@@ -1,0 +1,17 @@
+target/
+.mvn/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+.git
+.gitignore
+.idea
+.vscode
+*.iml
+node_modules
+frontend/node_modules
+frontend/dist
+frontend/.vite
+

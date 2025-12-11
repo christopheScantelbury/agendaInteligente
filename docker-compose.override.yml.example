@@ -1,0 +1,21 @@
+# Exemplo de override para desenvolvimento
+# Copie para docker-compose.override.yml e ajuste conforme necessário
+
+version: '3.8'
+
+services:
+  backend:
+    environment:
+      SPRING_PROFILES_ACTIVE: docker,dev
+      JWT_SECRET: seu-secret-aqui-altere-em-producao
+    volumes:
+      - ./src:/app/src  # Hot reload em desenvolvimento
+
+  postgres:
+    ports:
+      - "5432:5432"  # Expor porta para ferramentas externas
+
+  redis:
+    ports:
+      - "6379:6379"  # Expor porta para ferramentas externas
+

@@ -1,0 +1,92 @@
+spring:
+  application:
+    name: agenda-inteligente
+  
+  datasource:
+    url: jdbc:postgresql://localhost:5432/agenda_inteligente
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+    open-in-view: false
+  
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+  
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: America/Manaus
+
+server:
+  port: 8080
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# Configurações da API NFS-e Manaus
+nfse:
+  manaus:
+    url: https://nfse-prd.manaus.am.gov.br/nfse
+    timeout: 30000
+    retry:
+      max-attempts: 3
+      delay: 1000
+
+# Configurações de Pagamento
+payment:
+  gateway:
+    provider: ${PAYMENT_PROVIDER:stripe}
+    api-key: ${PAYMENT_API_KEY:}
+    webhook-secret: ${PAYMENT_WEBHOOK_SECRET:}
+
+# JWT
+jwt:
+  secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890}
+  expiration: 86400000
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# Swagger/OpenAPI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+# Logging
+logging:
+  level:
+    root: INFO
+    br.com.agendainteligente: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.cache: DEBUG
