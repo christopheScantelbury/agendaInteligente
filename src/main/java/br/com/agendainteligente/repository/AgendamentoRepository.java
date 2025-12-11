@@ -22,8 +22,12 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     List<Agendamento> findByPeriodo(@Param("inicio") LocalDateTime inicio, 
                                      @Param("fim") LocalDateTime fim);
     
-    @Query("SELECT a FROM Agendamento a WHERE a.dataHoraInicio = :dataHora AND a.status != 'CANCELADO'")
-    Optional<Agendamento> findConflitoHorario(@Param("dataHora") LocalDateTime dataHora);
+    @Query("SELECT a FROM Agendamento a WHERE " +
+           "(:dataHora BETWEEN a.dataHoraInicio AND a.dataHoraFim OR " +
+           "a.dataHoraInicio BETWEEN :dataHora AND :dataHoraFim) AND " +
+           "a.status != 'CANCELADO' AND a.status != 'CONCLUIDO'")
+    Optional<Agendamento> findConflitoHorario(@Param("dataHora") LocalDateTime dataHora, 
+                                               @Param("dataHoraFim") LocalDateTime dataHoraFim);
     
     List<Agendamento> findByUnidadeId(Long unidadeId);
     

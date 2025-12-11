@@ -1,9 +1,16 @@
 import api from './api'
 
+export interface AgendamentoServico {
+  servicoId: number
+  quantidade?: number
+  valor?: number
+  descricao?: string
+  valorTotal?: number
+}
+
 export interface Agendamento {
   id?: number
   clienteId: number
-  servicoId: number
   unidadeId: number
   atendenteId: number
   dataHoraInicio: string
@@ -12,6 +19,7 @@ export interface Agendamento {
   valorTotal?: number
   valorFinal?: number
   status?: string
+  servicos: AgendamentoServico[]
   cliente?: any
   servico?: any
   unidade?: any

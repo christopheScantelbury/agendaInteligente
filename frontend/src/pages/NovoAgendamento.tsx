@@ -11,12 +11,13 @@ export default function NovoAgendamento() {
   const navigate = useNavigate()
   const [formData, setFormData] = useState<Partial<Agendamento>>({
     clienteId: undefined,
-    servicoId: undefined,
     unidadeId: undefined,
     atendenteId: undefined,
     dataHoraInicio: '',
     observacoes: '',
+    servicos: [],
   })
+  const [servicosSelecionados, setServicosSelecionados] = useState<number[]>([])
 
   const { data: clientes = [] } = useQuery('clientes', clienteService.listar)
   const { data: servicos = [] } = useQuery('servicos', servicoService.listar)
@@ -35,16 +36,36 @@ export default function NovoAgendamento() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (formData.clienteId && formData.servicoId && formData.unidadeId && formData.atendenteId && formData.dataHoraInicio) {
+    if (formData.clienteId && servicosSelecionados.length > 0 && formData.unidadeId && formData.atendenteId && formData.dataHoraInicio) {
+      const servicos = servicosSelecionados.map(servicoId => {
+        const servico = servicos.find(s => s.id === servicoId)
+        return {
+          servicoId,
+          quantidade: 1,
+          valor: servico?.valor || 0,
+          descricao: servico?.descricao || servico?.nome
+        }
+      })
+      
       createMutation.mutate({
         clienteId: formData.clienteId,
-        servicoId: formData.servicoId,
         unidadeId: formData.unidadeId,
         atendenteId: formData.atendenteId,
         dataHoraInicio: formData.dataHoraInicio,
         observacoes: formData.observacoes,
+        servicos,
       } as Agendamento)
     }
+  }
+  
+  const handleServicoToggle = (servicoId: number) => {
+    setServicosSelecionados(prev => {
+      if (prev.includes(servicoId)) {
+        return prev.filter(id => id !== servicoId)
+      } else {
+        return [...prev, servicoId]
+      }
+    })
   }
 
   const handleUnidadeChange = (unidadeId: number) => {
@@ -115,24 +136,32 @@ export default function NovoAgendamento() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Serviço</label>
-            <select
-              required
-              value={formData.servicoId || ''}
-              onChange={(e) =>
-                setFormData({ ...formData, servicoId: parseInt(e.target.value) })
-              }
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            >
-              <option value="">Selecione um serviço</option>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Serviços {servicosSelecionados.length > 0 && `(${servicosSelecionados.length} selecionado${servicosSelecionados.length > 1 ? 's' : ''})`}
+            </label>
+            <div className="mt-1 space-y-2 max-h-60 overflow-y-auto border border-gray-300 rounded-md p-3">
               {servicos
                 .filter((s) => s.ativo)
                 .map((servico) => (
-                  <option key={servico.id} value={servico.id}>
-                    {servico.nome} - R$ {servico.valor.toFixed(2)} ({servico.duracaoMinutos} min)
-                  </option>
+                  <label key={servico.id} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                    <input
+                      type="checkbox"
+                      checked={servicosSelecionados.includes(servico.id)}
+                      onChange={() => handleServicoToggle(servico.id)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="flex-1">
+                      <span className="font-medium">{servico.nome}</span>
+                      <span className="text-gray-600 ml-2">
+                        - R$ {servico.valor.toFixed(2)} ({servico.duracaoMinutos} min)
+                      </span>
+                    </span>
+                  </label>
                 ))}
-            </select>
+            </div>
+            {servicosSelecionados.length === 0 && (
+              <p className="mt-1 text-sm text-red-600">Selecione pelo menos um serviço</p>
+            )}
           </div>
 
           <div>
