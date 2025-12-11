@@ -1,7 +1,7 @@
 package br.com.agendainteligente.service;
 
 import br.com.agendainteligente.domain.entity.Usuario;
-import br.com.agendainteligente.domain.enums.Perfil;
+import br.com.agendainteligente.domain.entity.Usuario.PerfilUsuario;
 import br.com.agendainteligente.dto.LoginDTO;
 import br.com.agendainteligente.dto.TokenDTO;
 import br.com.agendainteligente.exception.BusinessException;
@@ -54,7 +54,7 @@ class AuthServiceTest {
                 .email("admin@test.com")
                 .senha("$2a$10$encodedPassword")
                 .nome("Admin")
-                .perfil(Perfil.ADMIN)
+                .perfil(PerfilUsuario.ADMIN)
                 .ativo(true)
                 .build();
 

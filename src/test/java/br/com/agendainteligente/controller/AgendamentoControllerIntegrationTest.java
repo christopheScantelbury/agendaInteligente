@@ -1,7 +1,7 @@
 package br.com.agendainteligente.controller;
 
 import br.com.agendainteligente.domain.entity.*;
-import br.com.agendainteligente.domain.enums.Perfil;
+import br.com.agendainteligente.domain.entity.Usuario.PerfilUsuario;
 import br.com.agendainteligente.domain.enums.StatusAgendamento;
 import br.com.agendainteligente.dto.AgendamentoDTO;
 import br.com.agendainteligente.dto.AgendamentoServicoDTO;
@@ -92,7 +92,7 @@ class AgendamentoControllerIntegrationTest {
                 .email("admin@test.com")
                 .senha(passwordEncoder.encode("admin123"))
                 .nome("Admin")
-                .perfil(Perfil.ADMIN)
+                .perfil(PerfilUsuario.ADMIN)
                 .ativo(true)
                 .build();
         usuario = usuarioRepository.save(usuario);
@@ -133,13 +133,14 @@ class AgendamentoControllerIntegrationTest {
                 .email("atendente@test.com")
                 .senha(passwordEncoder.encode("senha123"))
                 .nome("Atendente")
-                .perfil(Perfil.ATENDENTE)
+                .perfil(PerfilUsuario.ATENDENTE)
                 .ativo(true)
                 .build();
         usuarioAtendente = usuarioRepository.save(usuarioAtendente);
 
         atendente = Atendente.builder()
-                .nomeUsuario("Atendente Test")
+                .cpf("12345678900")
+                .telefone("11999999999")
                 .unidade(unidade)
                 .usuario(usuarioAtendente)
                 .servicos(Collections.singletonList(servico))

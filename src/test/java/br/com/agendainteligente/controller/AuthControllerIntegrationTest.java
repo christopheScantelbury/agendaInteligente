@@ -1,7 +1,7 @@
 package br.com.agendainteligente.controller;
 
 import br.com.agendainteligente.domain.entity.Usuario;
-import br.com.agendainteligente.domain.enums.Perfil;
+import br.com.agendainteligente.domain.entity.Usuario.PerfilUsuario;
 import br.com.agendainteligente.dto.LoginDTO;
 import br.com.agendainteligente.repository.UsuarioRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,7 +45,7 @@ class AuthControllerIntegrationTest {
                 .email("admin@test.com")
                 .senha(passwordEncoder.encode("admin123"))
                 .nome("Admin Test")
-                .perfil(Perfil.ADMIN)
+                .perfil(PerfilUsuario.ADMIN)
                 .ativo(true)
                 .build();
         
