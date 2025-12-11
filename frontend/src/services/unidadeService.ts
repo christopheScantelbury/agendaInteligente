@@ -13,6 +13,8 @@ export interface Unidade {
   telefone?: string
   email?: string
   ativo?: boolean
+  clinicaId?: number
+  nomeClinica?: string
 }
 
 export const unidadeService = {
@@ -29,6 +31,15 @@ export const unidadeService = {
   criar: async (unidade: Unidade): Promise<Unidade> => {
     const response = await api.post<Unidade>('/unidades', unidade)
     return response.data
+  },
+
+  atualizar: async (id: number, unidade: Unidade): Promise<Unidade> => {
+    const response = await api.put<Unidade>(`/unidades/${id}`, unidade)
+    return response.data
+  },
+
+  excluir: async (id: number): Promise<void> => {
+    await api.delete(`/unidades/${id}`)
   },
 }
 

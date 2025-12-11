@@ -27,5 +27,10 @@ public class UnidadeDTO {
     private String telefone;
     private String email;
     private Boolean ativo;
+    
+    private Long clinicaId; // ID da clínica à qual a unidade pertence
+    
+    // Para exibição
+    private String nomeClinica;
 }
 

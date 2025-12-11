@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { clienteService, Cliente } from '../services/clienteService'
 import { Plus, Trash2, Edit } from 'lucide-react'
 import { useState } from 'react'
@@ -8,11 +8,15 @@ export default function Clientes() {
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null)
   const queryClient = useQueryClient()
 
-  const { data: clientes = [], isLoading } = useQuery('clientes', clienteService.listar)
+  const { data: clientes = [], isLoading } = useQuery({
+    queryKey: ['clientes'],
+    queryFn: clienteService.listar,
+  })
 
-  const deleteMutation = useMutation(clienteService.excluir, {
+  const deleteMutation = useMutation({
+    mutationFn: clienteService.excluir,
     onSuccess: () => {
-      queryClient.invalidateQueries('clientes')
+      queryClient.invalidateQueries({ queryKey: ['clientes'] })
     },
   })
 
@@ -27,9 +31,9 @@ export default function Clientes() {
   }
 
   return (
-    <div className="px-4 py-6 sm:px-0">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Clientes</h1>
+    <div className="w-full">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Clientes</h1>
         <button
           onClick={() => {
             setEditingCliente(null)
@@ -101,18 +105,16 @@ function ClienteModal({ cliente, onClose }: { cliente: Cliente | null; onClose: 
     }
   )
 
-  const saveMutation = useMutation(
-    (data: Cliente) =>
+  const saveMutation = useMutation({
+    mutationFn: (data: Cliente) =>
       cliente?.id
         ? clienteService.atualizar(cliente.id, data)
         : clienteService.criar(data),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries('clientes')
-        onClose()
-      },
-    }
-  )
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clientes'] })
+      onClose()
+    },
+  })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -174,9 +176,10 @@ function ClienteModal({ cliente, onClose }: { cliente: Cliente | null; onClose: 
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              disabled={saveMutation.isPending}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
             >
-              Salvar
+              {saveMutation.isPending ? 'Salvando...' : 'Salvar'}
             </button>
           </div>
         </form>

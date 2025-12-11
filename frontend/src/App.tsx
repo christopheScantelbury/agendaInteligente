@@ -1,40 +1,66 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from 'react-query'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { authService } from './services/authService'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Home from './pages/Home'
 import Clientes from './pages/Clientes'
+import Clinicas from './pages/Clinicas'
+import Unidades from './pages/Unidades'
+import Servicos from './pages/Servicos'
+import Usuarios from './pages/Usuarios'
+import Atendentes from './pages/Atendentes'
 import Agendamentos from './pages/Agendamentos'
 import NovoAgendamento from './pages/NovoAgendamento'
 
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutos
+    },
+  },
+})
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <Router>
-        <Routes>
-          <Route path="/login" element={authService.isAuthenticated() ? <Navigate to="/" /> : <Login />} />
-          <Route
-            path="/*"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Routes>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <Routes>
+            <Route
+              path="/login"
+              element={authService.isAuthenticated() ? <Navigate to="/" /> : <Login />}
+            />
+            <Route
+              path="/*"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/clientes" element={<Clientes />} />
+                    <Route path="/clinicas" element={<Clinicas />} />
+                    <Route path="/unidades" element={<Unidades />} />
+                    <Route path="/servicos" element={<Servicos />} />
+                    <Route path="/usuarios" element={<Usuarios />} />
+                    <Route path="/atendentes" element={<Atendentes />} />
                     <Route path="/agendamentos" element={<Agendamentos />} />
                     <Route path="/agendamentos/novo" element={<NovoAgendamento />} />
-                  </Routes>
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </Router>
-    </QueryClientProvider>
+                    </Routes>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </Router>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
+    </ErrorBoundary>
   )
 }
 

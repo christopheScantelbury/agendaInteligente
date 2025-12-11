@@ -50,5 +50,19 @@ public class AtendenteController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(atendenteService.criar(atendenteDTO));
     }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "Atualizar atendente")
+    public ResponseEntity<AtendenteDTO> atualizar(@PathVariable Long id,
+                                                  @Valid @RequestBody AtendenteDTO atendenteDTO) {
+        return ResponseEntity.ok(atendenteService.atualizar(id, atendenteDTO));
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Excluir atendente")
+    public ResponseEntity<Void> excluir(@PathVariable Long id) {
+        atendenteService.excluir(id);
+        return ResponseEntity.noContent().build();
+    }
 }
 

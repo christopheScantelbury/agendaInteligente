@@ -48,7 +48,36 @@ public class ClinicaService {
         }
         Clinica clinica = clinicaMapper.toEntity(clinicaDTO);
         clinica = clinicaRepository.save(clinica);
+        log.info("Clínica criada com sucesso. ID: {}, Nome: {}", clinica.getId(), clinica.getNome());
         return clinicaMapper.toDTO(clinica);
+    }
+
+    @Transactional
+    @CacheEvict(value = "clinicas", allEntries = true)
+    public ClinicaDTO atualizar(Long id, ClinicaDTO clinicaDTO) {
+        Clinica clinica = clinicaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Clínica não encontrada"));
+        
+        // Verifica se CNPJ está sendo alterado e se já existe outra clínica com ele
+        if (!clinica.getCnpj().equals(clinicaDTO.getCnpj()) 
+                && clinicaRepository.existsByCnpj(clinicaDTO.getCnpj())) {
+            throw new BusinessException("Já existe outra clínica cadastrada com este CNPJ");
+        }
+        
+        clinicaMapper.updateEntityFromDTO(clinicaDTO, clinica);
+        clinica = clinicaRepository.save(clinica);
+        log.info("Clínica atualizada com sucesso. ID: {}", clinica.getId());
+        return clinicaMapper.toDTO(clinica);
+    }
+
+    @Transactional
+    @CacheEvict(value = "clinicas", allEntries = true)
+    public void excluir(Long id) {
+        if (!clinicaRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Clínica não encontrada");
+        }
+        clinicaRepository.deleteById(id);
+        log.info("Clínica excluída com sucesso. ID: {}", id);
     }
 }
 

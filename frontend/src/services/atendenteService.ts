@@ -9,11 +9,17 @@ export interface Atendente {
   ativo?: boolean
   nomeUsuario?: string
   nomeUnidade?: string
+  servicosIds?: number[]
 }
 
 export const atendenteService = {
   listar: async (): Promise<Atendente[]> => {
     const response = await api.get<Atendente[]>('/atendentes/ativos')
+    return response.data
+  },
+
+  listarTodos: async (): Promise<Atendente[]> => {
+    const response = await api.get<Atendente[]>('/atendentes')
     return response.data
   },
 
@@ -25,6 +31,15 @@ export const atendenteService = {
   criar: async (atendente: Atendente): Promise<Atendente> => {
     const response = await api.post<Atendente>('/atendentes', atendente)
     return response.data
+  },
+
+  atualizar: async (id: number, atendente: Atendente): Promise<Atendente> => {
+    const response = await api.put<Atendente>(`/atendentes/${id}`, atendente)
+    return response.data
+  },
+
+  excluir: async (id: number): Promise<void> => {
+    await api.delete(`/atendentes/${id}`)
   },
 }
 

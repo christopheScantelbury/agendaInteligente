@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from 'react-query'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { agendamentoService, Agendamento } from '../services/agendamentoService'
 import { clienteService } from '../services/clienteService'
@@ -19,16 +19,26 @@ export default function NovoAgendamento() {
   })
   const [servicosSelecionados, setServicosSelecionados] = useState<number[]>([])
 
-  const { data: clientes = [] } = useQuery('clientes', clienteService.listar)
-  const { data: servicos = [] } = useQuery('servicos', servicoService.listar)
-  const { data: unidades = [] } = useQuery('unidades', unidadeService.listar)
-  const { data: atendentes = [], refetch: refetchAtendentes } = useQuery(
-    ['atendentes', formData.unidadeId],
-    () => formData.unidadeId ? atendenteService.listarPorUnidade(formData.unidadeId!) : Promise.resolve([]),
-    { enabled: !!formData.unidadeId }
-  )
+  const { data: clientes = [] } = useQuery({
+    queryKey: ['clientes'],
+    queryFn: clienteService.listar,
+  })
+  const { data: servicos = [] } = useQuery({
+    queryKey: ['servicos'],
+    queryFn: servicoService.listar,
+  })
+  const { data: unidades = [] } = useQuery({
+    queryKey: ['unidades'],
+    queryFn: unidadeService.listarTodos,
+  })
+  const { data: atendentes = [], refetch: refetchAtendentes } = useQuery({
+    queryKey: ['atendentes', formData.unidadeId],
+    queryFn: () => formData.unidadeId ? atendenteService.listarPorUnidade(formData.unidadeId!) : Promise.resolve([]),
+    enabled: !!formData.unidadeId,
+  })
 
-  const createMutation = useMutation(agendamentoService.criar, {
+  const createMutation = useMutation({
+    mutationFn: agendamentoService.criar,
     onSuccess: () => {
       navigate('/agendamentos')
     },
@@ -37,13 +47,13 @@ export default function NovoAgendamento() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (formData.clienteId && servicosSelecionados.length > 0 && formData.unidadeId && formData.atendenteId && formData.dataHoraInicio) {
-      const servicos = servicosSelecionados.map(servicoId => {
-        const servico = servicos.find(s => s.id === servicoId)
+      const servicosParaEnvio: Array<{ servicoId: number; quantidade: number; valor: number; descricao?: string }> = servicosSelecionados.map((servicoId: number) => {
+        const servicoEncontrado = servicos.find((s) => s.id === servicoId)
         return {
           servicoId,
           quantidade: 1,
-          valor: servico?.valor || 0,
-          descricao: servico?.descricao || servico?.nome
+          valor: servicoEncontrado?.valor || 0,
+          descricao: servicoEncontrado?.descricao || servicoEncontrado?.nome
         }
       })
       
@@ -53,7 +63,7 @@ export default function NovoAgendamento() {
         atendenteId: formData.atendenteId,
         dataHoraInicio: formData.dataHoraInicio,
         observacoes: formData.observacoes,
-        servicos,
+        servicos: servicosParaEnvio,
       } as Agendamento)
     }
   }
@@ -74,8 +84,8 @@ export default function NovoAgendamento() {
   }
 
   return (
-    <div className="px-4 py-6 sm:px-0">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">Novo Agendamento</h1>
+    <div className="w-full">
+      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">Novo Agendamento</h1>
 
       <div className="bg-white shadow rounded-lg p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -197,10 +207,10 @@ export default function NovoAgendamento() {
             </button>
             <button
               type="submit"
-              disabled={createMutation.isLoading}
+              disabled={createMutation.isPending}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
             >
-              {createMutation.isLoading ? 'Salvando...' : 'Criar Agendamento'}
+              {createMutation.isPending ? 'Salvando...' : 'Criar Agendamento'}
             </button>
           </div>
         </form>

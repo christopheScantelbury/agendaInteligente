@@ -38,5 +38,19 @@ public class ClinicaController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(clinicaService.criar(clinicaDTO));
     }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "Atualizar clínica")
+    public ResponseEntity<ClinicaDTO> atualizar(@PathVariable Long id,
+                                                @Valid @RequestBody ClinicaDTO clinicaDTO) {
+        return ResponseEntity.ok(clinicaService.atualizar(id, clinicaDTO));
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Excluir clínica")
+    public ResponseEntity<Void> excluir(@PathVariable Long id) {
+        clinicaService.excluir(id);
+        return ResponseEntity.noContent().build();
+    }
 }
 
