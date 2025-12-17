@@ -122,6 +122,27 @@
             <artifactId>jackson-dataformat-xml</artifactId>
         </dependency>
         
+        <!-- Apache Santuario para assinatura XML -->
+        <dependency>
+            <groupId>org.apache.santuario</groupId>
+            <artifactId>xmlsec</artifactId>
+            <version>3.0.3</version>
+        </dependency>
+        
+        <!-- Apache XML Security para assinatura digital -->
+        <dependency>
+            <groupId>org.apache.xmlgraphics</groupId>
+            <artifactId>xmlgraphics-commons</artifactId>
+            <version>2.9</version>
+        </dependency>
+        
+        <!-- SOAP Client -->
+        <dependency>
+            <groupId>com.sun.xml.ws</groupId>
+            <artifactId>jaxws-rt</artifactId>
+            <version>4.0.2</version>
+        </dependency>
+        
         <!-- OpenAPI/Swagger -->
         <dependency>
             <groupId>org.springdoc</groupId>

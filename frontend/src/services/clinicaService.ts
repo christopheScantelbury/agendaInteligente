@@ -13,6 +13,9 @@ export interface Clinica {
   uf?: string
   telefone?: string
   email?: string
+  inscricaoMunicipal?: string
+  inscricaoEstadual?: string
+  complemento?: string
   ativo?: boolean
 }
 

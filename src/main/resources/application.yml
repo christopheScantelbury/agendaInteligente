@@ -42,10 +42,30 @@ server:
     include-message: always
     include-binding-errors: always
 
-# Configurações da API NFS-e Manaus
+# Configurações da API NFS-e Manaus (Padrão ABRASF)
 nfse:
   manaus:
-    url: https://nfse-prd.manaus.am.gov.br/nfse
+    # Ambiente: homologacao | producao
+    ambiente: homologacao
+    # Domínios conforme DOC_102
+    dominio-homologacao: nfsev-prd.manaus.am.gov.br
+    dominio-producao: nfse-prd.manaus.am.gov.br
+    contexto-homologacao: nfsev
+    contexto-producao: nfse
+    # Web Services ABRASF
+    url-recepcao-lote-rps: https://nfsev-prd.manaus.am.gov.br/nfsev/servlet/arecepcionarloterps
+    url-consulta-situacao-lote: https://nfsev-prd.manaus.am.gov.br/nfsev/servlet/aconsultarsituacaoloterps
+    url-consulta-nfse-por-rps: https://nfsev-prd.manaus.am.gov.br/nfsev/servlet/aconsultarnfseporrps
+    url-consulta-lote-rps: https://nfsev-prd.manaus.am.gov.br/nfsev/servlet/aconsultarloterps
+    url-consulta-nfse: https://nfsev-prd.manaus.am.gov.br/nfsev/servlet/aconsultarnfse
+    # Versão do leiaute ABRASF
+    versao-dados: V2010
+    versao-cabecalho: 201001
+    # Certificado Digital (opcional para testes)
+    certificado:
+      caminho: ${NFSE_CERTIFICADO_PATH:}
+      senha: ${NFSE_CERTIFICADO_SENHA:}
+      usar-assinatura: ${NFSE_USAR_ASSINATURA:false}
     timeout: 30000
     retry:
       max-attempts: 3
@@ -86,7 +106,9 @@ logging:
   level:
     root: INFO
     br.com.agendainteligente: DEBUG
+    br.com.agendainteligente.integration: DEBUG # Logs detalhados da integração NFS-e
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     org.springframework.cache: DEBUG
+    org.springframework.web.reactive.function.client: DEBUG # Logs do WebClient

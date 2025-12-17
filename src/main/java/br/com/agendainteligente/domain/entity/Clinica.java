@@ -54,6 +54,15 @@ public class Clinica {
     @Column(length = 100)
     private String email;
 
+    @Column(length = 20)
+    private String inscricaoMunicipal;
+
+    @Column(length = 20)
+    private String inscricaoEstadual;
+
+    @Column(length = 100)
+    private String complemento;
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean ativo = true;

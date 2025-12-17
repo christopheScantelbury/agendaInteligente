@@ -30,6 +30,9 @@ public class ClinicaDTO {
     private String uf;
     private String telefone;
     private String email;
+    private String inscricaoMunicipal;
+    private String inscricaoEstadual;
+    private String complemento;
     private Boolean ativo;
 }
 

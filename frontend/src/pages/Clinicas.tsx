@@ -112,6 +112,9 @@ function ClinicaModal({ clinica, onClose }: { clinica: Clinica | null; onClose: 
       cep: '',
       cidade: '',
       uf: '',
+      inscricaoMunicipal: '',
+      inscricaoEstadual: '',
+      complemento: '',
       ativo: true,
     }
   )
@@ -193,6 +196,40 @@ function ClinicaModal({ clinica, onClose }: { clinica: Clinica | null; onClose: 
                 type="text"
                 value={formData.cep || ''}
                 onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Inscrição Municipal <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.inscricaoMunicipal || ''}
+                onChange={(e) => setFormData({ ...formData, inscricaoMunicipal: e.target.value })}
+                placeholder="Obrigatório para emissão de NFS-e"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Necessário para emissão de notas fiscais
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Inscrição Estadual</label>
+              <input
+                type="text"
+                value={formData.inscricaoEstadual || ''}
+                onChange={(e) => setFormData({ ...formData, inscricaoEstadual: e.target.value })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700">Complemento</label>
+              <input
+                type="text"
+                value={formData.complemento || ''}
+                onChange={(e) => setFormData({ ...formData, complemento: e.target.value })}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
