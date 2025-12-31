@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,6 +34,7 @@ public class ClinicaController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Criar nova clínica")
     public ResponseEntity<ClinicaDTO> criar(@Valid @RequestBody ClinicaDTO clinicaDTO) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -40,6 +42,7 @@ public class ClinicaController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('GERENTE')")
     @Operation(summary = "Atualizar clínica")
     public ResponseEntity<ClinicaDTO> atualizar(@PathVariable Long id,
                                                 @Valid @RequestBody ClinicaDTO clinicaDTO) {
@@ -47,6 +50,7 @@ public class ClinicaController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Excluir clínica")
     public ResponseEntity<Void> excluir(@PathVariable Long id) {
         clinicaService.excluir(id);

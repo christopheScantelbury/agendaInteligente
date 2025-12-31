@@ -1,5 +1,6 @@
 package br.com.agendainteligente.domain.entity;
 
+import br.com.agendainteligente.domain.enums.CategoriaEmpresa;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -62,6 +63,10 @@ public class Clinica {
 
     @Column(length = 100)
     private String complemento;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 50)
+    private CategoriaEmpresa categoriaEmpresa;
 
     @Column(nullable = false)
     @Builder.Default

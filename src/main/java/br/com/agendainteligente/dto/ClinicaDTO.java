@@ -1,5 +1,6 @@
 package br.com.agendainteligente.dto;
 
+import br.com.agendainteligente.domain.enums.CategoriaEmpresa;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,6 +34,7 @@ public class ClinicaDTO {
     private String inscricaoMunicipal;
     private String inscricaoEstadual;
     private String complemento;
+    private CategoriaEmpresa categoriaEmpresa;
     private Boolean ativo;
 }
 

@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +22,7 @@ public class ClienteController {
     private final ClienteService clienteService;
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN') or hasRole('GERENTE') or hasRole('PROFISSIONAL')")
     @Operation(summary = "Listar todos os clientes")
     public ResponseEntity<List<ClienteDTO>> listarTodos() {
         return ResponseEntity.ok(clienteService.listarTodos());
@@ -39,6 +41,7 @@ public class ClienteController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN') or hasRole('GERENTE') or hasRole('PROFISSIONAL')")
     @Operation(summary = "Criar novo cliente")
     public ResponseEntity<ClienteDTO> criar(@Valid @RequestBody ClienteDTO clienteDTO) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -53,6 +56,7 @@ public class ClienteController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('GERENTE')")
     @Operation(summary = "Excluir cliente")
     public ResponseEntity<Void> excluir(@PathVariable Long id) {
         clienteService.excluir(id);

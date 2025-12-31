@@ -41,13 +41,19 @@ public class Usuario implements UserDetails {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
-    private PerfilUsuario perfil = PerfilUsuario.ATENDENTE;
+    private PerfilUsuario perfil = PerfilUsuario.PROFISSIONAL;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataCriacao;
 
     @Column
     private LocalDateTime dataAtualizacao;
+
+    @Column(length = 255)
+    private String tokenRecuperacaoSenha;
+
+    @Column
+    private LocalDateTime tokenRecuperacaoSenhaExpiracao;
 
     @PrePersist
     protected void onCreate() {
@@ -96,9 +102,10 @@ public class Usuario implements UserDetails {
     }
 
     public enum PerfilUsuario {
-        ADMIN,
-        ATENDENTE,
-        GERENTE
+        ADMIN,           // Acesso total a todas as empresas
+        GERENTE,         // Gerencia uma clínica específica
+        PROFISSIONAL,    // Profissional/Atendente - gerencia seus horários
+        CLIENTE          // Cliente - apenas agendamentos próprios
     }
 }
 

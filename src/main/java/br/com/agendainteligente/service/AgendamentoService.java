@@ -165,9 +165,9 @@ public class AgendamentoService {
         LocalDateTime dataHoraInicio = agendamentoDTO.getDataHoraInicio();
         LocalDateTime dataHoraFim = dataHoraInicio.plusMinutes(duracaoTotal);
         
-        // Verifica conflito de horário (verifica sobreposição com outros agendamentos)
-        if (agendamentoRepository.findConflitoHorario(dataHoraInicio, dataHoraFim).isPresent()) {
-            throw new BusinessException("Já existe um agendamento neste horário");
+        // Verifica conflito de horário (verifica sobreposição com outros agendamentos do mesmo atendente)
+        if (agendamentoRepository.findConflitoHorario(atendente.getId(), dataHoraInicio, dataHoraFim).isPresent()) {
+            throw new BusinessException("Já existe um agendamento neste horário para este atendente");
         }
         
         // Cria agendamento

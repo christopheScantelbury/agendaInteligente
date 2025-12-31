@@ -32,9 +32,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (token != null && jwtTokenProvider.validateToken(token)) {
             String username = jwtTokenProvider.getUsernameFromToken(token);
             
-            // Aqui você pode buscar o usuário e suas autoridades do banco se necessário
-            // Por enquanto, vamos usar as autoridades do token
-            List<SimpleGrantedAuthority> authorities = Arrays.asList(new SimpleGrantedAuthority("ROLE_USER"));
+            // Extrair authorities do token
+            List<String> authorityStrings = jwtTokenProvider.getAuthoritiesFromToken(token);
+            List<SimpleGrantedAuthority> authorities = authorityStrings.stream()
+                    .map(SimpleGrantedAuthority::new)
+                    .collect(Collectors.toList());
+            
+            // Se não houver authorities no token, usar ROLE_USER como padrão (para compatibilidade)
+            if (authorities.isEmpty()) {
+                authorities = Arrays.asList(new SimpleGrantedAuthority("ROLE_USER"));
+            }
             
             UsernamePasswordAuthenticationToken authentication = 
                     new UsernamePasswordAuthenticationToken(username, null, authorities);

@@ -9,52 +9,30 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "clientes")
+@Table(name = "gerentes")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Cliente {
+public class Gerente {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 100)
-    private String nome;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "clinica_id", nullable = false)
+    private Clinica clinica;
 
-    @Column(nullable = false, unique = true, length = 14)
-    private String cpfCnpj;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_id", nullable = false, unique = true)
+    private Usuario usuario;
 
-    @Column(length = 100)
-    private String email;
+    @Column(nullable = false, length = 14)
+    private String cpf;
 
     @Column(length = 20)
     private String telefone;
-
-    @Column(length = 200)
-    private String endereco;
-
-    @Column(length = 10)
-    private String numero;
-
-    @Column(length = 100)
-    private String complemento;
-
-    @Column(length = 100)
-    private String bairro;
-
-    @Column(length = 8)
-    private String cep;
-
-    @Column(length = 100)
-    private String cidade;
-
-    @Column(length = 2)
-    private String uf;
-
-    @Column(length = 255)
-    private String senha;
 
     @Column(nullable = false)
     @Builder.Default
@@ -65,12 +43,6 @@ public class Cliente {
 
     @Column
     private LocalDateTime dataAtualizacao;
-
-    @Column(length = 255)
-    private String tokenRecuperacaoSenha;
-
-    @Column
-    private LocalDateTime tokenRecuperacaoSenhaExpiracao;
 
     @PrePersist
     protected void onCreate() {

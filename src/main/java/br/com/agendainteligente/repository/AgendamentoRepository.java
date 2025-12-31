@@ -23,10 +23,14 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
                                      @Param("fim") LocalDateTime fim);
     
     @Query("SELECT a FROM Agendamento a WHERE " +
-           "(:dataHora BETWEEN a.dataHoraInicio AND a.dataHoraFim OR " +
-           "a.dataHoraInicio BETWEEN :dataHora AND :dataHoraFim) AND " +
+           "a.atendente.id = :atendenteId AND " +
+           "((:dataHora BETWEEN a.dataHoraInicio AND a.dataHoraFim OR " +
+           "a.dataHoraInicio BETWEEN :dataHora AND :dataHoraFim) OR " +
+           "(:dataHoraFim BETWEEN a.dataHoraInicio AND a.dataHoraFim OR " +
+           "a.dataHoraFim BETWEEN :dataHora AND :dataHoraFim)) AND " +
            "a.status != 'CANCELADO' AND a.status != 'CONCLUIDO'")
-    Optional<Agendamento> findConflitoHorario(@Param("dataHora") LocalDateTime dataHora, 
+    Optional<Agendamento> findConflitoHorario(@Param("atendenteId") Long atendenteId,
+                                               @Param("dataHora") LocalDateTime dataHora, 
                                                @Param("dataHoraFim") LocalDateTime dataHoraFim);
     
     List<Agendamento> findByUnidadeId(Long unidadeId);

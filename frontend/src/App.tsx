@@ -2,10 +2,14 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { authService } from './services/authService'
+import { clientePublicoService } from './services/clientePublicoService'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 import Login from './pages/Login'
+import LoginCliente from './pages/LoginCliente'
+import AgendarCliente from './pages/AgendarCliente'
+import MeusAgendamentosCliente from './pages/MeusAgendamentosCliente'
 import Home from './pages/Home'
 import Clientes from './pages/Clientes'
 import Clinicas from './pages/Clinicas'
@@ -32,6 +36,21 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <Router>
           <Routes>
+            {/* Rotas públicas para clientes */}
+            <Route
+              path="/cliente/login"
+              element={clientePublicoService.isAuthenticated() ? <Navigate to="/cliente/agendar" /> : <LoginCliente />}
+            />
+            <Route
+              path="/cliente/agendar"
+              element={clientePublicoService.isAuthenticated() ? <AgendarCliente /> : <Navigate to="/cliente/login" />}
+            />
+            <Route
+              path="/cliente/meus-agendamentos"
+              element={clientePublicoService.isAuthenticated() ? <MeusAgendamentosCliente /> : <Navigate to="/cliente/login" />}
+            />
+            
+            {/* Rotas administrativas */}
             <Route
               path="/login"
               element={authService.isAuthenticated() ? <Navigate to="/" /> : <Login />}
