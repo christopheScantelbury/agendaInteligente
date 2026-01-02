@@ -1,6 +1,6 @@
 # Agenda Inteligente
 
-Sistema completo de agendamento inteligente com suporte a múltiplos tipos de empresas (academias, consultórios, salões, etc.), controle de acesso por perfis e interface pública para clientes.
+Sistema completo de agendamento inteligente com suporte a multiplos tipos de empresas (academias, consultorios, saloes, etc.), controle de acesso por perfis e interface publica para clientes.
 
 ## 🚀 Deploy com Docker
 
@@ -107,13 +107,13 @@ docker-compose up -d
 O sistema possui 4 níveis de acesso:
 
 #### 1. **ADMIN**
-- Acesso total a todas as empresas e unidades
+- Acesso total a todas as unidades
 - Pode criar/editar/excluir qualquer entidade
 - Gerenciar usuários e permissões
 
 #### 2. **GERENTE**
-- Gerencia uma clínica específica
-- Pode cadastrar unidades, atendentes, serviços da sua clínica
+- Gerencia uma unidade específica
+- Pode cadastrar atendentes e serviços
 - Pode gerenciar horários disponíveis
 - Pode ver e atualizar seu perfil
 - Pode alterar senha
@@ -158,8 +158,7 @@ O sistema possui 4 níveis de acesso:
 
 O sistema já vem com dados de exemplo:
 
-- ✅ **1 Clínica**: Clínica Saúde Total
-- ✅ **2 Unidades**: Centro e Zona Norte
+- ✅ **1 Unidade**: Matriz (Configurada com dados completos)
 - ✅ **3 Usuários**:
   - 1 Admin (admin@agendainteligente.com)
   - 2 Profissionais/Atendentes
@@ -264,19 +263,18 @@ As migrations do Flyway são executadas automaticamente na inicialização:
 ## 🎯 Funcionalidades Principais
 
 ### Para Administradores
-- ✅ Gerenciar todas as empresas e unidades
+- ✅ Gerenciar todas as unidades
 - ✅ Gerenciar usuários e permissões
-- ✅ Cadastrar clínicas com categoria (Academia, Consultório, etc.)
 - ✅ Acesso total ao sistema
 - ✅ Ver e atualizar perfil
 - ✅ Alterar senha
 - ✅ Recuperar senha
 
 ### Para Gerentes
-- ✅ Gerenciar sua clínica específica
-- ✅ Cadastrar unidades, atendentes, serviços da sua clínica
+- ✅ Gerenciar sua unidade específica
+- ✅ Cadastrar atendentes e serviços
 - ✅ Gerenciar horários disponíveis
-- ✅ Ver relatórios da clínica
+- ✅ Ver relatórios da unidade
 - ✅ Ver e atualizar perfil
 - ✅ Alterar senha
 - ✅ Recuperar senha
@@ -316,19 +314,16 @@ As migrations do Flyway são executadas automaticamente na inicialização:
 2. Use as credenciais: `admin@agendainteligente.com` / `admin123`
 3. Explore o sistema administrativo
 
-### 2. Cadastrar uma Clínica
+### 2. Gerenciar Unidade
 
-1. Vá em "Clínicas" → "Nova Clínica"
-2. Preencha os dados
-3. Selecione a **Categoria da Empresa** (Academia, Consultório, etc.)
-4. Salve
+1. Vá em "Unidades" → "Editar"
+2. Preencha os dados e horários
+3. Salve
 
-### 3. Criar Unidades e Atendentes
+### 3. Criar Atendentes
 
-1. Vá em "Unidades" → "Nova Unidade"
-2. Associe à clínica criada
-3. Vá em "Atendentes" → "Novo Atendente"
-4. Associe à unidade e selecione os serviços que o atendente presta
+1. Vá em "Atendentes" → "Novo Atendente"
+2. Associe à unidade e selecione os serviços que o atendente presta
 
 ### 4. Profissional Criar Horários Disponíveis
 

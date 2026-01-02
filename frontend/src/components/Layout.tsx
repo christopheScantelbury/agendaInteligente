@@ -1,11 +1,11 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Calendar,
   Users,
   Home as HomeIcon,
   LogOut,
-  Building2,
+
   Settings,
   UserCog,
   Briefcase,
@@ -13,7 +13,6 @@ import {
   Menu,
   X,
   User,
-  ChevronDown,
 } from 'lucide-react'
 import { authService } from '../services/authService'
 
@@ -32,8 +31,12 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
   const navigate = useNavigate()
   const usuario = authService.getUsuario()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false) // Mobile toggle
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setSidebarOpen(false)
+  }, [location.pathname])
 
   const isActive = (path: string, paths?: string[]) => {
     if (paths) {
@@ -50,7 +53,6 @@ export default function Layout({ children }: LayoutProps) {
   const navItems: NavItem[] = [
     { path: '/', label: 'Início', icon: <HomeIcon className="h-5 w-5" /> },
     { path: '/clientes', label: 'Clientes', icon: <Users className="h-5 w-5" /> },
-    { path: '/clinicas', label: 'Clínicas', icon: <Building2 className="h-5 w-5" /> },
     { path: '/unidades', label: 'Unidades', icon: <Briefcase className="h-5 w-5" /> },
     { path: '/atendentes', label: 'Atendentes', icon: <UserCog className="h-5 w-5" /> },
     { path: '/servicos', label: 'Serviços', icon: <Stethoscope className="h-5 w-5" /> },
@@ -63,171 +65,107 @@ export default function Layout({ children }: LayoutProps) {
     },
   ]
 
-  const NavLink = ({ item }: { item: NavItem }) => {
-    const active = isActive(item.path, item.paths)
-    return (
-      <Link
-        to={item.path}
-        onClick={() => setMobileMenuOpen(false)}
-        className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors ${
-          active
-            ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-500'
-            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-        }`}
-      >
-        <span className="mr-3">{item.icon}</span>
-        {item.label}
-      </Link>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo e título */}
-            <div className="flex items-center flex-shrink-0">
-              <Link to="/" className="flex items-center" onClick={() => setMobileMenuOpen(false)}>
-                <Calendar className="h-8 w-8 text-blue-600" />
-                <span className="ml-2 text-xl font-bold text-gray-900 hidden sm:block">
-                  Agenda Inteligente
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar Navigation */}
+      <aside
+        className={`
+          fixed lg:sticky lg:top-0 lg:h-screen inset-y-0 left-0 z-50
+          bg-white shadow-xl lg:shadow-none border-r border-gray-200
+          transform transition-all duration-300 ease-in-out
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          w-64
+          flex flex-col
+        `}
+      >
+        {/* Logo Header */}
+        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100">
+          <Link to="/" className="flex items-center space-x-2 overflow-hidden">
+            <Calendar className="h-8 w-8 text-blue-600 flex-shrink-0" />
+            <span className="font-bold text-xl text-gray-900">
+              Agenda
+            </span>
+          </Link>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden p-1 rounded-md hover:bg-gray-100 text-gray-500"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        {/* Navigation Items */}
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+          {navItems.map((item) => {
+            const active = isActive(item.path, item.paths)
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={() => setSidebarOpen(false)} // Auto-close on click (redundant with useEffect but safer)
+                className={`
+                  flex items-center px-3 py-2.5 rounded-lg transition-colors group relative
+                  ${active
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}
+                `}
+              >
+                <span className={`flex-shrink-0 ${active ? 'text-blue-600' : 'text-gray-500 group-hover:text-gray-700'}`}>
+                  {item.icon}
                 </span>
-                <span className="ml-2 text-lg font-bold text-gray-900 sm:hidden">
-                  Agenda
+                <span className="ml-3 font-medium whitespace-nowrap">
+                  {item.label}
                 </span>
               </Link>
+            )
+          })}
+        </nav>
+
+        {/* User Profile */}
+        <div className="border-t border-gray-100 p-3">
+          <div className="flex items-center justify-start px-2 py-2">
+            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 text-blue-700 font-semibold">
+              {usuario?.nome?.charAt(0) || <User className="h-5 w-5" />}
             </div>
-
-            {/* Menu Desktop - COMPLETAMENTE OCULTO em mobile/tablet */}
-            <div className="hidden lg:flex lg:items-center lg:flex-1 lg:justify-center lg:space-x-1 xl:space-x-2">
-              {navItems.map((item) => {
-                const active = isActive(item.path, item.paths)
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`inline-flex items-center px-2 xl:px-3 py-2 text-xs xl:text-sm font-medium transition-colors whitespace-nowrap ${
-                      active
-                        ? 'text-blue-600 border-b-2 border-blue-600'
-                        : 'text-gray-600 hover:text-gray-900 hover:border-b-2 hover:border-gray-300'
-                    }`}
-                  >
-                    <span className="mr-1">{item.icon}</span>
-                    <span className="hidden xl:inline">{item.label}</span>
-                  </Link>
-                )
-              })}
-            </div>
-
-            {/* Menu de Perfil e Menu Mobile */}
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              {/* Menu de Perfil - Desktop */}
-              <div className="hidden sm:relative sm:block">
-                <button
-                  onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-                  className="flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  aria-label="Menu do perfil"
-                  aria-expanded={profileMenuOpen}
-                >
-                  <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
-                    <User className="h-5 w-5 text-white" />
-                  </div>
-                  <ChevronDown className="h-4 w-4 text-gray-600" />
-                </button>
-
-                {/* Dropdown do Perfil */}
-                {profileMenuOpen && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setProfileMenuOpen(false)}
-                      aria-hidden="true"
-                    />
-                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
-                      <div className="py-1">
-                        <div className="px-4 py-3 border-b border-gray-200">
-                          <p className="text-sm font-semibold text-gray-900">{usuario?.nome}</p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Perfil: <span className="font-medium">{usuario?.perfil}</span>
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            ID: {usuario?.usuarioId}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            setProfileMenuOpen(false)
-                            handleLogout()
-                          }}
-                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center transition-colors"
-                        >
-                          <LogOut className="h-4 w-4 mr-2" />
-                          Sair
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* Botão Menu Mobile - SEMPRE VISÍVEL em telas menores que lg */}
+            <div className="ml-3 overflow-hidden">
+              <p className="text-sm font-medium text-gray-700 truncate">{usuario?.nome}</p>
               <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="lg:hidden text-gray-700 hover:text-gray-900 p-2 rounded-md hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 z-10"
-                aria-label={mobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
-                aria-expanded={mobileMenuOpen}
-                type="button"
+                onClick={handleLogout}
+                className="text-xs text-red-500 hover:text-red-700 flex items-center mt-0.5"
               >
-                {mobileMenuOpen ? (
-                  <X className="h-6 w-6" />
-                ) : (
-                  <Menu className="h-6 w-6" />
-                )}
+                <LogOut className="h-3 w-3 mr-1" /> Sair
               </button>
             </div>
           </div>
         </div>
+      </aside>
 
-        {/* Menu Mobile - Visível apenas em telas menores que lg */}
-        {mobileMenuOpen && (
-          <>
-            {/* Overlay para fechar ao clicar fora */}
-            <div
-              className="lg:hidden fixed inset-0 bg-black bg-opacity-25 z-40"
-              onClick={() => setMobileMenuOpen(false)}
-              aria-hidden="true"
-            />
-            {/* Menu dropdown */}
-            <div className="lg:hidden border-t border-gray-200 bg-white shadow-lg relative z-50">
-              <div className="px-2 pt-2 pb-3 space-y-1 max-h-[calc(100vh-4rem)] overflow-y-auto">
-                {navItems.map((item) => (
-                  <NavLink key={item.path} item={item} />
-                ))}
-                <div className="pt-4 pb-2 border-t border-gray-200 mt-2">
-                  <div className="px-3 py-2 text-sm text-gray-700">
-                    <span className="font-medium">{usuario?.nome}</span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setMobileMenuOpen(false)
-                      handleLogout()
-                    }}
-                    className="w-full mt-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors flex items-center"
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sair
-                  </button>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-      </nav>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-h-screen min-w-0 bg-gray-50">
+        {/* Mobile Header */}
+        <header className="lg:hidden bg-white shadow-sm h-16 flex items-center justify-between px-4 sticky top-0 z-30">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-md"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+          <span className="font-semibold text-gray-900">Agenda Inteligente</span>
+          <div className="w-8"></div> {/* Spacer for center alignment */}
+        </header>
 
-      <main className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
-        {children}
-      </main>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden">
+          {children}
+        </main>
+      </div>
     </div>
   )
 }

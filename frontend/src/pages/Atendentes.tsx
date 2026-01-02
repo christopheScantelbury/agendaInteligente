@@ -8,10 +8,14 @@ import { useState, useEffect } from 'react'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
 import FormField from '../components/FormField'
+import { useNotification } from '../contexts/NotificationContext'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 export default function Atendentes() {
+  const { showNotification } = useNotification()
   const [showModal, setShowModal] = useState(false)
   const [editingAtendente, setEditingAtendente] = useState<Atendente | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null })
   const queryClient = useQueryClient()
 
   const { data: atendentes = [], isLoading } = useQuery({
@@ -23,12 +27,22 @@ export default function Atendentes() {
     mutationFn: atendenteService.excluir,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['atendentes'] })
+      showNotification('success', 'Atendente excluído com sucesso!')
+      setConfirmDelete({ isOpen: false, id: null })
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Erro ao excluir atendente'
+      showNotification('error', errorMessage)
     },
   })
 
   const handleDelete = (id: number) => {
-    if (confirm('Tem certeza que deseja excluir este atendente?')) {
-      deleteMutation.mutate(id)
+    setConfirmDelete({ isOpen: true, id })
+  }
+
+  const confirmDeleteAction = () => {
+    if (confirmDelete.id) {
+      deleteMutation.mutate(confirmDelete.id)
     }
   }
 
@@ -68,11 +82,10 @@ export default function Atendentes() {
                     <p className="text-sm text-gray-500">Telefone: {atendente.telefone}</p>
                   )}
                   <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
-                      atendente.ativo
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${atendente.ativo
                         ? 'bg-green-100 text-green-800'
                         : 'bg-red-100 text-red-800'
-                    }`}
+                      }`}
                   >
                     {atendente.ativo ? 'Ativo' : 'Inativo'}
                   </span>
@@ -119,6 +132,17 @@ export default function Atendentes() {
           }}
         />
       </Modal>
+
+      <ConfirmDialog
+        isOpen={confirmDelete.isOpen}
+        title="Confirmar Exclusão"
+        message="Tem certeza que deseja excluir este atendente? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="danger"
+        onConfirm={confirmDeleteAction}
+        onCancel={() => setConfirmDelete({ isOpen: false, id: null })}
+      />
     </div>
   )
 }
@@ -131,6 +155,7 @@ function AtendenteForm({
   onClose: () => void
 }) {
   const queryClient = useQueryClient()
+  const { showNotification } = useNotification()
   const [formData, setFormData] = useState<Atendente>(
     atendente || {
       unidadeId: 0,
@@ -175,7 +200,12 @@ function AtendenteForm({
         : atendenteService.criar(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['atendentes'] })
+      showNotification('success', atendente ? 'Atendente atualizado com sucesso!' : 'Atendente criado com sucesso!')
       onClose()
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Erro ao salvar atendente'
+      showNotification('error', errorMessage)
     },
   })
 
@@ -202,7 +232,7 @@ function AtendenteForm({
           <option value="0">Selecione uma unidade</option>
           {unidades.map((unidade) => (
             <option key={unidade.id} value={unidade.id}>
-              {unidade.nome} {unidade.nomeClinica && `- ${unidade.nomeClinica}`}
+              {unidade.nome}
             </option>
           ))}
         </select>

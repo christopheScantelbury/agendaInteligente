@@ -6,6 +6,7 @@ import br.com.agendainteligente.dto.HorarioDisponivelDTO;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
 import br.com.agendainteligente.mapper.HorarioDisponivelMapper;
+import br.com.agendainteligente.repository.AgendamentoRepository;
 import br.com.agendainteligente.repository.AtendenteRepository;
 import br.com.agendainteligente.repository.HorarioDisponivelRepository;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -24,6 +27,7 @@ public class HorarioDisponivelService {
 
     private final HorarioDisponivelRepository horarioDisponivelRepository;
     private final AtendenteRepository atendenteRepository;
+    private final AgendamentoRepository agendamentoRepository;
     private final HorarioDisponivelMapper horarioDisponivelMapper;
 
     @Transactional(readOnly = true)
@@ -114,6 +118,49 @@ public class HorarioDisponivelService {
 
         horarioDisponivelRepository.delete(horario);
         log.info("Horário disponível excluído com sucesso. ID: {}", id);
+    }
+
+    @Transactional(readOnly = true)
+    public List<HorarioDisponivelDTO> buscarHorariosDisponiveis(Long unidadeId, Long servicoId, 
+                                                                  LocalDate dataInicio, LocalDate dataFim) {
+        log.debug("Buscando horários disponíveis - Unidade: {}, Serviço: {}, Período: {} a {}", 
+                  unidadeId, servicoId, dataInicio, dataFim);
+        
+        // Buscar atendentes da unidade que prestam o serviço
+        List<Atendente> atendentes = atendenteRepository.findByUnidadeIdAndAtivoTrue(unidadeId)
+                .stream()
+                .filter(atendente -> atendente.getServicos().stream()
+                        .anyMatch(servico -> servico.getId().equals(servicoId) && servico.getAtivo()))
+                .collect(Collectors.toList());
+        
+        if (atendentes.isEmpty()) {
+            log.debug("Nenhum atendente encontrado para a unidade {} e serviço {}", unidadeId, servicoId);
+            return List.of();
+        }
+        
+        // Converter LocalDate para LocalDateTime (início e fim do dia)
+        LocalDateTime dataHoraInicio = dataInicio.atStartOfDay();
+        LocalDateTime dataHoraFim = dataFim.atTime(LocalTime.MAX);
+        
+        // Buscar horários disponíveis dos atendentes no período
+        List<HorarioDisponivel> horariosDisponiveis = atendentes.stream()
+                .flatMap(atendente -> horarioDisponivelRepository
+                        .findByAtendenteAndPeriodo(atendente.getId(), dataHoraInicio, dataHoraFim)
+                        .stream())
+                .collect(Collectors.toList());
+        
+        // Filtrar horários que não têm conflito com agendamentos
+        return horariosDisponiveis.stream()
+                .filter(horario -> {
+                    // Verificar se há conflito com agendamentos
+                    return agendamentoRepository.findConflitoHorario(
+                            horario.getAtendente().getId(),
+                            horario.getDataHoraInicio(),
+                            horario.getDataHoraFim()
+                    ).isEmpty();
+                })
+                .map(this::toDTO)
+                .collect(Collectors.toList());
     }
 
     private HorarioDisponivelDTO toDTO(HorarioDisponivel horario) {

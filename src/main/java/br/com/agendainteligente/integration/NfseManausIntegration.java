@@ -133,7 +133,7 @@ public class NfseManausIntegration {
         log.info("=== ENVIANDO LOTE RPS ===");
         log.info("URL: {}", urlRecepcaoLoteRps);
         log.info("Tamanho da mensagem SOAP: {} bytes", mensagemSoap.length());
-        
+
         // Log do XML completo em modo debug
         if (log.isDebugEnabled()) {
             log.debug("Mensagem SOAP completa:\n{}", mensagemSoap);
@@ -152,7 +152,7 @@ public class NfseManausIntegration {
             log.info("=== RESPOSTA RECEBIDA ===");
             log.info("Tamanho da resposta: {} bytes", resposta != null ? resposta.length() : 0);
             log.debug("Resposta completa do web service:\n{}", resposta);
-            
+
             return resposta;
 
         } catch (Exception e) {
@@ -173,11 +173,12 @@ public class NfseManausIntegration {
         log.info("Consultando situação do lote. Protocolo: {}", protocolo);
 
         try {
-            var clinica = agendamento.getUnidade().getClinica();
-            String cnpj = limparCnpj(clinica.getCnpj());
-            String inscricaoMunicipal = clinica.getInscricaoMunicipal() != null && !clinica.getInscricaoMunicipal().isEmpty()
-                    ? clinica.getInscricaoMunicipal()
-                    : "00000000";
+            var unidade = agendamento.getUnidade();
+            String cnpj = limparCnpj(unidade.getCnpj());
+            String inscricaoMunicipal = unidade.getInscricaoMunicipal() != null
+                    && !unidade.getInscricaoMunicipal().isEmpty()
+                            ? unidade.getInscricaoMunicipal()
+                            : "00000000";
 
             // Monta XML de consulta
             String xmlConsulta = String.format("""
@@ -199,8 +200,7 @@ public class NfseManausIntegration {
                     """,
                     cnpj,
                     inscricaoMunicipal,
-                    protocolo
-            );
+                    protocolo);
 
             String mensagemSoap = montarSoapConsulta(xmlConsulta, "ConsultarSituacaoLoteRps");
 
@@ -235,11 +235,12 @@ public class NfseManausIntegration {
         log.info("Consultando NFSe gerada. Protocolo: {}", protocolo);
 
         try {
-            var clinica = agendamento.getUnidade().getClinica();
-            String cnpj = limparCnpj(clinica.getCnpj());
-            String inscricaoMunicipal = clinica.getInscricaoMunicipal() != null && !clinica.getInscricaoMunicipal().isEmpty()
-                    ? clinica.getInscricaoMunicipal()
-                    : "00000000";
+            var unidade = agendamento.getUnidade();
+            String cnpj = limparCnpj(unidade.getCnpj());
+            String inscricaoMunicipal = unidade.getInscricaoMunicipal() != null
+                    && !unidade.getInscricaoMunicipal().isEmpty()
+                            ? unidade.getInscricaoMunicipal()
+                            : "00000000";
 
             // Monta XML de consulta do lote
             String xmlConsulta = String.format("""
@@ -261,8 +262,7 @@ public class NfseManausIntegration {
                     """,
                     cnpj,
                     inscricaoMunicipal,
-                    protocolo
-            );
+                    protocolo);
 
             String mensagemSoap = montarSoapConsulta(xmlConsulta, "ConsultarLoteRps");
 
@@ -301,7 +301,6 @@ public class NfseManausIntegration {
         }
     }
 
-
     /**
      * Monta mensagem SOAP para consultas
      */
@@ -311,22 +310,22 @@ public class NfseManausIntegration {
         String cabecalho = partes[0] + "</Nfsecabecmsg>";
         String dados = partes.length > 1 ? partes[1].trim() : "";
 
-        return String.format("""
-                <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:e="http://www.e-nfs.com.br">
-                    <soapenv:Header/>
-                    <soapenv:Body>
-                        <e:%s.Execute>
-                            %s
-                            %s
-                        </e:%s.Execute>
-                    </soapenv:Body>
-                </soapenv:Envelope>
-                """,
+        return String.format(
+                """
+                        <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:e="http://www.e-nfs.com.br">
+                            <soapenv:Header/>
+                            <soapenv:Body>
+                                <e:%s.Execute>
+                                    %s
+                                    %s
+                                </e:%s.Execute>
+                            </soapenv:Body>
+                        </soapenv:Envelope>
+                        """,
                 nomeServico,
                 cabecalho,
                 dados,
-                nomeServico
-        );
+                nomeServico);
     }
 
     /**
@@ -379,7 +378,8 @@ public class NfseManausIntegration {
     }
 
     private String limparCnpj(String cnpj) {
-        if (cnpj == null) return "";
+        if (cnpj == null)
+            return "";
         return cnpj.replaceAll("[^0-9]", "");
     }
 

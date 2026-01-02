@@ -41,18 +41,15 @@ public class NfseTestController {
         if (agendamento.getServicos() != null) {
             agendamento.getServicos().size();
         }
-        if (agendamento.getUnidade() != null && agendamento.getUnidade().getClinica() != null) {
-            agendamento.getUnidade().getClinica().getNome();
-        }
 
-        BigDecimal valor = agendamento.getValorFinal() != null 
-                ? agendamento.getValorFinal() 
+        BigDecimal valor = agendamento.getValorFinal() != null
+                ? agendamento.getValorFinal()
                 : agendamento.getValorTotal();
 
         log.info("Valor para NFS-e: {}", valor);
-        log.info("Clínica: {}", agendamento.getUnidade().getClinica().getNome());
-        log.info("CNPJ: {}", agendamento.getUnidade().getClinica().getCnpj());
-        log.info("Inscrição Municipal: {}", agendamento.getUnidade().getClinica().getInscricaoMunicipal());
+        log.info("Unidade: {}", agendamento.getUnidade().getNome());
+        log.info("CNPJ: {}", agendamento.getUnidade().getCnpj());
+        log.info("Inscrição Municipal: {}", agendamento.getUnidade().getInscricaoMunicipal());
         log.info("Cliente: {}", agendamento.getCliente().getNome());
         log.info("CPF/CNPJ Cliente: {}", agendamento.getCliente().getCpfCnpj());
 
@@ -102,4 +99,3 @@ public class NfseTestController {
         return ResponseEntity.ok(info);
     }
 }
-

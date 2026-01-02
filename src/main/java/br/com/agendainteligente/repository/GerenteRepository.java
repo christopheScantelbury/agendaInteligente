@@ -10,8 +10,10 @@ import java.util.Optional;
 @Repository
 public interface GerenteRepository extends JpaRepository<Gerente, Long> {
     Optional<Gerente> findByUsuarioId(Long usuarioId);
-    List<Gerente> findByClinicaId(Long clinicaId);
-    List<Gerente> findByClinicaIdAndAtivoTrue(Long clinicaId);
+
+    List<Gerente> findByUnidadeId(Long unidadeId);
+
+    List<Gerente> findByUnidadeIdAndAtivoTrue(Long unidadeId);
+
     boolean existsByUsuarioId(Long usuarioId);
 }
-

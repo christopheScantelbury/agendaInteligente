@@ -52,15 +52,23 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4"
       onClick={(e) => {
+        // Bloqueia todos os cliques no backdrop
         if (e.target === e.currentTarget) {
           onClose()
+        }
+      }}
+      onMouseDown={(e) => {
+        // Previne cliques que passam pelo backdrop
+        if (e.target === e.currentTarget) {
+          e.preventDefault()
         }
       }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
+      style={{ pointerEvents: 'auto' }}
     >
       <div
         className={`bg-white rounded-lg shadow-xl w-full ${sizeClasses[size]} max-h-[90vh] overflow-hidden flex flex-col`}

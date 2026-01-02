@@ -1,15 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { usuarioService, Usuario, PerfilUsuario } from '../services/usuarioService'
-import { clinicaService } from '../services/clinicaService'
+import { unidadeService, Unidade } from '../services/unidadeService'
 import { Plus, Trash2, Edit, Eye, EyeOff } from 'lucide-react'
 import { useState } from 'react'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
 import FormField from '../components/FormField'
+import { useNotification } from '../contexts/NotificationContext'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 export default function Usuarios() {
+  const { showNotification } = useNotification()
   const [showModal, setShowModal] = useState(false)
   const [editingUsuario, setEditingUsuario] = useState<Usuario | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null })
   const queryClient = useQueryClient()
 
   const { data: usuarios = [], isLoading } = useQuery({
@@ -17,21 +21,31 @@ export default function Usuarios() {
     queryFn: usuarioService.listar,
   })
 
-  const { data: clinicas = [] } = useQuery({
-    queryKey: ['clinicas'],
-    queryFn: clinicaService.listar,
+  const { data: unidades = [] } = useQuery({
+    queryKey: ['unidades'],
+    queryFn: unidadeService.listarTodos,
   })
 
   const deleteMutation = useMutation({
     mutationFn: usuarioService.excluir,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['usuarios'] })
+      showNotification('success', 'Usuário excluído com sucesso!')
+      setConfirmDelete({ isOpen: false, id: null })
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Erro ao excluir usuário'
+      showNotification('error', errorMessage)
     },
   })
 
   const handleDelete = (id: number) => {
-    if (confirm('Tem certeza que deseja excluir este usuário?')) {
-      deleteMutation.mutate(id)
+    setConfirmDelete({ isOpen: true, id })
+  }
+
+  const confirmDeleteAction = () => {
+    if (confirmDelete.id) {
+      deleteMutation.mutate(confirmDelete.id)
     }
   }
 
@@ -65,15 +79,14 @@ export default function Usuarios() {
                   <p className="text-sm text-gray-500">
                     Perfil: <span className="font-medium">{usuario.perfil}</span>
                   </p>
-                  {usuario.nomeClinica && (
-                    <p className="text-sm text-gray-500">Clínica: {usuario.nomeClinica}</p>
+                  {usuario.nomeUnidade && (
+                    <p className="text-sm text-gray-500">Unidade: {usuario.nomeUnidade}</p>
                   )}
                   <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
-                      usuario.ativo
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${usuario.ativo
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                      }`}
                   >
                     {usuario.ativo ? 'Ativo' : 'Inativo'}
                   </span>
@@ -114,27 +127,39 @@ export default function Usuarios() {
       >
         <UsuarioForm
           usuario={editingUsuario}
-          clinicas={clinicas}
+          unidades={unidades}
           onClose={() => {
             setShowModal(false)
             setEditingUsuario(null)
           }}
         />
       </Modal>
+
+      <ConfirmDialog
+        isOpen={confirmDelete.isOpen}
+        title="Confirmar Exclusão"
+        message="Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="danger"
+        onConfirm={confirmDeleteAction}
+        onCancel={() => setConfirmDelete({ isOpen: false, id: null })}
+      />
     </div>
   )
 }
 
 function UsuarioForm({
   usuario,
-  clinicas,
+  unidades,
   onClose,
 }: {
   usuario: Usuario | null
-  clinicas: any[]
+  unidades: Unidade[]
   onClose: () => void
 }) {
   const queryClient = useQueryClient()
+  const { showNotification } = useNotification()
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState<Usuario>(
     usuario || {
@@ -142,7 +167,7 @@ function UsuarioForm({
       email: '',
       senha: '',
       perfil: 'ATENDENTE',
-      clinicaId: undefined,
+      unidadeId: undefined,
       ativo: true,
     }
   )
@@ -154,7 +179,12 @@ function UsuarioForm({
         : usuarioService.criar(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['usuarios'] })
+      showNotification('success', usuario ? 'Usuário atualizado com sucesso!' : 'Usuário criado com sucesso!')
       onClose()
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Erro ao salvar usuário'
+      showNotification('error', errorMessage)
     },
   })
 
@@ -218,8 +248,8 @@ function UsuarioForm({
             setFormData({
               ...formData,
               perfil,
-              // Limpa clinicaId se não for GERENTE
-              clinicaId: perfil === 'GERENTE' ? formData.clinicaId : undefined,
+              // Limpa unidadeId se não for GERENTE
+              unidadeId: perfil === 'GERENTE' ? formData.unidadeId : undefined,
             })
           }}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
@@ -231,19 +261,19 @@ function UsuarioForm({
       </FormField>
 
       {formData.perfil === 'GERENTE' && (
-        <FormField label="Clínica" required>
+        <FormField label="Unidade" required>
           <select
             required
-            value={formData.clinicaId || ''}
+            value={formData.unidadeId || ''}
             onChange={(e) =>
-              setFormData({ ...formData, clinicaId: parseInt(e.target.value) })
+              setFormData({ ...formData, unidadeId: parseInt(e.target.value) })
             }
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
           >
-            <option value="">Selecione uma clínica</option>
-            {clinicas.map((clinica) => (
-              <option key={clinica.id} value={clinica.id}>
-                {clinica.nome}
+            <option value="">Selecione uma unidade</option>
+            {unidades.map((unidade) => (
+              <option key={unidade.id} value={unidade.id}>
+                {unidade.nome}
               </option>
             ))}
           </select>

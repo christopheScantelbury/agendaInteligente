@@ -38,6 +38,14 @@ public class AtendenteController {
         return ResponseEntity.ok(atendenteService.listarPorUnidade(unidadeId));
     }
 
+    @GetMapping("/unidade/{unidadeId}/servicos")
+    @Operation(summary = "Listar atendentes por unidade e serviços")
+    public ResponseEntity<List<AtendenteDTO>> listarPorUnidadeEServicos(
+            @PathVariable Long unidadeId,
+            @RequestParam List<Long> servicosIds) {
+        return ResponseEntity.ok(atendenteService.listarPorUnidadeEServicos(unidadeId, servicosIds));
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Buscar atendente por ID")
     public ResponseEntity<AtendenteDTO> buscarPorId(@PathVariable Long id) {

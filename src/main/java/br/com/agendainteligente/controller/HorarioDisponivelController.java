@@ -16,8 +16,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -61,6 +63,20 @@ public class HorarioDisponivelController {
         Long atendenteId = getAtendenteIdDoUsuarioAutenticado();
         horarioDisponivelService.excluir(id, atendenteId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/buscar")
+    @Operation(summary = "Buscar horários disponíveis por unidade, serviço e período")
+    public ResponseEntity<List<HorarioDisponivelDTO>> buscarHorariosDisponiveis(
+            @RequestParam Long unidadeId,
+            @RequestParam Long servicoId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicio,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim) {
+        
+        List<HorarioDisponivelDTO> horarios = horarioDisponivelService.buscarHorariosDisponiveis(
+                unidadeId, servicoId, dataInicio, dataFim);
+        
+        return ResponseEntity.ok(horarios);
     }
 
     private Long getAtendenteIdDoUsuarioAutenticado() {

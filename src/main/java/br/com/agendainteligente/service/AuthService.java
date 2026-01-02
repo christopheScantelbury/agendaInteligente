@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private final UsuarioRepository usuarioRepository;
+    private final br.com.agendainteligente.repository.AtendenteRepository atendenteRepository;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
@@ -29,7 +30,7 @@ public class AuthService {
     @Transactional
     public TokenDTO login(LoginDTO loginDTO) {
         log.debug("Tentativa de login para email: {}", loginDTO.getEmail());
-        
+
         try {
             // Verificar se o usuário existe antes de autenticar
             Usuario usuario = usuarioRepository.findByEmail(loginDTO.getEmail())
@@ -44,29 +45,36 @@ public class AuthService {
             }
 
             log.debug("Usuário encontrado. Verificando senha...");
-            
+
             // Tentar autenticar
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             loginDTO.getEmail(),
-                            loginDTO.getSenha()
-                    )
-            );
+                            loginDTO.getSenha()));
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
-            
+
             String token = jwtTokenProvider.generateToken(authentication);
-            
+
+            // Buscar unidadeId se for profissional
+            Long unidadeId = null;
+            if (usuario.getPerfil() == br.com.agendainteligente.domain.entity.Usuario.PerfilUsuario.PROFISSIONAL) {
+                unidadeId = atendenteRepository.findByUsuarioId(usuario.getId())
+                        .map(atendente -> atendente.getUnidade().getId())
+                        .orElse(null);
+            }
+
             log.info("Login realizado com sucesso. Email: {}", loginDTO.getEmail());
-            
+
             return TokenDTO.builder()
                     .token(token)
                     .tipo("Bearer")
                     .usuarioId(usuario.getId())
+                    .unidadeId(unidadeId)
                     .nome(usuario.getNome())
                     .perfil(usuario.getPerfil().name())
                     .build();
-                    
+
         } catch (org.springframework.security.authentication.BadCredentialsException e) {
             log.error("Credenciais inválidas para email: {}", loginDTO.getEmail(), e);
             throw new BusinessException("Email ou senha inválidos");
@@ -78,4 +86,3 @@ public class AuthService {
         }
     }
 }
-

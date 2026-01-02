@@ -1,12 +1,12 @@
 package br.com.agendainteligente.service;
 
-import br.com.agendainteligente.domain.entity.Clinica;
+import br.com.agendainteligente.domain.entity.Unidade;
 import br.com.agendainteligente.domain.entity.Usuario;
 import br.com.agendainteligente.dto.UsuarioDTO;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
 import br.com.agendainteligente.mapper.UsuarioMapper;
-import br.com.agendainteligente.repository.ClinicaRepository;
+import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
-    private final ClinicaRepository clinicaRepository;
+    private final UnidadeRepository unidadeRepository;
     private final PasswordEncoder passwordEncoder;
     private final UsuarioMapper usuarioMapper;
 
@@ -46,22 +46,23 @@ public class UsuarioService {
         if (usuarioRepository.existsByEmail(usuarioDTO.getEmail())) {
             throw new BusinessException("Já existe um usuário com este email");
         }
-        
+
         if (usuarioDTO.getSenha() == null || usuarioDTO.getSenha().trim().isEmpty()) {
             throw new BusinessException("Senha é obrigatória");
         }
-        
+
         Usuario usuario = usuarioMapper.toEntity(usuarioDTO);
         usuario.setSenha(passwordEncoder.encode(usuarioDTO.getSenha()));
-        
-        // Validação: GERENTE deve ter clínica associada
-        if (usuario.getPerfil() == Usuario.PerfilUsuario.GERENTE && usuarioDTO.getClinicaId() != null) {
-            Clinica clinica = clinicaRepository.findById(usuarioDTO.getClinicaId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Clínica não encontrada"));
-            // Nota: A relação usuário-clínica pode ser implementada via tabela de relacionamento
-            // Por enquanto, apenas validamos que a clínica existe
+
+        // Validação: GERENTE deve ter unidade associada
+        if (usuario.getPerfil() == Usuario.PerfilUsuario.GERENTE && usuarioDTO.getUnidadeId() != null) {
+            Unidade unidade = unidadeRepository.findById(usuarioDTO.getUnidadeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada"));
+            // Nota: A relação usuário-unidade pode ser implementada via tabela de
+            // relacionamento
+            // Por enquanto, apenas validamos que a unidade existe
         }
-        
+
         usuario = usuarioRepository.save(usuario);
         log.info("Usuário criado com sucesso. ID: {}, Email: {}", usuario.getId(), usuario.getEmail());
         return toDTO(usuario);
@@ -71,20 +72,20 @@ public class UsuarioService {
     public UsuarioDTO atualizar(Long id, UsuarioDTO usuarioDTO) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
-        
+
         // Verifica se email está sendo alterado e se já existe outro usuário com ele
-        if (!usuario.getEmail().equals(usuarioDTO.getEmail()) 
+        if (!usuario.getEmail().equals(usuarioDTO.getEmail())
                 && usuarioRepository.existsByEmail(usuarioDTO.getEmail())) {
             throw new BusinessException("Já existe outro usuário cadastrado com este email");
         }
-        
+
         usuarioMapper.updateEntityFromDTO(usuarioDTO, usuario);
-        
+
         // Atualiza senha apenas se fornecida
         if (usuarioDTO.getSenha() != null && !usuarioDTO.getSenha().trim().isEmpty()) {
             usuario.setSenha(passwordEncoder.encode(usuarioDTO.getSenha()));
         }
-        
+
         usuario = usuarioRepository.save(usuario);
         log.info("Usuário atualizado com sucesso. ID: {}", usuario.getId());
         return toDTO(usuario);
@@ -105,4 +106,3 @@ public class UsuarioService {
         return dto;
     }
 }
-

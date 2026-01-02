@@ -28,6 +28,17 @@ export const atendenteService = {
     return response.data
   },
 
+  listarPorUnidadeEServicos: async (unidadeId: number, servicosIds: number[]): Promise<Atendente[]> => {
+    if (!servicosIds || servicosIds.length === 0) {
+      return atendenteService.listarPorUnidade(unidadeId)
+    }
+    // Spring aceita múltiplos parâmetros com o mesmo nome
+    const params = new URLSearchParams()
+    servicosIds.forEach(id => params.append('servicosIds', id.toString()))
+    const response = await api.get<Atendente[]>(`/atendentes/unidade/${unidadeId}/servicos?${params.toString()}`)
+    return response.data
+  },
+
   criar: async (atendente: Atendente): Promise<Atendente> => {
     const response = await api.post<Atendente>('/atendentes', atendente)
     return response.data

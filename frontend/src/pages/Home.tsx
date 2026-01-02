@@ -1,25 +1,50 @@
 import { useQuery } from '@tanstack/react-query'
 import { agendamentoService } from '../services/agendamentoService'
+import { authService } from '../services/authService'
+import { unidadeService } from '../services/unidadeService'
 import CalendarView from '../components/CalendarView'
 import { SlotInfo, View } from 'react-big-calendar'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 export default function Home() {
   const navigate = useNavigate()
   const [view, setView] = useState<View>('week')
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
+  const [showWelcome, setShowWelcome] = useState(true)
 
-  const { data: agendamentos = [], isLoading } = useQuery({
+  const usuario = authService.getUsuario()
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowWelcome(false)
+    }, 8000)
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  const { data: agendamentos = [], isLoading: isLoadingAgendamentos } = useQuery({
     queryKey: ['agendamentos'],
     queryFn: agendamentoService.listar,
   })
 
+  const { data: unidade, isLoading: isLoadingUnidade } = useQuery({
+    queryKey: ['unidade', usuario?.unidadeId],
+    queryFn: () => usuario?.unidadeId ? unidadeService.buscarPorId(usuario.unidadeId) : null,
+    enabled: !!usuario?.unidadeId
+  })
+
   const handleSelectSlot = (slotInfo: SlotInfo) => {
-    // Redireciona para a página de agendamentos com o horário selecionado
+    // Redireciona para a página de novo agendamento com o horário selecionado
     const start = slotInfo.start
     const startISO = start.toISOString().slice(0, 16) // Formato YYYY-MM-DDTHH:mm
-    navigate(`/agendamentos?start=${encodeURIComponent(startISO)}`)
+
+    navigate('/agendamentos/novo', {
+      state: {
+        dataHoraInicio: startISO,
+        unidadeId: usuario?.unidadeId
+      }
+    })
   }
 
   const handleSelectEvent = () => {
@@ -27,13 +52,21 @@ export default function Home() {
     navigate('/agendamentos')
   }
 
-  if (isLoading) {
-    return <div className="text-center py-8">Carregando calendário...</div>
+  if (isLoadingAgendamentos || isLoadingUnidade) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
   }
 
   return (
     <div className="w-full">
-      <div className="mb-6">
+      {/* Welcome Message with Fade Out */}
+      <div
+        className={`mb-6 transition-all duration-1000 ease-in-out ${showWelcome ? 'opacity-100 max-h-40' : 'opacity-0 max-h-0 overflow-hidden mb-0'
+          }`}
+      >
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
           Bem-vindo ao Agenda Inteligente
         </h1>
@@ -41,6 +74,13 @@ export default function Home() {
           Clique em um horário no calendário para criar um novo agendamento
         </p>
       </div>
+
+      {!unidade?.horarioAbertura && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4" role="alert">
+          <p className="font-bold">Atenção</p>
+          <p>Horários de funcionamento não configurados para esta unidade. O calendário pode estar totalmente liberado.</p>
+        </div>
+      )}
 
       {/* Calendário Visual */}
       <div className="mb-6">
@@ -52,6 +92,8 @@ export default function Home() {
           onViewChange={setView}
           date={currentDate}
           onNavigate={setCurrentDate}
+          horarioAbertura={unidade?.horarioAbertura}
+          horarioFechamento={unidade?.horarioFechamento}
         />
       </div>
 

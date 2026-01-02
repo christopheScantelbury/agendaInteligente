@@ -1,14 +1,16 @@
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { agendamentoService, Agendamento } from '../services/agendamentoService'
 import { clienteService } from '../services/clienteService'
 import { servicoService } from '../services/servicoService'
 import { unidadeService } from '../services/unidadeService'
 import { atendenteService } from '../services/atendenteService'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function NovoAgendamento() {
   const navigate = useNavigate()
+  const location = useLocation()
+
   const [formData, setFormData] = useState<Partial<Agendamento>>({
     clienteId: undefined,
     unidadeId: undefined,
@@ -17,6 +19,18 @@ export default function NovoAgendamento() {
     observacoes: '',
     servicos: [],
   })
+
+  useEffect(() => {
+    if (location.state) {
+      const { dataHoraInicio, unidadeId } = location.state
+      setFormData(prev => ({
+        ...prev,
+        dataHoraInicio: dataHoraInicio || prev.dataHoraInicio,
+        unidadeId: unidadeId || prev.unidadeId
+      }))
+    }
+  }, [location.state])
+
   const [servicosSelecionados, setServicosSelecionados] = useState<number[]>([])
 
   const { data: clientes = [] } = useQuery({
@@ -56,7 +70,7 @@ export default function NovoAgendamento() {
           descricao: servicoEncontrado?.descricao || servicoEncontrado?.nome
         }
       })
-      
+
       createMutation.mutate({
         clienteId: formData.clienteId,
         unidadeId: formData.unidadeId,
@@ -67,7 +81,7 @@ export default function NovoAgendamento() {
       } as Agendamento)
     }
   }
-  
+
   const handleServicoToggle = (servicoId: number) => {
     setServicosSelecionados(prev => {
       if (prev.includes(servicoId)) {

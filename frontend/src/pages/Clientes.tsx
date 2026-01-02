@@ -2,10 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { clienteService, Cliente } from '../services/clienteService'
 import { Plus, Trash2, Edit } from 'lucide-react'
 import { useState } from 'react'
+import { useNotification } from '../contexts/NotificationContext'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 export default function Clientes() {
+  const { showNotification } = useNotification()
   const [showModal, setShowModal] = useState(false)
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null })
   const queryClient = useQueryClient()
 
   const { data: clientes = [], isLoading } = useQuery({
@@ -17,12 +21,22 @@ export default function Clientes() {
     mutationFn: clienteService.excluir,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clientes'] })
+      showNotification('success', 'Cliente excluído com sucesso!')
+      setConfirmDelete({ isOpen: false, id: null })
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Erro ao excluir cliente'
+      showNotification('error', errorMessage)
     },
   })
 
   const handleDelete = (id: number) => {
-    if (confirm('Tem certeza que deseja excluir este cliente?')) {
-      deleteMutation.mutate(id)
+    setConfirmDelete({ isOpen: true, id })
+  }
+
+  const confirmDeleteAction = () => {
+    if (confirmDelete.id) {
+      deleteMutation.mutate(confirmDelete.id)
     }
   }
 
@@ -90,12 +104,24 @@ export default function Clientes() {
           }}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={confirmDelete.isOpen}
+        title="Confirmar Exclusão"
+        message="Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="danger"
+        onConfirm={confirmDeleteAction}
+        onCancel={() => setConfirmDelete({ isOpen: false, id: null })}
+      />
     </div>
   )
 }
 
 function ClienteModal({ cliente, onClose }: { cliente: Cliente | null; onClose: () => void }) {
   const queryClient = useQueryClient()
+  const { showNotification } = useNotification()
   const [formData, setFormData] = useState<Cliente>(
     cliente || {
       nome: '',
@@ -112,7 +138,12 @@ function ClienteModal({ cliente, onClose }: { cliente: Cliente | null; onClose: 
         : clienteService.criar(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clientes'] })
+      showNotification('success', cliente ? 'Cliente atualizado com sucesso!' : 'Cliente criado com sucesso!')
       onClose()
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Erro ao salvar cliente'
+      showNotification('error', errorMessage)
     },
   })
 
@@ -122,8 +153,24 @@ function ClienteModal({ cliente, onClose }: { cliente: Cliente | null; onClose: 
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose()
+        }
+      }}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) {
+          e.preventDefault()
+        }
+      }}
+      style={{ pointerEvents: 'auto' }}
+    >
+      <div
+        className="bg-white rounded-lg p-6 w-full max-w-md"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 className="text-2xl font-bold mb-4">
           {cliente ? 'Editar Cliente' : 'Novo Cliente'}
         </h2>

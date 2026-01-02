@@ -13,7 +13,7 @@ public class TokenDTO {
     private String token;
     private String tipo;
     private Long usuarioId;
+    private Long unidadeId;
     private String nome;
     private String perfil;
 }
-

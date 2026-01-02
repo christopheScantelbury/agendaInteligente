@@ -8,9 +8,9 @@ export interface Usuario {
   email: string
   senha?: string
   perfil: PerfilUsuario
-  clinicaId?: number
+  unidadeId?: number
   ativo?: boolean
-  nomeClinica?: string
+  nomeUnidade?: string
 }
 
 export const usuarioService = {

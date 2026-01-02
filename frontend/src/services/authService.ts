@@ -9,6 +9,7 @@ export interface TokenResponse {
   token: string
   tipo: string
   usuarioId: number
+  unidadeId: number
   nome: string
   perfil: string
 }

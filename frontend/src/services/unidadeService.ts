@@ -13,8 +13,10 @@ export interface Unidade {
   telefone?: string
   email?: string
   ativo?: boolean
-  clinicaId?: number
-  nomeClinica?: string
+
+
+  horarioAbertura?: string
+  horarioFechamento?: string
 }
 
 export const unidadeService = {
@@ -25,6 +27,11 @@ export const unidadeService = {
 
   listarTodos: async (): Promise<Unidade[]> => {
     const response = await api.get<Unidade[]>('/unidades')
+    return response.data
+  },
+
+  buscarPorId: async (id: number): Promise<Unidade> => {
+    const response = await api.get<Unidade>(`/unidades/${id}`)
     return response.data
   },
 

@@ -9,7 +9,7 @@ import org.mapstruct.ReportingPolicy;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface HorarioDisponivelMapper {
     
-    @Mapping(target = "atendente", ignore = true)
+    @Mapping(source = "atendente.id", target = "atendenteId")
     @Mapping(target = "atendenteNome", ignore = true)
     HorarioDisponivelDTO toDTO(HorarioDisponivel horario);
     

@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clientePublicoService } from '../services/clientePublicoService'
+import { useNotification } from '../contexts/NotificationContext'
+import { useConfirm } from '../hooks/useConfirm'
 
 export default function MeusAgendamentosCliente() {
   const navigate = useNavigate()
+  const { showNotification } = useNotification()
+  const { confirm, ConfirmComponent } = useConfirm()
   const [agendamentos, setAgendamentos] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
-  const [erro, setErro] = useState('')
 
   useEffect(() => {
     if (!clientePublicoService.isAuthenticated()) {
@@ -19,34 +22,38 @@ export default function MeusAgendamentosCliente() {
 
   const carregarAgendamentos = async () => {
     setLoading(true)
-    setErro('')
 
     try {
       const dados = await clientePublicoService.meusAgendamentos()
       setAgendamentos(dados)
     } catch (error: any) {
-      setErro(error.response?.data?.message || 'Erro ao carregar agendamentos')
+      const errorMessage = error.response?.data?.message || 'Erro ao carregar agendamentos'
+      showNotification('error', errorMessage)
     } finally {
       setLoading(false)
     }
   }
 
   const cancelarAgendamento = async (id: number) => {
-    if (!confirm('Tem certeza que deseja cancelar este agendamento?')) {
-      return
-    }
+    confirm({
+      message: 'Tem certeza que deseja cancelar este agendamento?',
+      title: 'Confirmar Cancelamento',
+      variant: 'warning',
+      onConfirm: async () => {
+        setLoading(true)
 
-    setLoading(true)
-    setErro('')
-
-    try {
-      await clientePublicoService.cancelarAgendamento(id)
-      await carregarAgendamentos()
-    } catch (error: any) {
-      setErro(error.response?.data?.message || 'Erro ao cancelar agendamento')
-    } finally {
-      setLoading(false)
-    }
+        try {
+          await clientePublicoService.cancelarAgendamento(id)
+          showNotification('success', 'Agendamento cancelado com sucesso!')
+          await carregarAgendamentos()
+        } catch (error: any) {
+          const errorMessage = error.response?.data?.message || 'Erro ao cancelar agendamento'
+          showNotification('error', errorMessage)
+        } finally {
+          setLoading(false)
+        }
+      },
+    })
   }
 
   const formatarDataHora = (dataHora: string) => {
@@ -106,12 +113,6 @@ export default function MeusAgendamentosCliente() {
               </button>
             </div>
           </div>
-
-          {erro && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-              {erro}
-            </div>
-          )}
 
           {loading && agendamentos.length === 0 ? (
             <div className="text-center py-8">Carregando...</div>
@@ -190,6 +191,7 @@ export default function MeusAgendamentosCliente() {
           )}
         </div>
       </div>
+      {ConfirmComponent}
     </div>
   )
 }

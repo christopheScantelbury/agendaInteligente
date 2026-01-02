@@ -53,6 +53,38 @@ public class AtendenteService {
     }
 
     @Transactional(readOnly = true)
+    public List<AtendenteDTO> listarPorUnidadeEServicos(Long unidadeId, List<Long> servicosIds) {
+        log.debug("Listando atendentes da unidade {} que prestam os serviços {}", unidadeId, servicosIds);
+        
+        List<Atendente> atendentes = atendenteRepository.findByUnidadeIdAndAtivoTrue(unidadeId);
+        
+        if (servicosIds == null || servicosIds.isEmpty()) {
+            return atendentes.stream()
+                    .map(this::toDTO)
+                    .collect(Collectors.toList());
+        }
+        
+        // Filtrar atendentes que prestam TODOS os serviços selecionados
+        List<Atendente> atendentesFiltrados = atendentes.stream()
+                .filter(atendente -> {
+                    if (atendente.getServicos() == null || atendente.getServicos().isEmpty()) {
+                        return false;
+                    }
+                    // Verifica se o atendente presta todos os serviços selecionados
+                    List<Long> servicosAtendente = atendente.getServicos().stream()
+                            .filter(Servico::getAtivo)
+                            .map(Servico::getId)
+                            .collect(Collectors.toList());
+                    return servicosAtendente.containsAll(servicosIds);
+                })
+                .collect(Collectors.toList());
+        
+        return atendentesFiltrados.stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public AtendenteDTO buscarPorId(Long id) {
         Atendente atendente = atendenteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Atendente não encontrado"));

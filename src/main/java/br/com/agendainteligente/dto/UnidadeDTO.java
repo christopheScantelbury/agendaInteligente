@@ -11,12 +11,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UnidadeDTO {
-    
+
     private Long id;
-    
+
     @NotBlank(message = "Nome é obrigatório")
     private String nome;
-    
+
     private String descricao;
     private String endereco;
     private String numero;
@@ -27,10 +27,13 @@ public class UnidadeDTO {
     private String telefone;
     private String email;
     private Boolean ativo;
-    
-    private Long clinicaId; // ID da clínica à qual a unidade pertence
-    
-    // Para exibição
-    private String nomeClinica;
-}
 
+    private String razaoSocial;
+    private String cnpj;
+    private String inscricaoMunicipal;
+    private String inscricaoEstadual;
+    private String complemento;
+
+    private java.time.LocalTime horarioAbertura;
+    private java.time.LocalTime horarioFechamento;
+}

@@ -32,16 +32,17 @@ public class NfseXmlBuilder {
     public String montarXmlLoteRps(Agendamento agendamento, BigDecimal valor, String numeroLote) {
         var cliente = agendamento.getCliente();
         var servicosList = agendamento.getServicos();
-        var clinica = agendamento.getUnidade().getClinica();
+        var unidade = agendamento.getUnidade();
 
         // Monta discriminação dos serviços
         StringBuilder discriminacao = new StringBuilder();
         if (servicosList != null && !servicosList.isEmpty()) {
             for (var agendamentoServico : servicosList) {
                 var servico = agendamentoServico.getServico();
-                String descricao = agendamentoServico.getDescricao() != null && !agendamentoServico.getDescricao().isEmpty()
-                        ? agendamentoServico.getDescricao()
-                        : servico.getDescricao() != null ? servico.getDescricao() : servico.getNome();
+                String descricao = agendamentoServico.getDescricao() != null
+                        && !agendamentoServico.getDescricao().isEmpty()
+                                ? agendamentoServico.getDescricao()
+                                : servico.getDescricao() != null ? servico.getDescricao() : servico.getNome();
 
                 discriminacao.append(String.format("%s - Qtd: %d - Valor Unit: R$ %.2f - Total: R$ %.2f; ",
                         descricao,
@@ -54,11 +55,12 @@ public class NfseXmlBuilder {
         }
 
         // Formata CNPJ (remove formatação)
-        String cnpjPrestador = limparCnpj(clinica.getCnpj());
+        String cnpjPrestador = limparCnpj(unidade.getCnpj());
         String cpfCnpjTomador = limparCnpj(cliente.getCpfCnpj());
-        String inscricaoMunicipal = clinica.getInscricaoMunicipal() != null && !clinica.getInscricaoMunicipal().isEmpty()
-                ? clinica.getInscricaoMunicipal()
-                : "00000000";
+        String inscricaoMunicipal = unidade.getInscricaoMunicipal() != null
+                && !unidade.getInscricaoMunicipal().isEmpty()
+                        ? unidade.getInscricaoMunicipal()
+                        : "00000000";
 
         // Data de emissão no formato ISO
         String dataEmissao = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
@@ -137,8 +139,7 @@ public class NfseXmlBuilder {
                 escapeXml(cliente.getBairro() != null ? cliente.getBairro() : ""),
                 cliente.getCep() != null ? cliente.getCep() : "",
                 cliente.getTelefone() != null ? cliente.getTelefone() : "",
-                cliente.getEmail() != null ? cliente.getEmail() : ""
-        );
+                cliente.getEmail() != null ? cliente.getEmail() : "");
 
         // Monta o Lote de RPS
         String xmlLoteRps = String.format("""
@@ -158,8 +159,7 @@ public class NfseXmlBuilder {
                 numeroLote,
                 cnpjPrestador,
                 inscricaoMunicipal,
-                xmlRps
-        );
+                xmlRps);
 
         // Monta o XML completo com cabeçalho e dados
         return montarXmlCompleto(xmlLoteRps);
@@ -182,8 +182,7 @@ public class NfseXmlBuilder {
                 """,
                 versaoCabecalho,
                 versaoDados,
-                xmlDados
-        );
+                xmlDados);
     }
 
     /**
@@ -198,29 +197,31 @@ public class NfseXmlBuilder {
         String cabecalho = partes[0] + "</Nfsecabecmsg>";
         String dados = partes.length > 1 ? partes[1].trim() : "";
 
-        return String.format("""
-                <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:e="http://www.e-nfs.com.br">
-                    <soapenv:Header/>
-                    <soapenv:Body>
-                        <e:RecepcionarLoteRps.Execute>
-                            %s
-                            %s
-                        </e:RecepcionarLoteRps.Execute>
-                    </soapenv:Body>
-                </soapenv:Envelope>
-                """,
+        return String.format(
+                """
+                        <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:e="http://www.e-nfs.com.br">
+                            <soapenv:Header/>
+                            <soapenv:Body>
+                                <e:RecepcionarLoteRps.Execute>
+                                    %s
+                                    %s
+                                </e:RecepcionarLoteRps.Execute>
+                            </soapenv:Body>
+                        </soapenv:Envelope>
+                        """,
                 cabecalho,
-                dados
-        );
+                dados);
     }
 
     private String limparCnpj(String cnpj) {
-        if (cnpj == null) return "";
+        if (cnpj == null)
+            return "";
         return cnpj.replaceAll("[^0-9]", "");
     }
 
     private String escapeXml(String texto) {
-        if (texto == null) return "";
+        if (texto == null)
+            return "";
         return texto
                 .replace("&", "&amp;")
                 .replace("<", "&lt;")
@@ -229,4 +230,3 @@ public class NfseXmlBuilder {
                 .replace("'", "&apos;");
     }
 }
-

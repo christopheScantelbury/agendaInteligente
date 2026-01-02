@@ -14,25 +14,25 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UsuarioDTO {
-    
+
     private Long id;
-    
+
     @NotBlank(message = "Nome é obrigatório")
     private String nome;
-    
+
     @NotBlank(message = "Email é obrigatório")
     @Email(message = "Email inválido")
     private String email;
-    
+
     private String senha; // Opcional na atualização
-    
+
     @NotNull(message = "Perfil é obrigatório")
     private PerfilUsuario perfil;
-    
-    private Long clinicaId; // Clínica à qual o usuário pertence (para GERENTE)
-    
+
+    private Long unidadeId; // Unidade à qual o usuário pertence (para GERENTE)
+
     private Boolean ativo;
-    
+
     // Para exibição
-    private String nomeClinica;
+    private String nomeUnidade;
 }

@@ -5,10 +5,14 @@ import { useState } from 'react'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
 import FormField from '../components/FormField'
+import { useNotification } from '../contexts/NotificationContext'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 export default function Servicos() {
+  const { showNotification } = useNotification()
   const [showModal, setShowModal] = useState(false)
   const [editingServico, setEditingServico] = useState<Servico | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null })
   const queryClient = useQueryClient()
 
   const { data: servicos = [], isLoading } = useQuery({
@@ -20,12 +24,22 @@ export default function Servicos() {
     mutationFn: servicoService.excluir,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['servicos'] })
+      showNotification('success', 'Serviço excluído com sucesso!')
+      setConfirmDelete({ isOpen: false, id: null })
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Erro ao excluir serviço'
+      showNotification('error', errorMessage)
     },
   })
 
   const handleDelete = (id: number) => {
-    if (confirm('Tem certeza que deseja excluir este serviço?')) {
-      deleteMutation.mutate(id)
+    setConfirmDelete({ isOpen: true, id })
+  }
+
+  const confirmDeleteAction = () => {
+    if (confirmDelete.id) {
+      deleteMutation.mutate(confirmDelete.id)
     }
   }
 
@@ -113,6 +127,17 @@ export default function Servicos() {
           }}
         />
       </Modal>
+
+      <ConfirmDialog
+        isOpen={confirmDelete.isOpen}
+        title="Confirmar Exclusão"
+        message="Tem certeza que deseja excluir este serviço? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="danger"
+        onConfirm={confirmDeleteAction}
+        onCancel={() => setConfirmDelete({ isOpen: false, id: null })}
+      />
     </div>
   )
 }
@@ -125,6 +150,7 @@ function ServicoForm({
   onClose: () => void
 }) {
   const queryClient = useQueryClient()
+  const { showNotification } = useNotification()
   const [formData, setFormData] = useState<Servico>(
     servico || {
       id: 0,
@@ -143,7 +169,12 @@ function ServicoForm({
         : servicoService.criar(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['servicos'] })
+      showNotification('success', servico ? 'Serviço atualizado com sucesso!' : 'Serviço criado com sucesso!')
       onClose()
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Erro ao salvar serviço'
+      showNotification('error', errorMessage)
     },
   })
 

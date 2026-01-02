@@ -21,10 +21,6 @@ public class Unidade {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "clinica_id", nullable = false)
-    private Clinica clinica;
-
     @Column(nullable = false, length = 100)
     private String nome;
 
@@ -59,6 +55,18 @@ public class Unidade {
     @Builder.Default
     private Boolean ativo = true;
 
+    @Column(name = "horario_abertura")
+    private java.time.LocalTime horarioAbertura;
+
+    @Column(name = "horario_fechamento")
+    private java.time.LocalTime horarioFechamento;
+
+    @Column(length = 14)
+    private String cnpj;
+
+    @Column(name = "inscricao_municipal", length = 20)
+    private String inscricaoMunicipal;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataCriacao;
 
@@ -76,4 +84,3 @@ public class Unidade {
         dataAtualizacao = LocalDateTime.now();
     }
 }
-

@@ -27,6 +27,9 @@ interface CalendarViewProps {
   onViewChange?: (view: View) => void
   date?: Date
   onNavigate?: (date: Date) => void
+  disabled?: boolean
+  horarioAbertura?: string
+  horarioFechamento?: string
 }
 
 export default function CalendarView({
@@ -37,6 +40,9 @@ export default function CalendarView({
   onViewChange,
   date = new Date(),
   onNavigate,
+  disabled = false,
+  horarioAbertura,
+  horarioFechamento,
 }: CalendarViewProps) {
   const [currentView, setCurrentView] = useState<View>(view)
   const [currentDate, setCurrentDate] = useState<Date>(date)
@@ -62,6 +68,41 @@ export default function CalendarView({
       }
     })
   }, [agendamentos])
+
+  const isSlotDisabled = (date: Date) => {
+    if (!horarioAbertura || !horarioFechamento) return false
+
+    // Converter horário atual do slot para minutos do dia
+    const currentMinutes = date.getHours() * 60 + date.getMinutes()
+
+    // Parse horário de abertura
+    const [openHour, openMinute] = horarioAbertura.split(':').map(Number)
+    const openMinutes = openHour * 60 + openMinute
+
+    // Parse horário de fechamento
+    const [closeHour, closeMinute] = horarioFechamento.split(':').map(Number)
+    const closeMinutes = closeHour * 60 + closeMinute
+
+    // Check if slot is in the past
+    const now = new Date()
+    if (date < now) return true
+
+    return currentMinutes < openMinutes || currentMinutes >= closeMinutes
+  }
+
+  const slotPropGetter = (date: Date) => {
+    const isDisabled = isSlotDisabled(date)
+
+    if (isDisabled) {
+      return {
+        className: 'bg-red-50 cursor-not-allowed',
+        style: {
+          backgroundColor: '#fef2f2', // red-50
+        }
+      }
+    }
+    return {}
+  }
 
   const eventStyleGetter = (event: CalendarEvent) => {
     let backgroundColor = '#3174ad'
@@ -92,12 +133,21 @@ export default function CalendarView({
   }
 
   const handleSelectSlot = (slotInfo: SlotInfo) => {
+    if (disabled) return
+
+    // Verificar se o slot selecionado está dentro do horário de funcionamento
+    // Checa tanto o início quanto o (fim - 1 minuto) para garantir que intervalos longos não furem
+    if (isSlotDisabled(slotInfo.start) || isSlotDisabled(new Date(slotInfo.end.getTime() - 1))) {
+      return // Ignora o clique se estiver fora do horário
+    }
+
     if (onSelectSlot) {
       onSelectSlot(slotInfo)
     }
   }
 
   const handleSelectEvent = (event: CalendarEvent) => {
+    if (disabled) return
     if (onSelectEvent) {
       onSelectEvent(event)
     }
@@ -118,7 +168,15 @@ export default function CalendarView({
   }
 
   return (
-    <div className="h-[600px] lg:h-[700px] w-full bg-white rounded-lg shadow-sm p-4">
+    <div className={`h-[600px] lg:h-[700px] w-full bg-white rounded-lg shadow-sm p-4 relative ${disabled ? 'pointer-events-none opacity-50' : ''}`}>
+      {disabled && (
+        <div className="absolute inset-0 bg-gray-900 bg-opacity-30 z-10 rounded-lg flex items-center justify-center backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-xl p-6 border-2 border-blue-300">
+            <p className="text-gray-700 font-semibold text-lg">Modal aberto</p>
+            <p className="text-gray-500 text-sm mt-1">O calendário está desabilitado enquanto o modal estiver aberto</p>
+          </div>
+        </div>
+      )}
       <Calendar
         localizer={localizer}
         events={events}
@@ -130,8 +188,9 @@ export default function CalendarView({
         onNavigate={handleNavigate}
         onSelectSlot={handleSelectSlot}
         onSelectEvent={handleSelectEvent}
-        selectable
+        selectable={!disabled}
         eventPropGetter={eventStyleGetter}
+        slotPropGetter={slotPropGetter}
         messages={{
           next: 'Próximo',
           previous: 'Anterior',

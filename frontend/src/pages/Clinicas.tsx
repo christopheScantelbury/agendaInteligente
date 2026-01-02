@@ -2,10 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { clinicaService, Clinica } from '../services/clinicaService'
 import { Plus, Trash2, Edit } from 'lucide-react'
 import { useState } from 'react'
+import { useNotification } from '../contexts/NotificationContext'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 export default function Clinicas() {
+  const { showNotification } = useNotification()
   const [showModal, setShowModal] = useState(false)
   const [editingClinica, setEditingClinica] = useState<Clinica | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null })
   const queryClient = useQueryClient()
 
   const { data: clinicas = [], isLoading } = useQuery({
@@ -17,12 +21,22 @@ export default function Clinicas() {
     mutationFn: clinicaService.excluir,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinicas'] })
+      showNotification('success', 'Clínica excluída com sucesso!')
+      setConfirmDelete({ isOpen: false, id: null })
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Erro ao excluir clínica'
+      showNotification('error', errorMessage)
     },
   })
 
   const handleDelete = (id: number) => {
-    if (confirm('Tem certeza que deseja excluir esta clínica?')) {
-      deleteMutation.mutate(id)
+    setConfirmDelete({ isOpen: true, id })
+  }
+
+  const confirmDeleteAction = () => {
+    if (confirmDelete.id) {
+      deleteMutation.mutate(confirmDelete.id)
     }
   }
 
@@ -93,12 +107,24 @@ export default function Clinicas() {
           }}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={confirmDelete.isOpen}
+        title="Confirmar Exclusão"
+        message="Tem certeza que deseja excluir esta clínica? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="danger"
+        onConfirm={confirmDeleteAction}
+        onCancel={() => setConfirmDelete({ isOpen: false, id: null })}
+      />
     </div>
   )
 }
 
 function ClinicaModal({ clinica, onClose }: { clinica: Clinica | null; onClose: () => void }) {
   const queryClient = useQueryClient()
+  const { showNotification } = useNotification()
   const [formData, setFormData] = useState<Clinica>(
     clinica || {
       nome: '',
@@ -126,7 +152,12 @@ function ClinicaModal({ clinica, onClose }: { clinica: Clinica | null; onClose: 
         : clinicaService.criar(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinicas'] })
+      showNotification('success', clinica ? 'Clínica atualizada com sucesso!' : 'Clínica criada com sucesso!')
       onClose()
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Erro ao salvar clínica'
+      showNotification('error', errorMessage)
     },
   })
 
@@ -136,8 +167,24 @@ function ClinicaModal({ clinica, onClose }: { clinica: Clinica | null; onClose: 
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose()
+        }
+      }}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) {
+          e.preventDefault()
+        }
+      }}
+      style={{ pointerEvents: 'auto' }}
+    >
+      <div
+        className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 className="text-2xl font-bold mb-4">
           {clinica ? 'Editar Clínica' : 'Nova Clínica'}
         </h2>

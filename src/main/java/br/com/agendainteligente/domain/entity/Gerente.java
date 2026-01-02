@@ -21,8 +21,8 @@ public class Gerente {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "clinica_id", nullable = false)
-    private Clinica clinica;
+    @JoinColumn(name = "unidade_id", nullable = false)
+    private Unidade unidade;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id", nullable = false, unique = true)
@@ -55,4 +55,3 @@ public class Gerente {
         dataAtualizacao = LocalDateTime.now();
     }
 }
-
