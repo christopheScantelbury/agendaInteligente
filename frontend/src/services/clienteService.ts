@@ -13,6 +13,8 @@ export interface Cliente {
   cep?: string
   cidade?: string
   uf?: string
+  dataNascimento?: string
+  rg?: string
 }
 
 export const clienteService = {

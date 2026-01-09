@@ -17,3 +17,5 @@ public interface GerenteRepository extends JpaRepository<Gerente, Long> {
 
     boolean existsByUsuarioId(Long usuarioId);
 }
+
+

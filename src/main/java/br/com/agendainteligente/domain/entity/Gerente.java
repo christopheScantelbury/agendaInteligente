@@ -55,3 +55,5 @@ public class Gerente {
         dataAtualizacao = LocalDateTime.now();
     }
 }
+
+

@@ -156,15 +156,13 @@ function AtendenteForm({
 }) {
   const queryClient = useQueryClient()
   const { showNotification } = useNotification()
-  const [formData, setFormData] = useState<Atendente>(
-    atendente || {
-      unidadeId: 0,
-      usuarioId: 0,
-      cpf: '',
-      telefone: '',
-      ativo: true,
-    }
-  )
+  const [formData, setFormData] = useState<Atendente>({
+    unidadeId: 0,
+    usuarioId: 0,
+    cpf: '',
+    telefone: '',
+    ativo: true,
+  })
 
   const { data: unidades = [] } = useQuery({
     queryKey: ['unidades'],
@@ -181,14 +179,29 @@ function AtendenteForm({
     queryFn: servicoService.listarTodos,
   })
 
-  const [servicosSelecionados, setServicosSelecionados] = useState<number[]>(
-    atendente?.servicosIds || []
-  )
+  const [servicosSelecionados, setServicosSelecionados] = useState<number[]>([])
 
-  // Carrega serviços selecionados quando edita
+  // Carrega dados do atendente quando edita
   useEffect(() => {
-    if (atendente?.servicosIds) {
-      setServicosSelecionados(atendente.servicosIds)
+    if (atendente) {
+      setFormData({
+        unidadeId: atendente.unidadeId || 0,
+        usuarioId: atendente.usuarioId || 0,
+        cpf: atendente.cpf || '',
+        telefone: atendente.telefone || '',
+        ativo: atendente.ativo !== undefined ? atendente.ativo : true,
+      })
+      setServicosSelecionados(atendente.servicosIds || [])
+    } else {
+      // Reset para novo atendente
+      setFormData({
+        unidadeId: 0,
+        usuarioId: 0,
+        cpf: '',
+        telefone: '',
+        ativo: true,
+      })
+      setServicosSelecionados([])
     }
   }, [atendente])
 

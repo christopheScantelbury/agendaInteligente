@@ -10,6 +10,7 @@ import NotificationContainer from './components/NotificationContainer'
 import { NotificationProvider } from './contexts/NotificationContext'
 import Login from './pages/Login'
 import LoginCliente from './pages/LoginCliente'
+import CadastroCliente from './pages/CadastroCliente'
 import AgendarCliente from './pages/AgendarCliente'
 import MeusAgendamentosCliente from './pages/MeusAgendamentosCliente'
 import Dashboard from './pages/Dashboard'
@@ -43,6 +44,10 @@ function App() {
               <Route
                 path="/cliente/login"
                 element={clientePublicoService.isAuthenticated() ? <Navigate to="/cliente/agendar" /> : <LoginCliente />}
+              />
+              <Route
+                path="/cliente/cadastro"
+                element={clientePublicoService.isAuthenticated() ? <Navigate to="/cliente/agendar" /> : <CadastroCliente />}
               />
               <Route
                 path="/cliente/agendar"

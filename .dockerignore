@@ -1,17 +1,54 @@
-target/
-.mvn/
-*.class
-*.jar
-*.war
-*.ear
-*.log
+# Git
 .git
 .gitignore
-.idea
-.vscode
-*.iml
-node_modules
-frontend/node_modules
-frontend/dist
-frontend/.vite
+.gitattributes
 
+# Documentation
+*.md
+!README.md
+docs/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+logs.txt
+
+# Build artifacts
+target/
+dist/
+node_modules/
+frontend/dist/
+frontend/node_modules/
+
+# Docker
+docker-compose*.yml
+docker-compose*.yaml
+Dockerfile*
+.dockerignore
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test files
+**/test/
+**/*.test.*
+**/*.spec.*
+
+# Temporary files
+*.tmp
+*.temp
+.cache/

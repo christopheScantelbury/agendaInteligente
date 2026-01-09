@@ -18,3 +18,5 @@ COMMENT ON COLUMN clinicas.categoria_empresa IS 'Categoria do negócio: ACADEMIA
 COMMENT ON COLUMN clientes.senha IS 'Senha criptografada para autenticação do cliente';
 COMMENT ON COLUMN clientes.ativo IS 'Indica se o cliente está ativo no sistema';
 
+
+

@@ -34,6 +34,8 @@ export interface ClienteCadastroRequest {
   cep?: string
   cidade?: string
   uf?: string
+  dataNascimento: string
+  rg?: string
   senha?: string
 }
 
@@ -98,4 +100,5 @@ export const clientePublicoService = {
     await api.post(`/publico/clientes/agendamentos/${id}/cancelar`)
   },
 }
+
 

@@ -102,6 +102,29 @@ docker-compose up -d
 
 **Perfil**: ADMIN (acesso total a todas as empresas e funcionalidades)
 
+### Login de Gerente
+
+**Interface Administrativa**: http://localhost:5173/login
+
+- **Email**: `gerente@clinicasaudetotal.com.br`
+- **Senha**: `123456`
+
+**Perfil**: GERENTE (gerencia uma unidade específica)
+
+### Login de Atendentes/Profissionais
+
+**Interface Administrativa**: http://localhost:5173/login
+
+**Atendente 1:**
+- **Email**: `atendente1@clinicasaudetotal.com.br`
+- **Senha**: `123456`
+
+**Atendente 2:**
+- **Email**: `atendente2@clinicasaudetotal.com.br`
+- **Senha**: `123456`
+
+**Perfil**: PROFISSIONAL/ATENDENTE (pode criar horários disponíveis)
+
 ### Perfis de Acesso
 
 O sistema possui 4 níveis de acesso:
@@ -137,12 +160,35 @@ O sistema possui 4 níveis de acesso:
 
 **URLs:**
 - Login: http://localhost:5173/cliente/login
+- **Cadastro**: http://localhost:5173/cliente/cadastro
 - Agendar: http://localhost:5173/cliente/agendar
 - Meus Agendamentos: http://localhost:5173/cliente/meus-agendamentos
 
 **Cadastro de Cliente:**
-- Os clientes podem se cadastrar através da interface pública
+- Os clientes podem se cadastrar através da interface pública em http://localhost:5173/cliente/cadastro
 - Ou podem ser cadastrados por um admin/gerente/profissional
+
+**Clientes de Teste (já cadastrados):**
+
+**Cliente 1 - José da Silva:**
+- **Email/CPF**: `jose.silva@email.com` ou `12345678901`
+- **Senha**: `123456`
+
+**Cliente 2 - Maria Oliveira:**
+- **Email/CPF**: `maria.oliveira@email.com` ou `98765432100`
+- **Senha**: `123456`
+
+**Cliente 3 - Pedro Costa:**
+- **Email/CPF**: `pedro.costa@email.com` ou `11122233344`
+- **Senha**: `123456`
+
+**Cliente 4 - Ana Paula Santos:**
+- **Email/CPF**: `ana.santos@email.com` ou `55566677788`
+- **Senha**: `123456`
+
+**Cliente 5 - Carlos Eduardo Lima:**
+- **Email/CPF**: `carlos.lima@email.com` ou `99988877766`
+- **Senha**: `123456`
 
 ### Recuperação de Senha
 
@@ -158,15 +204,15 @@ O sistema possui 4 níveis de acesso:
 
 O sistema já vem com dados de exemplo:
 
-- ✅ **1 Unidade**: Matriz (Configurada com dados completos)
-- ✅ **3 Usuários**:
+- ✅ **1 Clínica**: Clínica Saúde Total
+- ✅ **2 Unidades**: Unidade Centro e Unidade Zona Norte
+- ✅ **4 Usuários**:
   - 1 Admin (admin@agendainteligente.com)
+  - 1 Gerente (gerente@clinicasaudetotal.com.br)
   - 2 Profissionais/Atendentes
 - ✅ **8 Serviços** cadastrados
-- ✅ **3 Clientes** de exemplo
-- ✅ Atendentes vinculados aos serviços
-
-**Nota**: Os clientes de exemplo não possuem senha cadastrada. Para testar o login de clientes, cadastre um novo cliente pela interface pública ou defina uma senha para um cliente existente.
+- ✅ **5 Clientes** de exemplo (todos com senha cadastrada)
+- ✅ Atendentes vinculados aos serviços e unidades
 
 ## 🔧 Configurações do Docker
 

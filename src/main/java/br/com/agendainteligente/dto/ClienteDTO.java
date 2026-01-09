@@ -2,11 +2,14 @@ package br.com.agendainteligente.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
 
 @Data
 @Builder
@@ -34,5 +37,9 @@ public class ClienteDTO {
     private String cep;
     private String cidade;
     private String uf;
+    
+    @NotNull(message = "Data de nascimento é obrigatória")
+    private LocalDate dataNascimento;
+    private String rg;
 }
 

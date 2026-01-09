@@ -123,9 +123,7 @@ body {
   .rbc-time-view {
     min-width: 600px;
     /* Garante que as colunas não fiquem esmagadas */
-  }
-
-  .rbc-calendar {
+  }  .rbc-calendar {
     overflow-x: auto;
     /* Permite scroll horizontal no container pai se necessário */
   }

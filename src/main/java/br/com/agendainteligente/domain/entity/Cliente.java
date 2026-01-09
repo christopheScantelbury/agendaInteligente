@@ -53,6 +53,12 @@ public class Cliente {
     @Column(length = 2)
     private String uf;
 
+    @Column(name = "data_nascimento", nullable = false)
+    private java.time.LocalDate dataNascimento;
+
+    @Column(length = 20)
+    private String rg;
+
     @Column(length = 255)
     private String senha;
 
