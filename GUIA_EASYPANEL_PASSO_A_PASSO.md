@@ -72,7 +72,7 @@ GRANT ALL PRIVILEGES ON DATABASE agenda_inteligente TO agenda_user;
     - Build Context: `.`
 
 ### **Aba "Environment Variables" (Variáveis de Ambiente)**
-Adicione estas variáveis (substitua os valores entre `[]`):
+Adicione estas variáveis **OBRIGATÓRIAS**:
 
 ```bash
 # Spring Profile
@@ -88,15 +88,20 @@ SPRING_REDIS_HOST=agenda_redis
 SPRING_REDIS_PORT=6379
 
 # JWT - GERE UMA CHAVE SEGURA (obrigatório alterar!)
+# Execute: openssl rand -base64 64
 JWT_SECRET=[GERE COM: openssl rand -base64 64]
+```
 
-# NFS-e Manaus (se necessário)
+**Opcionais** (se usar NFS-e Manaus):
+```bash
 NFSE_MANAUS_AMBIENTE=producao
 NFSE_CERTIFICADO_PATH=/app/certificados/certificado.pfx
 NFSE_CERTIFICADO_SENHA=[senha do certificado]
 NFSE_USAR_ASSINATURA=true
+```
 
-# Gateway de Pagamento (se necessário)
+**Opcionais** (se usar Stripe):
+```bash
 PAYMENT_PROVIDER=stripe
 PAYMENT_API_KEY=[sua chave de API]
 PAYMENT_WEBHOOK_SECRET=[webhook secret]
@@ -144,22 +149,23 @@ Adicione dependências:
     - Build Context: `frontend`
 
 ### **Aba "Environment Variables" (Variáveis de Ambiente)**
-Adicione:
+Adicione estas variáveis **OBRIGATÓRIAS**:
 
 ```bash
-# URL da API Backend
-# Se o backend tiver domínio próprio:
-VITE_API_URL=https://api.seudominio.com.br/api
-# OU se usar mesmo domínio com proxy:
+# URL da API para o build do React (usa proxy nginx)
 VITE_API_URL=/api
+
+# Nome do serviço backend no EasyPanel (para proxy Nginx interno)
+# IMPORTANTE: Use o nome EXATO do serviço backend criado no EasyPanel
+# Para descobrir: veja na aba "Networking" do serviço backend
+# Exemplo: agenda-inteligente_agenda_backend
+BACKEND_HOST=agenda-inteligente_agenda_backend
 ```
 
 ### **Aba "Build Arguments" (Argumentos de Build)**
-Adicione (mesmo valor da variável de ambiente):
+Adicione (mesmo valor de VITE_API_URL):
 
 ```bash
-VITE_API_URL=https://api.seudominio.com.br/api
-# OU
 VITE_API_URL=/api
 ```
 
@@ -268,6 +274,109 @@ curl https://api.seudominio.com.br/actuator/health
 1. Configure **webhook** no repositório Git
 2. No EasyPanel, habilite **"Auto Deploy"** no serviço
 3. A cada push, o serviço será atualizado automaticamente
+
+---
+
+## 🔐 **Variáveis de Ambiente - Referência Completa**
+
+### 📋 **Backend (agenda_backend) - EasyPanel (Produção)**
+
+**Obrigatórias:**
+```bash
+SPRING_PROFILES_ACTIVE=prod
+SPRING_DATASOURCE_URL=jdbc:postgresql://agenda_postgres:5432/agenda_inteligente
+SPRING_DATASOURCE_USERNAME=agenda_user
+SPRING_DATASOURCE_PASSWORD=[SENHA DO POSTGRES]
+SPRING_REDIS_HOST=agenda_redis
+SPRING_REDIS_PORT=6379
+JWT_SECRET=[GERAR COM: openssl rand -base64 64]
+```
+
+**Opcionais (NFS-e Manaus):**
+```bash
+NFSE_MANAUS_AMBIENTE=producao
+NFSE_CERTIFICADO_PATH=/app/certificados/certificado.pfx
+NFSE_CERTIFICADO_SENHA=[senha do certificado]
+NFSE_USAR_ASSINATURA=true
+```
+
+**Opcionais (Pagamento Stripe):**
+```bash
+PAYMENT_PROVIDER=stripe
+PAYMENT_API_KEY=[sua chave]
+PAYMENT_WEBHOOK_SECRET=[webhook secret]
+```
+
+**Opcionais (CORS - IMPORTANTE para produção):**
+```bash
+# URLs permitidas para CORS (separadas por vírgula, SEM espaços)
+# Se não configurar, usará os padrões: localhost + EasyPanel (agendainteligenteapp.cloud)
+# Para domínio customizado, adicione:
+CORS_ALLOWED_ORIGINS=https://seudominio.com.br,https://www.seudominio.com.br,https://agendainteligenteapp.cloud
+```
+
+### 📋 **Frontend (agenda_frontend) - EasyPanel (Produção)**
+
+**Obrigatórias:**
+```bash
+# URL da API para o build do React (usa proxy nginx)
+VITE_API_URL=/api
+
+# Nome do serviço backend no EasyPanel (para proxy Nginx interno)
+# IMPORTANTE: Use o nome EXATO do serviço backend criado no EasyPanel
+BACKEND_HOST=agenda-inteligente_agenda_backend
+```
+
+**Build Arguments (mesmo valor de VITE_API_URL):**
+```bash
+VITE_API_URL=/api
+```
+
+### 🏠 **Variáveis para Ambiente LOCAL (Docker Compose)**
+
+**Backend:**
+```bash
+SPRING_PROFILES_ACTIVE=docker
+SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/agenda_inteligente
+SPRING_DATASOURCE_USERNAME=postgres
+SPRING_DATASOURCE_PASSWORD=postgres
+SPRING_REDIS_HOST=redis
+SPRING_REDIS_PORT=6379
+JWT_SECRET=mySecretKey123456789012345678901234567890
+```
+
+**Frontend:**
+```bash
+VITE_API_URL=/api
+BACKEND_HOST=backend
+```
+
+### ⚠️ **Importante**
+
+1. **JWT_SECRET**: Gere uma chave segura para produção:
+   ```bash
+   openssl rand -base64 64
+   ```
+
+2. **Nomes dos Serviços no EasyPanel**: Use exatamente:
+   - PostgreSQL: `agenda_postgres`
+   - Redis: `agenda_redis`
+   - Backend: `agenda_backend`
+   - Frontend: `agenda_frontend`
+
+3. **Portas**:
+   - Backend: `8080` (interno)
+   - Frontend: `80` (interno)
+
+4. **BACKEND_HOST**:
+   - **Local**: `backend` (nome do serviço no docker-compose)
+   - **EasyPanel**: `agenda-inteligente_agenda_backend` (nome completo do serviço no EasyPanel)
+   - Para descobrir o nome exato, veja na aba "Networking" do serviço backend no EasyPanel
+
+5. **VITE_API_URL**:
+   - **Local**: `/api` (usa proxy nginx)
+   - **EasyPanel**: `/api` (usa proxy nginx)
+   - **Alternativa**: Se backend tiver domínio próprio, use: `https://api.seudominio.com.br/api`
 
 ---
 

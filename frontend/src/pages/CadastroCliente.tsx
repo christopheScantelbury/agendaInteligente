@@ -67,15 +67,6 @@ export default function CadastroCliente() {
     }
   }
 
-  const formatarCpfCnpj = (value: string) => {
-    const apenasNumeros = value.replace(/\D/g, '')
-    if (apenasNumeros.length <= 11) {
-      return apenasNumeros.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
-    } else {
-      return apenasNumeros.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
-    }
-  }
-
   const formatarCep = (value: string) => {
     const apenasNumeros = value.replace(/\D/g, '')
     return apenasNumeros.replace(/(\d{5})(\d{3})/, '$1-$2')

@@ -23,10 +23,14 @@ FROM nginx:alpine
 # Copiar build para nginx
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copiar configuração do nginx
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copiar template do nginx (será processado pelo entrypoint do nginx:alpine)
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+
+# Variável de ambiente com valor padrão
+ENV BACKEND_HOST=backend
 
 EXPOSE 80
 
+# O nginx:alpine processa automaticamente templates em /etc/nginx/templates/*.template
 CMD ["nginx", "-g", "daemon off;"]
 

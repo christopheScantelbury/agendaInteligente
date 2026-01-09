@@ -95,11 +95,13 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=/api  # Passa como build argument
     container_name: agenda-frontend
     ports:
-      - "5173:5173"
+      - "5173:80"
     environment:
-      - VITE_API_URL=http://localhost:8080/api
+      - BACKEND_HOST=backend  # Nome do serviço no docker-compose
     depends_on:
       - backend
     networks:

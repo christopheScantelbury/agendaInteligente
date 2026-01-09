@@ -21,11 +21,10 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
-    # Proxy para API - No EasyPanel, use o nome do serviço backend
-    # Se o backend estiver em outro domínio, remova este proxy e configure no EasyPanel
+    # Proxy para API
+    # Usa variável de ambiente BACKEND_HOST (padrão: backend)
     location /api {
-        # Nome do serviço backend no EasyPanel
-        proxy_pass http://agenda-inteligente_agenda_backend:8080;
+        proxy_pass http://${BACKEND_HOST}:8080;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -36,4 +35,3 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
-
