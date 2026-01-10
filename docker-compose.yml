@@ -108,6 +108,29 @@ services:
       - agenda-network
     restart: unless-stopped
 
+  # Mobile Expo (Opcional - apenas para desenvolvimento)
+  # NOTA: Para produção, use EAS Build ou build nativo
+  # Para desenvolvimento, é melhor usar: cd mobile && npm start
+  # mobile:
+  #   build:
+  #     context: ./mobile
+  #     dockerfile: Dockerfile
+  #   container_name: agenda-mobile
+  #   ports:
+  #     - "8081:8081"  # Metro bundler
+  #     - "19000:19000"  # Expo
+  #     - "19001:19001"  # Expo
+  #     - "19002:19002"  # Expo
+  #   environment:
+  #     - EXPO_PUBLIC_API_URL=http://localhost:8080/api
+  #   volumes:
+  #     - ./mobile:/app
+  #     - /app/node_modules
+  #   networks:
+  #     - agenda-network
+  #   stdin_open: true
+  #   tty: true
+
 networks:
   agenda-network:
     driver: bridge

@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Agenda Inteligente",
+    "slug": "agenda-inteligente",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.agendainteligente.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.agendainteligente.app"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "scheme": "agendainteligente",
+    "plugins": [
+      "expo-router"
+    ],
+    "extra": {
+      "apiUrl": "https://agendainteligentebackend.agendainteligenteapp.cloud/api"
+    },
+    "expo-router": {
+      "root": "./app"
+    }
+  }
+}
