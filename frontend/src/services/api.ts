@@ -8,8 +8,17 @@ const api = axios.create({
   timeout: 30000, // 30 segundos
 })
 
-// Interceptor para adicionar token
+// Função para gerar Transaction ID único
+const generateTransactionId = (): string => {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`
+}
+
+// Interceptor para adicionar token e transaction ID
 api.interceptors.request.use((config) => {
+  // Adiciona Transaction ID para rastreamento
+  const transactionId = generateTransactionId()
+  config.headers['X-Transaction-ID'] = transactionId
+  
   // Prioriza token de cliente, depois token de usuário
   const clienteToken = localStorage.getItem('clienteToken')
   const usuarioToken = localStorage.getItem('token')
