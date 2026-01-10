@@ -1,26 +1,310 @@
-2026-01-09T20:47:06.783Z  INFO 1 --- [agenda-inteligente] [           main] b.c.a.AgendaInteligenteApplication       : Starting AgendaInteligenteApplication v1.0.0-SNAPSHOT using Java 21.0.9 with PID 1 (/app/app.jar started by spring in /app)
-2026-01-09T20:47:06.789Z DEBUG 1 --- [agenda-inteligente] [           main] b.c.a.AgendaInteligenteApplication       : Running with Spring Boot v3.3.0, Spring v6.1.8
-2026-01-09T20:47:06.791Z  INFO 1 --- [agenda-inteligente] [           main] b.c.a.AgendaInteligenteApplication       : The following 1 profile is active: "prod"
-2026-01-09T20:47:13.579Z  INFO 1 --- [agenda-inteligente] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
-2026-01-09T20:47:13.584Z  INFO 1 --- [agenda-inteligente] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
-2026-01-09T20:47:14.334Z  INFO 1 --- [agenda-inteligente] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 722 ms. Found 11 JPA repository interfaces.
-2026-01-09T20:47:14.401Z  INFO 1 --- [agenda-inteligente] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
-2026-01-09T20:47:14.406Z  INFO 1 --- [agenda-inteligente] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
-2026-01-09T20:47:14.467Z  INFO 1 --- [agenda-inteligente] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface br.com.agendainteligente.repository.AgendamentoServicoRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-01-09T20:47:14.468Z  INFO 1 --- [agenda-inteligente] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface br.com.agendainteligente.repository.HorarioDisponivelRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-01-09T20:47:14.470Z  INFO 1 --- [agenda-inteligente] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface br.com.agendainteligente.repository.AtendenteRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-01-09T20:47:14.471Z  INFO 1 --- [agenda-inteligente] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface br.com.agendainteligente.repository.GerenteRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-01-09T20:47:14.472Z  INFO 1 --- [agenda-inteligente] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface br.com.agendainteligente.repository.UnidadeRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-01-09T20:47:14.473Z  INFO 1 --- [agenda-inteligente] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface br.com.agendainteligente.repository.PagamentoRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-01-09T20:47:14.473Z  INFO 1 --- [agenda-inteligente] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface br.com.agendainteligente.repository.ClienteRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-01-09T20:47:14.475Z  INFO 1 --- [agenda-inteligente] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface br.com.agendainteligente.repository.AgendamentoRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-01-09T20:47:14.476Z  INFO 1 --- [agenda-inteligente] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface br.com.agendainteligente.repository.ServicoRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-01-09T20:47:14.476Z  INFO 1 --- [agenda-inteligente] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface br.com.agendainteligente.repository.UsuarioRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-01-09T20:47:14.477Z  INFO 1 --- [agenda-inteligente] [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface br.com.agendainteligente.repository.NotaFiscalRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-01-09T20:47:14.478Z  INFO 1 --- [agenda-inteligente] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 44 ms. Found 0 Redis repository interfaces.
-2026-01-09T20:47:19.305Z  INFO 1 --- [agenda-inteligente] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
-2026-01-09T20:47:19.347Z  INFO 1 --- [agenda-inteligente] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2026-01-09T20:47:19.351Z  INFO 1 --- [agenda-inteligente] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.24]
-2026-01-09T20:47:19.705Z  INFO 1 --- [agenda-inteligente] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
-2026-01-09T20:47:19.731Z  INFO 1 --- [agenda-inteligente] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 12653 ms
-Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts
+2026-01-10T04:32:55.941Z  INFO 1 --- [agenda-inteligente] [           main] b.c.a.AgendaInteligenteApplication       : Started AgendaInteligenteApplication in 41.636 seconds (process running for 43.96)
+2026-01-10T04:32:59.013Z  INFO 1 --- [agenda-inteligente] [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-01-10T04:32:59.015Z  INFO 1 --- [agenda-inteligente] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-01-10T04:32:59.022Z  INFO 1 --- [agenda-inteligente] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 5 ms
+2026-01-10T04:32:59.162Z DEBUG 1 --- [agenda-inteligente] [nio-8080-exec-1] b.c.a.config.TransactionIdFilter         : Request: GET /actuator/health - TransactionID: 0413a803-82aa-480f-aa29-8554af5180c8
+2026-01-10T04:33:04.411Z  INFO 1 --- [agenda-inteligente] [ionShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-01-10T04:33:04.436Z  INFO 1 --- [agenda-inteligente] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-01-10T04:33:04.494Z  INFO 1 --- [agenda-inteligente] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-01-10T04:33:28.096Z DEBUG 1 --- [agenda-inteligente] [nio-8080-exec-2] b.c.a.config.TransactionIdFilter         : Request: POST /api/auth/login - TransactionID: 8e3fad43-cbaf-4b37-9056-0f187aa11e84
+2026-01-10T04:33:28.421Z DEBUG 1 --- [agenda-inteligente] [nio-8080-exec-2] b.c.a.service.AuthService                : Tentativa de login para email: admin@agendainteligente.com
+2026-01-10T04:33:29.133Z DEBUG 1 --- [agenda-inteligente] [nio-8080-exec-2] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.ativo,
+        u1_0.data_atualizacao,
+        u1_0.data_criacao,
+        u1_0.email,
+        u1_0.nome,
+        u1_0.perfil,
+        u1_0.senha,
+        u1_0.token_recuperacao_senha,
+        u1_0.token_recuperacao_senha_expiracao 
+    from
+        usuarios u1_0 
+    where
+        u1_0.email=?
+2026-01-10T04:33:29.248Z DEBUG 1 --- [agenda-inteligente] [nio-8080-exec-2] b.c.a.service.AuthService                : Usuário encontrado. Verificando senha...
+2026-01-10T04:33:29.569Z DEBUG 1 --- [agenda-inteligente] [nio-8080-exec-2] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.ativo,
+        u1_0.data_atualizacao,
+        u1_0.data_criacao,
+        u1_0.email,
+        u1_0.nome,
+        u1_0.perfil,
+        u1_0.senha,
+        u1_0.token_recuperacao_senha,
+        u1_0.token_recuperacao_senha_expiracao 
+    from
+        usuarios u1_0 
+    where
+        u1_0.email=?
+2026-01-10T04:33:30.324Z  INFO 1 --- [agenda-inteligente] [nio-8080-exec-2] b.c.a.service.AuthService                : Login realizado com sucesso. Email: admin@agendainteligente.com
+2026-01-10T04:33:30.956Z DEBUG 1 --- [agenda-inteligente] [nio-8080-exec-3] b.c.a.config.TransactionIdFilter         : Request: GET /api/agendamentos - TransactionID: fcc3218a-91d1-4f51-9b22-22b1903e0d61
+2026-01-10T04:33:30.988Z DEBUG 1 --- [agenda-inteligente] [nio-8080-exec-3] b.c.a.service.AgendamentoService         : Listando todos os agendamentos
+2026-01-10T04:33:31.014Z DEBUG 1 --- [agenda-inteligente] [nio-8080-exec-5] b.c.a.config.TransactionIdFilter         : Request: GET /api/clientes - TransactionID: 1f5f41a8-59d0-48cf-b574-588c35f4a9df
+2026-01-10T04:33:31.097Z DEBUG 1 --- [agenda-inteligente] [nio-8080-exec-3] org.hibernate.SQL                        : 
+    select
+        a1_0.id,
+        a1_0.atendente_id,
+        a1_0.cliente_id,
+        a1_0.data_atualizacao,
+        a1_0.data_criacao,
+        a1_0.data_hora_fim,
+        a1_0.data_hora_inicio,
+        a1_0.observacoes,
+        a1_0.status,
+        a1_0.unidade_id,
+        a1_0.valor_final,
+        a1_0.valor_total 
+    from
+        agendamentos a1_0
+2026-01-10T04:33:31.140Z DEBUG 1 --- [agenda-inteligente] [nio-8080-exec-4] b.c.a.config.TransactionIdFilter         : Request: GET /actuator/health - TransactionID: cfb5435a-b927-49d8-9191-2d113358a27e
+2026-01-10T04:33:31.343Z DEBUG 1 --- [agenda-inteligente] [nio-8080-exec-5] b.c.a.service.ClienteService             : Listando todos os clientes
+2026-01-10T04:33:31.356Z DEBUG 1 --- [agenda-inteligente] [nio-8080-exec-5] org.hibernate.SQL                        : 
+    select
+        c1_0.id,
+        c1_0.ativo,
+        c1_0.bairro,
+        c1_0.cep,
+        c1_0.cidade,
+        c1_0.complemento,
+        c1_0.cpf_cnpj,
+        c1_0.data_atualizacao,
+        c1_0.data_criacao,
+        c1_0.data_nascimento,
+        c1_0.email,
+        c1_0.endereco,
+        c1_0.nome,
+        c1_0.numero,
+        c1_0.rg,
+        c1_0.senha,
+        c1_0.telefone,
+        c1_0.token_recuperacao_senha,
+        c1_0.token_recuperacao_senha_expiracao,
+        c1_0.uf 
+    from
+        clientes c1_0
+2026-01-10T04:33:31.473Z ERROR 1 --- [agenda-inteligente] [nio-8080-exec-5] b.c.a.exception.GlobalExceptionHandler   : Erro inesperado
+
+org.springframework.data.redis.serializer.SerializationException: Could not write JSON: Java 8 date/time type `java.time.LocalDate` not supported by default: add Module "com.fasterxml.jackson.datatype:jackson-datatype-jsr310" to enable handling (through reference chain: java.util.ArrayList[0]->br.com.agendainteligente.dto.ClienteDTO["dataNascimento"])
+        at org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer.serialize(GenericJackson2JsonRedisSerializer.java:255) ~[spring-data-redis-3.3.0.jar!/:3.3.0]
+        at org.springframework.data.redis.serializer.DefaultRedisElementWriter.write(DefaultRedisElementWriter.java:41) ~[spring-data-redis-3.3.0.jar!/:3.3.0]
+        at org.springframework.data.redis.serializer.RedisSerializationContext$SerializationPair.write(RedisSerializationContext.java:292) ~[spring-data-redis-3.3.0.jar!/:3.3.0]
+        at org.springframework.data.redis.cache.RedisCache.serializeCacheValue(RedisCache.java:368) ~[spring-data-redis-3.3.0.jar!/:3.3.0]
+        at org.springframework.data.redis.cache.RedisCache.put(RedisCache.java:226) ~[spring-data-redis-3.3.0.jar!/:3.3.0]
+        at org.springframework.cache.interceptor.AbstractCacheInvoker.doPut(AbstractCacheInvoker.java:87) ~[spring-context-6.1.8.jar!/:6.1.8]
+        at org.springframework.cache.interceptor.CacheAspectSupport$CachePutRequest.performCachePut(CacheAspectSupport.java:1031) ~[spring-context-6.1.8.jar!/:6.1.8]
+        at org.springframework.cache.interceptor.CacheAspectSupport$CachePutRequest.apply(CacheAspectSupport.java:1016) ~[spring-context-6.1.8.jar!/:6.1.8]
+        at org.springframework.cache.interceptor.CacheAspectSupport.evaluate(CacheAspectSupport.java:560) ~[spring-context-6.1.8.jar!/:6.1.8]
+        at org.springframework.cache.interceptor.CacheAspectSupport.execute(CacheAspectSupport.java:433) ~[spring-context-6.1.8.jar!/:6.1.8]
+        at org.springframework.cache.interceptor.CacheAspectSupport.execute(CacheAspectSupport.java:395) ~[spring-context-6.1.8.jar!/:6.1.8]
+        at org.springframework.cache.interceptor.CacheInterceptor.invoke(CacheInterceptor.java:74) ~[spring-context-6.1.8.jar!/:6.1.8]
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184) ~[spring-aop-6.1.8.jar!/:6.1.8]
+        at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.proceed(CglibAopProxy.java:768) ~[spring-aop-6.1.8.jar!/:6.1.8]
+        at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:720) ~[spring-aop-6.1.8.jar!/:6.1.8]
+        at br.com.agendainteligente.service.ClienteService$$SpringCGLIB$$0.listarTodos(<generated>) ~[!/:1.0.0-SNAPSHOT]
+        at br.com.agendainteligente.controller.ClienteController.listarTodos(ClienteController.java:28) ~[!/:1.0.0-SNAPSHOT]
+        at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(Unknown Source) ~[na:na]
+        at java.base/java.lang.reflect.Method.invoke(Unknown Source) ~[na:na]
+        at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:354) ~[spring-aop-6.1.8.jar!/:6.1.8]
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.1.8.jar!/:6.1.8]
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.1.8.jar!/:6.1.8]
+        at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.proceed(CglibAopProxy.java:768) ~[spring-aop-6.1.8.jar!/:6.1.8]
+        at org.springframework.security.authorization.method.AuthorizationManagerBeforeMethodInterceptor.proceed(AuthorizationManagerBeforeMethodInterceptor.java:269) ~[spring-security-core-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.authorization.method.AuthorizationManagerBeforeMethodInterceptor.attemptAuthorization(AuthorizationManagerBeforeMethodInterceptor.java:264) ~[spring-security-core-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.authorization.method.AuthorizationManagerBeforeMethodInterceptor.invoke(AuthorizationManagerBeforeMethodInterceptor.java:197) ~[spring-security-core-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.config.annotation.method.configuration.PrePostMethodSecurityConfiguration$DeferringMethodInterceptor.invoke(PrePostMethodSecurityConfiguration.java:200) ~[spring-security-config-6.3.0.jar!/:6.3.0]
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184) ~[spring-aop-6.1.8.jar!/:6.1.8]
+        at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.proceed(CglibAopProxy.java:768) ~[spring-aop-6.1.8.jar!/:6.1.8]
+        at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:720) ~[spring-aop-6.1.8.jar!/:6.1.8]
+        at br.com.agendainteligente.controller.ClienteController$$SpringCGLIB$$0.listarTodos(<generated>) ~[!/:1.0.0-SNAPSHOT]
+        at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(Unknown Source) ~[na:na]
+        at java.base/java.lang.reflect.Method.invoke(Unknown Source) ~[na:na]
+        at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:255) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:188) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118) ~[spring-webmvc-6.1.8.jar!/:6.1.8]
+        at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:926) ~[spring-webmvc-6.1.8.jar!/:6.1.8]
+        at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:831) ~[spring-webmvc-6.1.8.jar!/:6.1.8]
+        at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87) ~[spring-webmvc-6.1.8.jar!/:6.1.8]
+        at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089) ~[spring-webmvc-6.1.8.jar!/:6.1.8]
+        at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.1.8.jar!/:6.1.8]
+        at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.1.8.jar!/:6.1.8]
+        at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:903) ~[spring-webmvc-6.1.8.jar!/:6.1.8]
+        at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:564) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.1.8.jar!/:6.1.8]
+        at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:195) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51) ~[tomcat-embed-websocket-10.1.24.jar!/:na]
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:110) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at br.com.agendainteligente.config.TransactionIdFilter.doFilterInternal(TransactionIdFilter.java:43) ~[!/:1.0.0-SNAPSHOT]
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.springframework.security.web.FilterChainProxy.lambda$doFilterInternal$3(FilterChainProxy.java:231) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$FilterObservation$SimpleFilterObservation.lambda$wrap$1(ObservationFilterChainDecorator.java:479) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$AroundFilterObservation$SimpleAroundFilterObservation.lambda$wrap$1(ObservationFilterChainDecorator.java:340) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator.lambda$wrapSecured$0(ObservationFilterChainDecorator.java:82) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:128) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.access.intercept.AuthorizationFilter.doFilter(AuthorizationFilter.java:100) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:131) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:85) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:100) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:179) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at br.com.agendainteligente.security.JwtAuthenticationFilter.doFilterInternal(JwtAuthenticationFilter.java:53) ~[!/:1.0.0-SNAPSHOT]
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:107) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:93) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.web.filter.CorsFilter.doFilterInternal(CorsFilter.java:91) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.header.HeaderWriterFilter.doHeadersAfter(HeaderWriterFilter.java:90) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.header.HeaderWriterFilter.doFilterInternal(HeaderWriterFilter.java:75) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:82) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:69) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:62) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:227) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:240) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$AroundFilterObservation$SimpleAroundFilterObservation.lambda$wrap$0(ObservationFilterChainDecorator.java:323) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:224) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:137) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:233) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:191) ~[spring-security-web-6.3.0.jar!/:6.3.0]
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.springframework.web.servlet.handler.HandlerMappingIntrospector.lambda$createCacheFilter$3(HandlerMappingIntrospector.java:195) ~[spring-webmvc-6.1.8.jar!/:6.1.8]
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.springframework.security.config.annotation.web.configuration.WebMvcSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebMvcSecurityConfiguration.java:230) ~[spring-security-config-6.3.0.jar!/:6.3.0]
+        at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:352) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:268) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.springframework.web.filter.ServerHttpObservationFilter.doFilterInternal(ServerHttpObservationFilter.java:109) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.8.jar!/:6.1.8]
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:482) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:389) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:896) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1741) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1190) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.24.jar!/:na]
+        at java.base/java.lang.Thread.run(Unknown Source) ~[na:na]
+Caused by: com.fasterxml.jackson.databind.exc.InvalidDefinitionException: Java 8 date/time type `java.time.LocalDate` not supported by default: add Module "com.fasterxml.jackson.datatype:jackson-datatype-jsr310" to enable handling (through reference chain: java.util.ArrayList[0]->br.com.agendainteligente.dto.ClienteDTO["dataNascimento"])
+        at com.fasterxml.jackson.databind.exc.InvalidDefinitionException.from(InvalidDefinitionException.java:77) ~[jackson-databind-2.17.1.jar!/:2.17.1]
+        at com.fasterxml.jackson.databind.SerializerProvider.reportBadDefinition(SerializerProvider.java:1330) ~[jackson-databind-2.17.1.jar!/:2.17.1]
+        at com.fasterxml.jackson.databind.ser.impl.UnsupportedTypeSerializer.serialize(UnsupportedTypeSerializer.java:35) ~[jackson-databind-2.17.1.jar!/:2.17.1]
+        at com.fasterxml.jackson.databind.ser.BeanPropertyWriter.serializeAsField(BeanPropertyWriter.java:732) ~[jackson-databind-2.17.1.jar!/:2.17.1]
+        at com.fasterxml.jackson.databind.ser.std.BeanSerializerBase.serializeFields(BeanSerializerBase.java:770) ~[jackson-databind-2.17.1.jar!/:2.17.1]
+        at com.fasterxml.jackson.databind.ser.std.BeanSerializerBase.serializeWithType(BeanSerializerBase.java:653) ~[jackson-databind-2.17.1.jar!/:2.17.1]
+        at com.fasterxml.jackson.databind.ser.impl.IndexedListSerializer.serializeTypedContents(IndexedListSerializer.java:181) ~[jackson-databind-2.17.1.jar!/:2.17.1]
+        at com.fasterxml.jackson.databind.ser.impl.IndexedListSerializer.serializeContents(IndexedListSerializer.java:92) ~[jackson-databind-2.17.1.jar!/:2.17.1]
+        at com.fasterxml.jackson.databind.ser.impl.IndexedListSerializer.serializeContents(IndexedListSerializer.java:18) ~[jackson-databind-2.17.1.jar!/:2.17.1]
+        at com.fasterxml.jackson.databind.ser.std.AsArraySerializerBase.serializeWithType(AsArraySerializerBase.java:266) ~[jackson-databind-2.17.1.jar!/:2.17.1]
+        at com.fasterxml.jackson.databind.ser.impl.TypeWrappedSerializer.serialize(TypeWrappedSerializer.java:32) ~[jackson-databind-2.17.1.jar!/:2.17.1]
+        at com.fasterxml.jackson.databind.ser.DefaultSerializerProvider._serialize(DefaultSerializerProvider.java:502) ~[jackson-databind-2.17.1.jar!/:2.17.1]
+        at com.fasterxml.jackson.databind.ser.DefaultSerializerProvider.serializeValue(DefaultSerializerProvider.java:341) ~[jackson-databind-2.17.1.jar!/:2.17.1]
+        at com.fasterxml.jackson.databind.ObjectMapper._writeValueAndClose(ObjectMapper.java:4799) ~[jackson-databind-2.17.1.jar!/:2.17.1]
+        at com.fasterxml.jackson.databind.ObjectMapper.writeValueAsBytes(ObjectMapper.java:4065) ~[jackson-databind-2.17.1.jar!/:2.17.1]
+        at org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer.serialize(GenericJackson2JsonRedisSerializer.java:252) ~[spring-data-redis-3.3.0.jar!/:3.3.0]
+        ... 169 common frames omitted
+
+2026-01-10T04:33:32.671Z DEBUG 1 --- [agenda-inteligente] [nio-8080-exec-6] b.c.a.config.TransactionIdFilter         : Request: GET /api/clientes - TransactionID: 5777a648-2ee3-4c55-a4e1-a6b4e610bbc8
+2026-01-10T04:33:32.681Z DEBUG 1 --- [agenda-inteligente] [nio-8080-exec-6] b.c.a.service.ClienteService             : Listando todos os clientes
+2026-01-10T04:33:32.687Z DEBUG 1 --- [agenda-inteligente] [nio-8080-exec-6] org.hibernate.SQL                        : 
+    select
+        c1_0.id,
+        c1_0.ativo,
+        c1_0.bairro,
+        c1_0.cep,
+        c1_0.cidade,
+        c1_0.complemento,
+        c1_0.cpf_cnpj,
+        c1_0.data_atualizacao,
+        c1_0.data_criacao,
+        c1_0.data_nascimento,
+        c1_0.email,
+        c1_0.endereco,
+        c1_0.nome,
+        c1_0.numero,
+        c1_0.rg,
+        c1_0.senha,
+        c1_0.telefone,
+        c1_0.token_recuperacao_senha,
+        c1_0.token_recuperacao_senha_expiracao,
+        c1_0.uf 
+    from
+        clientes c1_0
+2026-01-10T04:33:32.705Z ERROR 1 --- [agenda-inteligente] [nio-8080-exec-6] b.c.a.exception.GlobalExceptionHandler   : Erro inesperado
+
+org.springframework.data.redis.serializer.SerializationException: Could not write JSON: Java 8 date/time type `java.time.LocalDate` not supported by default: add Module "com.fasterxml.jackson.datatype:jackson-datatype-jsr310" to enable handling (through reference chain: java.util.ArrayList[0]->br.com.agendainteligente.dto.ClienteDTO["dataNascimento"])
