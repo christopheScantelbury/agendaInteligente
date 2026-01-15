@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react'
-import { View, Text, StyleSheet, ScrollView, Alert, TextInput, TouchableOpacity, Platform } from 'react-native'
+import React, { useState, useEffect, useMemo } from 'react'
+import { View, Text, StyleSheet, ScrollView, Alert, TextInput, TouchableOpacity, Platform, Modal } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { router, useLocalSearchParams } from 'expo-router'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { agendamentoService, Agendamento } from '../../src/services/agendamentoService'
-import { clienteService } from '../../src/services/clienteService'
-import { servicoService } from '../../src/services/servicoService'
+import { clienteService, Cliente } from '../../src/services/clienteService'
+import { servicoService, Servico } from '../../src/services/servicoService'
 import { unidadeService } from '../../src/services/unidadeService'
 import { atendenteService } from '../../src/services/atendenteService'
 import { authService } from '../../src/services/authService'
@@ -14,13 +14,14 @@ import FormField from '../../src/components/FormField'
 import HeaderWithMenu from '../../src/components/HeaderWithMenu'
 import { Picker } from '@react-native-picker/picker'
 import { Ionicons } from '@expo/vector-icons'
-import { format, parseISO } from 'date-fns'
+import { format, parseISO, isBefore } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 export default function NovoAgendamentoScreen() {
   const params = useLocalSearchParams()
   const queryClient = useQueryClient()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [usuario, setUsuario] = useState<{ perfil?: string; unidadeId?: number; usuarioId?: number } | null>(null)
 
   // Estados para data/hora
   const [showDatePicker, setShowDatePicker] = useState(false)
@@ -46,17 +47,20 @@ export default function NovoAgendamentoScreen() {
   })
 
   const [servicosSelecionados, setServicosSelecionados] = useState<number[]>([])
+  const [buscaCliente, setBuscaCliente] = useState('')
+  const [buscaServico, setBuscaServico] = useState('')
+  const [mostrarModalCliente, setMostrarModalCliente] = useState(false)
+  const [mostrarModalServico, setMostrarModalServico] = useState(false)
 
   useEffect(() => {
     checkAuth()
+    loadUsuario()
   }, [])
 
-  useEffect(() => {
-    setFormData(prev => ({
-      ...prev,
-      dataHoraInicio: format(selectedDateTime, "yyyy-MM-dd'T'HH:mm"),
-    }))
-  }, [selectedDateTime])
+  const loadUsuario = async () => {
+    const usuarioData = await authService.getUsuario()
+    setUsuario(usuarioData)
+  }
 
   const checkAuth = async () => {
     const authenticated = await authService.isAuthenticated()
@@ -75,17 +79,91 @@ export default function NovoAgendamentoScreen() {
     enabled: isAuthenticated,
   })
 
-  const { data: unidades = [] } = useQuery({
+  const clientesFiltrados = useMemo(() => {
+    if (!buscaCliente) return clientes
+    const buscaLower = buscaCliente.toLowerCase()
+    return clientes.filter(c => 
+      c.nome.toLowerCase().includes(buscaLower) || 
+      c.cpfCnpj.includes(buscaCliente)
+    )
+  }, [clientes, buscaCliente])
+
+  const servicosFiltrados = useMemo(() => {
+    if (!buscaServico) return servicos.filter(s => s.ativo)
+    const buscaLower = buscaServico.toLowerCase()
+    return servicos.filter(s => 
+      s.ativo && (
+        s.nome.toLowerCase().includes(buscaLower) ||
+        s.descricao?.toLowerCase().includes(buscaLower)
+      )
+    )
+  }, [servicos, buscaServico])
+
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      dataHoraInicio: format(selectedDateTime, "yyyy-MM-dd'T'HH:mm"),
+    }))
+  }, [selectedDateTime])
+
+  const perfil = usuario?.perfil
+
+  const { data: todasUnidades = [] } = useQuery({
     queryKey: ['unidades'],
     queryFn: unidadeService.listarTodos,
     enabled: isAuthenticated,
   })
 
-  const { data: atendentes = [], refetch: refetchAtendentes } = useQuery({
+  const unidadesFiltradas = useMemo(() => {
+    if (perfil === 'ADMIN') {
+      return todasUnidades
+    }
+    if (perfil === 'GERENTE' && usuario?.unidadeId) {
+      return todasUnidades.filter(u => u.id === usuario.unidadeId)
+    }
+    if ((perfil === 'PROFISSIONAL' || perfil === 'ATENDENTE') && usuario?.unidadeId) {
+      return todasUnidades.filter(u => u.id === usuario.unidadeId)
+    }
+    return todasUnidades
+  }, [todasUnidades, perfil, usuario?.unidadeId])
+
+  const { data: todosAtendentes = [], refetch: refetchAtendentes } = useQuery({
     queryKey: ['atendentes', formData.unidadeId],
     queryFn: () => formData.unidadeId ? atendenteService.listarPorUnidade(formData.unidadeId!) : Promise.resolve([]),
     enabled: !!formData.unidadeId && isAuthenticated,
   })
+
+  const atendentesFiltrados = useMemo(() => {
+    if (perfil === 'ADMIN' || perfil === 'GERENTE') {
+      return todosAtendentes
+    }
+    if ((perfil === 'PROFISSIONAL' || perfil === 'ATENDENTE') && usuario?.usuarioId) {
+      return todosAtendentes.filter(a => a.usuarioId === usuario.usuarioId)
+    }
+    return todosAtendentes
+  }, [todosAtendentes, perfil, usuario?.usuarioId])
+
+  // Auto-selecionar unidade e atendente para PROFISSIONAL
+  useEffect(() => {
+    if ((perfil === 'PROFISSIONAL' || perfil === 'ATENDENTE') && usuario?.unidadeId && unidadesFiltradas.length > 0) {
+      setFormData(prev => ({
+        ...prev,
+        unidadeId: prev.unidadeId || usuario.unidadeId
+      }))
+    }
+  }, [perfil, usuario?.unidadeId, unidadesFiltradas])
+
+  useEffect(() => {
+    if ((perfil === 'PROFISSIONAL' || perfil === 'ATENDENTE') && atendentesFiltrados.length > 0) {
+      const meuAtendente = atendentesFiltrados.find(a => a.usuarioId === usuario?.usuarioId)
+      if (meuAtendente) {
+        setFormData(prev => ({
+          ...prev,
+          atendenteId: prev.atendenteId || meuAtendente.id
+        }))
+      }
+    }
+  }, [perfil, atendentesFiltrados, usuario?.usuarioId])
 
   const createMutation = useMutation({
     mutationFn: agendamentoService.criar,
@@ -103,6 +181,15 @@ export default function NovoAgendamentoScreen() {
   const handleSubmit = () => {
     if (!formData.clienteId || servicosSelecionados.length === 0 || !formData.unidadeId || !formData.atendenteId || !formData.dataHoraInicio) {
       Alert.alert('Atenção', 'Por favor, preencha todos os campos obrigatórios')
+      return
+    }
+
+    // Validar se a data não está no passado
+    const dataSelecionada = parseISO(formData.dataHoraInicio)
+    const agora = new Date()
+    
+    if (isBefore(dataSelecionada, agora)) {
+      Alert.alert('Atenção', 'A data/hora selecionada não pode ser no passado. Por favor, selecione uma data futura.')
       return
     }
 
@@ -180,6 +267,21 @@ export default function NovoAgendamentoScreen() {
           <Text style={styles.sectionTitle}>Informações Básicas</Text>
           
           <FormField label="Cliente" required>
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color="#6b7280" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Buscar cliente por nome ou CPF/CNPJ..."
+                value={buscaCliente}
+                onChangeText={setBuscaCliente}
+                placeholderTextColor="#9ca3af"
+              />
+              {buscaCliente ? (
+                <TouchableOpacity onPress={() => setBuscaCliente('')}>
+                  <Ionicons name="close-circle" size={20} color="#6b7280" />
+                </TouchableOpacity>
+              ) : null}
+            </View>
             <View style={styles.pickerContainer}>
               <Picker
                 selectedValue={formData.clienteId}
@@ -187,15 +289,27 @@ export default function NovoAgendamentoScreen() {
                 style={styles.picker}
               >
                 <Picker.Item label="Selecione um cliente" value={undefined} />
-                {clientes.map((cliente) => (
+                {clientesFiltrados.map((cliente) => (
                   <Picker.Item
                     key={cliente.id}
-                    label={cliente.nome}
+                    label={`${cliente.nome} - ${cliente.cpfCnpj}`}
                     value={cliente.id}
                   />
                 ))}
               </Picker>
             </View>
+            {clientesFiltrados.length === 0 && buscaCliente && (
+              <View style={styles.notFoundContainer}>
+                <Text style={styles.notFoundText}>Cliente não encontrado</Text>
+                <Button
+                  onPress={() => setMostrarModalCliente(true)}
+                  style={styles.addButton}
+                >
+                  <Ionicons name="add" size={16} color="#ffffff" />
+                  <Text style={styles.addButtonText}>Adicionar Novo</Text>
+                </Button>
+              </View>
+            )}
           </FormField>
 
           <FormField label="Unidade" required>
@@ -206,7 +320,7 @@ export default function NovoAgendamentoScreen() {
                 style={styles.picker}
               >
                 <Picker.Item label="Selecione uma unidade" value={undefined} />
-                {unidades.map((unidade) => (
+                {unidadesFiltradas.map((unidade) => (
                   <Picker.Item
                     key={unidade.id}
                     label={unidade.nome}
@@ -226,7 +340,7 @@ export default function NovoAgendamentoScreen() {
                   style={styles.picker}
                 >
                   <Picker.Item label="Selecione um atendente" value={undefined} />
-                  {atendentes.map((atendente) => (
+                  {atendentesFiltrados.map((atendente) => (
                     <Picker.Item
                       key={atendente.id}
                       label={atendente.nomeUsuario || `Atendente ${atendente.id}`}
@@ -296,14 +410,41 @@ export default function NovoAgendamentoScreen() {
           <Text style={styles.sectionTitle}>Serviços</Text>
           <Text style={styles.sectionSubtitle}>Selecione um ou mais serviços</Text>
           
-          {servicos.length === 0 ? (
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#6b7280" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar serviço por nome..."
+              value={buscaServico}
+              onChangeText={setBuscaServico}
+              placeholderTextColor="#9ca3af"
+            />
+            {buscaServico ? (
+              <TouchableOpacity onPress={() => setBuscaServico('')}>
+                <Ionicons name="close-circle" size={20} color="#6b7280" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+          
+          {servicosFiltrados.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="medical-outline" size={48} color="#d1d5db" />
-              <Text style={styles.emptyText}>Nenhum serviço disponível</Text>
+              <Text style={styles.emptyText}>
+                {buscaServico ? 'Serviço não encontrado' : 'Nenhum serviço disponível'}
+              </Text>
+              {buscaServico && (
+                <Button
+                  onPress={() => setMostrarModalServico(true)}
+                  style={styles.addButton}
+                >
+                  <Ionicons name="add" size={16} color="#ffffff" />
+                  <Text style={styles.addButtonText}>Adicionar Novo</Text>
+                </Button>
+              )}
             </View>
           ) : (
             <View style={styles.servicosGrid}>
-              {servicos.map((servico) => {
+              {servicosFiltrados.map((servico) => {
                 const isSelected = servicosSelecionados.includes(servico.id!)
                 return (
                   <TouchableOpacity
@@ -385,7 +526,225 @@ export default function NovoAgendamentoScreen() {
           </Button>
         </View>
       </ScrollView>
+
+      {/* Modal de Criar Cliente */}
+      <Modal
+        visible={mostrarModalCliente}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setMostrarModalCliente(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Novo Cliente</Text>
+              <TouchableOpacity onPress={() => setMostrarModalCliente(false)}>
+                <Ionicons name="close" size={24} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+            <ClienteForm
+              onClose={() => setMostrarModalCliente(false)}
+              onSuccess={(cliente) => {
+                setFormData({ ...formData, clienteId: cliente.id })
+                setMostrarModalCliente(false)
+                setBuscaCliente('')
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Criar Serviço */}
+      <Modal
+        visible={mostrarModalServico}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setMostrarModalServico(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Novo Serviço</Text>
+              <TouchableOpacity onPress={() => setMostrarModalServico(false)}>
+                <Ionicons name="close" size={24} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+            <ServicoForm
+              onClose={() => setMostrarModalServico(false)}
+              onSuccess={(servico) => {
+                setServicosSelecionados([...servicosSelecionados, servico.id])
+                setMostrarModalServico(false)
+                setBuscaServico('')
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
+  )
+}
+
+function ClienteForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: (cliente: Cliente) => void }) {
+  const queryClient = useQueryClient()
+  const [formData, setFormData] = useState<Cliente>({
+    nome: '',
+    cpfCnpj: '',
+    email: '',
+    telefone: '',
+  })
+
+  const saveMutation = useMutation({
+    mutationFn: clienteService.criar,
+    onSuccess: (cliente) => {
+      queryClient.invalidateQueries({ queryKey: ['clientes'] })
+      Alert.alert('Sucesso', 'Cliente criado com sucesso!')
+      onSuccess(cliente)
+    },
+    onError: (error: any) => {
+      Alert.alert('Erro', error.response?.data?.message || 'Erro ao criar cliente')
+    },
+  })
+
+  const handleSubmit = () => {
+    if (!formData.nome || !formData.cpfCnpj) {
+      Alert.alert('Atenção', 'Preencha os campos obrigatórios')
+      return
+    }
+    saveMutation.mutate(formData)
+  }
+
+  return (
+    <ScrollView style={styles.modalBody}>
+      <FormField label="Nome" required>
+        <TextInput
+          style={styles.input}
+          value={formData.nome}
+          onChangeText={(text) => setFormData({ ...formData, nome: text })}
+          placeholder="Nome do cliente"
+        />
+      </FormField>
+      <FormField label="CPF/CNPJ" required>
+        <TextInput
+          style={styles.input}
+          value={formData.cpfCnpj}
+          onChangeText={(text) => setFormData({ ...formData, cpfCnpj: text })}
+          placeholder="CPF ou CNPJ"
+        />
+      </FormField>
+      <FormField label="Email">
+        <TextInput
+          style={styles.input}
+          value={formData.email || ''}
+          onChangeText={(text) => setFormData({ ...formData, email: text })}
+          placeholder="Email (opcional)"
+          keyboardType="email-address"
+        />
+      </FormField>
+      <FormField label="Telefone">
+        <TextInput
+          style={styles.input}
+          value={formData.telefone || ''}
+          onChangeText={(text) => setFormData({ ...formData, telefone: text })}
+          placeholder="Telefone (opcional)"
+          keyboardType="phone-pad"
+        />
+      </FormField>
+      <View style={styles.modalFooter}>
+        <Button variant="secondary" onPress={onClose} style={styles.modalButton}>
+          Cancelar
+        </Button>
+        <Button onPress={handleSubmit} isLoading={saveMutation.isPending} style={styles.modalButton}>
+          Salvar
+        </Button>
+      </View>
+    </ScrollView>
+  )
+}
+
+function ServicoForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: (servico: Servico) => void }) {
+  const queryClient = useQueryClient()
+  const [formData, setFormData] = useState<Servico>({
+    id: 0,
+    nome: '',
+    descricao: '',
+    valor: 0,
+    duracaoMinutos: 30,
+    ativo: true,
+  })
+
+  const saveMutation = useMutation({
+    mutationFn: servicoService.criar,
+    onSuccess: (servico) => {
+      queryClient.invalidateQueries({ queryKey: ['servicos'] })
+      Alert.alert('Sucesso', 'Serviço criado com sucesso!')
+      onSuccess(servico)
+    },
+    onError: (error: any) => {
+      Alert.alert('Erro', error.response?.data?.message || 'Erro ao criar serviço')
+    },
+  })
+
+  const handleSubmit = () => {
+    if (!formData.nome || formData.valor <= 0) {
+      Alert.alert('Atenção', 'Preencha os campos obrigatórios')
+      return
+    }
+    saveMutation.mutate(formData)
+  }
+
+  return (
+    <ScrollView style={styles.modalBody}>
+      <FormField label="Nome" required>
+        <TextInput
+          style={styles.input}
+          value={formData.nome}
+          onChangeText={(text) => setFormData({ ...formData, nome: text })}
+          placeholder="Nome do serviço"
+        />
+      </FormField>
+      <FormField label="Descrição">
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          value={formData.descricao || ''}
+          onChangeText={(text) => setFormData({ ...formData, descricao: text })}
+          placeholder="Descrição (opcional)"
+          multiline
+          numberOfLines={3}
+        />
+      </FormField>
+      <View style={styles.row}>
+        <View style={styles.halfField}>
+          <FormField label="Valor (R$)" required>
+            <TextInput
+              style={styles.input}
+              value={formData.valor.toString()}
+              onChangeText={(text) => setFormData({ ...formData, valor: parseFloat(text) || 0 })}
+              placeholder="0.00"
+              keyboardType="decimal-pad"
+            />
+          </FormField>
+        </View>
+        <View style={styles.halfField}>
+          <FormField label="Duração (min)" required>
+            <TextInput
+              style={styles.input}
+              value={formData.duracaoMinutos.toString()}
+              onChangeText={(text) => setFormData({ ...formData, duracaoMinutos: parseInt(text) || 30 })}
+              placeholder="30"
+              keyboardType="number-pad"
+            />
+          </FormField>
+        </View>
+      </View>
+      <View style={styles.modalFooter}>
+        <Button variant="secondary" onPress={onClose} style={styles.modalButton}>
+          Cancelar
+        </Button>
+        <Button onPress={handleSubmit} isLoading={saveMutation.isPending} style={styles.modalButton}>
+          Salvar
+        </Button>
+      </View>
+    </ScrollView>
   )
 }
 
@@ -570,6 +929,106 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   submitButton: {
+    flex: 1,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#ffffff',
+    marginBottom: 8,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#111827',
+  },
+  notFoundContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    backgroundColor: '#fef3c7',
+    borderWidth: 1,
+    borderColor: '#fde047',
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  notFoundText: {
+    fontSize: 14,
+    color: '#92400e',
+    flex: 1,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  addButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  modalBody: {
+    padding: 20,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  modalButton: {
+    flex: 1,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#111827',
+    backgroundColor: '#ffffff',
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  halfField: {
     flex: 1,
   },
 })

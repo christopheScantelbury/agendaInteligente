@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { servicoService, Servico } from '../services/servicoService'
-import { Plus, Trash2, Edit } from 'lucide-react'
-import { useState } from 'react'
+import { Plus, Trash2, Edit, Search, X } from 'lucide-react'
+import { useState, useMemo } from 'react'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
 import FormField from '../components/FormField'
@@ -13,12 +13,22 @@ export default function Servicos() {
   const [showModal, setShowModal] = useState(false)
   const [editingServico, setEditingServico] = useState<Servico | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null })
+  const [buscaServico, setBuscaServico] = useState('')
   const queryClient = useQueryClient()
 
   const { data: servicos = [], isLoading } = useQuery({
     queryKey: ['servicos'],
     queryFn: servicoService.listarTodos,
   })
+
+  const servicosFiltrados = useMemo(() => {
+    if (!buscaServico) return servicos
+    const buscaLower = buscaServico.toLowerCase()
+    return servicos.filter(s => 
+      s.nome.toLowerCase().includes(buscaLower) ||
+      s.descricao?.toLowerCase().includes(buscaLower)
+    )
+  }, [servicos, buscaServico])
 
   const deleteMutation = useMutation({
     mutationFn: servicoService.excluir,
@@ -62,9 +72,31 @@ export default function Servicos() {
         </Button>
       </div>
 
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Buscar serviço por nome ou descrição..."
+            value={buscaServico}
+            onChange={(e) => setBuscaServico(e.target.value)}
+            className="block w-full pl-10 pr-10 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          />
+          {buscaServico && (
+            <button
+              type="button"
+              onClick={() => setBuscaServico('')}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
         <ul className="divide-y divide-gray-200">
-          {servicos.map((servico) => (
+          {servicosFiltrados.map((servico) => (
             <li key={servico.id} className="px-6 py-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -108,6 +140,11 @@ export default function Servicos() {
             </li>
           ))}
         </ul>
+        {servicosFiltrados.length === 0 && (
+          <div className="px-6 py-8 text-center">
+            <p className="text-gray-500">Nenhum serviço encontrado</p>
+          </div>
+        )}
       </div>
 
       <Modal

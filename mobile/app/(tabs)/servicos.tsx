@@ -1,16 +1,28 @@
-import React from 'react'
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native'
+import React, { useState, useMemo } from 'react'
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import { router } from 'expo-router'
 import { servicoService, Servico } from '../../src/services/servicoService'
 import Button from '../../src/components/Button'
 import HeaderWithMenu from '../../src/components/HeaderWithMenu'
+import { Ionicons } from '@expo/vector-icons'
 
 export default function Servicos() {
+  const [buscaServico, setBuscaServico] = useState('')
+  
   const { data: servicos = [], isLoading } = useQuery({
     queryKey: ['servicos'],
     queryFn: servicoService.listarTodos,
   })
+
+  const servicosFiltrados = useMemo(() => {
+    if (!buscaServico) return servicos
+    const buscaLower = buscaServico.toLowerCase()
+    return servicos.filter(s => 
+      s.nome.toLowerCase().includes(buscaLower) ||
+      s.descricao?.toLowerCase().includes(buscaLower)
+    )
+  }, [servicos, buscaServico])
 
   const renderItem = ({ item }: { item: Servico }) => (
     <TouchableOpacity 
@@ -35,11 +47,27 @@ export default function Servicos() {
         </Button>
       </View>
 
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="#6b7280" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar serviço por nome ou descrição..."
+          value={buscaServico}
+          onChangeText={setBuscaServico}
+          placeholderTextColor="#9ca3af"
+        />
+        {buscaServico ? (
+          <TouchableOpacity onPress={() => setBuscaServico('')}>
+            <Ionicons name="close-circle" size={20} color="#6b7280" />
+          </TouchableOpacity>
+        ) : null}
+      </View>
+
       {isLoading ? (
         <Text style={styles.loading}>Carregando...</Text>
       ) : (
         <FlatList
-          data={servicos}
+          data={servicosFiltrados}
           renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.list}
@@ -62,6 +90,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#ffffff',
+    margin: 16,
+    marginBottom: 0,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#111827',
   },
   list: {
     padding: 16,

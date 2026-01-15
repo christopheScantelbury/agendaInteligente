@@ -6,6 +6,7 @@ export interface Atendente {
   usuarioId: number
   cpf: string
   telefone?: string
+  percentualComissao?: number
   ativo?: boolean
   nomeUsuario?: string
   nomeUnidade?: string

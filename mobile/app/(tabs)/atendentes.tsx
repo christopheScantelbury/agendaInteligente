@@ -48,6 +48,13 @@ export default function AtendentesScreen() {
       <Text style={styles.atendenteDetail}>CPF: {item.cpf}</Text>
       {item.nomeUnidade && <Text style={styles.atendenteDetail}>Unidade: {item.nomeUnidade}</Text>}
       {item.telefone && <Text style={styles.atendenteDetail}>Telefone: {item.telefone}</Text>}
+      {(item.percentualComissao !== undefined && item.percentualComissao !== null) && (
+        <Text style={styles.atendenteDetail}>
+          Comissão: {typeof item.percentualComissao === 'number' 
+            ? item.percentualComissao.toFixed(2) 
+            : parseFloat(String(item.percentualComissao)).toFixed(2)}%
+        </Text>
+      )}
       <View style={styles.statusContainer}>
         <Text style={[styles.statusBadge, item.ativo ? styles.statusActive : styles.statusInactive]}>
           {item.ativo ? 'Ativo' : 'Inativo'}

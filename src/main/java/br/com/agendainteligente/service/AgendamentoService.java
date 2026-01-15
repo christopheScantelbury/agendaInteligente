@@ -6,6 +6,7 @@ import br.com.agendainteligente.domain.entity.Atendente;
 import br.com.agendainteligente.domain.entity.Cliente;
 import br.com.agendainteligente.domain.entity.Servico;
 import br.com.agendainteligente.domain.entity.Unidade;
+import br.com.agendainteligente.domain.entity.Usuario;
 import br.com.agendainteligente.domain.enums.StatusAgendamento;
 import br.com.agendainteligente.dto.AgendamentoDTO;
 import br.com.agendainteligente.dto.AgendamentoServicoDTO;
@@ -18,10 +19,14 @@ import br.com.agendainteligente.repository.AgendamentoRepository;
 import br.com.agendainteligente.repository.AgendamentoServicoRepository;
 import br.com.agendainteligente.repository.AtendenteRepository;
 import br.com.agendainteligente.repository.ClienteRepository;
+import br.com.agendainteligente.repository.GerenteRepository;
 import br.com.agendainteligente.repository.ServicoRepository;
 import br.com.agendainteligente.repository.UnidadeRepository;
+import br.com.agendainteligente.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,14 +47,19 @@ public class AgendamentoService {
     private final ServicoRepository servicoRepository;
     private final UnidadeRepository unidadeRepository;
     private final AtendenteRepository atendenteRepository;
+    private final GerenteRepository gerenteRepository;
+    private final UsuarioRepository usuarioRepository;
     private final AgendamentoMapper agendamentoMapper;
     private final AgendamentoServicoMapper agendamentoServicoMapper;
     private final NotaFiscalService notaFiscalService;
 
     @Transactional(readOnly = true)
     public List<AgendamentoDTO> listarTodos() {
-        log.debug("Listando todos os agendamentos");
-        return agendamentoRepository.findAll().stream()
+        log.debug("Listando agendamentos com filtro de permissão");
+        
+        List<Agendamento> agendamentos = filtrarPorPermissao();
+        
+        return agendamentos.stream()
                 .map(agendamento -> {
                     // Força carregamento dos serviços
                     if (agendamento.getServicos() != null) {
@@ -65,12 +75,52 @@ public class AgendamentoService {
                 })
                 .collect(Collectors.toList());
     }
+    
+    private List<Agendamento> filtrarPorPermissao() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return new ArrayList<>();
+        }
+        
+        String email = auth.getName();
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+        
+        Usuario.PerfilUsuario perfil = usuario.getPerfil();
+        
+        switch (perfil) {
+            case ADMIN:
+                log.debug("ADMIN: listando todos os agendamentos");
+                return agendamentoRepository.findAll();
+                
+            case GERENTE:
+                log.debug("GERENTE: listando agendamentos da unidade do gerente");
+                br.com.agendainteligente.domain.entity.Gerente gerente = gerenteRepository.findByUsuarioId(usuario.getId())
+                        .orElseThrow(() -> new BusinessException("Gerente não está vinculado a uma unidade"));
+                Long unidadeId = gerente.getUnidade().getId();
+                return agendamentoRepository.findByUnidadeId(unidadeId);
+                
+            case PROFISSIONAL:
+                log.debug("PROFISSIONAL: listando apenas agendamentos do próprio atendente");
+                Atendente atendente = atendenteRepository.findByUsuarioId(usuario.getId())
+                        .orElseThrow(() -> new BusinessException("Usuário não está vinculado a um atendente"));
+                return agendamentoRepository.findByAtendenteId(atendente.getId());
+                
+            case CLIENTE:
+            default:
+                log.debug("CLIENTE ou perfil desconhecido: retornando lista vazia (deve usar endpoint público)");
+                return new ArrayList<>();
+        }
+    }
 
     @Transactional(readOnly = true)
     public AgendamentoDTO buscarPorId(Long id) {
         log.debug("Buscando agendamento com id: {}", id);
         Agendamento agendamento = agendamentoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Agendamento não encontrado com id: " + id));
+        
+        // Validar permissão para visualizar agendamento
+        validarPermissaoVisualizarAgendamento(agendamento);
         
         // Força carregamento dos serviços
         if (agendamento.getServicos() != null) {
@@ -88,6 +138,87 @@ public class AgendamentoService {
         }
         
         return dto;
+    }
+    
+    private void validarPermissaoCriarAgendamento(Long unidadeId, Long atendenteId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new BusinessException("Usuário não autenticado");
+        }
+        
+        String email = auth.getName();
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+        
+        Usuario.PerfilUsuario perfil = usuario.getPerfil();
+        
+        switch (perfil) {
+            case ADMIN:
+                // ADMIN pode criar agendamentos em qualquer unidade/atendente
+                return;
+                
+            case GERENTE:
+                br.com.agendainteligente.domain.entity.Gerente gerente = gerenteRepository.findByUsuarioId(usuario.getId())
+                        .orElseThrow(() -> new BusinessException("Gerente não está vinculado a uma unidade"));
+                if (!gerente.getUnidade().getId().equals(unidadeId)) {
+                    throw new BusinessException("Você não tem permissão para criar agendamentos nesta unidade");
+                }
+                return;
+                
+            case PROFISSIONAL:
+                Atendente atendente = atendenteRepository.findByUsuarioId(usuario.getId())
+                        .orElseThrow(() -> new BusinessException("Usuário não está vinculado a um atendente"));
+                if (!atendente.getId().equals(atendenteId)) {
+                    throw new BusinessException("Você só pode criar agendamentos para si mesmo");
+                }
+                if (!atendente.getUnidade().getId().equals(unidadeId)) {
+                    throw new BusinessException("Você não tem permissão para criar agendamentos nesta unidade");
+                }
+                return;
+                
+            case CLIENTE:
+            default:
+                throw new BusinessException("Você não tem permissão para criar agendamentos");
+        }
+    }
+    
+    private void validarPermissaoVisualizarAgendamento(Agendamento agendamento) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new BusinessException("Usuário não autenticado");
+        }
+        
+        String email = auth.getName();
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+        
+        Usuario.PerfilUsuario perfil = usuario.getPerfil();
+        
+        switch (perfil) {
+            case ADMIN:
+                // ADMIN pode visualizar qualquer agendamento
+                return;
+                
+            case GERENTE:
+                br.com.agendainteligente.domain.entity.Gerente gerente = gerenteRepository.findByUsuarioId(usuario.getId())
+                        .orElseThrow(() -> new BusinessException("Gerente não está vinculado a uma unidade"));
+                if (!gerente.getUnidade().getId().equals(agendamento.getUnidade().getId())) {
+                    throw new BusinessException("Você não tem permissão para visualizar este agendamento");
+                }
+                return;
+                
+            case PROFISSIONAL:
+                Atendente atendente = atendenteRepository.findByUsuarioId(usuario.getId())
+                        .orElseThrow(() -> new BusinessException("Usuário não está vinculado a um atendente"));
+                if (!atendente.getId().equals(agendamento.getAtendente().getId())) {
+                    throw new BusinessException("Você não tem permissão para visualizar este agendamento");
+                }
+                return;
+                
+            case CLIENTE:
+            default:
+                throw new BusinessException("Você não tem permissão para visualizar este agendamento");
+        }
     }
 
     @Transactional
@@ -107,6 +238,9 @@ public class AgendamentoService {
         
         Atendente atendente = atendenteRepository.findById(agendamentoDTO.getAtendenteId())
                 .orElseThrow(() -> new ResourceNotFoundException("Atendente não encontrado"));
+        
+        // Validar permissão para criar agendamento
+        validarPermissaoCriarAgendamento(unidade.getId(), atendente.getId());
         
         if (!unidade.getAtivo()) {
             throw new BusinessException("Unidade não está ativa");
@@ -219,6 +353,9 @@ public class AgendamentoService {
         Agendamento agendamento = agendamentoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Agendamento não encontrado"));
         
+        // Validar permissão para atualizar agendamento
+        validarPermissaoVisualizarAgendamento(agendamento);
+        
         agendamento.setStatus(novoStatus);
         agendamento = agendamentoRepository.save(agendamento);
         log.info("Status do agendamento atualizado. ID: {}, Status: {}", id, novoStatus);
@@ -231,6 +368,9 @@ public class AgendamentoService {
         
         Agendamento agendamento = agendamentoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Agendamento não encontrado"));
+        
+        // Validar permissão para cancelar agendamento
+        validarPermissaoVisualizarAgendamento(agendamento);
         
         if (agendamento.getStatus() == StatusAgendamento.CANCELADO) {
             throw new BusinessException("Agendamento já está cancelado");
@@ -251,6 +391,9 @@ public class AgendamentoService {
         
         Agendamento agendamento = agendamentoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Agendamento não encontrado"));
+        
+        // Validar permissão para finalizar agendamento
+        validarPermissaoVisualizarAgendamento(agendamento);
         
         if (agendamento.getStatus() == StatusAgendamento.CONCLUIDO) {
             throw new BusinessException("Agendamento já está concluído");
