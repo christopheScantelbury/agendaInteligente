@@ -67,6 +67,12 @@ public class Unidade {
     @Column(name = "inscricao_municipal", length = 20)
     private String inscricaoMunicipal;
 
+    @Column(name = "logo", columnDefinition = "TEXT")
+    private String logo;
+
+    @Column(name = "cor_app", length = 7)
+    private String corApp;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataCriacao;
 

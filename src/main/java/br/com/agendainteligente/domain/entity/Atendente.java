@@ -43,6 +43,10 @@ public class Atendente {
     @Column(length = 20)
     private String telefone;
 
+    @Column(name = "percentual_comissao", precision = 5, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal percentualComissao = java.math.BigDecimal.ZERO;
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean ativo = true;

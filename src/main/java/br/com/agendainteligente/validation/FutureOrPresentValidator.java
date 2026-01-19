@@ -3,8 +3,11 @@ package br.com.agendainteligente.validation;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 public class FutureOrPresentValidator implements ConstraintValidator<FutureOrPresent, LocalDateTime> {
+    
+    private static final int TOLERANCIA_MINUTOS = 120;
     
     @Override
     public void initialize(FutureOrPresent constraintAnnotation) {
@@ -16,7 +19,9 @@ public class FutureOrPresentValidator implements ConstraintValidator<FutureOrPre
         if (value == null) {
             return true; // A validação de @NotNull cuida disso
         }
-        return !value.isBefore(LocalDateTime.now());
+        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime limiteMinimo = agora.minus(TOLERANCIA_MINUTOS, ChronoUnit.MINUTES);
+        return !value.isBefore(limiteMinimo);
     }
 }
 

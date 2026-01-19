@@ -6,12 +6,23 @@ import {
     TrendingUp,
     Clock,
     CheckCircle2,
-    XCircle
+    XCircle,
+    Bell,
+    AlertCircle
 } from 'lucide-react'
 import { agendamentoService } from '../services/agendamentoService'
 import { clienteService } from '../services/clienteService'
+import { reclamacaoService } from '../services/reclamacaoService'
+import { authService } from '../services/authService'
+import { Link } from 'react-router-dom'
 
 export default function Dashboard() {
+    const usuario = authService.getUsuario()
+    const isAdmin = usuario?.perfil === 'ADMIN'
+    const isGerente = usuario?.perfil === 'GERENTE'
+    const podeVerReclamacoes = isAdmin || isGerente
+    const unidadeId = usuario?.unidadeId
+
     const { data: agendamentos = [], isLoading: isLoadingAgendamentos } = useQuery({
         queryKey: ['agendamentos'],
         queryFn: agendamentoService.listar,
@@ -20,6 +31,20 @@ export default function Dashboard() {
     const { data: clientes = [], isLoading: isLoadingClientes } = useQuery({
         queryKey: ['clientes'],
         queryFn: clienteService.listar,
+    })
+
+    const { data: contadorReclamacoes = 0 } = useQuery({
+        queryKey: ['reclamacoes', 'contador', isAdmin ? 'todas' : 'unidade', unidadeId],
+        queryFn: () => {
+            if (isAdmin) {
+                return reclamacaoService.contarNaoLidas()
+            } else if (isGerente && unidadeId) {
+                return reclamacaoService.contarNaoLidasPorUnidade(unidadeId)
+            }
+            return Promise.resolve(0)
+        },
+        enabled: podeVerReclamacoes,
+        refetchInterval: 30000,
     })
 
     // Cálculos Básicos
@@ -104,6 +129,37 @@ export default function Dashboard() {
                         <p className="text-2xl font-bold text-gray-900 mt-1">{card.value}</p>
                     </div>
                 ))}
+                
+                {/* Card de Reclamações (apenas para ADMIN e GERENTE) */}
+                {podeVerReclamacoes && (
+                    <Link
+                        to="/notificacoes"
+                        className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
+                    >
+                        <div className="flex items-center justify-between mb-4">
+                            <div className={`p-3 rounded-lg ${contadorReclamacoes > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
+                                <Bell className={`h-6 w-6 ${contadorReclamacoes > 0 ? 'text-red-600' : 'text-gray-600'}`} />
+                            </div>
+                            {contadorReclamacoes > 0 && (
+                                <span className="bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
+                                    {contadorReclamacoes > 99 ? '99+' : contadorReclamacoes}
+                                </span>
+                            )}
+                        </div>
+                        <h3 className="text-gray-500 text-sm font-medium">Reclamações</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                            <p className="text-2xl font-bold text-gray-900">
+                                {contadorReclamacoes > 0 ? contadorReclamacoes : 'Nenhuma'}
+                            </p>
+                            {contadorReclamacoes > 0 && (
+                                <AlertCircle className="h-5 w-5 text-red-500" />
+                            )}
+                        </div>
+                        {contadorReclamacoes > 0 && (
+                            <p className="text-xs text-red-600 mt-2 font-medium">Clique para ver detalhes</p>
+                        )}
+                    </Link>
+                )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

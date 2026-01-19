@@ -8,6 +8,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 import NotificationContainer from './components/NotificationContainer'
 import { NotificationProvider } from './contexts/NotificationContext'
+import InstallPrompt from './components/InstallPrompt'
 import Login from './pages/Login'
 import LoginCliente from './pages/LoginCliente'
 import CadastroCliente from './pages/CadastroCliente'
@@ -21,6 +22,8 @@ import Usuarios from './pages/Usuarios'
 import Atendentes from './pages/Atendentes'
 import Agendamentos from './pages/Agendamentos'
 import NovoAgendamento from './pages/NovoAgendamento'
+import Reclamacoes from './pages/Reclamacoes'
+import Notificacoes from './pages/Notificacoes'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -38,6 +41,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <NotificationProvider>
           <NotificationContainer />
+          <InstallPrompt />
           <Router>
             <Routes>
               {/* Rotas públicas para clientes */}
@@ -57,6 +61,7 @@ function App() {
                 path="/cliente/meus-agendamentos"
                 element={clientePublicoService.isAuthenticated() ? <MeusAgendamentosCliente /> : <Navigate to="/cliente/login" />}
               />
+              <Route path="/reclamacoes" element={<Reclamacoes />} />
 
               {/* Rotas administrativas */}
               <Route
@@ -77,6 +82,7 @@ function App() {
                         <Route path="/atendentes" element={<Atendentes />} />
                         <Route path="/agendamentos" element={<Agendamentos />} />
                         <Route path="/agendamentos/novo" element={<NovoAgendamento />} />
+                        <Route path="/notificacoes" element={<Notificacoes />} />
                       </Routes>
                     </Layout>
                   </ProtectedRoute>

@@ -141,6 +141,7 @@ class AgendamentoControllerIntegrationTest {
                                 .cpfCnpj("12345678900")
                                 .email("cliente@test.com")
                                 .telefone("11999999999")
+                                .dataNascimento(java.time.LocalDate.of(1990, 1, 1))
                                 .build();
                 cliente = clienteRepository.save(cliente);
         }

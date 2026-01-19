@@ -28,6 +28,7 @@ public class RedisConfig {
     @Bean
     public ObjectMapper redisObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
+        mapper.findAndRegisterModules();
         JavaTimeModule javaTimeModule = new JavaTimeModule();
         DateTimeFormatter localDateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         javaTimeModule.addSerializer(LocalDate.class, new LocalDateSerializer(localDateFormatter));

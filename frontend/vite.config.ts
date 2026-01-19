@@ -12,5 +12,14 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
+    },
+  },
+  // Garantir que o service worker seja servido corretamente
+  publicDir: 'public',
 })
 
