@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Fundo com gradiente azul -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563EB;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1E40AF;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="calendarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Fundo arredondado -->
+  <rect width="512" height="512" rx="120" fill="url(#bgGradient)"/>
+  
+  <!-- Calendário -->
+  <g transform="translate(80, 100)">
+    <!-- Corpo do calendário -->
+    <rect x="0" y="0" width="352" height="312" rx="24" fill="white" opacity="0.95"/>
+    
+    <!-- Cabeçalho do calendário (azul) -->
+    <rect x="0" y="0" width="352" height="80" rx="24" fill="url(#calendarGradient)"/>
+    
+    <!-- Anéis de encadernação -->
+    <circle cx="80" cy="80" r="12" fill="#1E40AF" opacity="0.3"/>
+    <circle cx="272" cy="80" r="12" fill="#1E40AF" opacity="0.3"/>
+    
+    <!-- Linhas do calendário -->
+    <line x1="0" y1="120" x2="352" y2="120" stroke="#E5E7EB" stroke-width="3"/>
+    <line x1="117" y1="80" x2="117" y2="312" stroke="#E5E7EB" stroke-width="2"/>
+    <line x1="235" y1="80" x2="235" y2="312" stroke="#E5E7EB" stroke-width="2"/>
+    <line x1="0" y1="200" x2="352" y2="200" stroke="#E5E7EB" stroke-width="2"/>
+    <line x1="0" y1="240" x2="352" y2="240" stroke="#E5E7EB" stroke-width="2"/>
+    <line x1="0" y1="280" x2="352" y2="280" stroke="#E5E7EB" stroke-width="2"/>
+    
+    <!-- Número do dia (15) -->
+    <text x="176" y="60" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">15</text>
+    
+    <!-- Marca de check em um dos dias -->
+    <g transform="translate(150, 220)">
+      <circle cx="0" cy="0" r="20" fill="#10B981"/>
+      <path d="M -8 -2 L -2 4 L 8 -6" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </g>
+  </g>
+</svg>

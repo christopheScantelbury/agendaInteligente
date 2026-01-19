@@ -13,10 +13,10 @@ export interface Unidade {
   telefone?: string
   email?: string
   ativo?: boolean
-
-
   horarioAbertura?: string
   horarioFechamento?: string
+  logo?: string
+  corApp?: string
 }
 
 export const unidadeService = {

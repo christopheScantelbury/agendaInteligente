@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert } from 'react-native'
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, TouchableOpacity, Image } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
+import { router } from 'expo-router'
 import { unidadeService, Unidade } from '../../src/services/unidadeService'
 import { authService } from '../../src/services/authService'
 import Button from '../../src/components/Button'
@@ -43,9 +44,19 @@ export default function UnidadesScreen() {
   }
 
   const renderUnidadeItem = ({ item }: { item: Unidade }) => (
-    <View style={styles.unidadeCard}>
-      <Text style={styles.unidadeName}>{item.nome}</Text>
-      {item.descricao && <Text style={styles.unidadeDescription}>{item.descricao}</Text>}
+    <TouchableOpacity
+      style={styles.unidadeCard}
+      onPress={() => router.push(`/unidades/novo?id=${item.id}`)}
+    >
+      <View style={styles.cardHeader}>
+        {item.logo && (
+          <Image source={{ uri: item.logo }} style={styles.logo} />
+        )}
+        <View style={styles.cardHeaderText}>
+          <Text style={styles.unidadeName}>{item.nome}</Text>
+          {item.descricao && <Text style={styles.unidadeDescription}>{item.descricao}</Text>}
+        </View>
+      </View>
       {item.endereco && (
         <Text style={styles.unidadeDetail}>
           {item.endereco}
@@ -63,7 +74,7 @@ export default function UnidadesScreen() {
           {item.ativo ? 'Ativa' : 'Inativa'}
         </Text>
       </View>
-    </View>
+    </TouchableOpacity>
   )
 
   return (
@@ -73,8 +84,7 @@ export default function UnidadesScreen() {
         <Button
           size="sm"
           onPress={() => {
-            // TODO: Navegar para tela de cadastro
-            Alert.alert('Em desenvolvimento', 'Funcionalidade de cadastro em breve')
+            router.push('/unidades/novo')
           }}
         >
           + Nova
@@ -147,11 +157,27 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  logo: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  cardHeaderText: {
+    flex: 1,
+  },
   unidadeName: {
     fontSize: 18,
     fontWeight: '600',
     color: '#1F2937',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   unidadeDescription: {
     fontSize: 14,

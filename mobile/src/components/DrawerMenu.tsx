@@ -4,15 +4,18 @@ import { router, usePathname } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { authService } from '../services/authService'
 import { Alert } from 'react-native'
+import { useQuery } from '@tanstack/react-query'
+import { reclamacaoService } from '../services/reclamacaoService'
 
 interface MenuItem {
   label: string
   icon: keyof typeof Ionicons.glyphMap
   path: string
   paths?: string[]
+  badge?: number
 }
 
-const menuItems: MenuItem[] = [
+const baseMenuItems: MenuItem[] = [
   { label: 'Início', icon: 'home', path: '/(tabs)' },
   { label: 'Agendamentos', icon: 'calendar', path: '/(tabs)/agendamentos', paths: ['/(tabs)/agendamentos', '/agendamentos'] },
   { label: 'Clientes', icon: 'people', path: '/(tabs)/clientes' },
@@ -30,6 +33,31 @@ interface DrawerMenuProps {
 export default function DrawerMenu({ visible, onClose }: DrawerMenuProps) {
   const pathname = usePathname()
   const slideAnim = useRef(new Animated.Value(-280)).current
+  const usuario = authService.getUsuario()
+  const podeVerNotificacoes = usuario?.perfil === 'ADMIN' || usuario?.perfil === 'GERENTE'
+  const unidadeId = usuario?.unidadeId
+  const isAdmin = usuario?.perfil === 'ADMIN'
+
+  const { data: contadorReclamacoes = 0 } = useQuery({
+    queryKey: ['reclamacoes', 'contador', isAdmin ? 'todas' : 'unidade', unidadeId],
+    queryFn: async () => {
+      if (isAdmin) {
+        return await reclamacaoService.contarNaoLidas()
+      } else if (unidadeId) {
+        return await reclamacaoService.contarNaoLidasPorUnidade(unidadeId)
+      }
+      return 0
+    },
+    enabled: podeVerNotificacoes,
+    refetchInterval: 30000,
+  })
+
+  const menuItems: MenuItem[] = [
+    ...baseMenuItems,
+    ...(podeVerNotificacoes
+      ? [{ label: 'Notificações', icon: 'notifications', path: '/notificacoes', badge: contadorReclamacoes }]
+      : []),
+  ]
 
   useEffect(() => {
     if (visible) {
@@ -123,6 +151,13 @@ export default function DrawerMenu({ visible, onClose }: DrawerMenuProps) {
                   <Text style={[styles.menuText, active && styles.menuTextActive]}>
                     {item.label}
                   </Text>
+                  {item.badge !== undefined && item.badge > 0 && (
+                    <View style={styles.menuBadge}>
+                      <Text style={styles.menuBadgeText}>
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               )
             })}
@@ -228,5 +263,20 @@ const styles = StyleSheet.create({
     color: '#dc2626',
     fontWeight: '600',
     marginLeft: 12,
+  },
+  menuBadge: {
+    marginLeft: 'auto',
+    backgroundColor: '#DC2626',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+  },
+  menuBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 })

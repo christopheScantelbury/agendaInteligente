@@ -36,4 +36,7 @@ public class UnidadeDTO {
 
     private java.time.LocalTime horarioAbertura;
     private java.time.LocalTime horarioFechamento;
+    
+    private String logo;
+    private String corApp;
 }

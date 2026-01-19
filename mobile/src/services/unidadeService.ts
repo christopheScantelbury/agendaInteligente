@@ -15,6 +15,8 @@ export interface Unidade {
   ativo?: boolean
   horarioAbertura?: string
   horarioFechamento?: string
+  logo?: string
+  corApp?: string
 }
 
 export const unidadeService = {
