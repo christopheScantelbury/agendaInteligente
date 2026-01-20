@@ -6,6 +6,8 @@ import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
 import br.com.agendainteligente.mapper.PerfilMapper;
 import br.com.agendainteligente.repository.PerfilRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -78,11 +80,20 @@ public class PerfilService {
         Perfil perfil = perfilRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Perfil não encontrado"));
 
-        // Não permitir editar perfis do sistema
+        // Se for perfil do sistema, permitir editar apenas permissões de menu
         if (perfil.getSistema()) {
-            throw new BusinessException("Não é possível editar perfis do sistema");
+            // Apenas atualizar permissões de menu, mantendo nome, descrição e sistema inalterados
+            if (perfilDTO.getPermissoesMenu() != null) {
+                // Converter List<String> para JSON String
+                String permissoesJson = serializePermissoesMenu(perfilDTO.getPermissoesMenu());
+                perfil.setPermissoesMenu(permissoesJson);
+            }
+            perfil = perfilRepository.save(perfil);
+            log.info("Permissões de menu do perfil do sistema atualizadas. ID: {}, Nome: {}", id, perfil.getNome());
+            return perfilMapper.toDTO(perfil);
         }
 
+        // Para perfis customizados, permitir editar tudo exceto sistema
         // Validar nome único se mudou
         if (!perfil.getNome().equals(perfilDTO.getNome())) {
             if (perfilRepository.existsByNome(perfilDTO.getNome())) {
@@ -116,5 +127,21 @@ public class PerfilService {
 
         perfilRepository.delete(perfil);
         log.info("Perfil excluído. ID: {}", id);
+    }
+
+    /**
+     * Converte List<String> de permissões para JSON String
+     */
+    private String serializePermissoesMenu(List<String> permissoes) {
+        if (permissoes == null || permissoes.isEmpty()) {
+            return null;
+        }
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            return mapper.writeValueAsString(permissoes);
+        } catch (Exception e) {
+            log.error("Erro ao serializar permissões de menu", e);
+            return null;
+        }
     }
 }

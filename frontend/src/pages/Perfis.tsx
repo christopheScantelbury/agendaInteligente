@@ -104,9 +104,7 @@ export default function Perfis() {
                     )}
                   </div>
                 </div>
-                <div className="flex space-x-2">
-                  {!perfil.sistema && (
-                    <>
+                    <div className="flex space-x-2">
                       <button
                         onClick={() => {
                           setEditingPerfil(perfil)
@@ -117,16 +115,16 @@ export default function Perfis() {
                       >
                         <Edit className="h-5 w-5" />
                       </button>
-                      <button
-                        onClick={() => handleDelete(perfil.id!)}
-                        className="text-red-600 hover:text-red-800 transition-colors"
-                        aria-label="Excluir perfil"
-                      >
-                        <Trash2 className="h-5 w-5" />
-                      </button>
-                    </>
-                  )}
-                </div>
+                      {!perfil.sistema && (
+                        <button
+                          onClick={() => handleDelete(perfil.id!)}
+                          className="text-red-600 hover:text-red-800 transition-colors"
+                          aria-label="Excluir perfil"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </button>
+                      )}
+                    </div>
               </div>
             </li>
           ))}
@@ -266,18 +264,16 @@ function PerfilForm({
             <div className="mt-2 space-y-2 max-h-64 overflow-y-auto">
               {MENUS_DISPONIVEIS.map((menu) => {
                 const isSelected = formData.permissoesMenu?.includes(menu.path) || false
-                const isDisabled = perfil?.sistema || false
                 return (
                   <label
                     key={menu.path}
-                    className={`flex items-center p-2 rounded hover:bg-gray-50 ${isDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                    className="flex items-center p-2 rounded hover:bg-gray-50 cursor-pointer"
                   >
                     <input
                       type="checkbox"
                       checked={isSelected}
-                      onChange={() => !isDisabled && toggleMenu(menu.path)}
-                      disabled={isDisabled}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed"
+                      onChange={() => toggleMenu(menu.path)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                     <span className="ml-3 text-sm text-gray-700">{menu.label}</span>
                     <span className="ml-auto text-xs text-gray-400">{menu.path}</span>
@@ -298,15 +294,14 @@ function PerfilForm({
           <Button 
             type="submit" 
             isLoading={saveMutation.isPending}
-            disabled={perfil?.sistema || false}
           >
             Salvar
           </Button>
         </div>
         {perfil?.sistema && (
-          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-            <p className="text-sm text-yellow-800">
-              <strong>Atenção:</strong> Este é um perfil do sistema e não pode ser editado.
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-800">
+              <strong>Perfil do sistema:</strong> Apenas as permissões de menu podem ser editadas. Nome e descrição são fixos.
             </p>
           </div>
         )}
