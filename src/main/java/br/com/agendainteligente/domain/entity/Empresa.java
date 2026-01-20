@@ -10,12 +10,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
-@Table(name = "unidades")
+@Table(name = "empresas")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Unidade {
+public class Empresa {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,7 +25,16 @@ public class Unidade {
     private String nome;
 
     @Column(length = 200)
-    private String descricao;
+    private String razaoSocial;
+
+    @Column(length = 14, unique = true)
+    private String cnpj;
+
+    @Column(length = 100)
+    private String email;
+
+    @Column(length = 20)
+    private String telefone;
 
     @Column(length = 200)
     private String endereco;
@@ -45,31 +54,18 @@ public class Unidade {
     @Column(length = 2)
     private String uf;
 
-    @Column(length = 20)
-    private String telefone;
+    @Column(name = "logo", columnDefinition = "TEXT")
+    private String logo;
 
-    @Column(length = 100)
-    private String email;
+    @Column(name = "cor_app", length = 7)
+    private String corApp;
 
     @Column(nullable = false)
     @Builder.Default
     private Boolean ativo = true;
 
-    @Column(name = "horario_abertura")
-    private java.time.LocalTime horarioAbertura;
-
-    @Column(name = "horario_fechamento")
-    private java.time.LocalTime horarioFechamento;
-
-    @Column(length = 14)
-    private String cnpj;
-
-    @Column(name = "inscricao_municipal", length = 20)
-    private String inscricaoMunicipal;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "empresa_id", nullable = false)
-    private Empresa empresa;
+    @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Unidade> unidades;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataCriacao;

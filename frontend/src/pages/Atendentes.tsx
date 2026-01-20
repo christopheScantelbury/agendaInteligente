@@ -10,6 +10,7 @@ import Button from '../components/Button'
 import FormField from '../components/FormField'
 import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { maskCPF, maskPhone } from '../utils/masks'
 
 export default function Atendentes() {
   const { showNotification } = useNotification()
@@ -293,7 +294,9 @@ function AtendenteForm({
           type="text"
           required
           value={formData.cpf}
-          onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+          onChange={(e) => setFormData({ ...formData, cpf: maskCPF(e.target.value) })}
+          maxLength={14}
+          placeholder="000.000.000-00"
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         />
       </FormField>
@@ -302,7 +305,9 @@ function AtendenteForm({
         <input
           type="text"
           value={formData.telefone || ''}
-          onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+          onChange={(e) => setFormData({ ...formData, telefone: maskPhone(e.target.value) })}
+          maxLength={15}
+          placeholder="(00) 00000-0000"
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         />
       </FormField>

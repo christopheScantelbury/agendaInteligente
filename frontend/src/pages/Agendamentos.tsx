@@ -243,12 +243,26 @@ export default function Agendamentos() {
     return atendentesFiltrados.filter(a => atendentesIdsComHorarios.has(a.id!))
   }, [atendentesFiltrados, horariosDisponiveis])
 
+  const cancelarMutation = useMutation({
+    mutationFn: (id: number) => agendamentoService.cancelar(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agendamentos'] })
+      setAgendamentoDetalhes(null)
+      showNotification('success', 'Agendamento cancelado com sucesso!')
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Erro ao cancelar agendamento'
+      showNotification('error', errorMessage)
+    },
+  })
+
   const finalizarMutation = useMutation({
     mutationFn: ({ id, valorFinal }: { id: number; valorFinal: number }) =>
       agendamentoService.finalizar(id, valorFinal),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agendamentos'] })
       setFinalizarModal(null)
+      setAgendamentoDetalhes(null)
       showNotification('success', 'Agendamento finalizado! A nota fiscal será emitida automaticamente.')
     },
     onError: (error: any) => {
@@ -419,10 +433,10 @@ export default function Agendamentos() {
   }
 
   return (
-    <div className="w-full">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Agendamentos</h1>
-        <div className="flex gap-2">
+    <div className="w-full max-w-full overflow-x-hidden">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 sm:mb-6 px-2 sm:px-0">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Agendamentos</h1>
+        <div className="flex gap-2 w-full sm:w-auto">
           <Button
             onClick={() => {
               const agora = new Date()
@@ -440,16 +454,16 @@ export default function Agendamentos() {
               setHorariosDisponiveis([])
             }}
             variant="primary"
-            className="flex items-center"
+            className="flex items-center flex-1 sm:flex-initial"
           >
-            <Plus className="h-5 w-5 mr-2" />
-            Novo Agendamento
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+            <span className="text-sm sm:text-base">Novo Agendamento</span>
           </Button>
         </div>
       </div>
 
       {/* Calendário Visual */}
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6 px-2 sm:px-0">
         <CalendarView
           agendamentos={agendamentos}
           onSelectSlot={handleSelectSlot}
@@ -463,20 +477,20 @@ export default function Agendamentos() {
       </div>
 
       {/* Legenda */}
-      <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Legenda:</h3>
-        <div className="flex flex-wrap gap-4">
+      <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 mb-4 sm:mb-6 mx-2 sm:mx-0">
+        <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 sm:mb-3">Legenda:</h3>
+        <div className="flex flex-wrap gap-3 sm:gap-4">
           <div className="flex items-center">
-            <div className="w-4 h-4 bg-blue-500 rounded mr-2"></div>
-            <span className="text-sm text-gray-600">Agendado</span>
+            <div className="w-3 h-3 sm:w-4 sm:h-4 bg-blue-500 rounded mr-2"></div>
+            <span className="text-xs sm:text-sm text-gray-600">Agendado</span>
           </div>
           <div className="flex items-center">
-            <div className="w-4 h-4 bg-green-500 rounded mr-2"></div>
-            <span className="text-sm text-gray-600">Concluído</span>
+            <div className="w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded mr-2"></div>
+            <span className="text-xs sm:text-sm text-gray-600">Concluído</span>
           </div>
           <div className="flex items-center">
-            <div className="w-4 h-4 bg-red-500 rounded mr-2"></div>
-            <span className="text-sm text-gray-600">Cancelado</span>
+            <div className="w-3 h-3 sm:w-4 sm:h-4 bg-red-500 rounded mr-2"></div>
+            <span className="text-xs sm:text-sm text-gray-600">Cancelado</span>
           </div>
         </div>
       </div>
@@ -825,7 +839,38 @@ export default function Agendamentos() {
                 <p className="text-sm text-gray-900">{agendamentoDetalhes.observacoes}</p>
               </div>
             )}
-            <div className="flex justify-end pt-4 border-t">
+            <div className="flex justify-between items-center pt-4 border-t">
+              <div className="flex gap-2">
+                {perfil === 'ADMIN' || perfil === 'GERENTE' || perfil === 'PROFISSIONAL' ? (
+                  <>
+                    {agendamentoDetalhes.status !== 'CANCELADO' && agendamentoDetalhes.status !== 'FINALIZADO' && (
+                      <Button
+                        variant="danger"
+                        onClick={() => {
+                          if (window.confirm('Tem certeza que deseja cancelar este agendamento?')) {
+                            cancelarMutation.mutate(agendamentoDetalhes.id!)
+                          }
+                        }}
+                        disabled={cancelarMutation.isPending}
+                        isLoading={cancelarMutation.isPending}
+                      >
+                        Cancelar
+                      </Button>
+                    )}
+                    {agendamentoDetalhes.status !== 'FINALIZADO' && agendamentoDetalhes.status !== 'CANCELADO' && (
+                      <Button
+                        variant="success"
+                        onClick={() => {
+                          setFinalizarModal({ agendamento: agendamentoDetalhes, valor: agendamentoDetalhes.valorTotal?.toFixed(2) || '0' })
+                          setAgendamentoDetalhes(null)
+                        }}
+                      >
+                        Finalizar
+                      </Button>
+                    )}
+                  </>
+                ) : null}
+              </div>
               <Button variant="secondary" onClick={() => setAgendamentoDetalhes(null)}>
                 Fechar
               </Button>

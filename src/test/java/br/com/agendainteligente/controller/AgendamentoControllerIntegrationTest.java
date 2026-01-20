@@ -89,7 +89,7 @@ class AgendamentoControllerIntegrationTest {
                                 .email("admin@test.com")
                                 .senha(passwordEncoder.encode("admin123"))
                                 .nome("Admin")
-                                .perfil(PerfilUsuario.ADMIN)
+                                .perfilSistema(PerfilUsuario.ADMIN)
                                 .ativo(true)
                                 .build();
                 usuario = usuarioRepository.save(usuario);
@@ -121,7 +121,7 @@ class AgendamentoControllerIntegrationTest {
                                 .email("atendente@test.com")
                                 .senha(passwordEncoder.encode("senha123"))
                                 .nome("Atendente")
-                                .perfil(PerfilUsuario.PROFISSIONAL)
+                                .perfilSistema(PerfilUsuario.PROFISSIONAL)
                                 .ativo(true)
                                 .build();
                 usuarioAtendente = usuarioRepository.save(usuarioAtendente);

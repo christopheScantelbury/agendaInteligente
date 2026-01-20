@@ -26,10 +26,13 @@ public class UsuarioDTO {
 
     private String senha; // Opcional na atualização
 
-    @NotNull(message = "Perfil é obrigatório")
-    private PerfilUsuario perfil;
+    private PerfilUsuario perfilSistema; // Perfil do sistema (ADMIN, GERENTE, etc)
+    private Long perfilId; // ID do perfil customizado (opcional)
 
     private Long unidadeId; // Unidade à qual o usuário pertence (para GERENTE)
+    
+    // Campo de compatibilidade - será mapeado para perfilSistema
+    private PerfilUsuario perfil;
 
     private Boolean ativo;
 
