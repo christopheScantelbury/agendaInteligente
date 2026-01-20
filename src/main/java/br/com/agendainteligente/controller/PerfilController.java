@@ -1,164 +1,82 @@
 package br.com.agendainteligente.controller;
 
-import br.com.agendainteligente.domain.entity.Cliente;
-import br.com.agendainteligente.domain.entity.Usuario;
-import br.com.agendainteligente.dto.ClienteDTO;
-import br.com.agendainteligente.dto.UsuarioDTO;
-import br.com.agendainteligente.repository.ClienteRepository;
-import br.com.agendainteligente.repository.UsuarioRepository;
-import br.com.agendainteligente.service.ClienteService;
-import br.com.agendainteligente.service.UsuarioService;
+import br.com.agendainteligente.dto.PerfilDTO;
+import br.com.agendainteligente.service.PerfilService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("/api/perfil")
+@RequestMapping("/api/perfis")
 @RequiredArgsConstructor
-@Tag(name = "Perfil", description = "API para gerenciamento de perfil do usuário autenticado")
+@Tag(name = "Perfis", description = "API para gerenciamento de perfis e permissões")
 public class PerfilController {
 
-    private final UsuarioRepository usuarioRepository;
-    private final ClienteRepository clienteRepository;
-    private final UsuarioService usuarioService;
-    private final ClienteService clienteService;
-    private final PasswordEncoder passwordEncoder;
+    private final PerfilService perfilService;
 
-    @GetMapping("/usuario")
-    @Operation(summary = "Obter perfil do usuário autenticado")
-    public ResponseEntity<UsuarioDTO> meuPerfilUsuario() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String email = auth.getName();
-        
-        Usuario usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
-        
-        return ResponseEntity.ok(usuarioService.buscarPorId(usuario.getId()));
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Listar todos os perfis")
+    public ResponseEntity<List<PerfilDTO>> listarTodas() {
+        return ResponseEntity.ok(perfilService.listarTodos());
     }
 
-    @PutMapping("/usuario")
-    @Operation(summary = "Atualizar perfil do usuário autenticado")
-    public ResponseEntity<UsuarioDTO> atualizarPerfilUsuario(@Valid @RequestBody UsuarioDTO usuarioDTO) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String email = auth.getName();
-        
-        Usuario usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
-        
-        // Garantir que está atualizando apenas seu próprio perfil
-        usuarioDTO.setId(usuario.getId());
-        // Não permitir alterar perfil ou email
-        usuarioDTO.setPerfil(usuario.getPerfil());
-        usuarioDTO.setEmail(usuario.getEmail());
-        
-        return ResponseEntity.ok(usuarioService.atualizar(usuario.getId(), usuarioDTO));
+    @GetMapping("/ativos")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Listar apenas perfis ativos")
+    public ResponseEntity<List<PerfilDTO>> listarAtivos() {
+        return ResponseEntity.ok(perfilService.listarAtivos());
     }
 
-    @PutMapping("/usuario/senha")
-    @Operation(summary = "Alterar senha do usuário autenticado")
-    public ResponseEntity<Void> alterarSenhaUsuario(@Valid @RequestBody AlterarSenhaDTO dto) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String email = auth.getName();
-        
-        Usuario usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
-        
-        // Verificar senha atual
-        if (!passwordEncoder.matches(dto.getSenhaAtual(), usuario.getSenha())) {
-            throw new RuntimeException("Senha atual incorreta");
-        }
-        
-        // Atualizar senha
-        usuario.setSenha(passwordEncoder.encode(dto.getNovaSenha()));
-        usuarioRepository.save(usuario);
-        
-        return ResponseEntity.ok().build();
+    @GetMapping("/customizados")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Listar apenas perfis customizados (não do sistema)")
+    public ResponseEntity<List<PerfilDTO>> listarCustomizados() {
+        return ResponseEntity.ok(perfilService.listarCustomizados());
     }
 
-    @GetMapping("/cliente")
-    @Operation(summary = "Obter perfil do cliente autenticado")
-    public ResponseEntity<ClienteDTO> meuPerfilCliente() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String emailOuCpf = auth.getName();
-        
-        Cliente cliente = clienteRepository.findByEmail(emailOuCpf)
-                .orElseGet(() -> clienteRepository.findByCpfCnpj(emailOuCpf)
-                        .orElseThrow(() -> new RuntimeException("Cliente não encontrado")));
-        
-        return ResponseEntity.ok(clienteService.buscarPorId(cliente.getId()));
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Buscar perfil por ID")
+    public ResponseEntity<PerfilDTO> buscarPorId(@PathVariable Long id) {
+        return ResponseEntity.ok(perfilService.buscarPorId(id));
     }
 
-    @PutMapping("/cliente")
-    @Operation(summary = "Atualizar perfil do cliente autenticado")
-    public ResponseEntity<ClienteDTO> atualizarPerfilCliente(@Valid @RequestBody ClienteDTO clienteDTO) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String emailOuCpf = auth.getName();
-        
-        Cliente cliente = clienteRepository.findByEmail(emailOuCpf)
-                .orElseGet(() -> clienteRepository.findByCpfCnpj(emailOuCpf)
-                        .orElseThrow(() -> new RuntimeException("Cliente não encontrado")));
-        
-        // Garantir que está atualizando apenas seu próprio perfil
-        clienteDTO.setId(cliente.getId());
-        // Não permitir alterar CPF/CNPJ
-        clienteDTO.setCpfCnpj(cliente.getCpfCnpj());
-        
-        return ResponseEntity.ok(clienteService.atualizar(cliente.getId(), clienteDTO));
+    @GetMapping("/nome/{nome}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Buscar perfil por nome")
+    public ResponseEntity<PerfilDTO> buscarPorNome(@PathVariable String nome) {
+        return ResponseEntity.ok(perfilService.buscarPorNome(nome));
     }
 
-    @PutMapping("/cliente/senha")
-    @Operation(summary = "Alterar senha do cliente autenticado")
-    public ResponseEntity<Void> alterarSenhaCliente(@Valid @RequestBody AlterarSenhaDTO dto) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String emailOuCpf = auth.getName();
-        
-        Cliente cliente = clienteRepository.findByEmail(emailOuCpf)
-                .orElseGet(() -> clienteRepository.findByCpfCnpj(emailOuCpf)
-                        .orElseThrow(() -> new RuntimeException("Cliente não encontrado")));
-        
-        if (cliente.getSenha() == null || cliente.getSenha().isEmpty()) {
-            throw new RuntimeException("Cliente não possui senha cadastrada");
-        }
-        
-        // Verificar senha atual
-        if (!passwordEncoder.matches(dto.getSenhaAtual(), cliente.getSenha())) {
-            throw new RuntimeException("Senha atual incorreta");
-        }
-        
-        // Atualizar senha
-        cliente.setSenha(passwordEncoder.encode(dto.getNovaSenha()));
-        clienteRepository.save(cliente);
-        
-        return ResponseEntity.ok().build();
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Criar novo perfil customizado")
+    public ResponseEntity<PerfilDTO> criar(@Valid @RequestBody PerfilDTO perfilDTO) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(perfilService.criar(perfilDTO));
     }
 
-    // DTO interno
-    public static class AlterarSenhaDTO {
-        private String senhaAtual;
-        private String novaSenha;
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Atualizar perfil customizado")
+    public ResponseEntity<PerfilDTO> atualizar(@PathVariable Long id,
+                                                @Valid @RequestBody PerfilDTO perfilDTO) {
+        return ResponseEntity.ok(perfilService.atualizar(id, perfilDTO));
+    }
 
-        public String getSenhaAtual() {
-            return senhaAtual;
-        }
-
-        public void setSenhaAtual(String senhaAtual) {
-            this.senhaAtual = senhaAtual;
-        }
-
-        public String getNovaSenha() {
-            return novaSenha;
-        }
-
-        public void setNovaSenha(String novaSenha) {
-            this.novaSenha = novaSenha;
-        }
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Excluir perfil customizado")
+    public ResponseEntity<Void> excluir(@PathVariable Long id) {
+        perfilService.excluir(id);
+        return ResponseEntity.noContent().build();
     }
 }
-
-

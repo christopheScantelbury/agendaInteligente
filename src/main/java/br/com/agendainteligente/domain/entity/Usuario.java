@@ -39,9 +39,33 @@ public class Usuario implements UserDetails {
     private Boolean ativo = true;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    @Builder.Default
-    private PerfilUsuario perfil = PerfilUsuario.PROFISSIONAL;
+    @Column(name = "perfil_sistema", length = 20)
+    private PerfilUsuario perfilSistema; // Perfil do sistema (ADMIN, GERENTE, etc)
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "perfil_id")
+    private Perfil perfil; // Perfil customizado (pode ser null se usar perfilSistema)
+
+    // Método helper para obter a entidade Perfil
+    public Perfil getPerfilEntity() {
+        return perfil;
+    }
+
+    // Método helper para obter o perfil atual (enum)
+    public PerfilUsuario getPerfil() {
+        if (perfilSistema != null) {
+            return perfilSistema;
+        }
+        // Se tiver perfil customizado, retorna baseado no nome do perfil
+        if (perfil != null && perfil.getNome() != null) {
+            try {
+                return PerfilUsuario.valueOf(perfil.getNome().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return PerfilUsuario.PROFISSIONAL; // Default
+            }
+        }
+        return PerfilUsuario.PROFISSIONAL; // Default
+    }
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataCriacao;
@@ -68,7 +92,8 @@ public class Usuario implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + perfil.name()));
+        PerfilUsuario perfilAtual = getPerfil();
+        return List.of(new SimpleGrantedAuthority("ROLE_" + perfilAtual.name()));
     }
 
     @Override

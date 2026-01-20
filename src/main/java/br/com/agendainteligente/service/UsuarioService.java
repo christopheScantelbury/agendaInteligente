@@ -1,11 +1,13 @@
 package br.com.agendainteligente.service;
 
+import br.com.agendainteligente.domain.entity.Perfil;
 import br.com.agendainteligente.domain.entity.Unidade;
 import br.com.agendainteligente.domain.entity.Usuario;
 import br.com.agendainteligente.dto.UsuarioDTO;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
 import br.com.agendainteligente.mapper.UsuarioMapper;
+import br.com.agendainteligente.repository.PerfilRepository;
 import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,7 @@ public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
     private final UnidadeRepository unidadeRepository;
+    private final PerfilRepository perfilRepository;
     private final PasswordEncoder passwordEncoder;
     private final UsuarioMapper usuarioMapper;
 
@@ -51,20 +54,39 @@ public class UsuarioService {
             throw new BusinessException("Senha é obrigatória");
         }
 
+        // Determinar perfil: prioriza perfilSistema, depois perfilId, depois campo perfil (compatibilidade)
+        Usuario.PerfilUsuario perfilSistema = usuarioDTO.getPerfilSistema();
+        if (perfilSistema == null && usuarioDTO.getPerfil() != null) {
+            perfilSistema = usuarioDTO.getPerfil(); // Compatibilidade com código antigo
+        }
+        if (perfilSistema == null && usuarioDTO.getPerfilId() == null) {
+            throw new BusinessException("Perfil é obrigatório (perfilSistema ou perfilId)");
+        }
+
         Usuario usuario = usuarioMapper.toEntity(usuarioDTO);
         usuario.setSenha(passwordEncoder.encode(usuarioDTO.getSenha()));
+
+        // Setar perfil do sistema
+        if (perfilSistema != null) {
+            usuario.setPerfilSistema(perfilSistema);
+        }
+
+        // Setar perfil customizado se fornecido
+        if (usuarioDTO.getPerfilId() != null) {
+            Perfil perfil = perfilRepository.findById(usuarioDTO.getPerfilId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Perfil não encontrado"));
+            usuario.setPerfil(perfil);
+        }
 
         // Validação: GERENTE deve ter unidade associada
         if (usuario.getPerfil() == Usuario.PerfilUsuario.GERENTE && usuarioDTO.getUnidadeId() != null) {
             Unidade unidade = unidadeRepository.findById(usuarioDTO.getUnidadeId())
                     .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada"));
-            // Nota: A relação usuário-unidade pode ser implementada via tabela de
-            // relacionamento
-            // Por enquanto, apenas validamos que a unidade existe
         }
 
         usuario = usuarioRepository.save(usuario);
-        log.info("Usuário criado com sucesso. ID: {}, Email: {}", usuario.getId(), usuario.getEmail());
+        log.info("Usuário criado com sucesso. ID: {}, Email: {}, Perfil: {}", 
+                usuario.getId(), usuario.getEmail(), usuario.getPerfil());
         return toDTO(usuario);
     }
 
@@ -81,13 +103,31 @@ public class UsuarioService {
 
         usuarioMapper.updateEntityFromDTO(usuarioDTO, usuario);
 
+        // Atualizar perfil do sistema se fornecido
+        if (usuarioDTO.getPerfilSistema() != null) {
+            usuario.setPerfilSistema(usuarioDTO.getPerfilSistema());
+        } else if (usuarioDTO.getPerfil() != null) {
+            // Compatibilidade com código antigo
+            usuario.setPerfilSistema(usuarioDTO.getPerfil());
+        }
+
+        // Atualizar perfil customizado se fornecido
+        if (usuarioDTO.getPerfilId() != null) {
+            Perfil perfil = perfilRepository.findById(usuarioDTO.getPerfilId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Perfil não encontrado"));
+            usuario.setPerfil(perfil);
+        } else if (usuarioDTO.getPerfilId() == null && usuarioDTO.getPerfilSistema() != null) {
+            // Se perfilSistema foi fornecido mas perfilId não, limpar perfil customizado
+            usuario.setPerfil(null);
+        }
+
         // Atualiza senha apenas se fornecida
         if (usuarioDTO.getSenha() != null && !usuarioDTO.getSenha().trim().isEmpty()) {
             usuario.setSenha(passwordEncoder.encode(usuarioDTO.getSenha()));
         }
 
         usuario = usuarioRepository.save(usuario);
-        log.info("Usuário atualizado com sucesso. ID: {}", usuario.getId());
+        log.info("Usuário atualizado com sucesso. ID: {}, Perfil: {}", usuario.getId(), usuario.getPerfil());
         return toDTO(usuario);
     }
 

@@ -54,7 +54,7 @@ class AuthServiceTest {
                 .email("admin@test.com")
                 .senha("$2a$10$encodedPassword")
                 .nome("Admin")
-                .perfil(PerfilUsuario.ADMIN)
+                .perfilSistema(PerfilUsuario.ADMIN)
                 .ativo(true)
                 .build();
 

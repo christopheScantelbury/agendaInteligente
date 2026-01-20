@@ -10,32 +10,25 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UnidadeDTO {
+public class EmpresaDTO {
 
     private Long id;
 
     @NotBlank(message = "Nome é obrigatório")
     private String nome;
 
-    private String descricao;
+    private String razaoSocial;
+    private String cnpj;
+    private String email;
+    private String telefone;
     private String endereco;
     private String numero;
     private String bairro;
     private String cep;
     private String cidade;
     private String uf;
-    private String telefone;
-    private String email;
     private Boolean ativo;
-
-    private String razaoSocial;
-    private String cnpj;
-    private String inscricaoMunicipal;
-    private String inscricaoEstadual;
-    private String complemento;
-
-    private java.time.LocalTime horarioAbertura;
-    private java.time.LocalTime horarioFechamento;
     
-    private Long empresaId;
+    private String logo;
+    private String corApp;
 }
