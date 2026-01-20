@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,6 +31,8 @@ public class AtendenteService {
     private final UsuarioRepository usuarioRepository;
     private final ServicoRepository servicoRepository;
     private final AtendenteMapper atendenteMapper;
+    
+    private static final Pattern ONLY_DIGITS = Pattern.compile("\\D");
 
     @Transactional(readOnly = true)
     public List<AtendenteDTO> listarTodos() {
@@ -93,6 +96,9 @@ public class AtendenteService {
 
     @Transactional
     public AtendenteDTO criar(AtendenteDTO atendenteDTO) {
+        // Remover máscaras antes de validar e salvar
+        normalizeAtendenteDTO(atendenteDTO);
+        
         Unidade unidade = unidadeRepository.findById(atendenteDTO.getUnidadeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada"));
         
@@ -128,6 +134,9 @@ public class AtendenteService {
 
     @Transactional
     public AtendenteDTO atualizar(Long id, AtendenteDTO atendenteDTO) {
+        // Remover máscaras antes de validar e salvar
+        normalizeAtendenteDTO(atendenteDTO);
+        
         Atendente atendente = atendenteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Atendente não encontrado"));
         
@@ -189,6 +198,22 @@ public class AtendenteService {
                     .collect(Collectors.toList()));
         }
         return dto;
+    }
+
+    /**
+     * Remove máscaras de campos como CPF e telefone.
+     */
+    private void normalizeAtendenteDTO(AtendenteDTO atendenteDTO) {
+        if (atendenteDTO.getCpf() != null && !atendenteDTO.getCpf().trim().isEmpty()) {
+            String cpfNormalizado = ONLY_DIGITS.matcher(atendenteDTO.getCpf()).replaceAll("");
+            // Limitar a 14 caracteres (tamanho máximo do campo no banco)
+            atendenteDTO.setCpf(cpfNormalizado.length() > 14 ? cpfNormalizado.substring(0, 14) : cpfNormalizado);
+        }
+        if (atendenteDTO.getTelefone() != null && !atendenteDTO.getTelefone().trim().isEmpty()) {
+            String telefoneNormalizado = ONLY_DIGITS.matcher(atendenteDTO.getTelefone()).replaceAll("");
+            // Limitar a 20 caracteres (tamanho máximo do campo no banco)
+            atendenteDTO.setTelefone(telefoneNormalizado.length() > 20 ? telefoneNormalizado.substring(0, 20) : telefoneNormalizado);
+        }
     }
 }
 

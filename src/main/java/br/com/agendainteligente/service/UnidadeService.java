@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,6 +26,8 @@ public class UnidadeService {
     private final UnidadeRepository unidadeRepository;
     private final UnidadeMapper unidadeMapper;
     private final EmpresaRepository empresaRepository;
+
+    private static final Pattern ONLY_DIGITS = Pattern.compile("\\D");
 
     @Transactional(readOnly = true)
     public List<UnidadeDTO> listarTodos() {
@@ -50,6 +53,9 @@ public class UnidadeService {
 
     @Transactional
     public UnidadeDTO criar(UnidadeDTO unidadeDTO) {
+        // Remover máscaras antes de validar e salvar
+        normalizeUnidadeDTO(unidadeDTO);
+
         // Validar empresa
         if (unidadeDTO.getEmpresaId() == null) {
             throw new BusinessException("Empresa é obrigatória para criar uma unidade");
@@ -69,6 +75,9 @@ public class UnidadeService {
     public UnidadeDTO atualizar(Long id, UnidadeDTO unidadeDTO) {
         Unidade unidade = unidadeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada"));
+
+        // Remover máscaras antes de validar e salvar
+        normalizeUnidadeDTO(unidadeDTO);
         
         // Atualizar empresa se fornecido
         if (unidadeDTO.getEmpresaId() != null && !unidadeDTO.getEmpresaId().equals(unidade.getEmpresa().getId())) {
@@ -81,5 +90,31 @@ public class UnidadeService {
         unidade = unidadeRepository.save(unidade);
         log.info("Unidade atualizada. ID: {}", id);
         return unidadeMapper.toDTO(unidade);
+    }
+
+    /**
+     * Remove máscaras de campos como CEP, telefone e número.
+     */
+    private void normalizeUnidadeDTO(UnidadeDTO unidadeDTO) {
+        if (unidadeDTO.getCep() != null && !unidadeDTO.getCep().trim().isEmpty()) {
+            String cepNormalizado = ONLY_DIGITS.matcher(unidadeDTO.getCep()).replaceAll("");
+            // Limitar a 8 caracteres (tamanho máximo do campo no banco)
+            unidadeDTO.setCep(cepNormalizado.length() > 8 ? cepNormalizado.substring(0, 8) : cepNormalizado);
+        }
+        if (unidadeDTO.getTelefone() != null && !unidadeDTO.getTelefone().trim().isEmpty()) {
+            String telefoneNormalizado = ONLY_DIGITS.matcher(unidadeDTO.getTelefone()).replaceAll("");
+            // Limitar a 20 caracteres (tamanho máximo do campo no banco)
+            unidadeDTO.setTelefone(telefoneNormalizado.length() > 20 ? telefoneNormalizado.substring(0, 20) : telefoneNormalizado);
+        }
+        if (unidadeDTO.getNumero() != null && !unidadeDTO.getNumero().trim().isEmpty()) {
+            String numeroNormalizado = ONLY_DIGITS.matcher(unidadeDTO.getNumero()).replaceAll("");
+            // Limitar a 10 caracteres (tamanho máximo do campo no banco)
+            unidadeDTO.setNumero(numeroNormalizado.length() > 10 ? numeroNormalizado.substring(0, 10) : numeroNormalizado);
+        }
+        if (unidadeDTO.getCnpj() != null && !unidadeDTO.getCnpj().trim().isEmpty()) {
+            String cnpjNormalizado = ONLY_DIGITS.matcher(unidadeDTO.getCnpj()).replaceAll("");
+            // Limitar a 14 caracteres (tamanho máximo do campo no banco)
+            unidadeDTO.setCnpj(cnpjNormalizado.length() > 14 ? cnpjNormalizado.substring(0, 14) : cnpjNormalizado);
+        }
     }
 }

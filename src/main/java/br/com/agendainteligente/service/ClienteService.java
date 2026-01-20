@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,6 +24,8 @@ public class ClienteService {
 
     private final ClienteRepository clienteRepository;
     private final ClienteMapper clienteMapper;
+    
+    private static final Pattern ONLY_DIGITS = Pattern.compile("\\D");
 
     @Transactional(readOnly = true)
     @Cacheable(value = "clientes", unless = "#result.isEmpty()")
@@ -55,6 +58,9 @@ public class ClienteService {
     public ClienteDTO criar(ClienteDTO clienteDTO) {
         log.debug("Criando novo cliente: {}", clienteDTO);
         
+        // Remover máscaras antes de validar e salvar
+        normalizeClienteDTO(clienteDTO);
+        
         if (clienteRepository.existsByCpfCnpj(clienteDTO.getCpfCnpj())) {
             throw new BusinessException("Já existe um cliente cadastrado com este CPF/CNPJ");
         }
@@ -69,6 +75,9 @@ public class ClienteService {
     @CacheEvict(value = "clientes", allEntries = true)
     public ClienteDTO atualizar(Long id, ClienteDTO clienteDTO) {
         log.debug("Atualizando cliente com id: {}", id);
+        
+        // Remover máscaras antes de validar e salvar
+        normalizeClienteDTO(clienteDTO);
         
         Cliente cliente = clienteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado com id: " + id));
@@ -96,6 +105,32 @@ public class ClienteService {
         
         clienteRepository.deleteById(id);
         log.info("Cliente excluído com sucesso. ID: {}", id);
+    }
+
+    /**
+     * Remove máscaras de campos como CPF/CNPJ, telefone, CEP e número.
+     */
+    private void normalizeClienteDTO(ClienteDTO clienteDTO) {
+        if (clienteDTO.getCpfCnpj() != null && !clienteDTO.getCpfCnpj().trim().isEmpty()) {
+            String cpfCnpjNormalizado = ONLY_DIGITS.matcher(clienteDTO.getCpfCnpj()).replaceAll("");
+            // Limitar a 14 caracteres (tamanho máximo do campo no banco - aceita CPF 11 ou CNPJ 14)
+            clienteDTO.setCpfCnpj(cpfCnpjNormalizado.length() > 14 ? cpfCnpjNormalizado.substring(0, 14) : cpfCnpjNormalizado);
+        }
+        if (clienteDTO.getTelefone() != null && !clienteDTO.getTelefone().trim().isEmpty()) {
+            String telefoneNormalizado = ONLY_DIGITS.matcher(clienteDTO.getTelefone()).replaceAll("");
+            // Limitar a 20 caracteres (tamanho máximo do campo no banco)
+            clienteDTO.setTelefone(telefoneNormalizado.length() > 20 ? telefoneNormalizado.substring(0, 20) : telefoneNormalizado);
+        }
+        if (clienteDTO.getCep() != null && !clienteDTO.getCep().trim().isEmpty()) {
+            String cepNormalizado = ONLY_DIGITS.matcher(clienteDTO.getCep()).replaceAll("");
+            // Limitar a 8 caracteres (tamanho máximo do campo no banco)
+            clienteDTO.setCep(cepNormalizado.length() > 8 ? cepNormalizado.substring(0, 8) : cepNormalizado);
+        }
+        if (clienteDTO.getNumero() != null && !clienteDTO.getNumero().trim().isEmpty()) {
+            String numeroNormalizado = ONLY_DIGITS.matcher(clienteDTO.getNumero()).replaceAll("");
+            // Limitar a 10 caracteres (tamanho máximo do campo no banco)
+            clienteDTO.setNumero(numeroNormalizado.length() > 10 ? numeroNormalizado.substring(0, 10) : numeroNormalizado);
+        }
     }
 }
 
