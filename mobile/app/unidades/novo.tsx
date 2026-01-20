@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, StyleSheet, ScrollView, Alert, TextInput, TouchableOpacity, Image } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, Alert, TextInput } from 'react-native'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { router, useLocalSearchParams } from 'expo-router'
-import * as ImagePicker from 'expo-image-picker'
 import { unidadeService, Unidade } from '../../src/services/unidadeService'
+import { empresaService } from '../../src/services/empresaService'
 import Button from '../../src/components/Button'
 import FormField from '../../src/components/FormField'
 import HeaderWithMenu from '../../src/components/HeaderWithMenu'
+import { maskPhone, maskCEP, maskNumber, maskEmail } from '../../src/utils/masks'
+import { Picker } from '@react-native-picker/picker'
 
 export default function NovaUnidadeScreen() {
   const params = useLocalSearchParams()
@@ -33,52 +35,21 @@ export default function NovaUnidadeScreen() {
     ativo: true,
     horarioAbertura: '08:00',
     horarioFechamento: '18:00',
-    logo: undefined,
-    corApp: '#2563EB',
+    empresaId: undefined,
   })
 
-  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const { data: empresas = [] } = useQuery({
+    queryKey: ['empresas'],
+    queryFn: empresaService.listarAtivas,
+  })
 
   useEffect(() => {
     if (unidadeExistente) {
       setFormData({
         ...unidadeExistente,
-        corApp: unidadeExistente.corApp || '#2563EB',
       })
-      setLogoPreview(unidadeExistente.logo || null)
     }
   }, [unidadeExistente])
-
-  const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (status !== 'granted') {
-      Alert.alert('Permissão necessária', 'Precisamos de permissão para acessar suas fotos.')
-      return
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-      base64: true,
-    })
-
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0]
-      if (asset.base64) {
-        // Comprimir imagem no cliente (redimensionar para max 200x200)
-        const base64 = `data:image/jpeg;base64,${asset.base64}`
-        setLogoPreview(base64)
-        setFormData({ ...formData, logo: base64 })
-      }
-    }
-  }
-
-  const removeImage = () => {
-    setLogoPreview(null)
-    setFormData({ ...formData, logo: undefined })
-  }
 
   const saveMutation = useMutation({
     mutationFn: async (data: Unidade) => {
@@ -111,6 +82,21 @@ export default function NovaUnidadeScreen() {
     <View style={styles.container}>
       <HeaderWithMenu title={unidadeId ? 'Editar Unidade' : 'Nova Unidade'} />
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <FormField label="Empresa" required>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={formData.empresaId || ''}
+              onValueChange={(value) => setFormData({ ...formData, empresaId: value || undefined })}
+              style={styles.picker}
+            >
+              <Picker.Item label="Selecione uma empresa" value="" />
+              {empresas.map((empresa) => (
+                <Picker.Item key={empresa.id} label={empresa.nome} value={empresa.id} />
+              ))}
+            </Picker>
+          </View>
+        </FormField>
+
         <FormField label="Nome da Unidade" required>
           <TextInput
             style={styles.input}
@@ -162,9 +148,10 @@ export default function NovaUnidadeScreen() {
           <TextInput
             style={styles.input}
             value={formData.cep || ''}
-            onChangeText={(text) => setFormData({ ...formData, cep: text })}
+            onChangeText={(text) => setFormData({ ...formData, cep: maskCEP(text) })}
             placeholder="00000-000"
             placeholderTextColor="#9ca3af"
+            maxLength={9}
           />
         </FormField>
 
@@ -184,7 +171,7 @@ export default function NovaUnidadeScreen() {
               <TextInput
                 style={styles.input}
                 value={formData.numero || ''}
-                onChangeText={(text) => setFormData({ ...formData, numero: text })}
+                onChangeText={(text) => setFormData({ ...formData, numero: maskNumber(text) })}
                 placeholder="123"
                 placeholderTextColor="#9ca3af"
               />
@@ -233,10 +220,11 @@ export default function NovaUnidadeScreen() {
           <TextInput
             style={styles.input}
             value={formData.telefone || ''}
-            onChangeText={(text) => setFormData({ ...formData, telefone: text })}
+            onChangeText={(text) => setFormData({ ...formData, telefone: maskPhone(text) })}
             placeholder="(00) 00000-0000"
             placeholderTextColor="#9ca3af"
             keyboardType="phone-pad"
+            maxLength={15}
           />
         </FormField>
 
@@ -244,51 +232,12 @@ export default function NovaUnidadeScreen() {
           <TextInput
             style={styles.input}
             value={formData.email || ''}
-            onChangeText={(text) => setFormData({ ...formData, email: text })}
+            onChangeText={(text) => setFormData({ ...formData, email: maskEmail(text) })}
             placeholder="email@exemplo.com"
             placeholderTextColor="#9ca3af"
             keyboardType="email-address"
             autoCapitalize="none"
           />
-        </FormField>
-
-        {/* Logo */}
-        <FormField label="Logo da Empresa">
-          <View style={styles.logoContainer}>
-            {logoPreview ? (
-              <View style={styles.logoPreviewContainer}>
-                <Image source={{ uri: logoPreview }} style={styles.logoPreview} />
-                <TouchableOpacity style={styles.removeLogoButton} onPress={removeImage}>
-                  <Text style={styles.removeLogoText}>×</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-                <Text style={styles.uploadButtonText}>Selecionar Imagem</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          <Text style={styles.helperText}>Tamanho máximo: 200x200px. A imagem será comprimida automaticamente.</Text>
-        </FormField>
-
-        {/* Cor do App */}
-        <FormField label="Cor do App">
-          <View style={styles.colorContainer}>
-            <View style={[styles.colorPreview, { backgroundColor: formData.corApp || '#2563EB' }]} />
-            <TextInput
-              style={[styles.input, styles.colorInput]}
-              value={formData.corApp || '#2563EB'}
-              onChangeText={(text) => {
-                if (/^#[0-9A-Fa-f]{0,6}$/.test(text) || text === '') {
-                  setFormData({ ...formData, corApp: text || '#2563EB' })
-                }
-              }}
-              placeholder="#2563EB"
-              placeholderTextColor="#9ca3af"
-              maxLength={7}
-            />
-          </View>
-          <Text style={styles.helperText}>Cor principal que será usada no app (formato hexadecimal)</Text>
         </FormField>
 
         <View style={styles.buttonContainer}>
@@ -335,68 +284,15 @@ const styles = StyleSheet.create({
     minHeight: 80,
     textAlignVertical: 'top',
   },
-  logoContainer: {
-    marginTop: 8,
-  },
-  logoPreviewContainer: {
-    position: 'relative',
-    alignSelf: 'flex-start',
-  },
-  logoPreview: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
+  pickerContainer: {
     borderWidth: 1,
     borderColor: '#D1D5DB',
-  },
-  removeLogoButton: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    backgroundColor: '#DC2626',
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  removeLogoText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  uploadButton: {
-    backgroundColor: '#2563EB',
-    padding: 12,
     borderRadius: 8,
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-  },
-  uploadButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  colorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    backgroundColor: '#FFFFFF',
     marginTop: 8,
   },
-  colorPreview: {
-    width: 50,
+  picker: {
     height: 50,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-  },
-  colorInput: {
-    flex: 1,
-  },
-  helperText: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 4,
   },
   buttonContainer: {
     flexDirection: 'row',

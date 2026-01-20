@@ -24,6 +24,8 @@ import Agendamentos from './pages/Agendamentos'
 import NovoAgendamento from './pages/NovoAgendamento'
 import Reclamacoes from './pages/Reclamacoes'
 import Notificacoes from './pages/Notificacoes'
+import Empresas from './pages/Empresas'
+import Perfis from './pages/Perfis'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,6 +85,8 @@ function App() {
                         <Route path="/agendamentos" element={<Agendamentos />} />
                         <Route path="/agendamentos/novo" element={<NovoAgendamento />} />
                         <Route path="/notificacoes" element={<Notificacoes />} />
+                        <Route path="/empresas" element={<Empresas />} />
+                        <Route path="/perfis" element={<Perfis />} />
                       </Routes>
                     </Layout>
                   </ProtectedRoute>

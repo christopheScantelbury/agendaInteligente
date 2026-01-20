@@ -76,6 +76,24 @@ export default function TabsLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="empresas"
+        options={{
+          title: 'Empresas',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="business" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="perfis"
+        options={{
+          title: 'Perfis',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="shield" size={size} color={color} />
+          ),
+        }}
+      />
     </Tabs>
     </SwipeableContainer>
   )

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { unidadeService, Unidade } from '../services/unidadeService'
+import { empresaService } from '../services/empresaService'
 import { atendenteService } from '../services/atendenteService'
 import { Plus, Trash2, Edit, Clock, UserCog, ExternalLink } from 'lucide-react'
 import { useState, useEffect } from 'react'
@@ -9,6 +10,7 @@ import Button from '../components/Button'
 import FormField from '../components/FormField'
 import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { maskPhone, maskCEP, maskNumber } from '../utils/masks'
 
 export default function Unidades() {
   const { showNotification } = useNotification()
@@ -172,21 +174,20 @@ function UnidadeForm({
       ativo: true,
       horarioAbertura: '08:00',
       horarioFechamento: '18:00',
-      logo: undefined,
-      corApp: '#2563EB',
-      // unidadeId handled automatically
+      empresaId: undefined,
     }
   )
-  
-  const [logoPreview, setLogoPreview] = useState<string | null>(unidade?.logo || null)
+
+  const { data: empresas = [] } = useQuery({
+    queryKey: ['empresas'],
+    queryFn: empresaService.listarAtivas,
+  })
 
   useEffect(() => {
     if (unidade) {
       setFormData({
         ...unidade,
-        corApp: unidade.corApp || '#2563EB',
       })
-      setLogoPreview(unidade.logo || null)
     } else {
       setFormData({
         nome: '',
@@ -202,10 +203,8 @@ function UnidadeForm({
         ativo: true,
         horarioAbertura: '08:00',
         horarioFechamento: '18:00',
-        logo: undefined,
-        corApp: '#2563EB',
+        empresaId: undefined,
       })
-      setLogoPreview(null)
     }
   }, [unidade])
 
@@ -267,12 +266,30 @@ function UnidadeForm({
           </div>
         </div>
 
+        <FormField label="Empresa" required>
+          <select
+            required
+            value={formData.empresaId || ''}
+            onChange={(e) => setFormData({ ...formData, empresaId: Number(e.target.value) })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          >
+            <option value="">Selecione uma empresa</option>
+            {empresas.map((empresa) => (
+              <option key={empresa.id} value={empresa.id}>
+                {empresa.nome}
+              </option>
+            ))}
+          </select>
+        </FormField>
+
         <div className="grid grid-cols-2 gap-4">
           <FormField label="CEP">
             <input
               type="text"
               value={formData.cep || ''}
-              onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, cep: maskCEP(e.target.value) })}
+              maxLength={9}
+              placeholder="00000-000"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
           </FormField>
@@ -280,7 +297,9 @@ function UnidadeForm({
             <input
               type="text"
               value={formData.telefone || ''}
-              onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, telefone: maskPhone(e.target.value) })}
+              maxLength={15}
+              placeholder="(00) 00000-0000"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
           </FormField>
@@ -295,12 +314,22 @@ function UnidadeForm({
           />
         </FormField>
 
+        <FormField label="Email">
+          <input
+            type="email"
+            value={formData.email || ''}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value.toLowerCase().trim() })}
+            placeholder="exemplo@email.com"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          />
+        </FormField>
+
         <div className="grid grid-cols-3 gap-4">
           <FormField label="Número">
             <input
               type="text"
               value={formData.numero || ''}
-              onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, numero: maskNumber(e.target.value) })}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
           </FormField>
@@ -320,105 +349,6 @@ function UnidadeForm({
               onChange={(e) => setFormData({ ...formData, uf: e.target.value.toUpperCase() })}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
-          </FormField>
-        </div>
-
-        {/* Logo e Cor do App */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-          <FormField label="Logo da Empresa">
-            <div className="space-y-2">
-              {logoPreview && (
-                <div className="relative inline-block">
-                  <img
-                    src={logoPreview}
-                    alt="Logo preview"
-                    className="h-20 w-20 object-contain border border-gray-300 rounded-md p-2"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLogoPreview(null)
-                      setFormData({ ...formData, logo: undefined })
-                    }}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) {
-                    // Comprimir imagem antes de converter para base64
-                    const reader = new FileReader()
-                    reader.onload = (event) => {
-                      const img = new Image()
-                      img.onload = () => {
-                        const canvas = document.createElement('canvas')
-                        const maxSize = 200
-                        let width = img.width
-                        let height = img.height
-                        
-                        if (width > height) {
-                          if (width > maxSize) {
-                            height = (height * maxSize) / width
-                            width = maxSize
-                          }
-                        } else {
-                          if (height > maxSize) {
-                            width = (width * maxSize) / height
-                            height = maxSize
-                          }
-                        }
-                        
-                        canvas.width = width
-                        canvas.height = height
-                        const ctx = canvas.getContext('2d')
-                        ctx?.drawImage(img, 0, 0, width, height)
-                        
-                        const base64 = canvas.toDataURL('image/jpeg', 0.7)
-                        setLogoPreview(base64)
-                        setFormData({ ...formData, logo: base64 })
-                      }
-                      img.src = event.target?.result as string
-                    }
-                    reader.readAsDataURL(file)
-                  }
-                }}
-                className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-              />
-              <p className="text-xs text-gray-500">Tamanho máximo: 200x200px. A imagem será comprimida automaticamente.</p>
-            </div>
-          </FormField>
-          
-          <FormField label="Cor do App">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={formData.corApp || '#2563EB'}
-                  onChange={(e) => setFormData({ ...formData, corApp: e.target.value })}
-                  className="h-10 w-20 rounded border border-gray-300 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={formData.corApp || '#2563EB'}
-                  onChange={(e) => {
-                    const value = e.target.value
-                    if (/^#[0-9A-Fa-f]{6}$/.test(value) || value === '') {
-                      setFormData({ ...formData, corApp: value || '#2563EB' })
-                    }
-                  }}
-                  placeholder="#2563EB"
-                  maxLength={7}
-                  className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
-              </div>
-              <p className="text-xs text-gray-500">Cor principal que será usada no app (formato hexadecimal)</p>
-            </div>
           </FormField>
         </div>
 

@@ -13,6 +13,8 @@ import {
   X,
   User,
   Bell,
+  Building2,
+  Shield,
 } from 'lucide-react'
 import { authService } from '../services/authService'
 import { useQuery } from '@tanstack/react-query'
@@ -71,10 +73,14 @@ export default function Layout({ children }: LayoutProps) {
   const navItems: NavItem[] = [
     { path: '/', label: 'Início', icon: <HomeIcon className="h-5 w-5" /> },
     { path: '/clientes', label: 'Clientes', icon: <Users className="h-5 w-5" /> },
+    // Adicionar Empresas apenas para ADMIN
+    ...(usuario?.perfil === 'ADMIN' ? [{ path: '/empresas', label: 'Empresas', icon: <Building2 className="h-5 w-5" /> }] : []),
     { path: '/unidades', label: 'Unidades', icon: <Briefcase className="h-5 w-5" /> },
     { path: '/atendentes', label: 'Atendentes', icon: <UserCog className="h-5 w-5" /> },
     { path: '/servicos', label: 'Serviços', icon: <Stethoscope className="h-5 w-5" /> },
     { path: '/usuarios', label: 'Usuários', icon: <Settings className="h-5 w-5" /> },
+    // Adicionar Perfis apenas para ADMIN
+    ...(usuario?.perfil === 'ADMIN' ? [{ path: '/perfis', label: 'Perfis', icon: <Shield className="h-5 w-5" /> }] : []),
     {
       path: '/agendamentos',
       label: 'Agendamentos',

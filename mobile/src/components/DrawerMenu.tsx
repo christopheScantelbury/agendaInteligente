@@ -23,6 +23,7 @@ const baseMenuItems: MenuItem[] = [
   { label: 'Unidades', icon: 'business', path: '/(tabs)/unidades' },
   { label: 'Atendentes', icon: 'person', path: '/(tabs)/atendentes' },
   { label: 'Usuários', icon: 'settings', path: '/(tabs)/usuarios' },
+  // Empresas e Perfis apenas para ADMIN
 ]
 
 interface DrawerMenuProps {
@@ -54,6 +55,13 @@ export default function DrawerMenu({ visible, onClose }: DrawerMenuProps) {
 
   const menuItems: MenuItem[] = [
     ...baseMenuItems,
+    // Adicionar Empresas e Perfis apenas para ADMIN
+    ...(isAdmin
+      ? [
+          { label: 'Empresas', icon: 'business', path: '/(tabs)/empresas' },
+          { label: 'Perfis', icon: 'shield', path: '/(tabs)/perfis' },
+        ]
+      : []),
     ...(podeVerNotificacoes
       ? [{ label: 'Notificações', icon: 'notifications', path: '/notificacoes', badge: contadorReclamacoes }]
       : []),

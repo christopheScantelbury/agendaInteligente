@@ -55,6 +55,8 @@ export default function RootLayout() {
             <Stack.Screen name="clientes/[id]" />
             <Stack.Screen name="clientes/novo" />
             <Stack.Screen name="agendamentos/novo" />
+            <Stack.Screen name="empresas/novo" />
+            <Stack.Screen name="perfis/novo" />
           </Stack>
         </QueryClientProvider>
       </DrawerProvider>

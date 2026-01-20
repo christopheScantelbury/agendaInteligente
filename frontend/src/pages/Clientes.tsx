@@ -4,6 +4,7 @@ import { Plus, Trash2, Edit } from 'lucide-react'
 import { useState } from 'react'
 import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { maskCPF, maskCNPJ, maskPhone, maskEmail } from '../utils/masks'
 
 export default function Clientes() {
   const { showNotification } = useNotification()
@@ -191,7 +192,15 @@ function ClienteModal({ cliente, onClose }: { cliente: Cliente | null; onClose: 
               type="text"
               required
               value={formData.cpfCnpj}
-              onChange={(e) => setFormData({ ...formData, cpfCnpj: e.target.value })}
+              onChange={(e) => {
+                const value = e.target.value
+                // Detecta se é CPF (11 dígitos) ou CNPJ (14 dígitos)
+                const numbers = value.replace(/\D/g, '')
+                const masked = numbers.length <= 11 ? maskCPF(value) : maskCNPJ(value)
+                setFormData({ ...formData, cpfCnpj: masked })
+              }}
+              maxLength={18}
+              placeholder="000.000.000-00 ou 00.000.000/0000-00"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
@@ -200,7 +209,8 @@ function ClienteModal({ cliente, onClose }: { cliente: Cliente | null; onClose: 
             <input
               type="email"
               value={formData.email || ''}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, email: maskEmail(e.target.value) })}
+              placeholder="exemplo@email.com"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
@@ -209,7 +219,9 @@ function ClienteModal({ cliente, onClose }: { cliente: Cliente | null; onClose: 
             <input
               type="text"
               value={formData.telefone || ''}
-              onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, telefone: maskPhone(e.target.value) })}
+              maxLength={15}
+              placeholder="(00) 00000-0000"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
           </div>

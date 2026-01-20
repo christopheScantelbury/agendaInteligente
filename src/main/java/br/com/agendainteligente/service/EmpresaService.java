@@ -46,11 +46,27 @@ public class EmpresaService {
 
     @Transactional
     public EmpresaDTO criar(EmpresaDTO empresaDTO) {
-        // Validar CNPJ único se fornecido
+        // Remover máscara do CNPJ antes de salvar
         if (empresaDTO.getCnpj() != null && !empresaDTO.getCnpj().trim().isEmpty()) {
-            if (empresaRepository.existsByCnpj(empresaDTO.getCnpj())) {
+            String cnpjSemMascara = empresaDTO.getCnpj().replaceAll("\\D", "");
+            empresaDTO.setCnpj(cnpjSemMascara);
+            
+            // Validar CNPJ único se fornecido
+            if (empresaRepository.existsByCnpj(cnpjSemMascara)) {
                 throw new BusinessException("Já existe uma empresa cadastrada com este CNPJ");
             }
+        }
+        
+        // Remover máscara do CEP antes de salvar
+        if (empresaDTO.getCep() != null && !empresaDTO.getCep().trim().isEmpty()) {
+            String cepSemMascara = empresaDTO.getCep().replaceAll("\\D", "");
+            empresaDTO.setCep(cepSemMascara);
+        }
+        
+        // Remover máscara do telefone antes de salvar
+        if (empresaDTO.getTelefone() != null && !empresaDTO.getTelefone().trim().isEmpty()) {
+            String telefoneSemMascara = empresaDTO.getTelefone().replaceAll("\\D", "");
+            empresaDTO.setTelefone(telefoneSemMascara);
         }
 
         // Comprimir a imagem se fornecida
@@ -75,14 +91,30 @@ public class EmpresaService {
         Empresa empresa = empresaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa não encontrada"));
 
-        // Validar CNPJ único se fornecido e diferente do atual
+        // Remover máscara do CNPJ antes de salvar
         if (empresaDTO.getCnpj() != null && !empresaDTO.getCnpj().trim().isEmpty()) {
-            empresaRepository.findByCnpj(empresaDTO.getCnpj())
+            String cnpjSemMascara = empresaDTO.getCnpj().replaceAll("\\D", "");
+            empresaDTO.setCnpj(cnpjSemMascara);
+            
+            // Validar CNPJ único se fornecido e diferente do atual
+            empresaRepository.findByCnpj(cnpjSemMascara)
                     .ifPresent(empresaExistente -> {
                         if (!empresaExistente.getId().equals(id)) {
                             throw new BusinessException("Já existe uma empresa cadastrada com este CNPJ");
                         }
                     });
+        }
+        
+        // Remover máscara do CEP antes de salvar
+        if (empresaDTO.getCep() != null && !empresaDTO.getCep().trim().isEmpty()) {
+            String cepSemMascara = empresaDTO.getCep().replaceAll("\\D", "");
+            empresaDTO.setCep(cepSemMascara);
+        }
+        
+        // Remover máscara do telefone antes de salvar
+        if (empresaDTO.getTelefone() != null && !empresaDTO.getTelefone().trim().isEmpty()) {
+            String telefoneSemMascara = empresaDTO.getTelefone().replaceAll("\\D", "");
+            empresaDTO.setTelefone(telefoneSemMascara);
         }
 
         // Comprimir a imagem se fornecida

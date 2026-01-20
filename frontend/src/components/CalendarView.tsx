@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Calendar, momentLocalizer, View, SlotInfo } from 'react-big-calendar'
 import moment from 'moment'
 import 'moment/locale/pt-br'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
+import './CalendarView.css'
 import { Agendamento } from '../services/agendamentoService'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -46,6 +47,27 @@ export default function CalendarView({
 }: CalendarViewProps) {
   const [currentView, setCurrentView] = useState<View>(view)
   const [currentDate, setCurrentDate] = useState<Date>(date)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Detectar se está em mobile e ajustar visualização
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+      
+      // No mobile, forçar visualização de dia se estiver em semana
+      if (mobile && currentView === 'week') {
+        setCurrentView('day')
+        if (onViewChange) {
+          onViewChange('day')
+        }
+      }
+    }
+
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [currentView, onViewChange])
 
   const events: CalendarEvent[] = useMemo(() => {
     return agendamentos.map((agendamento) => {
@@ -167,8 +189,11 @@ export default function CalendarView({
     }
   }
 
+  // No mobile, usar visualização de dia por padrão
+  const effectiveView = isMobile && currentView === 'week' ? 'day' : currentView
+
   return (
-    <div className={`h-[600px] lg:h-[700px] w-full bg-white rounded-lg shadow-sm p-4 relative ${disabled ? 'pointer-events-none opacity-50' : ''}`}>
+    <div className={`${isMobile ? 'h-[500px]' : 'h-[600px] lg:h-[700px]'} w-full bg-white rounded-lg shadow-sm ${isMobile ? 'p-2' : 'p-4'} relative ${disabled ? 'pointer-events-none opacity-50' : ''}`}>
       {disabled && (
         <div className="absolute inset-0 bg-gray-900 bg-opacity-30 z-10 rounded-lg flex items-center justify-center backdrop-blur-sm">
           <div className="bg-white rounded-lg shadow-xl p-6 border-2 border-blue-300">
@@ -182,7 +207,7 @@ export default function CalendarView({
         events={events}
         startAccessor="start"
         endAccessor="end"
-        view={currentView}
+        view={effectiveView}
         onView={handleViewChange}
         date={currentDate}
         onNavigate={handleNavigate}
@@ -205,10 +230,10 @@ export default function CalendarView({
           noEventsInRange: 'Não há agendamentos neste período.',
         }}
         formats={{
-          dayHeaderFormat: (date) => format(date, 'EEEE, dd/MM', { locale: ptBR }),
+          dayHeaderFormat: (date) => format(date, isMobile ? 'dd/MM' : 'EEEE, dd/MM', { locale: ptBR }),
           dayFormat: 'dd/MM',
-          weekdayFormat: (date) => format(date, 'EEE', { locale: ptBR }),
-          timeGutterFormat: 'HH:mm',
+          weekdayFormat: (date) => format(date, isMobile ? 'dd' : 'EEE', { locale: ptBR }),
+          timeGutterFormat: isMobile ? 'HH:mm' : 'HH:mm',
           eventTimeRangeFormat: ({ start, end }) =>
             `${format(start, 'HH:mm', { locale: ptBR })} - ${format(end, 'HH:mm', { locale: ptBR })}`,
         }}
@@ -216,7 +241,7 @@ export default function CalendarView({
         max={new Date(2024, 0, 1, 22, 0, 0)} // 10:00 PM
         step={30} // Intervalo de 30 minutos
         timeslots={2} // 2 slots por hora (30 min cada)
-        defaultView="week"
+        defaultView={isMobile ? 'day' : 'week'}
         culture="pt-BR"
       />
     </div>
