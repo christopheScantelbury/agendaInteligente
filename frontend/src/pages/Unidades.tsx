@@ -1,14 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { unidadeService, Unidade } from '../services/unidadeService'
+import { empresaService } from '../services/empresaService'
 import { atendenteService } from '../services/atendenteService'
 import { Plus, Trash2, Edit, Clock, UserCog, ExternalLink } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
 import FormField from '../components/FormField'
 import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { maskPhone, maskCEP, maskNumber } from '../utils/masks'
 
 export default function Unidades() {
   const { showNotification } = useNotification()
@@ -172,9 +174,39 @@ function UnidadeForm({
       ativo: true,
       horarioAbertura: '08:00',
       horarioFechamento: '18:00',
-      // unidadeId handled automatically
+      empresaId: undefined,
     }
   )
+
+  const { data: empresas = [] } = useQuery({
+    queryKey: ['empresas'],
+    queryFn: empresaService.listarAtivas,
+  })
+
+  useEffect(() => {
+    if (unidade) {
+      setFormData({
+        ...unidade,
+      })
+    } else {
+      setFormData({
+        nome: '',
+        descricao: '',
+        endereco: '',
+        numero: '',
+        bairro: '',
+        cep: '',
+        cidade: '',
+        uf: '',
+        telefone: '',
+        email: '',
+        ativo: true,
+        horarioAbertura: '08:00',
+        horarioFechamento: '18:00',
+        empresaId: undefined,
+      })
+    }
+  }, [unidade])
 
   const saveMutation = useMutation({
     mutationFn: async (data: Unidade) => {
@@ -234,12 +266,30 @@ function UnidadeForm({
           </div>
         </div>
 
+        <FormField label="Empresa" required>
+          <select
+            required
+            value={formData.empresaId || ''}
+            onChange={(e) => setFormData({ ...formData, empresaId: Number(e.target.value) })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          >
+            <option value="">Selecione uma empresa</option>
+            {empresas.map((empresa) => (
+              <option key={empresa.id} value={empresa.id}>
+                {empresa.nome}
+              </option>
+            ))}
+          </select>
+        </FormField>
+
         <div className="grid grid-cols-2 gap-4">
           <FormField label="CEP">
             <input
               type="text"
               value={formData.cep || ''}
-              onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, cep: maskCEP(e.target.value) })}
+              maxLength={9}
+              placeholder="00000-000"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
           </FormField>
@@ -247,7 +297,9 @@ function UnidadeForm({
             <input
               type="text"
               value={formData.telefone || ''}
-              onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, telefone: maskPhone(e.target.value) })}
+              maxLength={15}
+              placeholder="(00) 00000-0000"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
           </FormField>
@@ -262,12 +314,22 @@ function UnidadeForm({
           />
         </FormField>
 
+        <FormField label="Email">
+          <input
+            type="email"
+            value={formData.email || ''}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value.toLowerCase().trim() })}
+            placeholder="exemplo@email.com"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          />
+        </FormField>
+
         <div className="grid grid-cols-3 gap-4">
           <FormField label="Número">
             <input
               type="text"
               value={formData.numero || ''}
-              onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, numero: maskNumber(e.target.value) })}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
           </FormField>

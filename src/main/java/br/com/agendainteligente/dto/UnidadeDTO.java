@@ -36,4 +36,6 @@ public class UnidadeDTO {
 
     private java.time.LocalTime horarioAbertura;
     private java.time.LocalTime horarioFechamento;
+    
+    private Long empresaId;
 }

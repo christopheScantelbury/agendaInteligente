@@ -13,10 +13,9 @@ export interface Unidade {
   telefone?: string
   email?: string
   ativo?: boolean
-
-
   horarioAbertura?: string
   horarioFechamento?: string
+  empresaId?: number
 }
 
 export const unidadeService = {

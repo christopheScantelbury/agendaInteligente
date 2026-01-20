@@ -1,0 +1,157 @@
+/* Estilos customizados para o calendário responsivo */
+
+/* Mobile: Forçar visualização de dia e ajustar layout */
+@media (max-width: 768px) {
+  .rbc-calendar {
+    font-size: 12px;
+  }
+
+  .rbc-header {
+    padding: 8px 4px;
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rbc-time-header {
+    display: none !important;
+  }
+
+  .rbc-time-content {
+    border-top: none !important;
+  }
+
+  .rbc-time-view {
+    border-top: none !important;
+  }
+
+  .rbc-day-slot {
+    min-height: 60px;
+  }
+
+  .rbc-time-slot {
+    min-height: 40px;
+  }
+
+  .rbc-event {
+    font-size: 10px;
+    padding: 2px 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rbc-event-label {
+    display: none;
+  }
+
+  .rbc-toolbar {
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .rbc-toolbar button {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+
+  .rbc-toolbar-label {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 4px 0;
+  }
+
+  /* Ocultar visualização semanal no mobile */
+  .rbc-toolbar button[type="button"]:nth-child(3),
+  .rbc-toolbar button[type="button"]:nth-child(4) {
+    display: none;
+  }
+
+  /* Ajustar gutter de tempo */
+  .rbc-time-gutter {
+    min-width: 50px;
+    font-size: 10px;
+  }
+
+  .rbc-time-gutter .rbc-timeslot-group {
+    min-height: 40px;
+  }
+
+  /* Ajustar colunas dos dias */
+  .rbc-day-bg {
+    min-width: 0;
+  }
+
+  /* Melhorar scroll horizontal se necessário */
+  .rbc-time-content {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Tablet: Ajustes intermediários */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .rbc-calendar {
+    font-size: 13px;
+  }
+
+  .rbc-header {
+    padding: 10px 6px;
+    font-size: 12px;
+  }
+
+  .rbc-event {
+    font-size: 11px;
+    padding: 3px 5px;
+  }
+
+  .rbc-time-gutter {
+    min-width: 60px;
+  }
+}
+
+/* Melhorias gerais para mobile */
+@media (max-width: 640px) {
+  .rbc-calendar {
+    font-size: 11px;
+  }
+
+  .rbc-header {
+    padding: 6px 2px;
+    font-size: 10px;
+  }
+
+  .rbc-toolbar {
+    padding: 6px;
+  }
+
+  .rbc-toolbar button {
+    font-size: 11px;
+    padding: 5px 8px;
+  }
+
+  .rbc-event {
+    font-size: 9px;
+    padding: 1px 3px;
+  }
+
+  .rbc-time-gutter {
+    min-width: 45px;
+    font-size: 9px;
+  }
+}
+
+/* Melhorar a experiência de toque */
+.rbc-event {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Ajustar scroll suave */
+.rbc-time-content,
+.rbc-day-slot {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}

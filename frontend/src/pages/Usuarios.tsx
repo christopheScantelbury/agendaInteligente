@@ -8,6 +8,7 @@ import Button from '../components/Button'
 import FormField from '../components/FormField'
 import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { maskEmail } from '../utils/masks'
 
 export default function Usuarios() {
   const { showNotification } = useNotification()
@@ -210,7 +211,8 @@ function UsuarioForm({
           type="email"
           required
           value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          onChange={(e) => setFormData({ ...formData, email: maskEmail(e.target.value) })}
+          placeholder="exemplo@email.com"
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         />
       </FormField>

@@ -67,6 +67,10 @@ public class Unidade {
     @Column(name = "inscricao_municipal", length = 20)
     private String inscricaoMunicipal;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "empresa_id", nullable = false)
+    private Empresa empresa;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataCriacao;
 

@@ -89,7 +89,7 @@ class AgendamentoControllerIntegrationTest {
                                 .email("admin@test.com")
                                 .senha(passwordEncoder.encode("admin123"))
                                 .nome("Admin")
-                                .perfil(PerfilUsuario.ADMIN)
+                                .perfilSistema(PerfilUsuario.ADMIN)
                                 .ativo(true)
                                 .build();
                 usuario = usuarioRepository.save(usuario);
@@ -121,7 +121,7 @@ class AgendamentoControllerIntegrationTest {
                                 .email("atendente@test.com")
                                 .senha(passwordEncoder.encode("senha123"))
                                 .nome("Atendente")
-                                .perfil(PerfilUsuario.PROFISSIONAL)
+                                .perfilSistema(PerfilUsuario.PROFISSIONAL)
                                 .ativo(true)
                                 .build();
                 usuarioAtendente = usuarioRepository.save(usuarioAtendente);
@@ -141,6 +141,7 @@ class AgendamentoControllerIntegrationTest {
                                 .cpfCnpj("12345678900")
                                 .email("cliente@test.com")
                                 .telefone("11999999999")
+                                .dataNascimento(java.time.LocalDate.of(1990, 1, 1))
                                 .build();
                 cliente = clienteRepository.save(cliente);
         }

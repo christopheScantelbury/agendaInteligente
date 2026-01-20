@@ -5,7 +5,6 @@ import {
   Users,
   Home as HomeIcon,
   LogOut,
-
   Settings,
   UserCog,
   Briefcase,
@@ -13,8 +12,13 @@ import {
   Menu,
   X,
   User,
+  Bell,
+  Building2,
+  Shield,
 } from 'lucide-react'
 import { authService } from '../services/authService'
+import { useQuery } from '@tanstack/react-query'
+import { reclamacaoService } from '../services/reclamacaoService'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -32,6 +36,22 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate()
   const usuario = authService.getUsuario()
   const [sidebarOpen, setSidebarOpen] = useState(false) // Mobile toggle
+
+  // Verificar se é ADMIN ou GERENTE para mostrar notificações
+  const podeVerNotificacoes = usuario?.perfil === 'ADMIN' || usuario?.perfil === 'GERENTE'
+
+  // Buscar contador de reclamações não lidas
+  const { data: contadorReclamacoes = 0 } = useQuery({
+    queryKey: ['reclamacoes', 'contador'],
+    queryFn: () => {
+      if (usuario?.perfil === 'GERENTE' && usuario?.unidadeId) {
+        return reclamacaoService.contarNaoLidasPorUnidade(usuario.unidadeId)
+      }
+      return reclamacaoService.contarNaoLidas()
+    },
+    enabled: podeVerNotificacoes,
+    refetchInterval: 30000, // Atualiza a cada 30 segundos
+  })
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -53,10 +73,14 @@ export default function Layout({ children }: LayoutProps) {
   const navItems: NavItem[] = [
     { path: '/', label: 'Início', icon: <HomeIcon className="h-5 w-5" /> },
     { path: '/clientes', label: 'Clientes', icon: <Users className="h-5 w-5" /> },
+    // Adicionar Empresas apenas para ADMIN
+    ...(usuario?.perfil === 'ADMIN' ? [{ path: '/empresas', label: 'Empresas', icon: <Building2 className="h-5 w-5" /> }] : []),
     { path: '/unidades', label: 'Unidades', icon: <Briefcase className="h-5 w-5" /> },
     { path: '/atendentes', label: 'Atendentes', icon: <UserCog className="h-5 w-5" /> },
     { path: '/servicos', label: 'Serviços', icon: <Stethoscope className="h-5 w-5" /> },
     { path: '/usuarios', label: 'Usuários', icon: <Settings className="h-5 w-5" /> },
+    // Adicionar Perfis apenas para ADMIN
+    ...(usuario?.perfil === 'ADMIN' ? [{ path: '/perfis', label: 'Perfis', icon: <Shield className="h-5 w-5" /> }] : []),
     {
       path: '/agendamentos',
       label: 'Agendamentos',
@@ -64,6 +88,15 @@ export default function Layout({ children }: LayoutProps) {
       paths: ['/agendamentos'],
     },
   ]
+
+  // Adicionar item de notificações se for ADMIN ou GERENTE
+  if (podeVerNotificacoes) {
+    navItems.push({
+      path: '/notificacoes',
+      label: 'Notificações',
+      icon: <Bell className="h-5 w-5" />,
+    })
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -106,6 +139,7 @@ export default function Layout({ children }: LayoutProps) {
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
           {navItems.map((item) => {
             const active = isActive(item.path, item.paths)
+            const isNotificacoes = item.path === '/notificacoes'
             return (
               <Link
                 key={item.path}
@@ -124,6 +158,11 @@ export default function Layout({ children }: LayoutProps) {
                 <span className="ml-3 font-medium whitespace-nowrap">
                   {item.label}
                 </span>
+                {isNotificacoes && contadorReclamacoes > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                    {contadorReclamacoes > 99 ? '99+' : contadorReclamacoes}
+                  </span>
+                )}
               </Link>
             )
           })}
@@ -159,7 +198,21 @@ export default function Layout({ children }: LayoutProps) {
             <Menu className="h-6 w-6" />
           </button>
           <span className="font-semibold text-gray-900">Agenda Inteligente</span>
-          <div className="w-8"></div> {/* Spacer for center alignment */}
+          {podeVerNotificacoes ? (
+            <Link
+              to="/notificacoes"
+              className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-md"
+            >
+              <Bell className="h-6 w-6" />
+              {contadorReclamacoes > 0 && (
+                <span className="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {contadorReclamacoes > 99 ? '99+' : contadorReclamacoes}
+                </span>
+              )}
+            </Link>
+          ) : (
+            <div className="w-8"></div>
+          )}
         </header>
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden">

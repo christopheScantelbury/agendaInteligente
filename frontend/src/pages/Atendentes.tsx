@@ -10,6 +10,7 @@ import Button from '../components/Button'
 import FormField from '../components/FormField'
 import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { maskCPF, maskPhone } from '../utils/masks'
 
 export default function Atendentes() {
   const { showNotification } = useNotification()
@@ -80,6 +81,13 @@ export default function Atendentes() {
                   <p className="text-sm text-gray-500">CPF: {atendente.cpf}</p>
                   {atendente.telefone && (
                     <p className="text-sm text-gray-500">Telefone: {atendente.telefone}</p>
+                  )}
+                  {(atendente.percentualComissao !== undefined && atendente.percentualComissao !== null) && (
+                    <p className="text-sm text-gray-500">
+                      Comissão: {typeof atendente.percentualComissao === 'number' 
+                        ? atendente.percentualComissao.toFixed(2) 
+                        : parseFloat(String(atendente.percentualComissao)).toFixed(2)}%
+                    </p>
                   )}
                   <span
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${atendente.ativo
@@ -161,6 +169,7 @@ function AtendenteForm({
     usuarioId: 0,
     cpf: '',
     telefone: '',
+    percentualComissao: undefined,
     ativo: true,
   })
 
@@ -189,6 +198,9 @@ function AtendenteForm({
         usuarioId: atendente.usuarioId || 0,
         cpf: atendente.cpf || '',
         telefone: atendente.telefone || '',
+        percentualComissao: atendente.percentualComissao !== undefined && atendente.percentualComissao !== null && atendente.percentualComissao !== 0
+          ? atendente.percentualComissao 
+          : undefined,
         ativo: atendente.ativo !== undefined ? atendente.ativo : true,
       })
       setServicosSelecionados(atendente.servicosIds || [])
@@ -199,6 +211,7 @@ function AtendenteForm({
         usuarioId: 0,
         cpf: '',
         telefone: '',
+        percentualComissao: undefined,
         ativo: true,
       })
       setServicosSelecionados([])
@@ -224,7 +237,14 @@ function AtendenteForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    saveMutation.mutate({ ...formData, servicosIds: servicosSelecionados } as any)
+    const dataToSave = {
+      ...formData,
+      servicosIds: servicosSelecionados,
+      percentualComissao: formData.percentualComissao === undefined || formData.percentualComissao === null
+        ? 0 
+        : formData.percentualComissao
+    }
+    saveMutation.mutate(dataToSave as any)
   }
 
   const handleServicoToggle = (servicoId: number) => {
@@ -274,7 +294,9 @@ function AtendenteForm({
           type="text"
           required
           value={formData.cpf}
-          onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+          onChange={(e) => setFormData({ ...formData, cpf: maskCPF(e.target.value) })}
+          maxLength={14}
+          placeholder="000.000.000-00"
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         />
       </FormField>
@@ -283,9 +305,38 @@ function AtendenteForm({
         <input
           type="text"
           value={formData.telefone || ''}
-          onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+          onChange={(e) => setFormData({ ...formData, telefone: maskPhone(e.target.value) })}
+          maxLength={15}
+          placeholder="(00) 00000-0000"
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         />
+      </FormField>
+
+      <FormField label="Percentual de Comissão (%)">
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          max="100"
+          value={formData.percentualComissao !== undefined && formData.percentualComissao !== null && formData.percentualComissao !== 0
+            ? formData.percentualComissao 
+            : ''}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (value === '') {
+              setFormData({ ...formData, percentualComissao: 0 });
+            } else {
+              const numValue = parseFloat(value);
+              setFormData({ 
+                ...formData, 
+                percentualComissao: isNaN(numValue) ? 0 : numValue
+              });
+            }
+          }}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          placeholder="0.00"
+        />
+        <p className="mt-1 text-xs text-gray-500">Percentual de comissão sobre os serviços prestados (0.00 a 100.00). Deixe vazio para 0%.</p>
       </FormField>
 
       <FormField label="Serviços" required>

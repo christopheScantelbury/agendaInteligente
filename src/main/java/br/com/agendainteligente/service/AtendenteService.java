@@ -113,6 +113,11 @@ public class AtendenteService {
         atendente.setUnidade(unidade);
         atendente.setUsuario(usuario);
         
+        // Define percentual de comissão se fornecido
+        if (atendenteDTO.getPercentualComissao() != null) {
+            atendente.setPercentualComissao(atendenteDTO.getPercentualComissao());
+        }
+        
         // Associa serviços se fornecidos
         if (atendenteDTO.getServicosIds() != null && !atendenteDTO.getServicosIds().isEmpty()) {
             List<Servico> servicos = servicoRepository.findAllById(atendenteDTO.getServicosIds());
@@ -151,6 +156,11 @@ public class AtendenteService {
         atendente.setUnidade(unidade);
         atendente.setCpf(atendenteDTO.getCpf());
         atendente.setTelefone(atendenteDTO.getTelefone());
+        atendente.setPercentualComissao(
+            atendenteDTO.getPercentualComissao() != null 
+                ? atendenteDTO.getPercentualComissao() 
+                : java.math.BigDecimal.ZERO
+        );
         if (atendenteDTO.getAtivo() != null) {
             atendente.setAtivo(atendenteDTO.getAtivo());
         }

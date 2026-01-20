@@ -25,6 +25,7 @@ public class AtendenteDTO {
     private String cpf;
     
     private String telefone;
+    private java.math.BigDecimal percentualComissao;
     private Boolean ativo;
     
     // Para exibição

@@ -45,7 +45,7 @@ class AuthControllerIntegrationTest {
                 .email("admin@test.com")
                 .senha(passwordEncoder.encode("admin123"))
                 .nome("Admin Test")
-                .perfil(PerfilUsuario.ADMIN)
+                .perfilSistema(PerfilUsuario.ADMIN)
                 .ativo(true)
                 .build();
         

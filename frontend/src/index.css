@@ -145,9 +145,7 @@ body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-}
-
-.rbc-day-slot {
+}.rbc-day-slot {
   position: relative;
 }
 
