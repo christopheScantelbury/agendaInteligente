@@ -37,6 +37,10 @@ public class Servico {
     @Builder.Default
     private Boolean ativo = true;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unidade_id", nullable = false)
+    private Unidade unidade;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataCriacao;
 

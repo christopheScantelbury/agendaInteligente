@@ -32,6 +32,18 @@ public class ServicoController {
         return ResponseEntity.ok(servicoService.listarAtivos());
     }
 
+    @GetMapping("/unidade/{unidadeId}")
+    @Operation(summary = "Listar serviços de uma unidade")
+    public ResponseEntity<List<ServicoDTO>> listarPorUnidade(@PathVariable Long unidadeId) {
+        return ResponseEntity.ok(servicoService.listarPorUnidade(unidadeId));
+    }
+
+    @GetMapping("/unidade/{unidadeId}/ativos")
+    @Operation(summary = "Listar serviços ativos de uma unidade")
+    public ResponseEntity<List<ServicoDTO>> listarAtivosPorUnidade(@PathVariable Long unidadeId) {
+        return ResponseEntity.ok(servicoService.listarAtivosPorUnidade(unidadeId));
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Buscar serviço por ID")
     public ResponseEntity<ServicoDTO> buscarPorId(@PathVariable Long id) {

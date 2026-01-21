@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { servicoService, Servico } from '../services/servicoService'
+import { unidadeService } from '../services/unidadeService'
+import { authService } from '../services/authService'
 import { Plus, Trash2, Edit } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import Modal from '../components/Modal'
@@ -209,6 +211,41 @@ function ServicoForm({
 }) {
   const queryClient = useQueryClient()
   const { showNotification } = useNotification()
+  const usuario = authService.getUsuario()
+  const perfilLogado = usuario?.perfil
+
+  // Buscar todas as unidades
+  const { data: todasUnidades = [] } = useQuery({
+    queryKey: ['unidades'],
+    queryFn: unidadeService.listarTodos,
+  })
+
+  // Buscar usuário completo para obter suas unidades (se não for admin)
+  const { data: usuarioCompleto } = useQuery({
+    queryKey: ['usuario', usuario?.usuarioId],
+    queryFn: () => {
+      // Implementar se necessário buscar usuário completo
+      return Promise.resolve(null)
+    },
+    enabled: false, // Desabilitado por enquanto
+  })
+
+  // Filtrar unidades baseado no perfil
+  const unidadesDisponiveis = useMemo(() => {
+    if (perfilLogado === 'ADMIN') {
+      return todasUnidades
+    }
+    // Para GERENTE e PROFISSIONAL, usar unidades do usuário
+    if (usuario?.unidadesIds && usuario.unidadesIds.length > 0) {
+      return todasUnidades.filter(u => usuario.unidadesIds?.includes(u.id!))
+    }
+    // Fallback: usar unidadeId se existir
+    if (usuario?.unidadeId) {
+      return todasUnidades.filter(u => u.id === usuario.unidadeId)
+    }
+    return []
+  }, [todasUnidades, perfilLogado, usuario?.unidadesIds, usuario?.unidadeId])
+
   const [formData, setFormData] = useState<Servico>(
     servico || {
       id: 0,
@@ -216,6 +253,7 @@ function ServicoForm({
       descricao: '',
       valor: 0,
       duracaoMinutos: 30,
+      unidadeId: unidadesDisponiveis.length === 1 ? unidadesDisponiveis[0].id! : 0,
       ativo: true,
     }
   )
@@ -260,6 +298,26 @@ function ServicoForm({
           rows={3}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         />
+      </FormField>
+
+      <FormField label="Unidade" required>
+        <select
+          required
+          value={formData.unidadeId || ''}
+          onChange={(e) => setFormData({ ...formData, unidadeId: parseInt(e.target.value) })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          disabled={unidadesDisponiveis.length === 1}
+        >
+          <option value="">Selecione uma unidade</option>
+          {unidadesDisponiveis.map((unidade) => (
+            <option key={unidade.id} value={unidade.id}>
+              {unidade.nome}
+            </option>
+          ))}
+        </select>
+        {unidadesDisponiveis.length === 0 && (
+          <p className="mt-1 text-sm text-red-600">Você não tem acesso a nenhuma unidade</p>
+        )}
       </FormField>
 
       <div className="grid grid-cols-2 gap-4">
