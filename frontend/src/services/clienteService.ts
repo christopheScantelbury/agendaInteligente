@@ -1,4 +1,5 @@
 import api from './api'
+import { Unidade } from './unidadeService'
 
 export interface Cliente {
   id?: number
@@ -15,6 +16,9 @@ export interface Cliente {
   uf?: string
   dataNascimento?: string
   rg?: string
+  ativo?: boolean
+  unidadesIds?: number[]
+  unidades?: Unidade[]
 }
 
 export const clienteService = {

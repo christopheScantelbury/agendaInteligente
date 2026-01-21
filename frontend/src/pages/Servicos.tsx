@@ -1,10 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { servicoService, Servico } from '../services/servicoService'
-import { Plus, Trash2, Edit, Search, X } from 'lucide-react'
+import { Plus, Trash2, Edit } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
 import FormField from '../components/FormField'
+import FilterBar from '../components/FilterBar'
 import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 
@@ -13,7 +14,8 @@ export default function Servicos() {
   const [showModal, setShowModal] = useState(false)
   const [editingServico, setEditingServico] = useState<Servico | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null })
-  const [buscaServico, setBuscaServico] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filters, setFilters] = useState<{ ativo?: string }>({})
   const queryClient = useQueryClient()
 
   const { data: servicos = [], isLoading } = useQuery({
@@ -22,13 +24,26 @@ export default function Servicos() {
   })
 
   const servicosFiltrados = useMemo(() => {
-    if (!buscaServico) return servicos
-    const buscaLower = buscaServico.toLowerCase()
-    return servicos.filter(s => 
-      s.nome.toLowerCase().includes(buscaLower) ||
-      s.descricao?.toLowerCase().includes(buscaLower)
-    )
-  }, [servicos, buscaServico])
+    let filtered = [...servicos]
+
+    // Filtro de busca
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase()
+      filtered = filtered.filter(
+        (s) =>
+          s.nome.toLowerCase().includes(term) ||
+          s.descricao?.toLowerCase().includes(term)
+      )
+    }
+
+    // Filtro de status
+    if (filters.ativo !== undefined && filters.ativo !== '') {
+      const isAtivo = filters.ativo === 'true'
+      filtered = filtered.filter((s) => (s.ativo ?? true) === isAtivo)
+    }
+
+    return filtered
+  }, [servicos, searchTerm, filters])
 
   const deleteMutation = useMutation({
     mutationFn: servicoService.excluir,
@@ -72,31 +87,36 @@ export default function Servicos() {
         </Button>
       </div>
 
-      <div className="mb-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Buscar serviço por nome ou descrição..."
-            value={buscaServico}
-            onChange={(e) => setBuscaServico(e.target.value)}
-            className="block w-full pl-10 pr-10 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          />
-          {buscaServico && (
-            <button
-              type="button"
-              onClick={() => setBuscaServico('')}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-      </div>
+      {/* Barra de Filtros */}
+      <FilterBar
+        onSearchChange={setSearchTerm}
+        onFilterChange={setFilters}
+        searchPlaceholder="Buscar por nome ou descrição..."
+        filters={[
+          {
+            key: 'ativo',
+            label: 'Status',
+            type: 'select',
+            options: [
+              { value: 'true', label: 'Ativos' },
+              { value: 'false', label: 'Inativos' },
+            ],
+          },
+        ]}
+      />
 
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul className="divide-y divide-gray-200">
-          {servicosFiltrados.map((servico) => (
+        {servicosFiltrados.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500">
+              {searchTerm || Object.values(filters).some(v => v !== '' && v !== undefined)
+                ? 'Nenhum serviço encontrado com os filtros aplicados'
+                : 'Nenhum serviço cadastrado'}
+            </p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-gray-200">
+            {servicosFiltrados.map((servico) => (
             <li key={servico.id} className="px-6 py-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -138,11 +158,12 @@ export default function Servicos() {
                 </div>
               </div>
             </li>
-          ))}
-        </ul>
-        {servicosFiltrados.length === 0 && (
-          <div className="px-6 py-8 text-center">
-            <p className="text-gray-500">Nenhum serviço encontrado</p>
+            ))}
+          </ul>
+        )}
+        {servicosFiltrados.length > 0 && (
+          <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 text-sm text-gray-600">
+            Mostrando {servicosFiltrados.length} de {servicos.length} serviço{servicos.length !== 1 ? 's' : ''}
           </div>
         )}
       </div>

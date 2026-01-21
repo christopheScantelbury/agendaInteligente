@@ -1,12 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { perfilService, Perfil } from '../services/perfilService'
-import { Plus, Trash2, Edit, Shield, Lock } from 'lucide-react'
+import { Plus, Trash2, Edit, Shield, Lock, Eye, Pencil, X } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
 import FormField from '../components/FormField'
 import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
+
+type TipoPermissao = 'EDITAR' | 'VISUALIZAR' | 'SEM_ACESSO'
 
 // Lista de menus disponíveis no sistema
 const MENUS_DISPONIVEIS = [
@@ -179,12 +181,16 @@ function PerfilForm({
       sistema: false,
       ativo: true,
       permissoesMenu: [],
+      permissoesGranulares: {},
     }
   )
 
   useEffect(() => {
     if (perfil) {
-      setFormData(perfil)
+      setFormData({
+        ...perfil,
+        permissoesGranulares: perfil.permissoesGranulares || {},
+      })
     } else {
       setFormData({
         nome: '',
@@ -192,23 +198,34 @@ function PerfilForm({
         sistema: false,
         ativo: true,
         permissoesMenu: [],
+        permissoesGranulares: {},
       })
     }
   }, [perfil])
 
-  const toggleMenu = (menuPath: string) => {
-    const currentMenus = formData.permissoesMenu || []
-    if (currentMenus.includes(menuPath)) {
-      setFormData({
-        ...formData,
-        permissoesMenu: currentMenus.filter((path) => path !== menuPath),
-      })
-    } else {
-      setFormData({
-        ...formData,
-        permissoesMenu: [...currentMenus, menuPath],
-      })
+  const setPermissaoMenu = (menuPath: string, tipo: TipoPermissao) => {
+    const novasPermissoes = {
+      ...(formData.permissoesGranulares || {}),
+      [menuPath]: tipo,
     }
+    
+    // Se for SEM_ACESSO, remover da lista
+    if (tipo === 'SEM_ACESSO') {
+      delete novasPermissoes[menuPath]
+    }
+    
+    setFormData({
+      ...formData,
+      permissoesGranulares: novasPermissoes,
+      // Manter compatibilidade com permissoesMenu
+      permissoesMenu: tipo !== 'SEM_ACESSO' 
+        ? [...new Set([...(formData.permissoesMenu || []), menuPath])]
+        : (formData.permissoesMenu || []).filter(path => path !== menuPath),
+    })
+  }
+
+  const getPermissaoMenu = (menuPath: string): TipoPermissao => {
+    return (formData.permissoesGranulares?.[menuPath] as TipoPermissao) || 'SEM_ACESSO'
   }
 
   const saveMutation = useMutation({
@@ -261,29 +278,90 @@ function PerfilForm({
 
         <div className="pt-4 border-t">
           <FormField label="Permissões de Menu">
-            <div className="mt-2 space-y-2 max-h-64 overflow-y-auto">
+            <div className="mt-2 space-y-3 max-h-96 overflow-y-auto">
               {MENUS_DISPONIVEIS.map((menu) => {
-                const isSelected = formData.permissoesMenu?.includes(menu.path) || false
+                const permissaoAtual = getPermissaoMenu(menu.path)
                 return (
-                  <label
+                  <div
                     key={menu.path}
-                    className="flex items-center p-2 rounded hover:bg-gray-50 cursor-pointer"
+                    className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
                   >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleMenu(menu.path)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="ml-3 text-sm text-gray-700">{menu.label}</span>
-                    <span className="ml-auto text-xs text-gray-400">{menu.path}</span>
-                  </label>
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <span className="text-sm font-medium text-gray-900">{menu.label}</span>
+                        <span className="ml-2 text-xs text-gray-400">{menu.path}</span>
+                      </div>
+                      {permissaoAtual !== 'SEM_ACESSO' && (
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          permissaoAtual === 'EDITAR' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {permissaoAtual === 'EDITAR' ? 'Editar' : 'Visualizar'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPermissaoMenu(menu.path, 'EDITAR')}
+                        className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                          permissaoAtual === 'EDITAR'
+                            ? 'bg-green-600 text-white hover:bg-green-700'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPermissaoMenu(menu.path, 'VISUALIZAR')}
+                        className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                          permissaoAtual === 'VISUALIZAR'
+                            ? 'bg-blue-600 text-white hover:bg-blue-700'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        <Eye className="h-4 w-4" />
+                        Visualizar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPermissaoMenu(menu.path, 'SEM_ACESSO')}
+                        className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                          permissaoAtual === 'SEM_ACESSO'
+                            ? 'bg-red-600 text-white hover:bg-red-700'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        <X className="h-4 w-4" />
+                        Sem Acesso
+                      </button>
+                    </div>
+                  </div>
                 )
               })}
             </div>
-            <p className="mt-2 text-xs text-gray-500">
-              Selecione os menus que este perfil terá acesso
-            </p>
+            <div className="mt-4 p-3 bg-gray-50 rounded-md">
+              <p className="text-xs text-gray-600 mb-2">
+                <strong>Legenda:</strong>
+              </p>
+              <div className="space-y-1 text-xs text-gray-600">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-600 rounded"></div>
+                  <span><strong>Editar:</strong> Pode criar, editar e excluir registros</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-blue-600 rounded"></div>
+                  <span><strong>Visualizar:</strong> Pode apenas visualizar, sem edição</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-red-600 rounded"></div>
+                  <span><strong>Sem Acesso:</strong> Menu não aparece na navegação</span>
+                </div>
+              </div>
+            </div>
           </FormField>
         </div>
 

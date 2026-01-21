@@ -4,10 +4,11 @@ import { unidadeService } from '../services/unidadeService'
 import { usuarioService } from '../services/usuarioService'
 import { servicoService } from '../services/servicoService'
 import { Plus, Trash2, Edit } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
 import FormField from '../components/FormField'
+import FilterBar from '../components/FilterBar'
 import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { maskCPF, maskPhone } from '../utils/masks'
@@ -17,12 +18,49 @@ export default function Atendentes() {
   const [showModal, setShowModal] = useState(false)
   const [editingAtendente, setEditingAtendente] = useState<Atendente | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null })
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filters, setFilters] = useState<{ ativo?: string; unidadeId?: string }>({})
   const queryClient = useQueryClient()
 
   const { data: atendentes = [], isLoading } = useQuery({
     queryKey: ['atendentes'],
     queryFn: atendenteService.listarTodos,
   })
+
+  const { data: unidades = [] } = useQuery({
+    queryKey: ['unidades'],
+    queryFn: unidadeService.listarTodos,
+  })
+
+  // Filtrar atendentes
+  const atendentesFiltrados = useMemo(() => {
+    let filtered = [...atendentes]
+
+    // Filtro de busca
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase()
+      filtered = filtered.filter(
+        (a) =>
+          a.nomeUsuario?.toLowerCase().includes(term) ||
+          a.cpf?.includes(term) ||
+          a.telefone?.includes(term) ||
+          a.nomeUnidade?.toLowerCase().includes(term)
+      )
+    }
+
+    // Filtro de status
+    if (filters.ativo !== undefined && filters.ativo !== '') {
+      const isAtivo = filters.ativo === 'true'
+      filtered = filtered.filter((a) => (a.ativo ?? true) === isAtivo)
+    }
+
+    // Filtro de unidade
+    if (filters.unidadeId && filters.unidadeId !== '') {
+      filtered = filtered.filter((a) => a.unidadeId === parseInt(filters.unidadeId!))
+    }
+
+    return filtered
+  }, [atendentes, searchTerm, filters])
 
   const deleteMutation = useMutation({
     mutationFn: atendenteService.excluir,
@@ -66,9 +104,51 @@ export default function Atendentes() {
         </Button>
       </div>
 
+      {/* Barra de Filtros */}
+      <FilterBar
+        onSearchChange={setSearchTerm}
+        onFilterChange={setFilters}
+        searchPlaceholder="Buscar por nome, CPF, telefone ou unidade..."
+        filters={[
+          {
+            key: 'ativo',
+            label: 'Status',
+            type: 'select',
+            options: [
+              { value: 'true', label: 'Ativos' },
+              { value: 'false', label: 'Inativos' },
+            ],
+          },
+          ...(unidades.length > 0
+            ? [
+                {
+                  key: 'unidadeId',
+                  label: 'Unidade',
+                  type: 'select' as const,
+                  options: unidades
+                    .filter((u) => u.id !== undefined)
+                    .map((u) => ({
+                      value: u.id!.toString(),
+                      label: u.nome,
+                    })),
+                },
+              ]
+            : []),
+        ]}
+      />
+
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul className="divide-y divide-gray-200">
-          {atendentes.map((atendente) => (
+        {atendentesFiltrados.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500">
+              {searchTerm || Object.values(filters).some(v => v !== '' && v !== undefined)
+                ? 'Nenhum atendente encontrado com os filtros aplicados'
+                : 'Nenhum atendente cadastrado'}
+            </p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-gray-200">
+            {atendentesFiltrados.map((atendente) => (
             <li key={atendente.id} className="px-6 py-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -119,8 +199,14 @@ export default function Atendentes() {
                 </div>
               </div>
             </li>
-          ))}
-        </ul>
+            ))}
+          </ul>
+        )}
+        {atendentesFiltrados.length > 0 && (
+          <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 text-sm text-gray-600">
+            Mostrando {atendentesFiltrados.length} de {atendentes.length} atendente{atendentes.length !== 1 ? 's' : ''}
+          </div>
+        )}
       </div>
 
       <Modal

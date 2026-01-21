@@ -6,7 +6,8 @@ export interface Perfil {
   descricao?: string
   sistema?: boolean
   ativo?: boolean
-  permissoesMenu?: string[]
+  permissoesMenu?: string[] // Compatibilidade
+  permissoesGranulares?: Record<string, 'EDITAR' | 'VISUALIZAR' | 'SEM_ACESSO'> // Novo formato
 }
 
 export const perfilService = {

@@ -7,10 +7,12 @@ import { atendenteService } from '../services/atendenteService'
 import { horarioDisponivelService } from '../services/horarioDisponivelService'
 import { authService } from '../services/authService'
 import CalendarView from '../components/CalendarView'
+import TimelineView from '../components/TimelineView'
+import CalendarMonth from '../components/CalendarMonth'
 import { SlotInfo, View } from 'react-big-calendar'
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, Clock, Calendar, User, Building2, Search, X } from 'lucide-react'
+import { Plus, Clock, Calendar, User, Building2, Search, X, CalendarDays, List } from 'lucide-react'
 import Modal from '../components/Modal'
 import FormField from '../components/FormField'
 import Button from '../components/Button'
@@ -42,6 +44,8 @@ export default function Agendamentos() {
   const [criarModal, setCriarModal] = useState<{ start: Date; end: Date } | null>(null)
   const [view, setView] = useState<View>('week')
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [viewMode, setViewMode] = useState<'timeline' | 'calendar'>('timeline')
 
   // Form data para criar agendamento
   const [formData, setFormData] = useState<Partial<Agendamento>>({
@@ -319,8 +323,14 @@ export default function Agendamentos() {
     setHorariosDisponiveis([])
   }
 
-  const handleSelectEvent = (event: CalendarEvent) => {
-    setAgendamentoDetalhes(event.resource)
+  const handleSelectEvent = (eventOrAgendamento: CalendarEvent | Agendamento) => {
+    // Se for um CalendarEvent (do CalendarView), pegar o resource
+    // Se for um Agendamento (do TimelineView), usar diretamente
+    if ('resource' in eventOrAgendamento) {
+      setAgendamentoDetalhes(eventOrAgendamento.resource)
+    } else {
+      setAgendamentoDetalhes(eventOrAgendamento)
+    }
   }
 
   const confirmarFinalizar = () => {
@@ -433,66 +443,141 @@ export default function Agendamentos() {
   }
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 sm:mb-6 px-2 sm:px-0">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Agendamentos</h1>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <Button
-            onClick={() => {
-              const agora = new Date()
-              const umaHoraDepois = new Date(agora.getTime() + 3600000)
-              setCriarModal({ start: agora, end: umaHoraDepois })
-              setFormData({
-                clienteId: undefined,
-                unidadeId: undefined,
-                atendenteId: undefined,
-                dataHoraInicio: format(agora, "yyyy-MM-dd'T'HH:mm"),
-                observacoes: '',
-                servicos: [],
-              })
-              setServicosSelecionados([])
-              setHorariosDisponiveis([])
-            }}
-            variant="primary"
-            className="flex items-center flex-1 sm:flex-initial"
-          >
-            <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-            <span className="text-sm sm:text-base">Novo Agendamento</span>
-          </Button>
-        </div>
-      </div>
-
-      {/* Calendário Visual */}
-      <div className="mb-4 sm:mb-6 px-2 sm:px-0">
-        <CalendarView
-          agendamentos={agendamentos}
-          onSelectSlot={handleSelectSlot}
-          onSelectEvent={handleSelectEvent}
-          view={view}
-          onViewChange={setView}
-          date={currentDate}
-          onNavigate={setCurrentDate}
-          disabled={!!criarModal || !!finalizarModal}
-        />
-      </div>
-
-      {/* Legenda */}
-      <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 mb-4 sm:mb-6 mx-2 sm:mx-0">
-        <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 sm:mb-3">Legenda:</h3>
-        <div className="flex flex-wrap gap-3 sm:gap-4">
-          <div className="flex items-center">
-            <div className="w-3 h-3 sm:w-4 sm:h-4 bg-blue-500 rounded mr-2"></div>
-            <span className="text-xs sm:text-sm text-gray-600">Agendado</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded mr-2"></div>
-            <span className="text-xs sm:text-sm text-gray-600">Concluído</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 sm:w-4 sm:h-4 bg-red-500 rounded mr-2"></div>
-            <span className="text-xs sm:text-sm text-gray-600">Cancelado</span>
+    <div className="w-full max-w-full overflow-x-hidden px-2 sm:px-0">
+      <div className="w-full max-w-full overflow-x-hidden px-2 sm:px-0">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Agendamentos</h1>
+          <div className="flex gap-2 w-full sm:w-auto">
+            {/* Toggle View Mode */}
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('timeline')}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
+                  viewMode === 'timeline'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <List className="h-4 w-4" />
+                <span className="hidden sm:inline">Timeline</span>
+              </button>
+              <button
+                onClick={() => setViewMode('calendar')}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
+                  viewMode === 'calendar'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <CalendarDays className="h-4 w-4" />
+                <span className="hidden sm:inline">Calendário</span>
+              </button>
+            </div>
+            <Button
+              onClick={() => {
+                const agora = new Date()
+                const umaHoraDepois = new Date(agora.getTime() + 3600000)
+                setCriarModal({ start: agora, end: umaHoraDepois })
+                setFormData({
+                  clienteId: undefined,
+                  unidadeId: undefined,
+                  atendenteId: undefined,
+                  dataHoraInicio: format(agora, "yyyy-MM-dd'T'HH:mm"),
+                  observacoes: '',
+                  servicos: [],
+                })
+                setServicosSelecionados([])
+                setHorariosDisponiveis([])
+              }}
+              variant="primary"
+              className="flex items-center flex-1 sm:flex-initial"
+            >
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+              <span className="text-sm sm:text-base">Novo Agendamento</span>
+            </Button>
           </div>
         </div>
+
+        {/* View Mode: Timeline */}
+        {viewMode === 'timeline' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
+            {/* Calendário Mensal */}
+            <div className="lg:col-span-1">
+              <CalendarMonth
+                selectedDate={selectedDate}
+                onDateSelect={(date) => {
+                  setSelectedDate(date)
+                  setCurrentDate(date)
+                }}
+                agendamentos={agendamentos}
+              />
+            </div>
+
+            {/* Timeline */}
+            <div className="lg:col-span-2">
+              <TimelineView
+                agendamentos={agendamentos}
+                selectedDate={selectedDate}
+                onEventClick={handleSelectEvent}
+                onSlotClick={(date) => {
+                  const umaHoraDepois = new Date(date.getTime() + 3600000)
+                  setCriarModal({ start: date, end: umaHoraDepois })
+                  setFormData({
+                    clienteId: undefined,
+                    unidadeId: undefined,
+                    atendenteId: undefined,
+                    dataHoraInicio: format(date, "yyyy-MM-dd'T'HH:mm"),
+                    observacoes: '',
+                    servicos: [],
+                  })
+                  setServicosSelecionados([])
+                  setHorariosDisponiveis([])
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* View Mode: Calendar (Original) */}
+        {viewMode === 'calendar' && (
+          <>
+            <div className="mb-4 sm:mb-6">
+              <CalendarView
+                agendamentos={agendamentos}
+                onSelectSlot={handleSelectSlot}
+                onSelectEvent={handleSelectEvent}
+                view={view}
+                onViewChange={setView}
+                date={currentDate}
+                onNavigate={(date) => {
+                  setCurrentDate(date)
+                  setSelectedDate(date)
+                }}
+                disabled={!!criarModal || !!finalizarModal}
+              />
+            </div>
+
+            {/* Legenda */}
+            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 mb-4 sm:mb-6">
+              <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 sm:mb-3">Legenda:</h3>
+              <div className="flex flex-wrap gap-3 sm:gap-4">
+                <div className="flex items-center">
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-blue-500 rounded mr-2"></div>
+                  <span className="text-xs sm:text-sm text-gray-600">Agendado</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded mr-2"></div>
+                  <span className="text-xs sm:text-sm text-gray-600">Concluído</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-red-500 rounded mr-2"></div>
+                  <span className="text-xs sm:text-sm text-gray-600">Cancelado</span>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Modal de Criar Agendamento */}

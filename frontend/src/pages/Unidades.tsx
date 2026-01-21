@@ -3,11 +3,12 @@ import { unidadeService, Unidade } from '../services/unidadeService'
 import { empresaService } from '../services/empresaService'
 import { atendenteService } from '../services/atendenteService'
 import { Plus, Trash2, Edit, Clock, UserCog, ExternalLink } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
 import FormField from '../components/FormField'
+import FilterBar from '../components/FilterBar'
 import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { maskPhone, maskCEP, maskNumber } from '../utils/masks'
@@ -17,12 +18,49 @@ export default function Unidades() {
   const [showModal, setShowModal] = useState(false)
   const [editingUnidade, setEditingUnidade] = useState<Unidade | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null })
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filters, setFilters] = useState<{ ativo?: string; empresaId?: string }>({})
   const queryClient = useQueryClient()
 
   const { data: unidades = [], isLoading } = useQuery({
     queryKey: ['unidades'],
     queryFn: unidadeService.listarTodos,
   })
+
+  const { data: empresas = [] } = useQuery({
+    queryKey: ['empresas'],
+    queryFn: empresaService.listarTodos,
+  })
+
+  // Filtrar unidades
+  const unidadesFiltradas = useMemo(() => {
+    let filtered = [...unidades]
+
+    // Filtro de busca
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase()
+      filtered = filtered.filter(
+        (u) =>
+          u.nome.toLowerCase().includes(term) ||
+          u.descricao?.toLowerCase().includes(term) ||
+          u.cidade?.toLowerCase().includes(term) ||
+          u.telefone?.includes(term)
+      )
+    }
+
+    // Filtro de status
+    if (filters.ativo !== undefined && filters.ativo !== '') {
+      const isAtivo = filters.ativo === 'true'
+      filtered = filtered.filter((u) => (u.ativo ?? true) === isAtivo)
+    }
+
+    // Filtro de empresa
+    if (filters.empresaId && filters.empresaId !== '') {
+      filtered = filtered.filter((u) => u.empresaId === parseInt(filters.empresaId!))
+    }
+
+    return filtered
+  }, [unidades, searchTerm, filters])
 
   const deleteMutation = useMutation({
     mutationFn: unidadeService.excluir,
@@ -66,9 +104,49 @@ export default function Unidades() {
         </Button>
       </div>
 
+      {/* Barra de Filtros */}
+      <FilterBar
+        onSearchChange={setSearchTerm}
+        onFilterChange={setFilters}
+        searchPlaceholder="Buscar por nome, descrição, cidade ou telefone..."
+        filters={[
+          {
+            key: 'ativo',
+            label: 'Status',
+            type: 'select',
+            options: [
+              { value: 'true', label: 'Ativas' },
+              { value: 'false', label: 'Inativas' },
+            ],
+          },
+          ...(empresas.length > 0
+            ? [
+                {
+                  key: 'empresaId',
+                  label: 'Empresa',
+                  type: 'select' as const,
+                  options: (empresas as Array<{ id?: number; nome: string }>).map((e) => ({
+                    value: e.id?.toString() || '',
+                    label: e.nome,
+                  })),
+                },
+              ]
+            : []),
+        ]}
+      />
+
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul className="divide-y divide-gray-200">
-          {unidades.map((unidade) => (
+        {unidadesFiltradas.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500">
+              {searchTerm || Object.values(filters).some(v => v !== '' && v !== undefined)
+                ? 'Nenhuma unidade encontrada com os filtros aplicados'
+                : 'Nenhuma unidade cadastrada'}
+            </p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-gray-200">
+            {unidadesFiltradas.map((unidade) => (
             <li key={unidade.id} className="px-6 py-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -114,8 +192,14 @@ export default function Unidades() {
                 </div>
               </div>
             </li>
-          ))}
-        </ul>
+            ))}
+          </ul>
+        )}
+        {unidadesFiltradas.length > 0 && (
+          <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 text-sm text-gray-600">
+            Mostrando {unidadesFiltradas.length} de {unidades.length} unidade{unidades.length !== 1 ? 's' : ''}
+          </div>
+        )}
       </div>
 
       <Modal

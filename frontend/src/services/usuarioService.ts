@@ -1,6 +1,6 @@
 import api from './api'
 
-export type PerfilUsuario = 'ADMIN' | 'ATENDENTE' | 'GERENTE'
+export type PerfilUsuario = 'ADMIN' | 'PROFISSIONAL' | 'GERENTE' | 'CLIENTE' | 'ATENDENTE' // ATENDENTE mantido para compatibilidade, mas será convertido para PROFISSIONAL
 
 export interface Usuario {
   id?: number
@@ -8,9 +8,11 @@ export interface Usuario {
   email: string
   senha?: string
   perfil: PerfilUsuario
-  unidadeId?: number
+  unidadeId?: number // DEPRECATED - usar unidadesIds
+  unidadesIds?: number[] // Lista de IDs das unidades
   ativo?: boolean
-  nomeUnidade?: string
+  nomeUnidade?: string // DEPRECATED - usar nomesUnidades
+  nomesUnidades?: string[] // Lista de nomes das unidades
 }
 
 export const usuarioService = {
