@@ -15,6 +15,7 @@ export interface Cliente {
   uf?: string
   dataNascimento?: string
   rg?: string
+  ativo?: boolean
 }
 
 export const clienteService = {

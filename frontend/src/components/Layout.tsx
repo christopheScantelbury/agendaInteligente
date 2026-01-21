@@ -1,5 +1,5 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Calendar,
   Users,
@@ -17,8 +17,10 @@ import {
   Shield,
 } from 'lucide-react'
 import { authService } from '../services/authService'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { reclamacaoService } from '../services/reclamacaoService'
+import { perfilService } from '../services/perfilService'
+import ConfirmDialog from './ConfirmDialog'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -33,9 +35,28 @@ interface NavItem {
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
-  const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const usuario = authService.getUsuario()
   const [sidebarOpen, setSidebarOpen] = useState(false) // Mobile toggle
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+
+  // Buscar perfil do usuário para verificar permissões granulares
+  const { data: perfilUsuario } = useQuery({
+    queryKey: ['perfil', usuario?.perfil],
+    queryFn: () => perfilService.buscarPorNome(usuario!.perfil!),
+    enabled: !!usuario?.perfil,
+  })
+
+  // Função para verificar permissão de menu
+  const temPermissaoMenu = (menuPath: string): boolean => {
+    if (!perfilUsuario) {
+      // Fallback: usar lógica antiga baseada em perfil
+      return true
+    }
+
+    const permissao = perfilUsuario.permissoesGranulares?.[menuPath]
+    return permissao === 'EDITAR' || permissao === 'VISUALIZAR'
+  }
 
   // Verificar se é ADMIN ou GERENTE para mostrar notificações
   const podeVerNotificacoes = usuario?.perfil === 'ADMIN' || usuario?.perfil === 'GERENTE'
@@ -66,37 +87,87 @@ export default function Layout({ children }: LayoutProps) {
   }
 
   const handleLogout = () => {
+    setShowLogoutConfirm(true)
+  }
+
+  const confirmLogout = () => {
+    // Fechar o dialog primeiro
+    setShowLogoutConfirm(false)
+    // Limpar cache do React Query
+    queryClient.clear()
+    // Fazer logout
     authService.logout()
-    navigate('/login')
+    // Usar window.location para garantir recarregamento completo e limpar estado
+    setTimeout(() => {
+      window.location.href = '/login'
+    }, 100)
   }
 
-  const navItems: NavItem[] = [
-    { path: '/', label: 'Início', icon: <HomeIcon className="h-5 w-5" /> },
-    { path: '/clientes', label: 'Clientes', icon: <Users className="h-5 w-5" /> },
-    // Adicionar Empresas apenas para ADMIN
-    ...(usuario?.perfil === 'ADMIN' ? [{ path: '/empresas', label: 'Empresas', icon: <Building2 className="h-5 w-5" /> }] : []),
-    { path: '/unidades', label: 'Unidades', icon: <Briefcase className="h-5 w-5" /> },
-    { path: '/atendentes', label: 'Atendentes', icon: <UserCog className="h-5 w-5" /> },
-    { path: '/servicos', label: 'Serviços', icon: <Stethoscope className="h-5 w-5" /> },
-    { path: '/usuarios', label: 'Usuários', icon: <Settings className="h-5 w-5" /> },
-    // Adicionar Perfis apenas para ADMIN
-    ...(usuario?.perfil === 'ADMIN' ? [{ path: '/perfis', label: 'Perfis', icon: <Shield className="h-5 w-5" /> }] : []),
-    {
-      path: '/agendamentos',
-      label: 'Agendamentos',
-      icon: <Calendar className="h-5 w-5" />,
-      paths: ['/agendamentos'],
-    },
-  ]
-
-  // Adicionar item de notificações se for ADMIN ou GERENTE
-  if (podeVerNotificacoes) {
-    navItems.push({
-      path: '/notificacoes',
-      label: 'Notificações',
-      icon: <Bell className="h-5 w-5" />,
-    })
-  }
+  // Construir lista de menus baseado em permissões
+  const navItems: NavItem[] = useMemo(() => {
+    const items: NavItem[] = []
+    
+    // Início - sempre disponível
+    if (temPermissaoMenu('/')) {
+      items.push({ path: '/', label: 'Início', icon: <HomeIcon className="h-5 w-5" /> })
+    }
+    
+    // Clientes
+    if (temPermissaoMenu('/clientes')) {
+      items.push({ path: '/clientes', label: 'Clientes', icon: <Users className="h-5 w-5" /> })
+    }
+    
+    // Empresas - apenas para ADMIN e se tiver permissão
+    if (usuario?.perfil === 'ADMIN' && temPermissaoMenu('/empresas')) {
+      items.push({ path: '/empresas', label: 'Empresas', icon: <Building2 className="h-5 w-5" /> })
+    }
+    
+    // Unidades
+    if (temPermissaoMenu('/unidades')) {
+      items.push({ path: '/unidades', label: 'Unidades', icon: <Briefcase className="h-5 w-5" /> })
+    }
+    
+    // Atendentes
+    if (temPermissaoMenu('/atendentes')) {
+      items.push({ path: '/atendentes', label: 'Atendentes', icon: <UserCog className="h-5 w-5" /> })
+    }
+    
+    // Serviços
+    if (temPermissaoMenu('/servicos')) {
+      items.push({ path: '/servicos', label: 'Serviços', icon: <Stethoscope className="h-5 w-5" /> })
+    }
+    
+    // Usuários
+    if (temPermissaoMenu('/usuarios')) {
+      items.push({ path: '/usuarios', label: 'Usuários', icon: <Settings className="h-5 w-5" /> })
+    }
+    
+    // Perfis - apenas para ADMIN e se tiver permissão
+    if (usuario?.perfil === 'ADMIN' && temPermissaoMenu('/perfis')) {
+      items.push({ path: '/perfis', label: 'Perfis', icon: <Shield className="h-5 w-5" /> })
+    }
+    
+    // Agendamentos
+    if (temPermissaoMenu('/agendamentos')) {
+      items.push({
+        path: '/agendamentos',
+        label: 'Agendamentos',
+        icon: <Calendar className="h-5 w-5" />,
+        paths: ['/agendamentos'],
+      })
+    }
+    
+    // Notificações
+    if (podeVerNotificacoes && temPermissaoMenu('/notificacoes')) {
+      items.push({
+        path: '/notificacoes',
+        label: 'Notificações',
+        icon: <Bell className="h-5 w-5" />,
+      })
+    }
+    
+    return items
+  }, [usuario?.perfil, perfilUsuario])
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -219,6 +290,18 @@ export default function Layout({ children }: LayoutProps) {
           {children}
         </main>
       </div>
+
+      {/* Dialog de Confirmação de Logout */}
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        title="Confirmar Saída"
+        message="Tem certeza que deseja sair do sistema?"
+        confirmText="Sair"
+        cancelText="Cancelar"
+        variant="danger"
+        onConfirm={confirmLogout}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </div>
   )
 }

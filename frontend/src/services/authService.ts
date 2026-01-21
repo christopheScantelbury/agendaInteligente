@@ -24,8 +24,11 @@ export const authService = {
   },
 
   logout: () => {
+    // Limpar todos os dados de autenticação
     localStorage.removeItem('token')
     localStorage.removeItem('usuario')
+    // Limpar qualquer outro dado relacionado
+    sessionStorage.clear()
   },
 
   getToken: (): string | null => {

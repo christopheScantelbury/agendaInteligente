@@ -1,13 +1,17 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, TouchableOpacity, Image } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import { router } from 'expo-router'
 import { unidadeService, Unidade } from '../../src/services/unidadeService'
+import { empresaService } from '../../src/services/empresaService'
 import { authService } from '../../src/services/authService'
 import Button from '../../src/components/Button'
+import FilterBar from '../../src/components/FilterBar'
 
 export default function UnidadesScreen() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filters, setFilters] = useState<{ ativo?: string; empresaId?: string }>({})
 
   useEffect(() => {
     checkAuth()
@@ -24,6 +28,42 @@ export default function UnidadesScreen() {
     retry: false,
     enabled: isAuthenticated,
   })
+
+  const { data: empresas = [] } = useQuery({
+    queryKey: ['empresas'],
+    queryFn: empresaService.listarTodos,
+    enabled: isAuthenticated,
+  })
+
+  // Filtrar unidades
+  const unidadesFiltradas = useMemo(() => {
+    let filtered = [...unidades]
+
+    // Filtro de busca
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase()
+      filtered = filtered.filter(
+        (u) =>
+          u.nome.toLowerCase().includes(term) ||
+          u.descricao?.toLowerCase().includes(term) ||
+          u.cidade?.toLowerCase().includes(term) ||
+          u.telefone?.includes(term)
+      )
+    }
+
+    // Filtro de status
+    if (filters.ativo !== undefined && filters.ativo !== '') {
+      const isAtivo = filters.ativo === 'true'
+      filtered = filtered.filter((u) => (u.ativo ?? true) === isAtivo)
+    }
+
+    // Filtro de empresa
+    if (filters.empresaId && filters.empresaId !== '') {
+      filtered = filtered.filter((u) => u.empresaId === parseInt(filters.empresaId!))
+    }
+
+    return filtered
+  }, [unidades, searchTerm, filters])
 
   if (isLoading) {
     return (
@@ -43,7 +83,8 @@ export default function UnidadesScreen() {
     )
   }
 
-  const renderUnidadeItem = ({ item }: { item: Unidade }) => (
+  const renderUnidadeItem = ({ item }: { item: Unidade }) => {
+    return (
     <TouchableOpacity
       style={styles.unidadeCard}
       onPress={() => router.push(`/unidades/novo?id=${item.id}`)}
@@ -75,7 +116,8 @@ export default function UnidadesScreen() {
         </Text>
       </View>
     </TouchableOpacity>
-  )
+    )
+  }
 
   return (
     <View style={styles.container}>
@@ -90,14 +132,47 @@ export default function UnidadesScreen() {
           + Nova
         </Button>
       </View>
+      <FilterBar
+        onSearchChange={setSearchTerm}
+        onFilterChange={setFilters}
+        searchPlaceholder="Buscar por nome, descrição, cidade ou telefone..."
+        filters={[
+          {
+            key: 'ativo',
+            label: 'Status',
+            type: 'select',
+            options: [
+              { value: 'true', label: 'Ativas' },
+              { value: 'false', label: 'Inativas' },
+            ],
+          },
+          ...(empresas.length > 0
+            ? [
+                {
+                  key: 'empresaId',
+                  label: 'Empresa',
+                  type: 'select' as const,
+                  options: (empresas as Array<{ id?: number; nome: string }>).map((e) => ({
+                    value: e.id?.toString() || '',
+                    label: e.nome,
+                  })),
+                },
+              ]
+            : []),
+        ]}
+      />
       <FlatList
-        data={unidades}
+        data={unidadesFiltradas}
         keyExtractor={(item) => item.id?.toString() || item.nome}
         renderItem={renderUnidadeItem}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Nenhuma unidade encontrada</Text>
+            <Text style={styles.emptyText}>
+              {searchTerm || Object.values(filters).some(v => v !== '' && v !== undefined)
+                ? 'Nenhuma unidade encontrada com os filtros aplicados'
+                : 'Nenhuma unidade encontrada'}
+            </Text>
           </View>
         }
       />

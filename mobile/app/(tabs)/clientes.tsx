@@ -1,16 +1,45 @@
-import React from 'react'
+import React, { useState, useMemo } from 'react'
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import { router } from 'expo-router'
 import { clienteService, Cliente } from '../../src/services/clienteService'
 import Button from '../../src/components/Button'
 import HeaderWithMenu from '../../src/components/HeaderWithMenu'
+import FilterBar from '../../src/components/FilterBar'
 
 export default function Clientes() {
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filters, setFilters] = useState<{ ativo?: string }>({})
+  
   const { data: clientes = [], isLoading } = useQuery({
     queryKey: ['clientes'],
     queryFn: clienteService.listar,
   })
+
+  // Filtrar clientes
+  const clientesFiltrados = useMemo(() => {
+    let filtered = [...clientes]
+
+    // Filtro de busca
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase()
+      filtered = filtered.filter(
+        (c) =>
+          c.nome.toLowerCase().includes(term) ||
+          c.cpfCnpj.includes(term) ||
+          c.email?.toLowerCase().includes(term) ||
+          c.telefone?.includes(term)
+      )
+    }
+
+    // Filtro de status
+    if (filters.ativo !== undefined && filters.ativo !== '') {
+      const isAtivo = filters.ativo === 'true'
+      filtered = filtered.filter((c) => (c.ativo ?? true) === isAtivo)
+    }
+
+    return filtered
+  }, [clientes, searchTerm, filters])
 
   const renderItem = ({ item }: { item: Cliente }) => (
     <TouchableOpacity 
@@ -33,16 +62,37 @@ export default function Clientes() {
         </Button>
       </View>
 
+      <FilterBar
+        onSearchChange={setSearchTerm}
+        onFilterChange={setFilters}
+        searchPlaceholder="Buscar por nome, CPF/CNPJ, email ou telefone..."
+        filters={[
+          {
+            key: 'ativo',
+            label: 'Status',
+            type: 'select',
+            options: [
+              { value: 'true', label: 'Ativos' },
+              { value: 'false', label: 'Inativos' },
+            ],
+          },
+        ]}
+      />
+
       {isLoading ? (
         <Text style={styles.loading}>Carregando...</Text>
       ) : (
         <FlatList
-          data={clientes}
+          data={clientesFiltrados}
           renderItem={renderItem}
           keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
-            <Text style={styles.empty}>Nenhum cliente encontrado</Text>
+            <Text style={styles.empty}>
+              {searchTerm || Object.values(filters).some(v => v !== '' && v !== undefined)
+                ? 'Nenhum cliente encontrado com os filtros aplicados'
+                : 'Nenhum cliente encontrado'}
+            </Text>
           }
         />
       )}

@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @Builder
@@ -41,5 +42,14 @@ public class ClienteDTO {
     @NotNull(message = "Data de nascimento é obrigatória")
     private LocalDate dataNascimento;
     private String rg;
+    
+    // Senha para criação de usuário (opcional, não é persistida na entidade Cliente)
+    private String senha;
+    
+    // Unidades associadas ao cliente (para entrada - apenas IDs)
+    private List<Long> unidadesIds;
+    
+    // Unidades completas (para saída - objetos UnidadeDTO)
+    private List<UnidadeDTO> unidades;
 }
 

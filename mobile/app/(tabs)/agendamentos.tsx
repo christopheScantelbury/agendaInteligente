@@ -5,7 +5,7 @@ import { router } from 'expo-router'
 import { Calendar } from 'react-native-calendars'
 import { agendamentoService, Agendamento } from '../../src/services/agendamentoService'
 import { authService } from '../../src/services/authService'
-import { format, parseISO, startOfDay, isSameDay } from 'date-fns'
+import { format, parseISO, startOfDay, isSameDay, addHours } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import Button from '../../src/components/Button'
 import HeaderWithMenu from '../../src/components/HeaderWithMenu'
@@ -185,59 +185,120 @@ export default function Agendamentos() {
           />
         </View>
 
-        {/* Agendamentos do dia selecionado */}
+        {/* Timeline de Agendamentos */}
         <View style={styles.agendamentosContainer}>
-          <Text style={styles.sectionTitle}>
-            {format(parseISO(selectedDate), "EEEE, dd 'de' MMMM", { locale: ptBR })}
-          </Text>
+          <View style={styles.timelineHeader}>
+            <Text style={styles.sectionTitle}>
+              {format(parseISO(selectedDate), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+            </Text>
+            <Text style={styles.sectionSubtitle}>
+              {agendamentosDoDia.length} {agendamentosDoDia.length === 1 ? 'agendamento' : 'agendamentos'}
+            </Text>
+          </View>
           
           {isLoading ? (
-            <Text style={styles.loading}>Carregando...</Text>
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loading}>Carregando...</Text>
+            </View>
           ) : agendamentosDoDia.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="calendar-outline" size={48} color="#d1d5db" />
               <Text style={styles.emptyText}>Nenhum agendamento neste dia</Text>
+              <Text style={styles.emptySubtext}>
+                Toque em um horário para criar um novo agendamento
+              </Text>
             </View>
           ) : (
-            agendamentosDoDia.map((agendamento) => (
-              <TouchableOpacity
-                key={agendamento.id}
-                style={styles.card}
-                onPress={() => handleAgendamentoPress(agendamento)}
-              >
-                <View style={styles.cardHeader}>
-                  <Text style={styles.cardTitle}>
-                    {agendamento.cliente?.nome || 'Cliente não informado'}
-                  </Text>
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      { backgroundColor: getStatusColor(agendamento.status) },
-                    ]}
-                  >
-                    <Text style={styles.statusText}>
-                      {getStatusLabel(agendamento.status)}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={styles.cardTime}>
-                  {format(parseISO(agendamento.dataHoraInicio), 'HH:mm', { locale: ptBR })}
-                </Text>
-                {agendamento.atendente?.nome && (
-                  <Text style={styles.cardText}>
-                    Atendente: {agendamento.atendente.nome}
-                  </Text>
-                )}
-                {agendamento.servicos && agendamento.servicos.length > 0 && (
-                  <Text style={styles.cardText}>
-                    Serviços: {agendamento.servicos.map((s) => s.descricao || 'Serviço').join(', ')}
-                  </Text>
-                )}
-                {agendamento.valorTotal && (
-                  <Text style={styles.cardValue}>R$ {agendamento.valorTotal.toFixed(2)}</Text>
-                )}
-              </TouchableOpacity>
-            ))
+            <View style={styles.timelineContainer}>
+              {/* Linha vertical da timeline */}
+              <View style={styles.timelineLine} />
+              
+              {/* Agendamentos ordenados por hora */}
+              {agendamentosDoDia
+                .sort((a, b) => {
+                  const timeA = parseISO(a.dataHoraInicio).getTime()
+                  const timeB = parseISO(b.dataHoraInicio).getTime()
+                  return timeA - timeB
+                })
+                .map((agendamento, index) => {
+                  const inicio = parseISO(agendamento.dataHoraInicio)
+                  const fim = agendamento.dataHoraFim 
+                    ? parseISO(agendamento.dataHoraFim)
+                    : new Date(inicio.getTime() + 60 * 60 * 1000)
+                  const hora = inicio.getHours()
+                  const minuto = inicio.getMinutes()
+                  const horaFormatada = format(inicio, 'HH:mm')
+                  
+                  return (
+                    <View key={agendamento.id} style={styles.timelineItem}>
+                      {/* Marcador de hora */}
+                      <View style={styles.timelineMarker}>
+                        <View
+                          style={[
+                            styles.timelineDot,
+                            { backgroundColor: getStatusColor(agendamento.status) },
+                          ]}
+                        />
+                        <Text style={styles.timelineTime}>{horaFormatada}</Text>
+                      </View>
+                      
+                      {/* Card do agendamento */}
+                      <TouchableOpacity
+                        style={[
+                          styles.timelineCard,
+                          {
+                            borderLeftColor: getStatusColor(agendamento.status),
+                          },
+                        ]}
+                        onPress={() => handleAgendamentoPress(agendamento)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.cardHeader}>
+                          <Text style={styles.cardTitle} numberOfLines={1}>
+                            {agendamento.cliente?.nome || 'Cliente não informado'}
+                          </Text>
+                          <View
+                            style={[
+                              styles.statusBadge,
+                              { backgroundColor: getStatusColor(agendamento.status) },
+                            ]}
+                          >
+                            <Text style={styles.statusText}>
+                              {getStatusLabel(agendamento.status)}
+                            </Text>
+                          </View>
+                        </View>
+                        
+                        <View style={styles.cardTimeContainer}>
+                          <Ionicons name="time-outline" size={14} color="#2563eb" />
+                          <Text style={styles.cardTime}>
+                            {horaFormatada} - {format(fim, 'HH:mm')}
+                          </Text>
+                        </View>
+                        
+                        {agendamento.servicos && agendamento.servicos.length > 0 && (
+                          <Text style={styles.cardText} numberOfLines={2}>
+                            {agendamento.servicos.map((s) => s.descricao || 'Serviço').join(', ')}
+                          </Text>
+                        )}
+                        
+                        {agendamento.atendente?.nome && (
+                          <View style={styles.cardInfoRow}>
+                            <Ionicons name="person-outline" size={14} color="#6b7280" />
+                            <Text style={styles.cardInfoText}>{agendamento.atendente.nome}</Text>
+                          </View>
+                        )}
+                        
+                        {agendamento.valorTotal && (
+                          <View style={styles.cardValueContainer}>
+                            <Text style={styles.cardValue}>R$ {agendamento.valorTotal.toFixed(2)}</Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  )
+                })}
+            </View>
           )}
         </View>
 
@@ -377,18 +438,83 @@ const styles = StyleSheet.create({
   },
   agendamentosContainer: {
     padding: 16,
+    flex: 1,
+  },
+  timelineHeader: {
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#111827',
-    marginBottom: 16,
     textTransform: 'capitalize',
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginTop: 4,
+  },
+  timelineContainer: {
+    position: 'relative',
+    paddingLeft: 60,
+  },
+  timelineLine: {
+    position: 'absolute',
+    left: 20,
+    top: 0,
+    bottom: 0,
+    width: 2,
+    backgroundColor: '#e5e7eb',
+  },
+  timelineItem: {
+    marginBottom: 16,
+    position: 'relative',
+  },
+  timelineMarker: {
+    position: 'absolute',
+    left: -60,
+    top: 0,
+    alignItems: 'center',
+    width: 50,
+  },
+  timelineDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+    marginBottom: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  timelineTime: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  timelineCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    borderLeftWidth: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
   },
   loading: {
     textAlign: 'center',
-    marginTop: 32,
     color: '#6b7280',
+    fontSize: 16,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -399,17 +525,35 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     color: '#6b7280',
+    fontWeight: '500',
   },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+  emptySubtext: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#9ca3af',
+    textAlign: 'center',
+  },
+  cardTimeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  cardInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  cardInfoText: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginLeft: 6,
+  },
+  cardValueContainer: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -434,10 +578,10 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   cardTime: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#2563eb',
-    marginBottom: 4,
+    marginLeft: 6,
   },
   cardText: {
     fontSize: 14,

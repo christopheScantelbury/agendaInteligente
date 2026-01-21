@@ -1,12 +1,15 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import { usuarioService, Usuario } from '../../src/services/usuarioService'
 import { authService } from '../../src/services/authService'
 import Button from '../../src/components/Button'
+import FilterBar from '../../src/components/FilterBar'
 
 export default function UsuariosScreen() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filters, setFilters] = useState<{ ativo?: string; perfil?: string }>({})
 
   useEffect(() => {
     checkAuth()
@@ -23,6 +26,35 @@ export default function UsuariosScreen() {
     retry: false,
     enabled: isAuthenticated,
   })
+
+  // Filtrar usuários
+  const usuariosFiltrados = useMemo(() => {
+    let filtered = [...usuarios]
+
+    // Filtro de busca
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase()
+      filtered = filtered.filter(
+        (u) =>
+          u.nome.toLowerCase().includes(term) ||
+          u.email.toLowerCase().includes(term) ||
+          (u.nomeUnidade && u.nomeUnidade.toLowerCase().includes(term))
+      )
+    }
+
+    // Filtro de status
+    if (filters.ativo !== undefined && filters.ativo !== '') {
+      const isAtivo = filters.ativo === 'true'
+      filtered = filtered.filter((u) => (u.ativo ?? true) === isAtivo)
+    }
+
+    // Filtro de perfil
+    if (filters.perfil && filters.perfil !== '') {
+      filtered = filtered.filter((u) => u.perfil === filters.perfil)
+    }
+
+    return filtered
+  }, [usuarios, searchTerm, filters])
 
   if (isLoading) {
     return (
@@ -48,6 +80,7 @@ export default function UsuariosScreen() {
         return '#DC2626'
       case 'GERENTE':
         return '#2563EB'
+      case 'PROFISSIONAL':
       case 'ATENDENTE':
         return '#059669'
       default:
@@ -84,14 +117,44 @@ export default function UsuariosScreen() {
           + Novo
         </Button>
       </View>
+      <FilterBar
+        onSearchChange={setSearchTerm}
+        onFilterChange={setFilters}
+        searchPlaceholder="Buscar por nome, email ou unidade..."
+        filters={[
+          {
+            key: 'ativo',
+            label: 'Status',
+            type: 'select',
+            options: [
+              { value: 'true', label: 'Ativos' },
+              { value: 'false', label: 'Inativos' },
+            ],
+          },
+          {
+            key: 'perfil',
+            label: 'Perfil',
+            type: 'select',
+            options: [
+              { value: 'ADMIN', label: 'Administrador' },
+              { value: 'GERENTE', label: 'Gerente' },
+              { value: 'PROFISSIONAL', label: 'Profissional/Atendente' },
+            ],
+          },
+        ]}
+      />
       <FlatList
-        data={usuarios}
+        data={usuariosFiltrados}
         keyExtractor={(item) => item.id?.toString() || item.email}
         renderItem={renderUsuarioItem}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Nenhum usuário encontrado</Text>
+            <Text style={styles.emptyText}>
+              {searchTerm || Object.values(filters).some(v => v !== '' && v !== undefined)
+                ? 'Nenhum usuário encontrado com os filtros aplicados'
+                : 'Nenhum usuário encontrado'}
+            </Text>
           </View>
         }
       />

@@ -9,6 +9,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -37,6 +38,48 @@ public class Usuario implements UserDetails {
     @Column(nullable = false)
     @Builder.Default
     private Boolean ativo = true;
+
+    // Campos específicos de Cliente
+    @Column(length = 14, unique = true)
+    private String cpfCnpj; // CPF/CNPJ (único para clientes)
+
+    @Column(name = "data_nascimento")
+    private java.time.LocalDate dataNascimento;
+
+    @Column(length = 20)
+    private String rg;
+
+    @Column(length = 200)
+    private String endereco;
+
+    @Column(length = 10)
+    private String numero;
+
+    @Column(length = 100)
+    private String complemento;
+
+    @Column(length = 100)
+    private String bairro;
+
+    @Column(length = 8)
+    private String cep;
+
+    @Column(length = 100)
+    private String cidade;
+
+    @Column(length = 2)
+    private String uf;
+
+    // Campos específicos de Atendente/Gerente
+    @Column(length = 14)
+    private String cpf; // CPF para atendentes/gerentes (diferente de cpfCnpj)
+
+    @Column(length = 20)
+    private String telefone;
+
+    @Column(name = "percentual_comissao", precision = 5, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal percentualComissao = java.math.BigDecimal.ZERO;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "perfil_sistema", length = 20)
@@ -78,6 +121,23 @@ public class Usuario implements UserDetails {
 
     @Column
     private LocalDateTime tokenRecuperacaoSenhaExpiracao;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "usuario_unidades",
+        joinColumns = @JoinColumn(name = "usuario_id"),
+        inverseJoinColumns = @JoinColumn(name = "unidade_id")
+    )
+    private List<Unidade> unidades;
+
+    // Relação com serviços (para atendentes/profissionais)
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "atendente_servicos",
+        joinColumns = @JoinColumn(name = "atendente_id"),
+        inverseJoinColumns = @JoinColumn(name = "servico_id")
+    )
+    private List<Servico> servicos;
 
     @PrePersist
     protected void onCreate() {

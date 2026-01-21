@@ -116,9 +116,7 @@ body {
   min-height: 600px;
   display: flex;
   flex-direction: column;
-}
-
-/* Responsividade mobile: Forçar largura mínima para permitir scroll horizontal se necessário */
+}/* Responsividade mobile: Forçar largura mínima para permitir scroll horizontal se necessário */
 @media (max-width: 768px) {
   .rbc-time-view {
     min-width: 600px;
