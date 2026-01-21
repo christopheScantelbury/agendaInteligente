@@ -37,7 +37,11 @@ public class Perfil {
 
     // Permissões de menu (JSON ou tabela separada)
     @Column(name = "permissoes_menu", columnDefinition = "TEXT")
-    private String permissoesMenu; // JSON com lista de menus permitidos
+    private String permissoesMenu; // JSON com lista de menus permitidos (compatibilidade)
+    
+    // Permissões granulares (JSON com Map<menu, tipo>)
+    @Column(name = "permissoes_granulares", columnDefinition = "TEXT")
+    private String permissoesGranulares; // JSON com Map<String, String> onde tipo pode ser "EDITAR", "VISUALIZAR", "SEM_ACESSO"
 
     @OneToMany(mappedBy = "perfil", fetch = FetchType.LAZY)
     private List<Usuario> usuarios;

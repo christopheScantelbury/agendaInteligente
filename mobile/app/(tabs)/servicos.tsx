@@ -1,14 +1,15 @@
 import React, { useState, useMemo } from 'react'
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native'
+import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import { router } from 'expo-router'
 import { servicoService, Servico } from '../../src/services/servicoService'
 import Button from '../../src/components/Button'
 import HeaderWithMenu from '../../src/components/HeaderWithMenu'
-import { Ionicons } from '@expo/vector-icons'
+import FilterBar from '../../src/components/FilterBar'
 
 export default function Servicos() {
-  const [buscaServico, setBuscaServico] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filters, setFilters] = useState<{ ativo?: string }>({})
   
   const { data: servicos = [], isLoading } = useQuery({
     queryKey: ['servicos'],
@@ -16,13 +17,26 @@ export default function Servicos() {
   })
 
   const servicosFiltrados = useMemo(() => {
-    if (!buscaServico) return servicos
-    const buscaLower = buscaServico.toLowerCase()
-    return servicos.filter(s => 
-      s.nome.toLowerCase().includes(buscaLower) ||
-      s.descricao?.toLowerCase().includes(buscaLower)
-    )
-  }, [servicos, buscaServico])
+    let filtered = [...servicos]
+
+    // Filtro de busca
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase()
+      filtered = filtered.filter(
+        (s) =>
+          s.nome.toLowerCase().includes(term) ||
+          s.descricao?.toLowerCase().includes(term)
+      )
+    }
+
+    // Filtro de status
+    if (filters.ativo !== undefined && filters.ativo !== '') {
+      const isAtivo = filters.ativo === 'true'
+      filtered = filtered.filter((s) => (s.ativo ?? true) === isAtivo)
+    }
+
+    return filtered
+  }, [servicos, searchTerm, filters])
 
   const renderItem = ({ item }: { item: Servico }) => (
     <TouchableOpacity 
@@ -47,21 +61,22 @@ export default function Servicos() {
         </Button>
       </View>
 
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#6b7280" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Buscar serviço por nome ou descrição..."
-          value={buscaServico}
-          onChangeText={setBuscaServico}
-          placeholderTextColor="#9ca3af"
-        />
-        {buscaServico ? (
-          <TouchableOpacity onPress={() => setBuscaServico('')}>
-            <Ionicons name="close-circle" size={20} color="#6b7280" />
-          </TouchableOpacity>
-        ) : null}
-      </View>
+      <FilterBar
+        onSearchChange={setSearchTerm}
+        onFilterChange={setFilters}
+        searchPlaceholder="Buscar por nome ou descrição..."
+        filters={[
+          {
+            key: 'ativo',
+            label: 'Status',
+            type: 'select',
+            options: [
+              { value: 'true', label: 'Ativos' },
+              { value: 'false', label: 'Inativos' },
+            ],
+          },
+        ]}
+      />
 
       {isLoading ? (
         <Text style={styles.loading}>Carregando...</Text>
@@ -72,7 +87,11 @@ export default function Servicos() {
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
-            <Text style={styles.empty}>Nenhum serviço encontrado</Text>
+            <Text style={styles.empty}>
+              {searchTerm || Object.values(filters).some(v => v !== '' && v !== undefined)
+                ? 'Nenhum serviço encontrado com os filtros aplicados'
+                : 'Nenhum serviço encontrado'}
+            </Text>
           }
         />
       )}
@@ -90,26 +109,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#ffffff',
-    margin: 16,
-    marginBottom: 0,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#111827',
   },
   list: {
     padding: 16,

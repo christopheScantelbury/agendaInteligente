@@ -1,15 +1,22 @@
 package br.com.agendainteligente.service;
 
 import br.com.agendainteligente.domain.entity.Cliente;
+import br.com.agendainteligente.domain.entity.Unidade;
+import br.com.agendainteligente.domain.entity.Usuario;
 import br.com.agendainteligente.dto.ClienteDTO;
+import br.com.agendainteligente.dto.UnidadeDTO;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.mapper.ClienteMapper;
+import br.com.agendainteligente.mapper.UnidadeMapper;
 import br.com.agendainteligente.repository.ClienteRepository;
+import br.com.agendainteligente.repository.UnidadeRepository;
+import br.com.agendainteligente.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +31,10 @@ public class ClienteService {
 
     private final ClienteRepository clienteRepository;
     private final ClienteMapper clienteMapper;
+    private final UnidadeMapper unidadeMapper;
+    private final UsuarioRepository usuarioRepository;
+    private final UnidadeRepository unidadeRepository;
+    private final PasswordEncoder passwordEncoder;
     
     private static final Pattern ONLY_DIGITS = Pattern.compile("\\D");
 
@@ -32,7 +43,7 @@ public class ClienteService {
     public List<ClienteDTO> listarTodos() {
         log.debug("Listando todos os clientes");
         return clienteRepository.findAll().stream()
-                .map(clienteMapper::toDTO)
+                .map(this::toDTO)
                 .collect(Collectors.toList());
     }
 
@@ -42,7 +53,7 @@ public class ClienteService {
         log.debug("Buscando cliente com id: {}", id);
         Cliente cliente = clienteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado com id: " + id));
-        return clienteMapper.toDTO(cliente);
+        return toDTO(cliente);
     }
 
     @Transactional(readOnly = true)
@@ -65,10 +76,49 @@ public class ClienteService {
             throw new BusinessException("Já existe um cliente cadastrado com este CPF/CNPJ");
         }
         
+        // Verificar se já existe usuário com o email
+        if (clienteDTO.getEmail() != null && !clienteDTO.getEmail().trim().isEmpty()) {
+            if (usuarioRepository.existsByEmail(clienteDTO.getEmail())) {
+                throw new BusinessException("Já existe um usuário cadastrado com este email");
+            }
+        }
+        
         Cliente cliente = clienteMapper.toEntity(clienteDTO);
+        
+        // Associar unidades ao cliente
+        if (clienteDTO.getUnidadesIds() != null && !clienteDTO.getUnidadesIds().isEmpty()) {
+            List<Unidade> unidades = unidadeRepository.findAllById(clienteDTO.getUnidadesIds());
+            if (unidades.size() != clienteDTO.getUnidadesIds().size()) {
+                throw new BusinessException("Uma ou mais unidades informadas não foram encontradas");
+            }
+            cliente.setUnidades(unidades);
+        }
+        
         cliente = clienteRepository.save(cliente);
+        
+        // Criar usuário automaticamente para o cliente se tiver email e senha
+        if (clienteDTO.getEmail() != null && !clienteDTO.getEmail().trim().isEmpty() 
+            && clienteDTO.getSenha() != null && !clienteDTO.getSenha().trim().isEmpty()) {
+            try {
+                Usuario usuario = Usuario.builder()
+                    .nome(cliente.getNome())
+                    .email(cliente.getEmail())
+                    .senha(passwordEncoder.encode(clienteDTO.getSenha()))
+                    .perfilSistema(Usuario.PerfilUsuario.CLIENTE)
+                    .ativo(cliente.getAtivo())
+                    .build();
+                
+                usuario = usuarioRepository.save(usuario);
+                log.info("Usuário criado automaticamente para cliente. Cliente ID: {}, Usuário ID: {}", 
+                    cliente.getId(), usuario.getId());
+            } catch (Exception e) {
+                log.warn("Erro ao criar usuário para cliente ID: {}. Erro: {}", cliente.getId(), e.getMessage());
+                // Não falha o cadastro do cliente se houver erro ao criar usuário
+            }
+        }
+        
         log.info("Cliente criado com sucesso. ID: {}", cliente.getId());
-        return clienteMapper.toDTO(cliente);
+        return toDTO(cliente);
     }
 
     @Transactional
@@ -89,9 +139,23 @@ public class ClienteService {
         }
         
         clienteMapper.updateEntityFromDTO(clienteDTO, cliente);
+        
+        // Atualizar unidades do cliente
+        if (clienteDTO.getUnidadesIds() != null) {
+            if (clienteDTO.getUnidadesIds().isEmpty()) {
+                cliente.setUnidades(List.of());
+            } else {
+                List<Unidade> unidades = unidadeRepository.findAllById(clienteDTO.getUnidadesIds());
+                if (unidades.size() != clienteDTO.getUnidadesIds().size()) {
+                    throw new BusinessException("Uma ou mais unidades informadas não foram encontradas");
+                }
+                cliente.setUnidades(unidades);
+            }
+        }
+        
         cliente = clienteRepository.save(cliente);
         log.info("Cliente atualizado com sucesso. ID: {}", cliente.getId());
-        return clienteMapper.toDTO(cliente);
+        return toDTO(cliente);
     }
 
     @Transactional
@@ -131,6 +195,28 @@ public class ClienteService {
             // Limitar a 10 caracteres (tamanho máximo do campo no banco)
             clienteDTO.setNumero(numeroNormalizado.length() > 10 ? numeroNormalizado.substring(0, 10) : numeroNormalizado);
         }
+    }
+    
+    /**
+     * Converte Cliente para ClienteDTO, populando a lista de unidades como objetos UnidadeDTO
+     */
+    private ClienteDTO toDTO(Cliente cliente) {
+        ClienteDTO dto = clienteMapper.toDTO(cliente);
+        
+        // Popular lista de unidades como objetos UnidadeDTO
+        if (cliente.getUnidades() != null && !cliente.getUnidades().isEmpty()) {
+            List<UnidadeDTO> unidadesDTO = cliente.getUnidades().stream()
+                    .map(unidadeMapper::toDTO)
+                    .collect(Collectors.toList());
+            dto.setUnidades(unidadesDTO);
+            
+            // Também popular unidadesIds para compatibilidade
+            dto.setUnidadesIds(cliente.getUnidades().stream()
+                    .map(Unidade::getId)
+                    .collect(Collectors.toList()));
+        }
+        
+        return dto;
     }
 }
 

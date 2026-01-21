@@ -78,10 +78,18 @@ public class UsuarioService {
             usuario.setPerfil(perfil);
         }
 
-        // Validação: GERENTE deve ter unidade associada
-        if (usuario.getPerfil() == Usuario.PerfilUsuario.GERENTE && usuarioDTO.getUnidadeId() != null) {
+        // Associar unidades ao usuário
+        if (usuarioDTO.getUnidadesIds() != null && !usuarioDTO.getUnidadesIds().isEmpty()) {
+            List<Unidade> unidades = unidadeRepository.findAllById(usuarioDTO.getUnidadesIds());
+            if (unidades.size() != usuarioDTO.getUnidadesIds().size()) {
+                throw new BusinessException("Uma ou mais unidades não foram encontradas");
+            }
+            usuario.setUnidades(unidades);
+        } else if (usuarioDTO.getUnidadeId() != null) {
+            // Compatibilidade com código antigo - se tiver unidadeId, converter para lista
             Unidade unidade = unidadeRepository.findById(usuarioDTO.getUnidadeId())
                     .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada"));
+            usuario.setUnidades(List.of(unidade));
         }
 
         usuario = usuarioRepository.save(usuario);
@@ -104,11 +112,20 @@ public class UsuarioService {
         usuarioMapper.updateEntityFromDTO(usuarioDTO, usuario);
 
         // Atualizar perfil do sistema se fornecido
+        // Nota: Se o frontend enviar "ATENDENTE", o Jackson pode falhar ao fazer parse
+        // Nesse caso, o perfilSistema virá null e usaremos o campo perfil
         if (usuarioDTO.getPerfilSistema() != null) {
             usuario.setPerfilSistema(usuarioDTO.getPerfilSistema());
         } else if (usuarioDTO.getPerfil() != null) {
             // Compatibilidade com código antigo
-            usuario.setPerfilSistema(usuarioDTO.getPerfil());
+            // Se o perfil for "ATENDENTE" (que não existe no enum), tratar como PROFISSIONAL
+            try {
+                usuario.setPerfilSistema(usuarioDTO.getPerfil());
+            } catch (IllegalArgumentException e) {
+                // Se o enum não conseguir fazer parse (ex: "ATENDENTE"), usar PROFISSIONAL
+                log.warn("Perfil inválido recebido: {}. Convertendo para PROFISSIONAL", usuarioDTO.getPerfil());
+                usuario.setPerfilSistema(Usuario.PerfilUsuario.PROFISSIONAL);
+            }
         }
 
         // Atualizar perfil customizado se fornecido
@@ -124,6 +141,56 @@ public class UsuarioService {
         // Atualiza senha apenas se fornecida
         if (usuarioDTO.getSenha() != null && !usuarioDTO.getSenha().trim().isEmpty()) {
             usuario.setSenha(passwordEncoder.encode(usuarioDTO.getSenha()));
+        }
+
+        // Determinar o perfil final após atualização
+        Usuario.PerfilUsuario perfilFinal = usuario.getPerfilSistema();
+        if (perfilFinal == null && usuarioDTO.getPerfilSistema() != null) {
+            perfilFinal = usuarioDTO.getPerfilSistema();
+        } else if (perfilFinal == null && usuarioDTO.getPerfil() != null) {
+            perfilFinal = usuarioDTO.getPerfil();
+        }
+
+        // Atualizar unidades associadas
+        if (usuarioDTO.getUnidadesIds() != null) {
+            if (usuarioDTO.getUnidadesIds().isEmpty()) {
+                // Validar se o perfil requer unidades
+                if (perfilFinal == Usuario.PerfilUsuario.GERENTE || 
+                    perfilFinal == Usuario.PerfilUsuario.PROFISSIONAL) {
+                    throw new BusinessException("Usuários com perfil " + perfilFinal + " devem ter pelo menos uma unidade associada");
+                }
+                usuario.setUnidades(List.of());
+            } else {
+                List<Unidade> unidades = unidadeRepository.findAllById(usuarioDTO.getUnidadesIds());
+                if (unidades.size() != usuarioDTO.getUnidadesIds().size()) {
+                    throw new BusinessException("Uma ou mais unidades não foram encontradas");
+                }
+                usuario.setUnidades(unidades);
+            }
+        } else if (usuarioDTO.getUnidadeId() != null) {
+            // Compatibilidade com código antigo
+            Unidade unidade = unidadeRepository.findById(usuarioDTO.getUnidadeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada"));
+            usuario.setUnidades(List.of(unidade));
+        } else {
+            // Se não foi fornecido unidadesIds nem unidadeId, verificar se precisa validar
+            // Se está mudando para um perfil que requer unidades, validar
+            if (perfilFinal == Usuario.PerfilUsuario.GERENTE || 
+                perfilFinal == Usuario.PerfilUsuario.PROFISSIONAL) {
+                // Se o usuário não tem unidades e está mudando para um perfil que requer, validar
+                if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
+                    throw new BusinessException("Usuários com perfil " + perfilFinal + " devem ter pelo menos uma unidade associada");
+                }
+            }
+        }
+
+        // Validação final: garantir que perfis que requerem unidades tenham pelo menos uma
+        if (perfilFinal == Usuario.PerfilUsuario.GERENTE || 
+            perfilFinal == Usuario.PerfilUsuario.PROFISSIONAL ||
+            perfilFinal == Usuario.PerfilUsuario.CLIENTE) {
+            if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
+                throw new BusinessException("Usuários com perfil " + perfilFinal + " devem ter pelo menos uma unidade associada");
+            }
         }
 
         usuario = usuarioRepository.save(usuario);
@@ -142,7 +209,22 @@ public class UsuarioService {
 
     private UsuarioDTO toDTO(Usuario usuario) {
         UsuarioDTO dto = usuarioMapper.toDTO(usuario);
-        // Nota: Se houver relação direta usuário-clínica, buscar aqui
+        
+        // Preencher lista de IDs de unidades
+        if (usuario.getUnidades() != null && !usuario.getUnidades().isEmpty()) {
+            dto.setUnidadesIds(usuario.getUnidades().stream()
+                    .map(Unidade::getId)
+                    .collect(Collectors.toList()));
+            dto.setNomesUnidades(usuario.getUnidades().stream()
+                    .map(Unidade::getNome)
+                    .collect(Collectors.toList()));
+            // Compatibilidade: se tiver apenas uma unidade, setar unidadeId
+            if (usuario.getUnidades().size() == 1) {
+                dto.setUnidadeId(usuario.getUnidades().get(0).getId());
+                dto.setNomeUnidade(usuario.getUnidades().get(0).getNome());
+            }
+        }
+        
         return dto;
     }
 }

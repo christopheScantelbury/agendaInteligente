@@ -1,6 +1,6 @@
 import api from './api'
 
-export type PerfilUsuario = 'ADMIN' | 'ATENDENTE' | 'GERENTE'
+export type PerfilUsuario = 'ADMIN' | 'PROFISSIONAL' | 'GERENTE' | 'ATENDENTE' // ATENDENTE mantido para compatibilidade
 
 export interface Usuario {
   id?: number

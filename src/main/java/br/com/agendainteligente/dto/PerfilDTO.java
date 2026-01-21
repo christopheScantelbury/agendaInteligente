@@ -22,5 +22,6 @@ public class PerfilDTO {
     private String descricao;
     private Boolean sistema;
     private Boolean ativo;
-    private List<String> permissoesMenu; // Lista de paths de menus permitidos
+    private List<String> permissoesMenu; // Lista de paths de menus permitidos (compatibilidade)
+    private java.util.Map<String, String> permissoesGranulares; // Map<menu, tipo> onde tipo pode ser "EDITAR", "VISUALIZAR", "SEM_ACESSO"
 }

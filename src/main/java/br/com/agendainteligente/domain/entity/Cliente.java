@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "clientes")
@@ -77,6 +78,14 @@ public class Cliente {
 
     @Column
     private LocalDateTime tokenRecuperacaoSenhaExpiracao;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "cliente_unidades",
+        joinColumns = @JoinColumn(name = "cliente_id"),
+        inverseJoinColumns = @JoinColumn(name = "unidade_id")
+    )
+    private List<Unidade> unidades;
 
     @PrePersist
     protected void onCreate() {

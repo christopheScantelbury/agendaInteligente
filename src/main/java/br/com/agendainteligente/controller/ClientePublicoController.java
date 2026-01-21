@@ -57,13 +57,14 @@ public class ClientePublicoController {
             throw new BusinessException("Já existe um cliente cadastrado com este email");
         }
         
-        // Criar cliente
-        ClienteDTO clienteCriado = clienteService.criar(clienteDTO);
-        
-        // Definir senha se fornecida
-        if (senha != null && !senha.isEmpty()) {
-            clienteAuthService.definirSenha(clienteCriado.getId(), senha);
+        // Usar senha do parâmetro se fornecida, senão usar do DTO
+        String senhaFinal = senha != null && !senha.isEmpty() ? senha : clienteDTO.getSenha();
+        if (senhaFinal != null && !senhaFinal.isEmpty()) {
+            clienteDTO.setSenha(senhaFinal);
         }
+        
+        // Criar cliente (já cria usuário automaticamente se tiver email e senha)
+        ClienteDTO clienteCriado = clienteService.criar(clienteDTO);
         
         return ResponseEntity.status(HttpStatus.CREATED).body(clienteCriado);
     }

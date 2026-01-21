@@ -1,12 +1,16 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import { atendenteService, Atendente } from '../../src/services/atendenteService'
+import { unidadeService } from '../../src/services/unidadeService'
 import { authService } from '../../src/services/authService'
 import Button from '../../src/components/Button'
+import FilterBar from '../../src/components/FilterBar'
 
 export default function AtendentesScreen() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filters, setFilters] = useState<{ ativo?: string; unidadeId?: string }>({})
 
   useEffect(() => {
     checkAuth()
@@ -23,6 +27,42 @@ export default function AtendentesScreen() {
     retry: false,
     enabled: isAuthenticated,
   })
+
+  const { data: unidades = [] } = useQuery({
+    queryKey: ['unidades'],
+    queryFn: unidadeService.listarTodos,
+    enabled: isAuthenticated,
+  })
+
+  // Filtrar atendentes
+  const atendentesFiltrados = useMemo(() => {
+    let filtered = [...atendentes]
+
+    // Filtro de busca
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase()
+      filtered = filtered.filter(
+        (a) =>
+          a.nomeUsuario?.toLowerCase().includes(term) ||
+          a.cpf?.includes(term) ||
+          a.telefone?.includes(term) ||
+          a.nomeUnidade?.toLowerCase().includes(term)
+      )
+    }
+
+    // Filtro de status
+    if (filters.ativo !== undefined && filters.ativo !== '') {
+      const isAtivo = filters.ativo === 'true'
+      filtered = filtered.filter((a) => (a.ativo ?? true) === isAtivo)
+    }
+
+    // Filtro de unidade
+    if (filters.unidadeId && filters.unidadeId !== '') {
+      filtered = filtered.filter((a) => a.unidadeId === parseInt(filters.unidadeId!))
+    }
+
+    return filtered
+  }, [atendentes, searchTerm, filters])
 
   if (isLoading) {
     return (
@@ -76,14 +116,49 @@ export default function AtendentesScreen() {
           + Novo
         </Button>
       </View>
+      <FilterBar
+        onSearchChange={setSearchTerm}
+        onFilterChange={setFilters}
+        searchPlaceholder="Buscar por nome, CPF, telefone ou unidade..."
+        filters={[
+          {
+            key: 'ativo',
+            label: 'Status',
+            type: 'select',
+            options: [
+              { value: 'true', label: 'Ativos' },
+              { value: 'false', label: 'Inativos' },
+            ],
+          },
+          ...(unidades.length > 0
+            ? [
+                {
+                  key: 'unidadeId',
+                  label: 'Unidade',
+                  type: 'select' as const,
+                  options: unidades
+                    .filter((u) => u.id !== undefined)
+                    .map((u) => ({
+                      value: u.id!.toString(),
+                      label: u.nome,
+                    })),
+                },
+              ]
+            : []),
+        ]}
+      />
       <FlatList
-        data={atendentes}
+        data={atendentesFiltrados}
         keyExtractor={(item) => item.id?.toString() || item.cpf}
         renderItem={renderAtendenteItem}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Nenhum atendente encontrado</Text>
+            <Text style={styles.emptyText}>
+              {searchTerm || Object.values(filters).some(v => v !== '' && v !== undefined)
+                ? 'Nenhum atendente encontrado com os filtros aplicados'
+                : 'Nenhum atendente encontrado'}
+            </Text>
           </View>
         }
       />
