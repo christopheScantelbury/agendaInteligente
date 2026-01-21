@@ -46,7 +46,10 @@ public class ClienteDTO {
     // Senha para criação de usuário (opcional, não é persistida na entidade Cliente)
     private String senha;
     
-    // Unidades associadas ao cliente (para entrada - apenas IDs)
+    @NotNull(message = "Unidade é obrigatória")
+    private Long unidadeId; // Unidade principal do cliente
+    
+    // Unidades associadas ao cliente (para entrada - apenas IDs) - unidades adicionais
     private List<Long> unidadesIds;
     
     // Unidades completas (para saída - objetos UnidadeDTO)
