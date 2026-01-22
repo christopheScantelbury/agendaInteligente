@@ -1001,6 +1001,7 @@ export default function Agendamentos() {
           size="md"
         >
           <ServicoForm
+            unidadeId={formData.unidadeId}
             onClose={() => {
               setMostrarModalServico(false)
               setBuscaServico('')
@@ -1148,15 +1149,26 @@ function ClienteForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
   )
 }
 
-function ServicoForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: (servico: Servico) => void }) {
+function ServicoForm({ 
+  onClose, 
+  onSuccess,
+  unidadeId 
+}: { 
+  onClose: () => void
+  onSuccess: (servico: Servico) => void
+  unidadeId?: number
+}) {
   const queryClient = useQueryClient()
   const { showNotification } = useNotification()
+  const usuario = authService.getUsuario()
+  
   const [formData, setFormData] = useState<Servico>({
     id: 0,
     nome: '',
     descricao: '',
     valor: 0,
     duracaoMinutos: 30,
+    unidadeId: unidadeId || usuario?.unidadeId || 0,
     ativo: true,
   })
 
@@ -1175,6 +1187,13 @@ function ServicoForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validação: garantir que tem unidadeId
+    if (!formData.unidadeId || formData.unidadeId === 0) {
+      showNotification('error', 'Por favor, selecione uma unidade primeiro')
+      return
+    }
+    
     saveMutation.mutate(formData)
   }
 

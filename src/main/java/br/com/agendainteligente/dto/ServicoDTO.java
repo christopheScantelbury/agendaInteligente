@@ -32,6 +32,9 @@ public class ServicoDTO {
     @Min(value = 1, message = "Duração deve ser no mínimo 1 minuto")
     private Integer duracaoMinutos;
     
+    @NotNull(message = "Unidade é obrigatória")
+    private Long unidadeId;
+    
     private Boolean ativo;
 }
 

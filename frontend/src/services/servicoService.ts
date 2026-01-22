@@ -6,6 +6,7 @@ export interface Servico {
   descricao?: string
   valor: number
   duracaoMinutos: number
+  unidadeId: number
   ativo: boolean
 }
 

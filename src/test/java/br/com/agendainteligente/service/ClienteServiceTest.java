@@ -1,12 +1,16 @@
 package br.com.agendainteligente.service;
 
 import br.com.agendainteligente.domain.entity.Cliente;
+import br.com.agendainteligente.domain.entity.Unidade;
 import br.com.agendainteligente.dto.ClienteDTO;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
 import br.com.agendainteligente.mapper.ClienteMapper;
 import br.com.agendainteligente.mapper.ClienteMapperImpl;
+import br.com.agendainteligente.mapper.UnidadeMapper;
 import br.com.agendainteligente.repository.ClienteRepository;
+import br.com.agendainteligente.repository.UnidadeRepository;
+import br.com.agendainteligente.repository.UsuarioRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,6 +18,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Arrays;
 import java.util.List;
@@ -29,6 +34,18 @@ class ClienteServiceTest {
     @Mock
     private ClienteRepository clienteRepository;
 
+    @Mock
+    private UnidadeRepository unidadeRepository;
+
+    @Mock
+    private UsuarioRepository usuarioRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private UnidadeMapper unidadeMapper;
+
     @Spy
     private ClienteMapper clienteMapper = new ClienteMapperImpl();
 
@@ -38,14 +55,23 @@ class ClienteServiceTest {
     private Cliente cliente;
     private ClienteDTO clienteDTO;
 
+    private Unidade unidade;
+
     @BeforeEach
     void setUp() {
+        unidade = Unidade.builder()
+                .id(1L)
+                .nome("Unidade Teste")
+                .ativo(true)
+                .build();
+
         cliente = Cliente.builder()
                 .id(1L)
                 .nome("João Silva")
                 .cpfCnpj("12345678900")
                 .email("joao@test.com")
                 .telefone("11999999999")
+                .unidade(unidade)
                 .build();
 
         clienteDTO = ClienteDTO.builder()
@@ -54,6 +80,7 @@ class ClienteServiceTest {
                 .cpfCnpj("12345678900")
                 .email("joao@test.com")
                 .telefone("11999999999")
+                .unidadeId(1L)
                 .build();
     }
 
@@ -107,6 +134,8 @@ class ClienteServiceTest {
         // Arrange
         clienteDTO.setId(null);
         when(clienteRepository.existsByCpfCnpj("12345678900")).thenReturn(false);
+        when(usuarioRepository.existsByEmail("joao@test.com")).thenReturn(false);
+        when(unidadeRepository.findById(1L)).thenReturn(Optional.of(unidade));
         when(clienteRepository.save(any(Cliente.class))).thenReturn(cliente);
 
         // Act
@@ -117,6 +146,8 @@ class ClienteServiceTest {
         assertEquals(1L, result.getId());
         assertEquals("João Silva", result.getNome());
         verify(clienteRepository).existsByCpfCnpj("12345678900");
+        verify(usuarioRepository).existsByEmail("joao@test.com");
+        verify(unidadeRepository).findById(1L);
         verify(clienteRepository).save(any(Cliente.class));
     }
 

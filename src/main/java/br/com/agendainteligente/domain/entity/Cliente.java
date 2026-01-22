@@ -67,6 +67,10 @@ public class Cliente {
     @Builder.Default
     private Boolean ativo = true;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unidade_id", nullable = false)
+    private Unidade unidade; // Unidade principal do cliente
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataCriacao;
 
@@ -85,7 +89,7 @@ public class Cliente {
         joinColumns = @JoinColumn(name = "cliente_id"),
         inverseJoinColumns = @JoinColumn(name = "unidade_id")
     )
-    private List<Unidade> unidades;
+    private List<Unidade> unidades; // Unidades adicionais que o cliente pode acessar
 
     @PrePersist
     protected void onCreate() {

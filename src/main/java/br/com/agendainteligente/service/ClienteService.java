@@ -85,7 +85,19 @@ public class ClienteService {
         
         Cliente cliente = clienteMapper.toEntity(clienteDTO);
         
-        // Associar unidades ao cliente
+        // Buscar e associar unidade principal
+        if (clienteDTO.getUnidadeId() != null) {
+            Unidade unidade = unidadeRepository.findById(clienteDTO.getUnidadeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada com id: " + clienteDTO.getUnidadeId()));
+            if (!unidade.getAtivo()) {
+                throw new BusinessException("Unidade não está ativa");
+            }
+            cliente.setUnidade(unidade);
+        } else {
+            throw new BusinessException("Unidade é obrigatória para criar um cliente");
+        }
+        
+        // Associar unidades adicionais ao cliente (além da principal)
         if (clienteDTO.getUnidadesIds() != null && !clienteDTO.getUnidadesIds().isEmpty()) {
             List<Unidade> unidades = unidadeRepository.findAllById(clienteDTO.getUnidadesIds());
             if (unidades.size() != clienteDTO.getUnidadesIds().size()) {
@@ -140,7 +152,17 @@ public class ClienteService {
         
         clienteMapper.updateEntityFromDTO(clienteDTO, cliente);
         
-        // Atualizar unidades do cliente
+        // Atualizar unidade principal
+        if (clienteDTO.getUnidadeId() != null) {
+            Unidade unidade = unidadeRepository.findById(clienteDTO.getUnidadeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada com id: " + clienteDTO.getUnidadeId()));
+            if (!unidade.getAtivo()) {
+                throw new BusinessException("Unidade não está ativa");
+            }
+            cliente.setUnidade(unidade);
+        }
+        
+        // Atualizar unidades adicionais do cliente
         if (clienteDTO.getUnidadesIds() != null) {
             if (clienteDTO.getUnidadesIds().isEmpty()) {
                 cliente.setUnidades(List.of());

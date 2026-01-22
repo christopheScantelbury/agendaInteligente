@@ -1,7 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { servicoService, Servico } from '../services/servicoService'
+import { unidadeService } from '../services/unidadeService'
+import { usuarioService } from '../services/usuarioService'
+import { authService } from '../services/authService'
 import { Plus, Trash2, Edit } from 'lucide-react'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
 import FormField from '../components/FormField'
@@ -22,6 +25,17 @@ export default function Servicos() {
     queryKey: ['servicos'],
     queryFn: servicoService.listarTodos,
   })
+
+  const { data: todasUnidades = [] } = useQuery({
+    queryKey: ['unidades'],
+    queryFn: unidadeService.listarTodos,
+  })
+
+  // Função helper para obter nome da unidade
+  const getNomeUnidade = (unidadeId: number) => {
+    const unidade = todasUnidades.find(u => u.id === unidadeId)
+    return unidade?.nome || 'Unidade não encontrada'
+  }
 
   const servicosFiltrados = useMemo(() => {
     let filtered = [...servicos]
@@ -126,16 +140,21 @@ export default function Servicos() {
                   )}
                   <p className="text-sm text-gray-500">
                     Valor: R$ {servico.valor.toFixed(2)} | Duração: {servico.duracaoMinutos} min
+                    {servico.unidadeId && (
+                      <> | Unidade: {getNomeUnidade(servico.unidadeId)}</>
+                    )}
                   </p>
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
-                      servico.ativo
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}
-                  >
-                    {servico.ativo ? 'Ativo' : 'Inativo'}
-                  </span>
+                  <div className="flex gap-2 mt-1">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        servico.ativo
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}
+                    >
+                      {servico.ativo ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </div>
                 </div>
                 <div className="flex space-x-2">
                   <button
@@ -209,16 +228,78 @@ function ServicoForm({
 }) {
   const queryClient = useQueryClient()
   const { showNotification } = useNotification()
-  const [formData, setFormData] = useState<Servico>(
-    servico || {
-      id: 0,
-      nome: '',
-      descricao: '',
-      valor: 0,
-      duracaoMinutos: 30,
-      ativo: true,
+  const usuario = authService.getUsuario()
+  const perfilLogado = usuario?.perfil
+
+  // Buscar todas as unidades
+  const { data: todasUnidades = [] } = useQuery({
+    queryKey: ['unidades'],
+    queryFn: unidadeService.listarTodos,
+  })
+
+  // Buscar usuário completo para obter suas unidades (se não for admin)
+  const { data: usuarioCompleto } = useQuery({
+    queryKey: ['usuario', usuario?.usuarioId],
+    queryFn: () => {
+      if (!usuario?.usuarioId) return Promise.resolve(null)
+      return usuarioService.buscarPorId(usuario.usuarioId)
+    },
+    enabled: !!usuario?.usuarioId && perfilLogado !== 'ADMIN',
+  })
+
+  // Filtrar unidades baseado no perfil
+  const unidadesDisponiveis = useMemo(() => {
+    if (perfilLogado === 'ADMIN') {
+      return todasUnidades
     }
-  )
+    // Para GERENTE e PROFISSIONAL, usar unidades do usuário completo
+    if (usuarioCompleto?.unidadesIds && usuarioCompleto.unidadesIds.length > 0) {
+      return todasUnidades.filter(u => usuarioCompleto.unidadesIds?.includes(u.id!))
+    }
+    // Fallback: usar unidadeId se existir
+    if (usuario?.unidadeId) {
+      return todasUnidades.filter(u => u.id === usuario.unidadeId)
+    }
+    return []
+  }, [todasUnidades, perfilLogado, usuarioCompleto?.unidadesIds, usuario?.unidadeId])
+
+  const [formData, setFormData] = useState<Servico>({
+    id: 0,
+    nome: '',
+    descricao: '',
+    valor: 0,
+    duracaoMinutos: 30,
+    unidadeId: 0,
+    ativo: true,
+  })
+
+  // Atualizar formData quando servico ou unidadesDisponiveis mudarem
+  useEffect(() => {
+    if (servico) {
+      // Ao editar: usar dados do serviço
+      setFormData({
+        id: servico.id,
+        nome: servico.nome || '',
+        descricao: servico.descricao || '',
+        valor: servico.valor || 0,
+        duracaoMinutos: servico.duracaoMinutos || 30,
+        unidadeId: servico.unidadeId || 0,
+        ativo: servico.ativo !== undefined ? servico.ativo : true,
+      })
+    } else {
+      // Ao criar: usar unidade padrão se houver apenas uma disponível
+      const unidadePadrao = unidadesDisponiveis.length === 1 ? unidadesDisponiveis[0].id! : 0
+      setFormData({
+        id: 0,
+        nome: '',
+        descricao: '',
+        valor: 0,
+        duracaoMinutos: 30,
+        unidadeId: unidadePadrao,
+        ativo: true,
+      })
+    }
+  }, [servico, unidadesDisponiveis])
 
   const saveMutation = useMutation({
     mutationFn: (data: Servico) =>
@@ -238,6 +319,28 @@ function ServicoForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validação adicional
+    if (!formData.unidadeId || formData.unidadeId === 0) {
+      showNotification('error', 'Por favor, selecione uma unidade')
+      return
+    }
+
+    if (!formData.nome || formData.nome.trim() === '') {
+      showNotification('error', 'Por favor, informe o nome do serviço')
+      return
+    }
+
+    if (!formData.valor || formData.valor <= 0) {
+      showNotification('error', 'Por favor, informe um valor válido')
+      return
+    }
+
+    if (!formData.duracaoMinutos || formData.duracaoMinutos <= 0) {
+      showNotification('error', 'Por favor, informe uma duração válida')
+      return
+    }
+
     saveMutation.mutate(formData)
   }
 
@@ -260,6 +363,26 @@ function ServicoForm({
           rows={3}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         />
+      </FormField>
+
+      <FormField label="Unidade" required>
+        <select
+          required
+          value={formData.unidadeId || ''}
+          onChange={(e) => setFormData({ ...formData, unidadeId: parseInt(e.target.value) })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          disabled={unidadesDisponiveis.length === 1}
+        >
+          <option value="">Selecione uma unidade</option>
+          {unidadesDisponiveis.map((unidade) => (
+            <option key={unidade.id} value={unidade.id}>
+              {unidade.nome}
+            </option>
+          ))}
+        </select>
+        {unidadesDisponiveis.length === 0 && (
+          <p className="mt-1 text-sm text-red-600">Você não tem acesso a nenhuma unidade</p>
+        )}
       </FormField>
 
       <div className="grid grid-cols-2 gap-4">
