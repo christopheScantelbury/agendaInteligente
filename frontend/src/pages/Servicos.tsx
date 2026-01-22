@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { servicoService, Servico } from '../services/servicoService'
 import { unidadeService } from '../services/unidadeService'
+import { usuarioService } from '../services/usuarioService'
 import { authService } from '../services/authService'
 import { Plus, Trash2, Edit } from 'lucide-react'
 import { useState, useMemo, useEffect } from 'react'
@@ -240,10 +241,10 @@ function ServicoForm({
   const { data: usuarioCompleto } = useQuery({
     queryKey: ['usuario', usuario?.usuarioId],
     queryFn: () => {
-      // Implementar se necessário buscar usuário completo
-      return Promise.resolve(null)
+      if (!usuario?.usuarioId) return Promise.resolve(null)
+      return usuarioService.buscarPorId(usuario.usuarioId)
     },
-    enabled: false, // Desabilitado por enquanto
+    enabled: !!usuario?.usuarioId && perfilLogado !== 'ADMIN',
   })
 
   // Filtrar unidades baseado no perfil
@@ -251,16 +252,16 @@ function ServicoForm({
     if (perfilLogado === 'ADMIN') {
       return todasUnidades
     }
-    // Para GERENTE e PROFISSIONAL, usar unidades do usuário
-    if (usuario?.unidadesIds && usuario.unidadesIds.length > 0) {
-      return todasUnidades.filter(u => usuario.unidadesIds?.includes(u.id!))
+    // Para GERENTE e PROFISSIONAL, usar unidades do usuário completo
+    if (usuarioCompleto?.unidadesIds && usuarioCompleto.unidadesIds.length > 0) {
+      return todasUnidades.filter(u => usuarioCompleto.unidadesIds?.includes(u.id!))
     }
     // Fallback: usar unidadeId se existir
     if (usuario?.unidadeId) {
       return todasUnidades.filter(u => u.id === usuario.unidadeId)
     }
     return []
-  }, [todasUnidades, perfilLogado, usuario?.unidadesIds, usuario?.unidadeId])
+  }, [todasUnidades, perfilLogado, usuarioCompleto?.unidadesIds, usuario?.unidadeId])
 
   const [formData, setFormData] = useState<Servico>({
     id: 0,
