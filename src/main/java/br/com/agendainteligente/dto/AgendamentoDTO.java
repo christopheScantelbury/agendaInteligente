@@ -47,5 +47,11 @@ public class AgendamentoDTO {
     private UnidadeDTO unidade;
     private AtendenteDTO atendente;
     private java.util.List<AgendamentoServicoDTO> servicos;
+    
+    // Campos de recorrência
+    private RecorrenciaDTO recorrencia;
+    private Boolean agendamentoRecorrente;
+    private Long agendamentoOriginalId;
+    private String serieRecorrenciaId;
 }
 

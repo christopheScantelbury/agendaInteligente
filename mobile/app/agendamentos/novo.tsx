@@ -12,6 +12,7 @@ import { authService } from '../../src/services/authService'
 import Button from '../../src/components/Button'
 import FormField from '../../src/components/FormField'
 import HeaderWithMenu from '../../src/components/HeaderWithMenu'
+import RecorrenciaConfig, { RecorrenciaConfig as RecorrenciaConfigType } from '../../src/components/RecorrenciaConfig'
 import { Picker } from '@react-native-picker/picker'
 import { Ionicons } from '@expo/vector-icons'
 import { format, parseISO, isBefore } from 'date-fns'
@@ -51,6 +52,9 @@ export default function NovoAgendamentoScreen() {
   const [buscaServico, setBuscaServico] = useState('')
   const [mostrarModalCliente, setMostrarModalCliente] = useState(false)
   const [mostrarModalServico, setMostrarModalServico] = useState(false)
+  const [recorrenciaConfig, setRecorrenciaConfig] = useState<RecorrenciaConfigType>({
+    recorrente: false,
+  })
 
   useEffect(() => {
     checkAuth()
@@ -203,14 +207,49 @@ export default function NovoAgendamentoScreen() {
       }
     })
 
-    createMutation.mutate({
+    const payload: any = {
       clienteId: formData.clienteId,
       unidadeId: formData.unidadeId,
       atendenteId: formData.atendenteId,
       dataHoraInicio: formData.dataHoraInicio,
       observacoes: formData.observacoes,
       servicos: servicosParaEnvio,
-    } as Agendamento)
+    }
+
+    // Adiciona configuração de recorrência se estiver habilitada
+    if (recorrenciaConfig.recorrente) {
+      // Validação para recorrência semanal
+      if (recorrenciaConfig.tipoRecorrencia === 'SEMANAL' && 
+          (!recorrenciaConfig.diasDaSemana || recorrenciaConfig.diasDaSemana.length === 0)) {
+        Alert.alert('Erro', 'Selecione pelo menos um dia da semana para recorrência semanal')
+        return
+      }
+
+      // Validação para término por data
+      if (recorrenciaConfig.tipoTermino === 'DATA' && !recorrenciaConfig.dataTermino) {
+        Alert.alert('Erro', 'Informe a data de término para a recorrência')
+        return
+      }
+
+      // Validação para término por ocorrências
+      if (recorrenciaConfig.tipoTermino === 'OCORRENCIAS' && 
+          (!recorrenciaConfig.numeroOcorrencias || recorrenciaConfig.numeroOcorrencias < 1)) {
+        Alert.alert('Erro', 'Informe o número de ocorrências (mínimo 1)')
+        return
+      }
+
+      payload.recorrencia = {
+        recorrente: true,
+        tipoRecorrencia: recorrenciaConfig.tipoRecorrencia,
+        diasDaSemana: recorrenciaConfig.diasDaSemana,
+        tipoTermino: recorrenciaConfig.tipoTermino,
+        dataTermino: recorrenciaConfig.dataTermino,
+        numeroOcorrencias: recorrenciaConfig.numeroOcorrencias,
+        intervalo: recorrenciaConfig.intervalo || 1,
+      }
+    }
+
+    createMutation.mutate(payload as Agendamento)
   }
 
   const handleServicoToggle = (servicoId: number) => {
@@ -504,6 +543,14 @@ export default function NovoAgendamentoScreen() {
             multiline
             numberOfLines={4}
             placeholderTextColor="#9ca3af"
+          />
+        </View>
+
+        {/* Seção: Recorrência */}
+        <View style={styles.section}>
+          <RecorrenciaConfig
+            value={recorrenciaConfig}
+            onChange={setRecorrenciaConfig}
           />
         </View>
 

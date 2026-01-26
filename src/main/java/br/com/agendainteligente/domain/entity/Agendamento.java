@@ -70,6 +70,17 @@ public class Agendamento {
     @Column
     private LocalDateTime dataAtualizacao;
 
+    // Campos de recorrência
+    @Column(name = "agendamento_recorrente")
+    @Builder.Default
+    private Boolean agendamentoRecorrente = false;
+
+    @Column(name = "agendamento_original_id")
+    private Long agendamentoOriginalId; // ID do primeiro agendamento da série
+
+    @Column(name = "serie_recorrencia_id")
+    private String serieRecorrenciaId; // ID único para identificar todos os agendamentos da mesma série
+
     @PrePersist
     protected void onCreate() {
         dataCriacao = LocalDateTime.now();

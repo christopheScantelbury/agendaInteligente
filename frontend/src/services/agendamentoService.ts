@@ -8,6 +8,16 @@ export interface AgendamentoServico {
   valorTotal?: number
 }
 
+export interface Recorrencia {
+  recorrente: boolean
+  tipoRecorrencia?: 'DIARIA' | 'SEMANAL' | 'MENSAL'
+  diasDaSemana?: number[]
+  tipoTermino?: 'INFINITA' | 'DATA' | 'OCORRENCIAS'
+  dataTermino?: string
+  numeroOcorrencias?: number
+  intervalo?: number
+}
+
 export interface Agendamento {
   id?: number
   clienteId: number
@@ -24,6 +34,10 @@ export interface Agendamento {
   servico?: any
   unidade?: any
   atendente?: any
+  recorrencia?: Recorrencia
+  agendamentoRecorrente?: boolean
+  agendamentoOriginalId?: number
+  serieRecorrenciaId?: string
 }
 
 export interface FinalizarAgendamento {

@@ -11,6 +11,7 @@ import br.com.agendainteligente.domain.enums.StatusAgendamento;
 import br.com.agendainteligente.dto.AgendamentoDTO;
 import br.com.agendainteligente.dto.AgendamentoServicoDTO;
 import br.com.agendainteligente.dto.FinalizarAgendamentoDTO;
+import br.com.agendainteligente.dto.RecorrenciaDTO;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
 import br.com.agendainteligente.mapper.AgendamentoMapper;
@@ -48,6 +49,7 @@ public class AgendamentoService {
     private final UnidadeRepository unidadeRepository;
     private final AtendenteRepository atendenteRepository;
     private final GerenteRepository gerenteRepository;
+    private final AgendamentoRecorrenteService agendamentoRecorrenteService;
     private final UsuarioRepository usuarioRepository;
     private final AgendamentoMapper agendamentoMapper;
     private final AgendamentoServicoMapper agendamentoServicoMapper;
@@ -299,12 +301,38 @@ public class AgendamentoService {
         LocalDateTime dataHoraInicio = agendamentoDTO.getDataHoraInicio();
         LocalDateTime dataHoraFim = dataHoraInicio.plusMinutes(duracaoTotal);
         
+        // Verifica se é agendamento recorrente
+        RecorrenciaDTO recorrencia = agendamentoDTO.getRecorrencia();
+        boolean isRecorrente = recorrencia != null && Boolean.TRUE.equals(recorrencia.getRecorrente());
+        
+        if (isRecorrente) {
+            // Cria agendamentos recorrentes
+            List<Agendamento> agendamentosRecorrentes = agendamentoRecorrenteService.criarAgendamentosRecorrentes(
+                    agendamentoDTO,
+                    recorrencia,
+                    cliente,
+                    unidade,
+                    atendente,
+                    servicos,
+                    agendamentoDTO.getServicos(),
+                    valorTotal,
+                    duracaoTotal
+            );
+            
+            if (agendamentosRecorrentes.isEmpty()) {
+                throw new BusinessException("Não foi possível criar nenhum agendamento recorrente. Verifique conflitos de horário.");
+            }
+            
+            log.info("Criados {} agendamentos recorrentes", agendamentosRecorrentes.size());
+            return agendamentoMapper.toDTO(agendamentosRecorrentes.get(0)); // Retorna o primeiro
+        }
+        
         // Verifica conflito de horário (verifica sobreposição com outros agendamentos do mesmo atendente)
         if (agendamentoRepository.findConflitoHorario(atendente.getId(), dataHoraInicio, dataHoraFim).isPresent()) {
             throw new BusinessException("Já existe um agendamento neste horário para este atendente");
         }
         
-        // Cria agendamento
+        // Cria agendamento único
         Agendamento agendamento = agendamentoMapper.toEntity(agendamentoDTO);
         agendamento.setCliente(cliente);
         agendamento.setUnidade(unidade);
@@ -313,6 +341,7 @@ public class AgendamentoService {
         agendamento.setDataHoraFim(dataHoraFim);
         agendamento.setValorTotal(valorTotal);
         agendamento.setStatus(StatusAgendamento.AGENDADO);
+        agendamento.setAgendamentoRecorrente(false);
         agendamento.setServicos(new ArrayList<>());
         
         agendamento = agendamentoRepository.save(agendamento);

@@ -16,6 +16,7 @@ import { Plus, Clock, Calendar, User, Building2, Search, X, CalendarDays, List }
 import Modal from '../components/Modal'
 import FormField from '../components/FormField'
 import Button from '../components/Button'
+import RecorrenciaConfig, { RecorrenciaConfig as RecorrenciaConfigType } from '../components/RecorrenciaConfig'
 import { format, parseISO, addDays, startOfDay, isBefore, isAfter } from 'date-fns'
 import { useNotification } from '../contexts/NotificationContext'
 
@@ -64,6 +65,9 @@ export default function Agendamentos() {
   const [mostrarModalCliente, setMostrarModalCliente] = useState(false)
   const [mostrarModalServico, setMostrarModalServico] = useState(false)
   const [agendamentoDetalhes, setAgendamentoDetalhes] = useState<Agendamento | null>(null)
+  const [recorrenciaConfig, setRecorrenciaConfig] = useState<RecorrenciaConfigType>({
+    recorrente: false,
+  })
 
   // Verifica se há parâmetro de data na URL (vindo da Home)
   useEffect(() => {
@@ -310,17 +314,18 @@ export default function Agendamentos() {
     const agora = new Date()
     const dataSelecionada = start < agora ? agora : start
 
-    setCriarModal({ start: dataSelecionada, end })
-    setFormData({
-      clienteId: undefined,
-      unidadeId: undefined,
-      atendenteId: undefined,
-      dataHoraInicio: format(dataSelecionada, "yyyy-MM-dd'T'HH:mm"),
-      observacoes: '',
-      servicos: [],
-    })
-    setServicosSelecionados([])
-    setHorariosDisponiveis([])
+      setCriarModal({ start: dataSelecionada, end })
+      setFormData({
+        clienteId: undefined,
+        unidadeId: undefined,
+        atendenteId: undefined,
+        dataHoraInicio: format(dataSelecionada, "yyyy-MM-dd'T'HH:mm"),
+        observacoes: '',
+        servicos: [],
+      })
+      setServicosSelecionados([])
+      setHorariosDisponiveis([])
+      setRecorrenciaConfig({ recorrente: false })
   }
 
   const handleSelectEvent = (eventOrAgendamento: CalendarEvent | Agendamento) => {
@@ -394,14 +399,49 @@ export default function Agendamentos() {
         ? formData.dataHoraInicio 
         : `${formData.dataHoraInicio}:00`
 
-      createMutation.mutate({
+      const payload: any = {
         clienteId: formData.clienteId,
         unidadeId: formData.unidadeId,
         atendenteId: formData.atendenteId,
         dataHoraInicio: dataHoraFormatada,
         observacoes: formData.observacoes,
         servicos: servicosParaEnvio,
-      } as Agendamento)
+      }
+
+      // Adiciona configuração de recorrência se estiver habilitada
+      if (recorrenciaConfig.recorrente) {
+        // Validação para recorrência semanal
+        if (recorrenciaConfig.tipoRecorrencia === 'SEMANAL' && 
+            (!recorrenciaConfig.diasDaSemana || recorrenciaConfig.diasDaSemana.length === 0)) {
+          showNotification('error', 'Selecione pelo menos um dia da semana para recorrência semanal')
+          return
+        }
+
+        // Validação para término por data
+        if (recorrenciaConfig.tipoTermino === 'DATA' && !recorrenciaConfig.dataTermino) {
+          showNotification('error', 'Informe a data de término para a recorrência')
+          return
+        }
+
+        // Validação para término por ocorrências
+        if (recorrenciaConfig.tipoTermino === 'OCORRENCIAS' && 
+            (!recorrenciaConfig.numeroOcorrencias || recorrenciaConfig.numeroOcorrencias < 1)) {
+          showNotification('error', 'Informe o número de ocorrências (mínimo 1)')
+          return
+        }
+
+        payload.recorrencia = {
+          recorrente: true,
+          tipoRecorrencia: recorrenciaConfig.tipoRecorrencia,
+          diasDaSemana: recorrenciaConfig.diasDaSemana,
+          tipoTermino: recorrenciaConfig.tipoTermino,
+          dataTermino: recorrenciaConfig.dataTermino,
+          numeroOcorrencias: recorrenciaConfig.numeroOcorrencias,
+          intervalo: recorrenciaConfig.intervalo || 1,
+        }
+      }
+
+      createMutation.mutate(payload)
     } else {
       showNotification('error', 'Por favor, preencha todos os campos obrigatórios')
     }
@@ -596,6 +636,7 @@ export default function Agendamentos() {
             })
             setServicosSelecionados([])
             setHorariosDisponiveis([])
+            setRecorrenciaConfig({ recorrente: false })
           }}
           title="Novo Agendamento"
           size="lg"
@@ -829,6 +870,12 @@ export default function Agendamentos() {
               />
             </FormField>
 
+            {/* Configuração de Recorrência */}
+            <RecorrenciaConfig
+              value={recorrenciaConfig}
+              onChange={setRecorrenciaConfig}
+            />
+
             {/* Botões */}
             <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
               <Button
@@ -845,6 +892,7 @@ export default function Agendamentos() {
                   })
                   setServicosSelecionados([])
                   setHorariosDisponiveis([])
+                  setRecorrenciaConfig({ recorrente: false })
                 }}
               >
                 Cancelar
