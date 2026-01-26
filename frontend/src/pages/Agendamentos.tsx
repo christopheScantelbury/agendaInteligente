@@ -6,6 +6,7 @@ import { unidadeService } from '../services/unidadeService'
 import { atendenteService } from '../services/atendenteService'
 import { horarioDisponivelService } from '../services/horarioDisponivelService'
 import { authService } from '../services/authService'
+import { usuarioService } from '../services/usuarioService'
 import CalendarView from '../components/CalendarView'
 import TimelineView from '../components/TimelineView'
 import CalendarMonth from '../components/CalendarMonth'
@@ -136,24 +137,44 @@ export default function Agendamentos() {
   const usuario = authService.getUsuario()
   const perfil = usuario?.perfil
 
+  // Buscar usuário completo para obter suas unidades (se não for admin)
+  const { data: usuarioCompleto } = useQuery({
+    queryKey: ['usuario', usuario?.usuarioId],
+    queryFn: () => {
+      if (!usuario?.usuarioId) return Promise.resolve(null)
+      return usuarioService.buscarPorId(usuario.usuarioId)
+    },
+    enabled: !!usuario?.usuarioId && perfil !== 'ADMIN',
+  })
+
   // Filtrar unidades baseado no perfil
+  // O backend já filtra corretamente, então podemos usar todas as unidades retornadas
   const { data: todasUnidades = [] } = useQuery({
     queryKey: ['unidades'],
     queryFn: unidadeService.listarTodos,
   })
 
   const unidadesFiltradas = useMemo(() => {
+    // O backend já filtra por empresa/unidade, então podemos usar todas as unidades retornadas
+    // Mas mantemos o filtro no frontend como segurança adicional
     if (perfil === 'ADMIN') {
       return todasUnidades
     }
-    if (perfil === 'GERENTE' && usuario?.unidadeId) {
-      return todasUnidades.filter(u => u.id === usuario.unidadeId)
+    // Para GERENTE, usar todas as unidades retornadas pelo backend (já filtradas por empresa)
+    if (perfil === 'GERENTE') {
+      // O backend já retorna apenas unidades da mesma empresa
+      return todasUnidades
     }
+    // Para PROFISSIONAL/ATENDENTE, usar unidadesIds do usuário completo
+    if ((perfil === 'PROFISSIONAL' || perfil === 'ATENDENTE') && usuarioCompleto?.unidadesIds && usuarioCompleto.unidadesIds.length > 0) {
+      return todasUnidades.filter(u => usuarioCompleto.unidadesIds?.includes(u.id!))
+    }
+    // Fallback: usar unidadeId se existir
     if ((perfil === 'PROFISSIONAL' || perfil === 'ATENDENTE') && usuario?.unidadeId) {
       return todasUnidades.filter(u => u.id === usuario.unidadeId)
     }
     return todasUnidades
-  }, [todasUnidades, perfil, usuario?.unidadeId])
+  }, [todasUnidades, perfil, usuarioCompleto?.unidadesIds, usuario?.unidadeId])
 
   // Filtrar atendentes baseado na unidade, serviços selecionados e perfil
   const { data: todosAtendentes = [], refetch: refetchAtendentes } = useQuery({

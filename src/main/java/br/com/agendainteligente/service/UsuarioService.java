@@ -12,11 +12,14 @@ import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,9 +35,129 @@ public class UsuarioService {
 
     @Transactional(readOnly = true)
     public List<UsuarioDTO> listarTodos() {
-        return usuarioRepository.findAll().stream()
+        List<Usuario> usuarios = filtrarPorPermissao();
+        return usuarios.stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Filtra usuários baseado no perfil e unidades do usuário logado.
+     * - ADMIN: vê todos os usuários
+     * - GERENTE: vê apenas usuários das unidades da mesma empresa
+     * - PROFISSIONAL: vê apenas usuários da mesma unidade
+     * - CLIENTE: não deve acessar esta funcionalidade
+     */
+    private List<Usuario> filtrarPorPermissao() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            log.warn("Tentativa de listar usuários sem autenticação");
+            return List.of();
+        }
+
+        String email = auth.getName();
+        Usuario usuarioLogado = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+
+        Usuario.PerfilUsuario perfil = usuarioLogado.getPerfil();
+
+        switch (perfil) {
+            case ADMIN:
+                log.debug("ADMIN: listando todos os usuários");
+                return usuarioRepository.findAll();
+
+            case GERENTE:
+                log.debug("GERENTE: listando usuários das unidades da mesma empresa");
+                if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
+                    log.warn("Gerente {} não tem unidades vinculadas", email);
+                    return List.of();
+                }
+                
+                // Carregar unidades com empresas para evitar lazy loading
+                List<Unidade> unidadesGerente = usuarioLogado.getUnidades();
+                
+                // Obter IDs das empresas das unidades do gerente
+                Set<Long> empresaIds = unidadesGerente.stream()
+                        .map(u -> {
+                            // Forçar carregamento da empresa
+                            if (u.getEmpresa() == null) {
+                                Unidade unidadeCompleta = unidadeRepository.findById(u.getId())
+                                        .orElse(null);
+                                if (unidadeCompleta != null && unidadeCompleta.getEmpresa() != null) {
+                                    return unidadeCompleta.getEmpresa().getId();
+                                }
+                                return null;
+                            }
+                            return u.getEmpresa().getId();
+                        })
+                        .filter(id -> id != null)
+                        .collect(Collectors.toSet());
+                
+                if (empresaIds.isEmpty()) {
+                    log.warn("Gerente {} não tem empresas vinculadas", email);
+                    return List.of();
+                }
+                
+                log.debug("Gerente {} tem acesso às empresas: {}", email, empresaIds);
+                
+                // Obter IDs de todas as unidades das mesmas empresas
+                List<Unidade> todasUnidades = unidadeRepository.findAll();
+                List<Long> unidadesIds = todasUnidades.stream()
+                        .filter(u -> {
+                            if (u.getEmpresa() == null) {
+                                return false;
+                            }
+                            return empresaIds.contains(u.getEmpresa().getId());
+                        })
+                        .map(Unidade::getId)
+                        .collect(Collectors.toList());
+                
+                log.debug("Unidades acessíveis pelo gerente {}: {}", email, unidadesIds);
+                
+                // Filtrar usuários que têm pelo menos uma unidade nas empresas do gerente
+                List<Usuario> todosUsuarios = usuarioRepository.findAll();
+                List<Usuario> usuariosFiltrados = todosUsuarios.stream()
+                        .filter(u -> {
+                            if (u.getUnidades() == null || u.getUnidades().isEmpty()) {
+                                return false;
+                            }
+                            boolean temAcesso = u.getUnidades().stream()
+                                    .anyMatch(unidade -> unidadesIds.contains(unidade.getId()));
+                            return temAcesso;
+                        })
+                        .collect(Collectors.toList());
+                
+                log.debug("Gerente {} pode ver {} usuários de {} total", email, usuariosFiltrados.size(), todosUsuarios.size());
+                return usuariosFiltrados;
+
+            case PROFISSIONAL:
+                log.debug("PROFISSIONAL: listando usuários da mesma unidade");
+                if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
+                    log.warn("Profissional {} não tem unidades vinculadas", email);
+                    return List.of();
+                }
+                
+                // Obter IDs das unidades do profissional
+                List<Long> unidadesProfissional = usuarioLogado.getUnidades().stream()
+                        .map(Unidade::getId)
+                        .collect(Collectors.toList());
+                
+                // Filtrar usuários que têm pelo menos uma unidade em comum
+                return usuarioRepository.findAll().stream()
+                        .filter(u -> {
+                            if (u.getUnidades() == null || u.getUnidades().isEmpty()) {
+                                return false;
+                            }
+                            return u.getUnidades().stream()
+                                    .anyMatch(unidade -> unidadesProfissional.contains(unidade.getId()));
+                        })
+                        .collect(Collectors.toList());
+
+            case CLIENTE:
+            default:
+                log.debug("CLIENTE ou perfil desconhecido: retornando lista vazia");
+                return List.of();
+        }
     }
 
     @Transactional(readOnly = true)

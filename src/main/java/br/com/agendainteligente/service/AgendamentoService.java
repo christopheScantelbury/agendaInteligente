@@ -35,6 +35,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -96,11 +97,49 @@ public class AgendamentoService {
                 return agendamentoRepository.findAll();
                 
             case GERENTE:
-                log.debug("GERENTE: listando agendamentos da unidade do gerente");
-                br.com.agendainteligente.domain.entity.Gerente gerente = gerenteRepository.findByUsuarioId(usuario.getId())
-                        .orElseThrow(() -> new BusinessException("Gerente não está vinculado a uma unidade"));
-                Long unidadeId = gerente.getUnidade().getId();
-                return agendamentoRepository.findByUnidadeId(unidadeId);
+                log.debug("GERENTE: listando agendamentos das unidades do gerente");
+                if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
+                    log.warn("Gerente {} não tem unidades vinculadas", email);
+                    return new ArrayList<>();
+                }
+                
+                // Obter IDs das empresas das unidades do gerente
+                Set<Long> empresaIds = usuario.getUnidades().stream()
+                        .map(u -> {
+                            if (u.getEmpresa() == null) {
+                                Unidade unidadeCompleta = unidadeRepository.findById(u.getId())
+                                        .orElse(null);
+                                if (unidadeCompleta != null && unidadeCompleta.getEmpresa() != null) {
+                                    return unidadeCompleta.getEmpresa().getId();
+                                }
+                                return null;
+                            }
+                            return u.getEmpresa().getId();
+                        })
+                        .filter(id -> id != null)
+                        .collect(Collectors.toSet());
+                
+                if (empresaIds.isEmpty()) {
+                    log.warn("Gerente {} não tem empresas vinculadas", email);
+                    return new ArrayList<>();
+                }
+                
+                // Obter IDs de todas as unidades das mesmas empresas
+                List<Unidade> todasUnidades = unidadeRepository.findAll();
+                List<Long> unidadesIds = todasUnidades.stream()
+                        .filter(u -> {
+                            if (u.getEmpresa() == null) {
+                                return false;
+                            }
+                            return empresaIds.contains(u.getEmpresa().getId());
+                        })
+                        .map(Unidade::getId)
+                        .collect(Collectors.toList());
+                
+                // Retornar agendamentos de todas as unidades da mesma empresa
+                return agendamentoRepository.findAll().stream()
+                        .filter(a -> unidadesIds.contains(a.getUnidade().getId()))
+                        .collect(Collectors.toList());
                 
             case PROFISSIONAL:
                 log.debug("PROFISSIONAL: listando apenas agendamentos do próprio atendente");
@@ -160,9 +199,32 @@ public class AgendamentoService {
                 return;
                 
             case GERENTE:
-                br.com.agendainteligente.domain.entity.Gerente gerente = gerenteRepository.findByUsuarioId(usuario.getId())
-                        .orElseThrow(() -> new BusinessException("Gerente não está vinculado a uma unidade"));
-                if (!gerente.getUnidade().getId().equals(unidadeId)) {
+                if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
+                    throw new BusinessException("Gerente não está vinculado a uma unidade");
+                }
+                
+                // Obter IDs das empresas das unidades do gerente
+                Set<Long> empresaIds = usuario.getUnidades().stream()
+                        .map(u -> {
+                            if (u.getEmpresa() == null) {
+                                Unidade unidadeCompleta = unidadeRepository.findById(u.getId())
+                                        .orElse(null);
+                                if (unidadeCompleta != null && unidadeCompleta.getEmpresa() != null) {
+                                    return unidadeCompleta.getEmpresa().getId();
+                                }
+                                return null;
+                            }
+                            return u.getEmpresa().getId();
+                        })
+                        .filter(id -> id != null)
+                        .collect(Collectors.toSet());
+                
+                // Verificar se a unidade do agendamento pertence a uma das empresas do gerente
+                Unidade unidadeAgendamento = unidadeRepository.findById(unidadeId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada"));
+                
+                if (unidadeAgendamento.getEmpresa() == null || 
+                    !empresaIds.contains(unidadeAgendamento.getEmpresa().getId())) {
                     throw new BusinessException("Você não tem permissão para criar agendamentos nesta unidade");
                 }
                 return;
@@ -202,9 +264,29 @@ public class AgendamentoService {
                 return;
                 
             case GERENTE:
-                br.com.agendainteligente.domain.entity.Gerente gerente = gerenteRepository.findByUsuarioId(usuario.getId())
-                        .orElseThrow(() -> new BusinessException("Gerente não está vinculado a uma unidade"));
-                if (!gerente.getUnidade().getId().equals(agendamento.getUnidade().getId())) {
+                if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
+                    throw new BusinessException("Gerente não está vinculado a uma unidade");
+                }
+                
+                // Obter IDs das empresas das unidades do gerente
+                Set<Long> empresaIds = usuario.getUnidades().stream()
+                        .map(u -> {
+                            if (u.getEmpresa() == null) {
+                                Unidade unidadeCompleta = unidadeRepository.findById(u.getId())
+                                        .orElse(null);
+                                if (unidadeCompleta != null && unidadeCompleta.getEmpresa() != null) {
+                                    return unidadeCompleta.getEmpresa().getId();
+                                }
+                                return null;
+                            }
+                            return u.getEmpresa().getId();
+                        })
+                        .filter(id -> id != null)
+                        .collect(Collectors.toSet());
+                
+                // Verificar se a unidade do agendamento pertence a uma das empresas do gerente
+                if (agendamento.getUnidade() == null || agendamento.getUnidade().getEmpresa() == null ||
+                    !empresaIds.contains(agendamento.getUnidade().getEmpresa().getId())) {
                     throw new BusinessException("Você não tem permissão para visualizar este agendamento");
                 }
                 return;

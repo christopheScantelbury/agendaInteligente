@@ -1,6 +1,7 @@
 package br.com.agendainteligente.service;
 
 import br.com.agendainteligente.domain.entity.Cliente;
+import br.com.agendainteligente.domain.entity.Empresa;
 import br.com.agendainteligente.domain.entity.Unidade;
 import br.com.agendainteligente.domain.entity.Usuario;
 import br.com.agendainteligente.dto.ClienteDTO;
@@ -16,11 +17,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -41,10 +45,112 @@ public class ClienteService {
     @Transactional(readOnly = true)
     @Cacheable(value = "clientes", unless = "#result.isEmpty()")
     public List<ClienteDTO> listarTodos() {
-        log.debug("Listando todos os clientes");
-        return clienteRepository.findAll().stream()
+        log.debug("Listando clientes com filtro de permissão");
+        List<Cliente> clientes = filtrarPorPermissao();
+        return clientes.stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Filtra clientes baseado no perfil e empresas do usuário logado.
+     * - ADMIN: vê todos os clientes
+     * - GERENTE: vê apenas clientes das unidades da mesma empresa
+     * - PROFISSIONAL: vê apenas clientes da mesma unidade
+     * - CLIENTE: não deve acessar esta funcionalidade
+     */
+    private List<Cliente> filtrarPorPermissao() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            log.warn("Tentativa de listar clientes sem autenticação");
+            return clienteRepository.findAll();
+        }
+
+        String email = auth.getName();
+        Usuario usuarioLogado = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+
+        Usuario.PerfilUsuario perfil = usuarioLogado.getPerfil();
+
+        switch (perfil) {
+            case ADMIN:
+                log.debug("ADMIN: listando todos os clientes");
+                return clienteRepository.findAll();
+
+            case GERENTE:
+                log.debug("GERENTE: listando clientes das unidades da mesma empresa");
+                if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
+                    log.warn("Gerente {} não tem unidades vinculadas", email);
+                    return List.of();
+                }
+                
+                // Obter IDs das empresas das unidades do gerente
+                Set<Long> empresaIds = usuarioLogado.getUnidades().stream()
+                        .map(u -> {
+                            // Forçar carregamento da empresa
+                            if (u.getEmpresa() == null) {
+                                Unidade unidadeCompleta = unidadeRepository.findById(u.getId())
+                                        .orElse(null);
+                                if (unidadeCompleta != null && unidadeCompleta.getEmpresa() != null) {
+                                    return unidadeCompleta.getEmpresa().getId();
+                                }
+                                return null;
+                            }
+                            return u.getEmpresa().getId();
+                        })
+                        .filter(id -> id != null)
+                        .collect(Collectors.toSet());
+                
+                if (empresaIds.isEmpty()) {
+                    log.warn("Gerente {} não tem empresas vinculadas", email);
+                    return List.of();
+                }
+                
+                log.debug("Gerente {} tem acesso às empresas: {}", email, empresaIds);
+                
+                // Obter IDs de todas as unidades das mesmas empresas
+                List<Unidade> todasUnidades = unidadeRepository.findAll();
+                List<Long> unidadesIds = todasUnidades.stream()
+                        .filter(u -> {
+                            if (u.getEmpresa() == null) {
+                                return false;
+                            }
+                            return empresaIds.contains(u.getEmpresa().getId());
+                        })
+                        .map(Unidade::getId)
+                        .collect(Collectors.toList());
+                
+                // Retornar clientes das unidades da mesma empresa
+                List<Cliente> todosClientes = clienteRepository.findAll();
+                List<Cliente> clientesFiltrados = todosClientes.stream()
+                        .filter(c -> c.getUnidade() != null && unidadesIds.contains(c.getUnidade().getId()))
+                        .collect(Collectors.toList());
+                
+                log.debug("Gerente {} pode ver {} clientes de {} total", email, clientesFiltrados.size(), todosClientes.size());
+                return clientesFiltrados;
+
+            case PROFISSIONAL:
+                log.debug("PROFISSIONAL: listando apenas clientes da mesma unidade");
+                if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
+                    log.warn("Profissional {} não tem unidades vinculadas", email);
+                    return List.of();
+                }
+                
+                // Obter IDs das unidades do profissional
+                List<Long> unidadesProfissionalIds = usuarioLogado.getUnidades().stream()
+                        .map(Unidade::getId)
+                        .collect(Collectors.toList());
+                
+                // Retornar clientes das mesmas unidades
+                return clienteRepository.findAll().stream()
+                        .filter(c -> c.getUnidade() != null && unidadesProfissionalIds.contains(c.getUnidade().getId()))
+                        .collect(Collectors.toList());
+
+            case CLIENTE:
+            default:
+                log.debug("CLIENTE ou perfil desconhecido: retornando lista vazia");
+                return List.of();
+        }
     }
 
     @Transactional(readOnly = true)

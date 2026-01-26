@@ -2,19 +2,24 @@ package br.com.agendainteligente.service;
 
 import br.com.agendainteligente.domain.entity.Empresa;
 import br.com.agendainteligente.domain.entity.Unidade;
+import br.com.agendainteligente.domain.entity.Usuario;
 import br.com.agendainteligente.dto.UnidadeDTO;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
 import br.com.agendainteligente.mapper.UnidadeMapper;
 import br.com.agendainteligente.repository.EmpresaRepository;
 import br.com.agendainteligente.repository.UnidadeRepository;
+import br.com.agendainteligente.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -26,14 +31,107 @@ public class UnidadeService {
     private final UnidadeRepository unidadeRepository;
     private final UnidadeMapper unidadeMapper;
     private final EmpresaRepository empresaRepository;
+    private final UsuarioRepository usuarioRepository;
 
     private static final Pattern ONLY_DIGITS = Pattern.compile("\\D");
 
     @Transactional(readOnly = true)
     public List<UnidadeDTO> listarTodos() {
-        return unidadeRepository.findAll().stream()
+        List<Unidade> unidades = filtrarPorPermissao();
+        return unidades.stream()
                 .map(unidadeMapper::toDTO)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Filtra unidades baseado no perfil e empresas do usuário logado.
+     * - ADMIN: vê todas as unidades
+     * - GERENTE: vê apenas unidades das empresas vinculadas
+     * - PROFISSIONAL: vê apenas suas unidades
+     * - CLIENTE: vê apenas suas unidades
+     */
+    private List<Unidade> filtrarPorPermissao() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            log.warn("Tentativa de listar unidades sem autenticação");
+            return unidadeRepository.findAll();
+        }
+
+        String email = auth.getName();
+        Usuario usuarioLogado = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+
+        Usuario.PerfilUsuario perfil = usuarioLogado.getPerfil();
+
+        switch (perfil) {
+            case ADMIN:
+                log.debug("ADMIN: listando todas as unidades");
+                return unidadeRepository.findAll();
+
+            case GERENTE:
+                log.debug("GERENTE: listando unidades das empresas do gerente");
+                if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
+                    log.warn("Gerente {} não tem unidades vinculadas", email);
+                    return List.of();
+                }
+                
+                // Obter IDs das empresas das unidades do gerente
+                Set<Long> empresaIds = usuarioLogado.getUnidades().stream()
+                        .map(u -> {
+                            // Forçar carregamento da empresa
+                            if (u.getEmpresa() == null) {
+                                Unidade unidadeCompleta = unidadeRepository.findById(u.getId())
+                                        .orElse(null);
+                                if (unidadeCompleta != null && unidadeCompleta.getEmpresa() != null) {
+                                    return unidadeCompleta.getEmpresa().getId();
+                                }
+                                return null;
+                            }
+                            return u.getEmpresa().getId();
+                        })
+                        .filter(id -> id != null)
+                        .collect(Collectors.toSet());
+                
+                if (empresaIds.isEmpty()) {
+                    log.warn("Gerente {} não tem empresas vinculadas", email);
+                    return List.of();
+                }
+                
+                log.debug("Gerente {} tem acesso às empresas: {}", email, empresaIds);
+                
+                // Retornar todas as unidades das mesmas empresas
+                List<Unidade> todasUnidades = unidadeRepository.findAll();
+                List<Unidade> unidadesFiltradas = todasUnidades.stream()
+                        .filter(u -> {
+                            if (u.getEmpresa() == null) {
+                                return false;
+                            }
+                            return empresaIds.contains(u.getEmpresa().getId());
+                        })
+                        .collect(Collectors.toList());
+                
+                log.debug("Gerente {} pode ver {} unidades de {} total", email, unidadesFiltradas.size(), todasUnidades.size());
+                return unidadesFiltradas;
+
+            case PROFISSIONAL:
+            case CLIENTE:
+                log.debug("{}: listando apenas unidades do usuário", perfil);
+                if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
+                    log.warn("Usuário {} não tem unidades vinculadas", email);
+                    return List.of();
+                }
+                
+                // Retornar apenas as unidades do usuário
+                List<Long> unidadesIds = usuarioLogado.getUnidades().stream()
+                        .map(Unidade::getId)
+                        .collect(Collectors.toList());
+                
+                return unidadeRepository.findAllById(unidadesIds);
+
+            default:
+                log.debug("Perfil desconhecido: retornando lista vazia");
+                return List.of();
+        }
     }
 
     @Transactional(readOnly = true)
