@@ -11,6 +11,7 @@ import br.com.agendainteligente.domain.enums.StatusAgendamento;
 import br.com.agendainteligente.dto.AgendamentoDTO;
 import br.com.agendainteligente.dto.AgendamentoServicoDTO;
 import br.com.agendainteligente.dto.FinalizarAgendamentoDTO;
+import br.com.agendainteligente.dto.RecorrenciaDTO;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
 import br.com.agendainteligente.mapper.AgendamentoMapper;
@@ -34,6 +35,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -48,6 +50,7 @@ public class AgendamentoService {
     private final UnidadeRepository unidadeRepository;
     private final AtendenteRepository atendenteRepository;
     private final GerenteRepository gerenteRepository;
+    private final AgendamentoRecorrenteService agendamentoRecorrenteService;
     private final UsuarioRepository usuarioRepository;
     private final AgendamentoMapper agendamentoMapper;
     private final AgendamentoServicoMapper agendamentoServicoMapper;
@@ -94,11 +97,49 @@ public class AgendamentoService {
                 return agendamentoRepository.findAll();
                 
             case GERENTE:
-                log.debug("GERENTE: listando agendamentos da unidade do gerente");
-                br.com.agendainteligente.domain.entity.Gerente gerente = gerenteRepository.findByUsuarioId(usuario.getId())
-                        .orElseThrow(() -> new BusinessException("Gerente não está vinculado a uma unidade"));
-                Long unidadeId = gerente.getUnidade().getId();
-                return agendamentoRepository.findByUnidadeId(unidadeId);
+                log.debug("GERENTE: listando agendamentos das unidades do gerente");
+                if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
+                    log.warn("Gerente {} não tem unidades vinculadas", email);
+                    return new ArrayList<>();
+                }
+                
+                // Obter IDs das empresas das unidades do gerente
+                Set<Long> empresaIds = usuario.getUnidades().stream()
+                        .map(u -> {
+                            if (u.getEmpresa() == null) {
+                                Unidade unidadeCompleta = unidadeRepository.findById(u.getId())
+                                        .orElse(null);
+                                if (unidadeCompleta != null && unidadeCompleta.getEmpresa() != null) {
+                                    return unidadeCompleta.getEmpresa().getId();
+                                }
+                                return null;
+                            }
+                            return u.getEmpresa().getId();
+                        })
+                        .filter(id -> id != null)
+                        .collect(Collectors.toSet());
+                
+                if (empresaIds.isEmpty()) {
+                    log.warn("Gerente {} não tem empresas vinculadas", email);
+                    return new ArrayList<>();
+                }
+                
+                // Obter IDs de todas as unidades das mesmas empresas
+                List<Unidade> todasUnidades = unidadeRepository.findAll();
+                List<Long> unidadesIds = todasUnidades.stream()
+                        .filter(u -> {
+                            if (u.getEmpresa() == null) {
+                                return false;
+                            }
+                            return empresaIds.contains(u.getEmpresa().getId());
+                        })
+                        .map(Unidade::getId)
+                        .collect(Collectors.toList());
+                
+                // Retornar agendamentos de todas as unidades da mesma empresa
+                return agendamentoRepository.findAll().stream()
+                        .filter(a -> unidadesIds.contains(a.getUnidade().getId()))
+                        .collect(Collectors.toList());
                 
             case PROFISSIONAL:
                 log.debug("PROFISSIONAL: listando apenas agendamentos do próprio atendente");
@@ -158,9 +199,32 @@ public class AgendamentoService {
                 return;
                 
             case GERENTE:
-                br.com.agendainteligente.domain.entity.Gerente gerente = gerenteRepository.findByUsuarioId(usuario.getId())
-                        .orElseThrow(() -> new BusinessException("Gerente não está vinculado a uma unidade"));
-                if (!gerente.getUnidade().getId().equals(unidadeId)) {
+                if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
+                    throw new BusinessException("Gerente não está vinculado a uma unidade");
+                }
+                
+                // Obter IDs das empresas das unidades do gerente
+                Set<Long> empresaIds = usuario.getUnidades().stream()
+                        .map(u -> {
+                            if (u.getEmpresa() == null) {
+                                Unidade unidadeCompleta = unidadeRepository.findById(u.getId())
+                                        .orElse(null);
+                                if (unidadeCompleta != null && unidadeCompleta.getEmpresa() != null) {
+                                    return unidadeCompleta.getEmpresa().getId();
+                                }
+                                return null;
+                            }
+                            return u.getEmpresa().getId();
+                        })
+                        .filter(id -> id != null)
+                        .collect(Collectors.toSet());
+                
+                // Verificar se a unidade do agendamento pertence a uma das empresas do gerente
+                Unidade unidadeAgendamento = unidadeRepository.findById(unidadeId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada"));
+                
+                if (unidadeAgendamento.getEmpresa() == null || 
+                    !empresaIds.contains(unidadeAgendamento.getEmpresa().getId())) {
                     throw new BusinessException("Você não tem permissão para criar agendamentos nesta unidade");
                 }
                 return;
@@ -200,9 +264,29 @@ public class AgendamentoService {
                 return;
                 
             case GERENTE:
-                br.com.agendainteligente.domain.entity.Gerente gerente = gerenteRepository.findByUsuarioId(usuario.getId())
-                        .orElseThrow(() -> new BusinessException("Gerente não está vinculado a uma unidade"));
-                if (!gerente.getUnidade().getId().equals(agendamento.getUnidade().getId())) {
+                if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
+                    throw new BusinessException("Gerente não está vinculado a uma unidade");
+                }
+                
+                // Obter IDs das empresas das unidades do gerente
+                Set<Long> empresaIds = usuario.getUnidades().stream()
+                        .map(u -> {
+                            if (u.getEmpresa() == null) {
+                                Unidade unidadeCompleta = unidadeRepository.findById(u.getId())
+                                        .orElse(null);
+                                if (unidadeCompleta != null && unidadeCompleta.getEmpresa() != null) {
+                                    return unidadeCompleta.getEmpresa().getId();
+                                }
+                                return null;
+                            }
+                            return u.getEmpresa().getId();
+                        })
+                        .filter(id -> id != null)
+                        .collect(Collectors.toSet());
+                
+                // Verificar se a unidade do agendamento pertence a uma das empresas do gerente
+                if (agendamento.getUnidade() == null || agendamento.getUnidade().getEmpresa() == null ||
+                    !empresaIds.contains(agendamento.getUnidade().getEmpresa().getId())) {
                     throw new BusinessException("Você não tem permissão para visualizar este agendamento");
                 }
                 return;
@@ -299,12 +383,38 @@ public class AgendamentoService {
         LocalDateTime dataHoraInicio = agendamentoDTO.getDataHoraInicio();
         LocalDateTime dataHoraFim = dataHoraInicio.plusMinutes(duracaoTotal);
         
+        // Verifica se é agendamento recorrente
+        RecorrenciaDTO recorrencia = agendamentoDTO.getRecorrencia();
+        boolean isRecorrente = recorrencia != null && Boolean.TRUE.equals(recorrencia.getRecorrente());
+        
+        if (isRecorrente) {
+            // Cria agendamentos recorrentes
+            List<Agendamento> agendamentosRecorrentes = agendamentoRecorrenteService.criarAgendamentosRecorrentes(
+                    agendamentoDTO,
+                    recorrencia,
+                    cliente,
+                    unidade,
+                    atendente,
+                    servicos,
+                    agendamentoDTO.getServicos(),
+                    valorTotal,
+                    duracaoTotal
+            );
+            
+            if (agendamentosRecorrentes.isEmpty()) {
+                throw new BusinessException("Não foi possível criar nenhum agendamento recorrente. Verifique conflitos de horário.");
+            }
+            
+            log.info("Criados {} agendamentos recorrentes", agendamentosRecorrentes.size());
+            return agendamentoMapper.toDTO(agendamentosRecorrentes.get(0)); // Retorna o primeiro
+        }
+        
         // Verifica conflito de horário (verifica sobreposição com outros agendamentos do mesmo atendente)
         if (agendamentoRepository.findConflitoHorario(atendente.getId(), dataHoraInicio, dataHoraFim).isPresent()) {
             throw new BusinessException("Já existe um agendamento neste horário para este atendente");
         }
         
-        // Cria agendamento
+        // Cria agendamento único
         Agendamento agendamento = agendamentoMapper.toEntity(agendamentoDTO);
         agendamento.setCliente(cliente);
         agendamento.setUnidade(unidade);
@@ -313,6 +423,7 @@ public class AgendamentoService {
         agendamento.setDataHoraFim(dataHoraFim);
         agendamento.setValorTotal(valorTotal);
         agendamento.setStatus(StatusAgendamento.AGENDADO);
+        agendamento.setAgendamentoRecorrente(false);
         agendamento.setServicos(new ArrayList<>());
         
         agendamento = agendamentoRepository.save(agendamento);
