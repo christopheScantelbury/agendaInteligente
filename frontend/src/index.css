@@ -137,9 +137,7 @@ body {
 .rbc-time-header {
   display: flex;
   flex: 0 0 auto;
-}
-
-.rbc-time-content {
+}.rbc-time-content {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
