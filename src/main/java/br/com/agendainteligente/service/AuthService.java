@@ -66,13 +66,18 @@ public class AuthService {
 
             log.info("Login realizado com sucesso. Email: {}", loginDTO.getEmail());
 
+            // Enviar o nome do perfil customizado quando existir, para o frontend carregar permissoesGranulares corretamente
+            String perfilParaToken = (usuario.getPerfilEntity() != null && usuario.getPerfilEntity().getNome() != null)
+                    ? usuario.getPerfilEntity().getNome()
+                    : usuario.getPerfil().name();
+
             return TokenDTO.builder()
                     .token(token)
                     .tipo("Bearer")
                     .usuarioId(usuario.getId())
                     .unidadeId(unidadeId)
                     .nome(usuario.getNome())
-                    .perfil(usuario.getPerfil().name())
+                    .perfil(perfilParaToken)
                     .build();
 
         } catch (org.springframework.security.authentication.BadCredentialsException e) {

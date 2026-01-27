@@ -1,11 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { clienteService, Cliente } from '../services/clienteService'
 import { unidadeService } from '../services/unidadeService'
-import { Plus, Trash2, Edit, Eye, EyeOff, User, Lock, Briefcase } from 'lucide-react'
+import { atendenteService } from '../services/atendenteService'
+import { servicoService, Servico } from '../services/servicoService'
+import { agendamentoService, Agendamento } from '../services/agendamentoService'
+import { Plus, Trash2, Edit, Eye, EyeOff, User, Lock, Briefcase, CalendarPlus } from 'lucide-react'
 import { useState, useMemo, useEffect } from 'react'
 import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import FilterBar from '../components/FilterBar'
+import RecorrenciaConfig, { RecorrenciaConfig as RecorrenciaConfigType } from '../components/RecorrenciaConfig'
 import { maskCPF, maskCNPJ, maskPhone, maskEmail } from '../utils/masks'
 import { authService } from '../services/authService'
 import { perfilService } from '../services/perfilService'
@@ -22,9 +26,9 @@ export default function Clientes() {
   
   const usuario = authService.getUsuario()
   const { data: perfilUsuario } = useQuery({
-    queryKey: ['perfil', usuario?.perfil],
-    queryFn: () => perfilService.buscarPorNome(usuario!.perfil!),
-    enabled: !!usuario?.perfil,
+    queryKey: ['perfil', 'meu'],
+    queryFn: () => perfilService.buscarMeuPerfil(),
+    enabled: !!usuario,
   })
   
   const podeEditarClientes = podeEditar(perfilUsuario, '/clientes')
@@ -214,9 +218,35 @@ function ClienteModal({ cliente, onClose }: { cliente: Cliente | null; onClose: 
     }
   )
 
+  // Opcional: criar agendamento ao cadastrar novo cliente
+  const [queroCriarAgendamento, setQueroCriarAgendamento] = useState(false)
+  const [agendamentoUnidadeId, setAgendamentoUnidadeId] = useState<number | ''>('')
+  const [agendamentoAtendenteId, setAgendamentoAtendenteId] = useState<number | ''>('')
+  const [agendamentoDataHoraInicio, setAgendamentoDataHoraInicio] = useState('')
+  const [agendamentoServicosIds, setAgendamentoServicosIds] = useState<number[]>([])
+  const [recorrenciaConfig, setRecorrenciaConfig] = useState<RecorrenciaConfigType>({
+    recorrente: false,
+    tipoRecorrencia: 'SEMANAL',
+    tipoTermino: 'OCORRENCIAS',
+    numeroOcorrencias: 4,
+    intervalo: 1,
+  })
+
   const { data: unidades = [] } = useQuery({
     queryKey: ['unidades'],
     queryFn: unidadeService.listarTodos,
+  })
+
+  const { data: servicos = [] } = useQuery({
+    queryKey: ['servicos'],
+    queryFn: servicoService.listar,
+  })
+
+  const { data: atendentesAgendamento = [] } = useQuery({
+    queryKey: ['atendentes', agendamentoUnidadeId],
+    queryFn: () =>
+      agendamentoUnidadeId ? atendenteService.listarPorUnidade(agendamentoUnidadeId as number) : Promise.resolve([]),
+    enabled: !!agendamentoUnidadeId,
   })
 
   useEffect(() => {
@@ -246,27 +276,68 @@ function ClienteModal({ cliente, onClose }: { cliente: Cliente | null; onClose: 
     },
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [salvandoComAgendamento, setSalvandoComAgendamento] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // Validações de senha
     if (!cliente && (!formData.senha || formData.senha.length < 6)) {
       showNotification('error', 'A senha deve ter no mínimo 6 caracteres')
       return
     }
-    
+
     if (formData.senha && formData.senha !== formData.confirmarSenha) {
       showNotification('error', 'As senhas não coincidem')
       return
     }
-    
+
     // Validação de unidades
     if (!formData.unidadesIds || formData.unidadesIds.length === 0) {
       showNotification('error', 'Selecione pelo menos uma unidade para o cliente')
       return
     }
-    
-    // Preparar dados para envio (remover confirmarSenha e unidades)
+
+    if (!cliente && queroCriarAgendamento) {
+      if (!agendamentoUnidadeId || !agendamentoAtendenteId || !agendamentoDataHoraInicio) {
+        showNotification('error', 'Preencha unidade, atendente e data/hora do agendamento')
+        return
+      }
+      if (agendamentoServicosIds.length === 0) {
+        showNotification('error', 'Selecione pelo menos um serviço para o agendamento')
+        return
+      }
+      const { confirmarSenha, unidades, ...dadosEnvio } = formData
+      setSalvandoComAgendamento(true)
+      try {
+        const clienteCriado = await clienteService.criar(dadosEnvio)
+        const servicosPayload = agendamentoServicosIds.map((servicoId) => {
+          const s = servicos.find((sv) => sv.id === servicoId)
+          return { servicoId, quantidade: 1, valor: s?.valor ?? 0, descricao: s?.nome }
+        })
+        const agendamentoPayload: Agendamento = {
+          clienteId: clienteCriado.id!,
+          unidadeId: agendamentoUnidadeId as number,
+          atendenteId: agendamentoAtendenteId as number,
+          dataHoraInicio: agendamentoDataHoraInicio,
+          servicos: servicosPayload,
+          recorrencia: recorrenciaConfig.recorrente ? recorrenciaConfig : undefined,
+        }
+        await agendamentoService.criar(agendamentoPayload)
+        queryClient.invalidateQueries({ queryKey: ['clientes'] })
+        queryClient.invalidateQueries({ queryKey: ['agendamentos'] })
+        showNotification('success', 'Cliente e agendamento criados com sucesso!')
+        onClose()
+      } catch (err: any) {
+        const msg = err.response?.data?.message || 'Erro ao salvar. Tente novamente.'
+        showNotification('error', msg)
+      } finally {
+        setSalvandoComAgendamento(false)
+      }
+      return
+    }
+
+    // Fluxo normal (sem agendamento ou edição)
     const { confirmarSenha, unidades, ...dadosEnvio } = formData
     saveMutation.mutate(dadosEnvio)
   }
@@ -287,10 +358,10 @@ function ClienteModal({ cliente, onClose }: { cliente: Cliente | null; onClose: 
       style={{ pointerEvents: 'auto' }}
     >
       <div
-        className="bg-white rounded-lg p-6 w-full max-w-md"
+        className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-2xl font-bold mb-4">
+        <h2 className="text-xl sm:text-2xl font-bold mb-4">
           {cliente ? 'Editar Cliente' : 'Novo Cliente'}
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -506,20 +577,135 @@ function ClienteModal({ cliente, onClose }: { cliente: Cliente | null; onClose: 
             </div>
           </div>
 
-          <div className="flex justify-end space-x-2">
+          {/* Seção: Já criar agendamento (só ao criar novo cliente) */}
+          {!cliente && (
+            <div className="pt-4 border-t border-gray-200">
+              <label className="flex items-center gap-2 cursor-pointer p-3 rounded-lg border border-gray-200 hover:bg-gray-50">
+                <input
+                  type="checkbox"
+                  checked={queroCriarAgendamento}
+                  onChange={(e) => {
+                    setQueroCriarAgendamento(e.target.checked)
+                    if (!e.target.checked) {
+                      setAgendamentoUnidadeId('')
+                      setAgendamentoAtendenteId('')
+                      setAgendamentoDataHoraInicio('')
+                      setAgendamentoServicosIds([])
+                    }
+                  }}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                />
+                <span className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <CalendarPlus className="w-5 h-5 text-blue-600" />
+                  Já criar um agendamento para este cliente
+                </span>
+              </label>
+
+              {queroCriarAgendamento && (
+                <div className="mt-4 space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <p className="text-sm text-gray-600">
+                    Preencha os dados do primeiro agendamento. Pode ser único ou recorrente.
+                  </p>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Unidade do agendamento</label>
+                    <select
+                      value={agendamentoUnidadeId}
+                      onChange={(e) => {
+                        setAgendamentoUnidadeId(e.target.value ? Number(e.target.value) : '')
+                        setAgendamentoAtendenteId('')
+                      }}
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                    >
+                      <option value="">Selecione</option>
+                      {unidades.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.nome}
+                          {u.cidade ? ` (${u.cidade})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Atendente</label>
+                    <select
+                      value={agendamentoAtendenteId}
+                      onChange={(e) => setAgendamentoAtendenteId(e.target.value ? Number(e.target.value) : '')}
+                      disabled={!agendamentoUnidadeId}
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm disabled:bg-gray-100"
+                    >
+                      <option value="">Selecione</option>
+                      {atendentesAgendamento.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.nomeUsuario}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Serviços</label>
+                    <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3 bg-white">
+                      {(servicos || []).filter((s) => s.ativo !== false).map((s: Servico) => (
+                        <label key={s.id} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={agendamentoServicosIds.includes(s.id!)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setAgendamentoServicosIds((prev) => [...prev, s.id!])
+                              } else {
+                                setAgendamentoServicosIds((prev) => prev.filter((id) => id !== s.id))
+                              }
+                            }}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm">
+                            {s.nome}
+                            {s.valor != null && <span className="text-gray-500 ml-1">R$ {Number(s.valor).toFixed(2)}</span>}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Data e hora</label>
+                    <input
+                      type="datetime-local"
+                      value={agendamentoDataHoraInicio}
+                      onChange={(e) => setAgendamentoDataHoraInicio(e.target.value)}
+                      min={new Date().toISOString().slice(0, 16)}
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                    />
+                  </div>
+
+                  <RecorrenciaConfig value={recorrenciaConfig} onChange={setRecorrenciaConfig} />
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:space-x-2 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              disabled={saveMutation.isPending || salvandoComAgendamento}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              disabled={saveMutation.isPending}
+              disabled={saveMutation.isPending || salvandoComAgendamento}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
             >
-              {saveMutation.isPending ? 'Salvando...' : 'Salvar'}
+              {saveMutation.isPending || salvandoComAgendamento
+                ? 'Salvando...'
+                : queroCriarAgendamento && !cliente
+                  ? 'Cadastrar e criar agendamento'
+                  : 'Salvar'}
             </button>
           </div>
         </form>

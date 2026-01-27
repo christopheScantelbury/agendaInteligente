@@ -32,7 +32,13 @@ export const perfilService = {
   },
 
   buscarPorNome: async (nome: string): Promise<Perfil> => {
-    const response = await api.get<Perfil>(`/perfis/nome/${nome}`)
+    const response = await api.get<Perfil>(`/perfis/nome/${encodeURIComponent(nome)}`)
+    return response.data
+  },
+
+  /** Perfil do usuário logado (permissoesGranulares). Qualquer usuário autenticado pode chamar. */
+  buscarMeuPerfil: async (): Promise<Perfil> => {
+    const response = await api.get<Perfil>('/perfis/meu')
     return response.data
   },
 
