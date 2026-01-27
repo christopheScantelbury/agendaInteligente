@@ -114,16 +114,18 @@ public class UsuarioService {
                 
                 log.debug("Unidades acessíveis pelo gerente {}: {}", email, unidadesIds);
                 
-                // Filtrar usuários que têm pelo menos uma unidade nas empresas do gerente
                 List<Usuario> todosUsuarios = usuarioRepository.findAll();
                 List<Usuario> usuariosFiltrados = todosUsuarios.stream()
                         .filter(u -> {
+                            if (Usuario.PerfilUsuario.ADMIN.equals(u.getPerfil())) {
+                                return false;
+                            }
                             if (u.getUnidades() == null || u.getUnidades().isEmpty()) {
                                 return false;
                             }
-                            boolean temAcesso = u.getUnidades().stream()
-                                    .anyMatch(unidade -> unidadesIds.contains(unidade.getId()));
-                            return temAcesso;
+                            boolean todasUnidadesNaEmpresa = u.getUnidades().stream()
+                                    .allMatch(unidade -> unidadesIds.contains(unidade.getId()));
+                            return todasUnidadesNaEmpresa;
                         })
                         .collect(Collectors.toList());
                 
@@ -137,14 +139,15 @@ public class UsuarioService {
                     return List.of();
                 }
                 
-                // Obter IDs das unidades do profissional
                 List<Long> unidadesProfissional = usuarioLogado.getUnidades().stream()
                         .map(Unidade::getId)
                         .collect(Collectors.toList());
                 
-                // Filtrar usuários que têm pelo menos uma unidade em comum
                 return usuarioRepository.findAll().stream()
                         .filter(u -> {
+                            if (Usuario.PerfilUsuario.ADMIN.equals(u.getPerfil()) || Usuario.PerfilUsuario.GERENTE.equals(u.getPerfil())) {
+                                return false;
+                            }
                             if (u.getUnidades() == null || u.getUnidades().isEmpty()) {
                                 return false;
                             }
@@ -162,9 +165,11 @@ public class UsuarioService {
 
     @Transactional(readOnly = true)
     public UsuarioDTO buscarPorId(Long id) {
-        Usuario usuario = usuarioRepository.findById(id)
+        return filtrarPorPermissao().stream()
+                .filter(u -> u.getId().equals(id))
+                .findFirst()
+                .map(this::toDTO)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
-        return toDTO(usuario);
     }
 
     @Transactional

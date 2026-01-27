@@ -12,7 +12,6 @@ import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -135,9 +134,9 @@ public class UnidadeService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "unidades", key = "'ativas'", unless = "#result.isEmpty()")
     public List<UnidadeDTO> listarAtivas() {
-        return unidadeRepository.findByAtivoTrue().stream()
+        return filtrarPorPermissao().stream()
+                .filter(Unidade::getAtivo)
                 .map(unidadeMapper::toDTO)
                 .collect(Collectors.toList());
     }
@@ -146,6 +145,11 @@ public class UnidadeService {
     public UnidadeDTO buscarPorId(Long id) {
         Unidade unidade = unidadeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada"));
+        List<Unidade> permitidas = filtrarPorPermissao();
+        boolean podeAcessar = permitidas.stream().anyMatch(u -> u.getId().equals(id));
+        if (!podeAcessar) {
+            throw new ResourceNotFoundException("Unidade não encontrada");
+        }
         return unidadeMapper.toDTO(unidade);
     }
 

@@ -147,15 +147,69 @@ public class AtendenteService {
         }
     }
 
+    private boolean podeAcessarAtendente(Atendente atendente) {
+        if (atendente == null || atendente.getUnidade() == null) {
+            return false;
+        }
+        return obterUnidadesIdsPermitidas().contains(atendente.getUnidade().getId());
+    }
+
+    private Set<Long> obterUnidadesIdsPermitidas() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return Set.of();
+        }
+        Usuario usuarioLogado = usuarioRepository.findByEmail(auth.getName()).orElse(null);
+        if (usuarioLogado == null) {
+            return Set.of();
+        }
+        switch (usuarioLogado.getPerfil()) {
+            case ADMIN:
+                return unidadeRepository.findAll().stream().map(Unidade::getId).collect(Collectors.toSet());
+            case GERENTE:
+                if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
+                    return Set.of();
+                }
+                Set<Long> empresaIds = usuarioLogado.getUnidades().stream()
+                        .map(u -> {
+                            if (u.getEmpresa() == null) {
+                                Unidade uc = unidadeRepository.findById(u.getId()).orElse(null);
+                                return uc != null && uc.getEmpresa() != null ? uc.getEmpresa().getId() : null;
+                            }
+                            return u.getEmpresa().getId();
+                        })
+                        .filter(id -> id != null)
+                        .collect(Collectors.toSet());
+                if (empresaIds.isEmpty()) {
+                    return Set.of();
+                }
+                return unidadeRepository.findAll().stream()
+                        .filter(u -> u.getEmpresa() != null && empresaIds.contains(u.getEmpresa().getId()))
+                        .map(Unidade::getId)
+                        .collect(Collectors.toSet());
+            case PROFISSIONAL:
+                if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
+                    return Set.of();
+                }
+                return usuarioLogado.getUnidades().stream().map(Unidade::getId).collect(Collectors.toSet());
+            default:
+                return Set.of();
+        }
+    }
+
     @Transactional(readOnly = true)
     public List<AtendenteDTO> listarAtivos() {
-        return atendenteRepository.findByAtivoTrue().stream()
+        return filtrarPorPermissao().stream()
+                .filter(Atendente::getAtivo)
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<AtendenteDTO> listarPorUnidade(Long unidadeId) {
+        if (!obterUnidadesIdsPermitidas().contains(unidadeId)) {
+            return List.of();
+        }
         return atendenteRepository.findByUnidadeIdAndAtivoTrue(unidadeId).stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
@@ -164,7 +218,9 @@ public class AtendenteService {
     @Transactional(readOnly = true)
     public List<AtendenteDTO> listarPorUnidadeEServicos(Long unidadeId, List<Long> servicosIds) {
         log.debug("Listando atendentes da unidade {} que prestam os serviços {}", unidadeId, servicosIds);
-        
+        if (!obterUnidadesIdsPermitidas().contains(unidadeId)) {
+            return List.of();
+        }
         List<Atendente> atendentes = atendenteRepository.findByUnidadeIdAndAtivoTrue(unidadeId);
         
         if (servicosIds == null || servicosIds.isEmpty()) {
@@ -202,9 +258,10 @@ public class AtendenteService {
 
     @Transactional
     public AtendenteDTO criar(AtendenteDTO atendenteDTO) {
-        // Remover máscaras antes de validar e salvar
         normalizeAtendenteDTO(atendenteDTO);
-        
+        if (!obterUnidadesIdsPermitidas().contains(atendenteDTO.getUnidadeId())) {
+            throw new ResourceNotFoundException("Unidade não encontrada");
+        }
         Unidade unidade = unidadeRepository.findById(atendenteDTO.getUnidadeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada"));
         
@@ -240,12 +297,15 @@ public class AtendenteService {
 
     @Transactional
     public AtendenteDTO atualizar(Long id, AtendenteDTO atendenteDTO) {
-        // Remover máscaras antes de validar e salvar
         normalizeAtendenteDTO(atendenteDTO);
-        
         Atendente atendente = atendenteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Atendente não encontrado"));
-        
+        if (!podeAcessarAtendente(atendente)) {
+            throw new ResourceNotFoundException("Atendente não encontrado");
+        }
+        if (!obterUnidadesIdsPermitidas().contains(atendenteDTO.getUnidadeId())) {
+            throw new ResourceNotFoundException("Unidade não encontrada");
+        }
         Unidade unidade = unidadeRepository.findById(atendenteDTO.getUnidadeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada"));
         
@@ -287,7 +347,9 @@ public class AtendenteService {
 
     @Transactional
     public void excluir(Long id) {
-        if (!atendenteRepository.existsById(id)) {
+        Atendente atendente = atendenteRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Atendente não encontrado"));
+        if (!podeAcessarAtendente(atendente)) {
             throw new ResourceNotFoundException("Atendente não encontrado");
         }
         atendenteRepository.deleteById(id);

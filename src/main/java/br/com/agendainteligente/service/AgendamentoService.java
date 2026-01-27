@@ -246,6 +246,49 @@ public class AgendamentoService {
         }
     }
     
+    private Set<Long> obterUnidadesIdsPermitidas() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return Set.of();
+        }
+        Usuario usuario = usuarioRepository.findByEmail(auth.getName()).orElse(null);
+        if (usuario == null) {
+            return Set.of();
+        }
+        switch (usuario.getPerfil()) {
+            case ADMIN:
+                return unidadeRepository.findAll().stream().map(Unidade::getId).collect(Collectors.toSet());
+            case GERENTE:
+                if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
+                    return Set.of();
+                }
+                Set<Long> empresaIds = usuario.getUnidades().stream()
+                        .map(u -> {
+                            if (u.getEmpresa() == null) {
+                                Unidade uc = unidadeRepository.findById(u.getId()).orElse(null);
+                                return uc != null && uc.getEmpresa() != null ? uc.getEmpresa().getId() : null;
+                            }
+                            return u.getEmpresa().getId();
+                        })
+                        .filter(id -> id != null)
+                        .collect(Collectors.toSet());
+                if (empresaIds.isEmpty()) {
+                    return Set.of();
+                }
+                return unidadeRepository.findAll().stream()
+                        .filter(u -> u.getEmpresa() != null && empresaIds.contains(u.getEmpresa().getId()))
+                        .map(Unidade::getId)
+                        .collect(Collectors.toSet());
+            case PROFISSIONAL:
+                if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
+                    return Set.of();
+                }
+                return usuario.getUnidades().stream().map(Unidade::getId).collect(Collectors.toSet());
+            default:
+                return Set.of();
+        }
+    }
+    
     private void validarPermissaoVisualizarAgendamento(Agendamento agendamento) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) {
@@ -323,8 +366,11 @@ public class AgendamentoService {
         Atendente atendente = atendenteRepository.findById(agendamentoDTO.getAtendenteId())
                 .orElseThrow(() -> new ResourceNotFoundException("Atendente não encontrado"));
         
-        // Validar permissão para criar agendamento
         validarPermissaoCriarAgendamento(unidade.getId(), atendente.getId());
+        Set<Long> unidadesPermitidas = obterUnidadesIdsPermitidas();
+        if (cliente.getUnidade() == null || !unidadesPermitidas.contains(cliente.getUnidade().getId())) {
+            throw new BusinessException("Cliente não pertence a uma unidade que você pode acessar");
+        }
         
         if (!unidade.getAtivo()) {
             throw new BusinessException("Unidade não está ativa");
@@ -342,6 +388,11 @@ public class AgendamentoService {
         List<Servico> servicos = servicoRepository.findAllById(servicosIds);
         if (servicos.size() != servicosIds.size()) {
             throw new ResourceNotFoundException("Um ou mais serviços não foram encontrados");
+        }
+        for (Servico s : servicos) {
+            if (s.getUnidade() == null || !unidadesPermitidas.contains(s.getUnidade().getId())) {
+                throw new BusinessException("Um ou mais serviços não pertencem a unidades que você pode acessar");
+            }
         }
         
         // Verifica se atendente pode prestar os serviços

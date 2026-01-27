@@ -267,15 +267,21 @@ export default function RecorrenciaConfig({ value, onChange, onClose }: Recorren
           <FormField label="Número de Ocorrências">
             <input
               type="number"
-              value={config.numeroOcorrencias || 4}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setConfig({
-                  ...config,
-                  numeroOcorrencias: Math.max(1, parseInt(e.target.value) || 1),
-                })
-              }
+              value={config.numeroOcorrencias ?? ''}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                const raw = e.target.value
+                if (raw === '') {
+                  setConfig({ ...config, numeroOcorrencias: undefined })
+                  return
+                }
+                const n = parseInt(raw, 10)
+                if (!isNaN(n)) {
+                  setConfig({ ...config, numeroOcorrencias: Math.min(365, Math.max(1, n)) })
+                }
+              }}
               min={1}
               max={365}
+              placeholder="Ex: 5"
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
           </FormField>
