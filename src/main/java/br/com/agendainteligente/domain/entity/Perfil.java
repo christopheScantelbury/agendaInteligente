@@ -35,6 +35,21 @@ public class Perfil {
     @Builder.Default
     private Boolean ativo = true;
 
+    /** Indica se este perfil é de atendente/profissional (presta serviços). */
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean atendente = false;
+
+    /** Indica se este perfil é de cliente. */
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean cliente = false;
+
+    /** Indica se este perfil é de gerente. */
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean gerente = false;
+
     // Permissões de menu (JSON ou tabela separada)
     @Column(name = "permissoes_menu", columnDefinition = "TEXT")
     private String permissoesMenu; // JSON com lista de menus permitidos (compatibilidade)

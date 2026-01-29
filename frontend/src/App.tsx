@@ -15,11 +15,9 @@ import CadastroCliente from './pages/CadastroCliente'
 import AgendarCliente from './pages/AgendarCliente'
 import MeusAgendamentosCliente from './pages/MeusAgendamentosCliente'
 import Dashboard from './pages/Dashboard'
-import Clientes from './pages/Clientes'
 import Unidades from './pages/Unidades'
 import Servicos from './pages/Servicos'
 import Usuarios from './pages/Usuarios'
-import Atendentes from './pages/Atendentes'
 import Agendamentos from './pages/Agendamentos'
 import NovoAgendamento from './pages/NovoAgendamento'
 import Reclamacoes from './pages/Reclamacoes'
@@ -77,11 +75,11 @@ function App() {
                     <Layout>
                       <Routes>
                         <Route path="/" element={<Dashboard />} />
-                        <Route path="/clientes" element={<Clientes />} />
+                        <Route path="/clientes" element={<Navigate to="/usuarios" replace />} />
                         <Route path="/unidades" element={<Unidades />} />
                         <Route path="/servicos" element={<Servicos />} />
                         <Route path="/usuarios" element={<Usuarios />} />
-                        <Route path="/atendentes" element={<Atendentes />} />
+                        <Route path="/atendentes" element={<Navigate to="/usuarios" replace />} />
                         <Route path="/agendamentos" element={<Agendamentos />} />
                         <Route path="/agendamentos/novo" element={<NovoAgendamento />} />
                         <Route path="/notificacoes" element={<Notificacoes />} />

@@ -2,8 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { usuarioService, Usuario } from '../services/usuarioService'
 import { unidadeService, Unidade } from '../services/unidadeService'
 import { perfilService, Perfil } from '../services/perfilService'
+import { atendenteService, Atendente } from '../services/atendenteService'
+import { servicoService, Servico } from '../services/servicoService'
 import { authService } from '../services/authService'
-import { Plus, Trash2, Edit, Eye, EyeOff } from 'lucide-react'
+import { Plus, Trash2, Edit, Eye, EyeOff, Stethoscope } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
@@ -11,7 +13,7 @@ import FormField from '../components/FormField'
 import FilterBar from '../components/FilterBar'
 import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
-import { maskEmail } from '../utils/masks'
+import { maskEmail, maskCPF, maskPhone } from '../utils/masks'
 
 export default function Usuarios() {
   const { showNotification } = useNotification()
@@ -286,6 +288,21 @@ export default function Usuarios() {
   )
 }
 
+/** Perfil é considerado atendente quando a flag atendente do perfil está ativa (vindo do banco). */
+function isPerfilAtendente(perfis: Perfil[], perfilId: number | undefined): boolean {
+  if (!perfilId) return false
+  return perfis.find((p) => p.id === perfilId)?.atendente === true
+}
+
+type FormDataUsuario = Usuario & {
+  perfilId?: number
+  atendenteCpf?: string
+  atendenteTelefone?: string
+  atendentePercentualComissao?: number
+  atendenteServicosIds?: number[]
+  atendenteId?: number
+}
+
 function UsuarioForm({
   usuario,
   unidades,
@@ -302,22 +319,37 @@ function UsuarioForm({
   const [showPassword, setShowPassword] = useState(false)
   const usuarioLogado = authService.getUsuario()
   const perfilLogado = usuarioLogado?.perfil
-  const [formData, setFormData] = useState<Usuario & { perfilId?: number }>(
+  const [formData, setFormData] = useState<FormDataUsuario>(
     usuario
-      ? {
-          ...usuario,
-          perfilId: usuario.perfilId ?? undefined,
-          senha: '',
-        }
-      : {
-          nome: '',
-          email: '',
-          senha: '',
-          perfilId: undefined,
-          unidadesIds: [],
-          ativo: true,
-        }
+      ? { ...usuario, perfilId: usuario.perfilId ?? undefined, senha: '' }
+      : { nome: '', email: '', senha: '', perfilId: undefined, unidadesIds: [], ativo: true }
   )
+
+  const perfilAtendente = isPerfilAtendente(perfis, formData.perfilId)
+  const [filtroServicos, setFiltroServicos] = useState('')
+  const { data: servicos = [] } = useQuery({
+    queryKey: ['servicos'],
+    queryFn: servicoService.listar,
+  })
+  const servicosAtivos = useMemo(
+    () => (servicos as Servico[]).filter((s) => s.ativo !== false),
+    [servicos]
+  )
+  const servicosFiltrados = useMemo(() => {
+    if (!filtroServicos.trim()) return servicosAtivos
+    const term = filtroServicos.toLowerCase().trim()
+    return servicosAtivos.filter(
+      (s) =>
+        s.nome?.toLowerCase().includes(term) ||
+        (typeof s.descricao === 'string' && s.descricao.toLowerCase().includes(term))
+    )
+  }, [servicosAtivos, filtroServicos])
+  const { data: atendenteExistente } = useQuery({
+    queryKey: ['atendente', 'usuario', usuario?.id],
+    queryFn: () => atendenteService.buscarPorUsuarioId(usuario!.id!),
+    enabled: !!usuario?.id && perfilAtendente,
+    retry: false,
+  })
 
   // Inicializar formData quando o usuário ou a lista de perfis mudar
   useEffect(() => {
@@ -328,7 +360,6 @@ function UsuarioForm({
       } else if (usuario.unidadeId) {
         unidadesIds = [usuario.unidadeId]
       }
-      // Se não tiver perfilId, tentar achar perfil pelo nome do enum (usuários antigos)
       const perfilId =
         usuario.perfilId ??
         (usuario.perfil && perfis.length
@@ -343,6 +374,11 @@ function UsuarioForm({
         perfil: usuario.perfil,
         unidadesIds,
         ativo: usuario.ativo ?? true,
+        atendenteId: undefined,
+        atendenteCpf: '',
+        atendenteTelefone: '',
+        atendentePercentualComissao: undefined,
+        atendenteServicosIds: [],
       })
     } else {
       setFormData({
@@ -352,9 +388,28 @@ function UsuarioForm({
         perfilId: undefined,
         unidadesIds: [],
         ativo: true,
+        atendenteCpf: '',
+        atendenteTelefone: '',
+        atendentePercentualComissao: undefined,
+        atendenteServicosIds: [],
       })
     }
   }, [usuario, perfis])
+
+  // Preencher dados do atendente quando carregar (edição)
+  useEffect(() => {
+    if (atendenteExistente) {
+      setFormData((prev) => ({
+        ...prev,
+        atendenteId: atendenteExistente.id,
+        atendenteCpf: atendenteExistente.cpf ?? '',
+        atendenteTelefone: atendenteExistente.telefone ?? '',
+        atendentePercentualComissao:
+          atendenteExistente.percentualComissao != null ? Number(atendenteExistente.percentualComissao) : undefined,
+        atendenteServicosIds: atendenteExistente.servicosIds ?? [],
+      }))
+    }
+  }, [atendenteExistente])
 
   const saveMutation = useMutation({
     mutationFn: (data: Usuario) =>
@@ -363,8 +418,7 @@ function UsuarioForm({
         : usuarioService.criar(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['usuarios'] })
-      showNotification('success', usuario ? 'Usuário atualizado com sucesso!' : 'Usuário criado com sucesso!')
-      onClose()
+      queryClient.invalidateQueries({ queryKey: ['atendentes'] })
     },
     onError: (error: any) => {
       const errorMessage = error.response?.data?.message || 'Erro ao salvar usuário'
@@ -372,7 +426,7 @@ function UsuarioForm({
     },
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!formData.perfilId) {
@@ -383,17 +437,55 @@ function UsuarioForm({
     const perfilSelecionado = perfis.find((p) => p.id === formData.perfilId)
     const perfilRequerUnidades = perfilSelecionado?.nome?.toUpperCase() !== 'ADMIN'
     if (perfilRequerUnidades && (!formData.unidadesIds || formData.unidadesIds.length === 0)) {
-      showNotification('error', 'Selecione pelo menos uma unidade para este perfil')
+      showNotification('error', 'Selecione pelo menos uma unidade. Apenas o perfil Administrador não exige unidade.')
       return
     }
 
-    const dadosEnvio = {
+    if (perfilAtendente) {
+      if (!formData.atendenteCpf?.trim()) {
+        showNotification('error', 'CPF é obrigatório para perfil atendente')
+        return
+      }
+      if (!formData.unidadesIds?.length) {
+        showNotification('error', 'Selecione pelo menos uma unidade')
+        return
+      }
+    }
+
+    const dadosUsuario = {
       ...formData,
       perfilId: formData.perfilId,
       perfil: undefined,
       unidadesIds: formData.unidadesIds,
     }
-    saveMutation.mutate(dadosEnvio)
+    try {
+      const usuarioSalvo = await saveMutation.mutateAsync(dadosUsuario)
+      const usuarioId = usuarioSalvo.id ?? usuario?.id
+      if (perfilAtendente && usuarioId && formData.unidadesIds?.length) {
+        const unidadeId = formData.unidadesIds[0]
+        const payload: Partial<Atendente> = {
+          usuarioId,
+          unidadeId,
+          cpf: (formData.atendenteCpf ?? '').replace(/\D/g, ''),
+          telefone: formData.atendenteTelefone?.replace(/\D/g, ''),
+          percentualComissao: formData.atendentePercentualComissao ?? 0,
+          servicosIds: formData.atendenteServicosIds ?? [],
+          ativo: formData.ativo ?? true,
+        }
+        if (formData.atendenteId) {
+          await atendenteService.atualizar(formData.atendenteId, payload as Atendente)
+        } else {
+          await atendenteService.criar(payload as Atendente)
+        }
+        queryClient.invalidateQueries({ queryKey: ['atendentes'] })
+      }
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] })
+      showNotification('success', usuario ? 'Usuário atualizado com sucesso!' : 'Usuário criado com sucesso!')
+      onClose()
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Erro ao salvar'
+      showNotification('error', msg)
+    }
   }
 
   return (
@@ -449,10 +541,18 @@ function UsuarioForm({
           value={formData.perfilId ?? ''}
           onChange={(e) => {
             const perfilId = e.target.value ? Number(e.target.value) : undefined
+            const ehAtendente = perfilId ? isPerfilAtendente(perfis, perfilId) : false
             setFormData({
               ...formData,
               perfilId,
               unidadesIds: perfilId ? (formData.unidadesIds ?? []) : [],
+              ...(!ehAtendente && {
+                atendenteCpf: '',
+                atendenteTelefone: '',
+                atendentePercentualComissao: undefined,
+                atendenteServicosIds: [],
+                atendenteId: undefined,
+              }),
             })
           }}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
@@ -474,6 +574,7 @@ function UsuarioForm({
           label={`Unidades ${formData.unidadesIds && formData.unidadesIds.length > 0 ? `(${formData.unidadesIds.length} selecionada${formData.unidadesIds.length > 1 ? 's' : ''})` : ''}`} 
           required
         >
+          <p className="text-xs text-gray-500 mb-2">Selecione pelo menos uma unidade onde este usuário atua.</p>
           <div className="mt-1 max-h-48 overflow-y-auto border border-gray-300 rounded-md p-3 space-y-2 bg-gray-50">
             {unidades.length === 0 ? (
               <div className="text-sm">
@@ -516,6 +617,99 @@ function UsuarioForm({
             <p className="mt-1 text-sm text-red-600">Selecione pelo menos uma unidade</p>
           )}
         </FormField>
+      )}
+
+      {/* Seção Atendente: CPF, telefone, comissão e serviços (quando perfil for atendente/profissional) */}
+      {perfilAtendente && (
+        <div className="border-t pt-4 space-y-4">
+          <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+            <Stethoscope className="h-4 w-4 text-blue-600" />
+            Dados do atendente / profissional
+          </h3>
+          <p className="text-xs text-gray-500">
+            Unidade de atuação: primeira unidade selecionada acima. Serviços que esta pessoa pode prestar:
+          </p>
+          <FormField label="CPF" required>
+            <input
+              type="text"
+              required
+              value={formData.atendenteCpf ?? ''}
+              onChange={(e) => setFormData({ ...formData, atendenteCpf: maskCPF(e.target.value) })}
+              placeholder="000.000.000-00"
+              maxLength={14}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            />
+          </FormField>
+          <FormField label="Telefone">
+            <input
+              type="text"
+              value={formData.atendenteTelefone ?? ''}
+              onChange={(e) => setFormData({ ...formData, atendenteTelefone: maskPhone(e.target.value) })}
+              placeholder="(00) 00000-0000"
+              maxLength={15}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            />
+          </FormField>
+          <FormField label="Percentual de comissão (%)">
+            <input
+              type="number"
+              min={0}
+              max={100}
+              step={0.01}
+              value={formData.atendentePercentualComissao ?? ''}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  atendentePercentualComissao: e.target.value === '' ? undefined : Number(e.target.value),
+                })
+              }
+              placeholder="0"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            />
+          </FormField>
+          <FormField label="Serviços que este atendente presta">
+            <input
+              type="text"
+              value={filtroServicos}
+              onChange={(e) => setFiltroServicos(e.target.value)}
+              placeholder="Buscar serviço por nome ou descrição..."
+              className="mt-1 mb-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+            />
+            <div className="mt-1 max-h-44 overflow-y-auto border border-gray-300 rounded-md p-3 space-y-2 bg-gray-50">
+              {servicosAtivos.length === 0 ? (
+                <p className="text-sm text-gray-500">Nenhum serviço cadastrado</p>
+              ) : servicosFiltrados.length === 0 ? (
+                <p className="text-sm text-gray-500">Nenhum serviço encontrado com &quot;{filtroServicos}&quot;</p>
+              ) : (
+                servicosFiltrados.map((s) => (
+                  <label
+                    key={s.id}
+                    className="flex items-center space-x-3 cursor-pointer hover:bg-white p-2 rounded transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.atendenteServicosIds?.includes(s.id) ?? false}
+                      onChange={(e) => {
+                        const ids = formData.atendenteServicosIds ?? []
+                        const newIds = e.target.checked
+                          ? [...ids, s.id]
+                          : ids.filter((id) => id !== s.id)
+                        setFormData({ ...formData, atendenteServicosIds: newIds })
+                      }}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-900">
+                      {s.nome}
+                      {s.valor != null && (
+                        <span className="text-gray-500 ml-1">R$ {Number(s.valor).toFixed(2)}</span>
+                      )}
+                    </span>
+                  </label>
+                ))
+              )}
+            </div>
+          </FormField>
+        </div>
       )}
 
       <FormField label="Status">

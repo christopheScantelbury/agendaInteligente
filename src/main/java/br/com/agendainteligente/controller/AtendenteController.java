@@ -46,6 +46,12 @@ public class AtendenteController {
         return ResponseEntity.ok(atendenteService.listarPorUnidadeEServicos(unidadeId, servicosIds));
     }
 
+    @GetMapping("/usuario/{usuarioId}")
+    @Operation(summary = "Buscar atendente pelo ID do usuário")
+    public ResponseEntity<AtendenteDTO> buscarPorUsuarioId(@PathVariable Long usuarioId) {
+        return ResponseEntity.ok(atendenteService.buscarPorUsuarioId(usuarioId));
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Buscar atendente por ID")
     public ResponseEntity<AtendenteDTO> buscarPorId(@PathVariable Long id) {

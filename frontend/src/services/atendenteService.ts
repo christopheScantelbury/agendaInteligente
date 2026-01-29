@@ -29,6 +29,17 @@ export const atendenteService = {
     return response.data
   },
 
+  /** Retorna o atendente vinculado ao usuário ou null se não existir. */
+  buscarPorUsuarioId: async (usuarioId: number): Promise<Atendente | null> => {
+    try {
+      const response = await api.get<Atendente>(`/atendentes/usuario/${usuarioId}`)
+      return response.data
+    } catch (err: any) {
+      if (err.response?.status === 404) return null
+      throw err
+    }
+  },
+
   listarPorUnidadeEServicos: async (unidadeId: number, servicosIds: number[]): Promise<Atendente[]> => {
     if (!servicosIds || servicosIds.length === 0) {
       return atendenteService.listarPorUnidade(unidadeId)

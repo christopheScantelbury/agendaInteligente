@@ -10,13 +10,11 @@ import ConfirmDialog from '../components/ConfirmDialog'
 
 type TipoPermissao = 'EDITAR' | 'VISUALIZAR' | 'SEM_ACESSO'
 
-// Lista de menus disponíveis no sistema
+// Lista de menus disponíveis no sistema (Clientes e Atendentes unificados em Usuários)
 const MENUS_DISPONIVEIS = [
   { path: '/', label: 'Início' },
-  { path: '/clientes', label: 'Clientes' },
   { path: '/empresas', label: 'Empresas' },
   { path: '/unidades', label: 'Unidades' },
-  { path: '/atendentes', label: 'Atendentes' },
   { path: '/servicos', label: 'Serviços' },
   { path: '/usuarios', label: 'Usuários' },
   { path: '/perfis', label: 'Perfis' },
@@ -90,10 +88,19 @@ export default function Perfis() {
                     <Shield className="h-5 w-5 text-blue-500" />
                   )}
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-medium text-gray-900">{perfil.nome}</p>
                       {perfil.sistema && (
                         <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">Sistema</span>
+                      )}
+                      {perfil.atendente && (
+                        <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-1 rounded">Atendente</span>
+                      )}
+                      {perfil.cliente && (
+                        <span className="text-xs bg-sky-100 text-sky-800 px-2 py-1 rounded">Cliente</span>
+                      )}
+                      {perfil.gerente && (
+                        <span className="text-xs bg-violet-100 text-violet-800 px-2 py-1 rounded">Gerente</span>
                       )}
                     </div>
                     {perfil.descricao && (
@@ -180,6 +187,9 @@ function PerfilForm({
       descricao: '',
       sistema: false,
       ativo: true,
+      atendente: false,
+      cliente: false,
+      gerente: false,
       permissoesMenu: [],
       permissoesGranulares: {},
     }
@@ -189,6 +199,9 @@ function PerfilForm({
     if (perfil) {
       setFormData({
         ...perfil,
+        atendente: perfil.atendente ?? false,
+        cliente: perfil.cliente ?? false,
+        gerente: perfil.gerente ?? false,
         permissoesGranulares: perfil.permissoesGranulares || {},
       })
     } else {
@@ -197,6 +210,9 @@ function PerfilForm({
         descricao: '',
         sistema: false,
         ativo: true,
+        atendente: false,
+        cliente: false,
+        gerente: false,
         permissoesMenu: [],
         permissoesGranulares: {},
       })
@@ -247,6 +263,12 @@ function PerfilForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    const temTipo = (formData.atendente || formData.cliente || formData.gerente) === true
+    if (!perfil?.sistema && !temTipo && formData.nome?.trim()) {
+      if (!window.confirm('Este perfil não está marcado como Atendente, Cliente ou Gerente. Deseja mesmo salvar?')) {
+        return
+      }
+    }
     saveMutation.mutate(formData)
   }
 
@@ -274,6 +296,42 @@ function PerfilForm({
             disabled={perfil?.sistema || false}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
+        </FormField>
+
+        <FormField label="Tipo de perfil">
+          <p className="text-xs text-gray-500 mb-2">Marque para identificar este perfil (permite usar qualquer nome acima)</p>
+          <div className="mt-2 space-y-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.atendente ?? false}
+                onChange={(e) => setFormData({ ...formData, atendente: e.target.checked })}
+                disabled={perfil?.sistema || false}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+              />
+              <span className="text-sm text-gray-700">Atendente / Profissional</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.cliente ?? false}
+                onChange={(e) => setFormData({ ...formData, cliente: e.target.checked })}
+                disabled={perfil?.sistema || false}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+              />
+              <span className="text-sm text-gray-700">Cliente</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.gerente ?? false}
+                onChange={(e) => setFormData({ ...formData, gerente: e.target.checked })}
+                disabled={perfil?.sistema || false}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+              />
+              <span className="text-sm text-gray-700">Gerente</span>
+            </label>
+          </div>
         </FormField>
 
         <div className="pt-4 border-t">

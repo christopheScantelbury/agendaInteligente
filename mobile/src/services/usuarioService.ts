@@ -1,16 +1,18 @@
 import api from './api'
 
-export type PerfilUsuario = 'ADMIN' | 'PROFISSIONAL' | 'GERENTE' | 'ATENDENTE' // ATENDENTE mantido para compatibilidade
-
+/** Nome do perfil do usuário – valor vindo do banco/API. Não usar union estático. */
 export interface Usuario {
   id?: number
   nome: string
   email: string
   senha?: string
-  perfil: PerfilUsuario
+  perfil?: string
+  perfilId?: number
   unidadeId?: number
+  unidadesIds?: number[]
   ativo?: boolean
   nomeUnidade?: string
+  nomesUnidades?: string[]
 }
 
 export const usuarioService = {

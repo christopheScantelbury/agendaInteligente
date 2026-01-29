@@ -2,11 +2,9 @@ import { Link, useLocation } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
 import {
   Calendar,
-  Users,
   Home as HomeIcon,
   LogOut,
   Settings,
-  UserCog,
   Briefcase,
   Stethoscope,
   Menu,
@@ -112,11 +110,6 @@ export default function Layout({ children }: LayoutProps) {
       items.push({ path: '/', label: 'Início', icon: <HomeIcon className="h-5 w-5" /> })
     }
     
-    // Clientes
-    if (temPermissaoMenu('/clientes')) {
-      items.push({ path: '/clientes', label: 'Clientes', icon: <Users className="h-5 w-5" /> })
-    }
-    
     // Empresas - apenas para ADMIN e se tiver permissão
     if (usuario?.perfil === 'ADMIN' && temPermissaoMenu('/empresas')) {
       items.push({ path: '/empresas', label: 'Empresas', icon: <Building2 className="h-5 w-5" /> })
@@ -125,11 +118,6 @@ export default function Layout({ children }: LayoutProps) {
     // Unidades
     if (temPermissaoMenu('/unidades')) {
       items.push({ path: '/unidades', label: 'Unidades', icon: <Briefcase className="h-5 w-5" /> })
-    }
-    
-    // Atendentes
-    if (temPermissaoMenu('/atendentes')) {
-      items.push({ path: '/atendentes', label: 'Atendentes', icon: <UserCog className="h-5 w-5" /> })
     }
     
     // Serviços

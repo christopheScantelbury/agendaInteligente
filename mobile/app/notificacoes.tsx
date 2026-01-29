@@ -2,17 +2,17 @@ import React from 'react'
 import { View, Text, StyleSheet, ScrollView, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { reclamacaoService, Reclamacao } from '../src/services/reclamacaoService'
-import { authService } from '../src/services/authService'
 import { unidadeService } from '../src/services/unidadeService'
 import HeaderWithMenu from '../src/components/HeaderWithMenu'
 import Button from '../src/components/Button'
+import { useUsuario } from '../src/hooks/useUsuario'
 import { Ionicons } from '@expo/vector-icons'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 export default function NotificacoesScreen() {
   const queryClient = useQueryClient()
-  const usuario = authService.getUsuario()
+  const { usuario } = useUsuario()
 
   const isAdmin = usuario?.perfil === 'ADMIN'
   const unidadeId = usuario?.unidadeId

@@ -8,6 +8,7 @@ import Button from '../../src/components/Button'
 import HeaderWithMenu from '../../src/components/HeaderWithMenu'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import { useUsuario } from '../../src/hooks/useUsuario'
 
 export default function Dashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -21,7 +22,7 @@ export default function Dashboard() {
     setIsAuthenticated(authenticated)
   }
 
-  const usuario = authService.getUsuario()
+  const { usuario } = useUsuario()
   const isAdmin = usuario?.perfil === 'ADMIN'
   const isGerente = usuario?.perfil === 'GERENTE'
   const podeVerReclamacoes = isAdmin || isGerente
