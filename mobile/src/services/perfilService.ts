@@ -1,12 +1,24 @@
 import api from './api'
 
+export type TipoPermissao = 'EDITAR' | 'VISUALIZAR' | 'SEM_ACESSO'
+
 export interface Perfil {
   id?: number
   nome: string
   descricao?: string
   sistema?: boolean
   ativo?: boolean
+  atendente?: boolean
+  cliente?: boolean
+  gerente?: boolean
   permissoesMenu?: string[]
+  permissoesGranulares?: Record<string, TipoPermissao>
+}
+
+/** Perfil do usuário logado (permissoesGranulares). Qualquer usuário autenticado pode chamar. */
+export const buscarMeuPerfil = async (): Promise<Perfil> => {
+  const response = await api.get<Perfil>('/perfis/meu')
+  return response.data
 }
 
 export const perfilService = {
@@ -48,4 +60,6 @@ export const perfilService = {
   excluir: async (id: number): Promise<void> => {
     await api.delete(`/perfis/${id}`)
   },
+
+  buscarMeuPerfil,
 }

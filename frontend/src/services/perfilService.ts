@@ -6,6 +6,9 @@ export interface Perfil {
   descricao?: string
   sistema?: boolean
   ativo?: boolean
+  atendente?: boolean // perfil de atendente/profissional (presta serviços)
+  cliente?: boolean   // perfil de cliente
+  gerente?: boolean   // perfil de gerente
   permissoesMenu?: string[] // Compatibilidade
   permissoesGranulares?: Record<string, 'EDITAR' | 'VISUALIZAR' | 'SEM_ACESSO'> // Novo formato
 }

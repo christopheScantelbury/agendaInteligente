@@ -1,11 +1,13 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useMemo } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Pressable, Animated } from 'react-native'
 import { router, usePathname } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { authService } from '../services/authService'
 import { Alert } from 'react-native'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { reclamacaoService } from '../services/reclamacaoService'
+import { perfilService } from '../services/perfilService'
+import { useUsuario } from '../hooks/useUsuario'
 
 interface MenuItem {
   label: string
@@ -15,16 +17,17 @@ interface MenuItem {
   badge?: number
 }
 
-const baseMenuItems: MenuItem[] = [
-  { label: 'Início', icon: 'home', path: '/(tabs)' },
-  { label: 'Agendamentos', icon: 'calendar', path: '/(tabs)/agendamentos', paths: ['/(tabs)/agendamentos', '/agendamentos'] },
-  { label: 'Clientes', icon: 'people', path: '/(tabs)/clientes' },
-  { label: 'Serviços', icon: 'medical', path: '/(tabs)/servicos' },
-  { label: 'Unidades', icon: 'business', path: '/(tabs)/unidades' },
-  { label: 'Atendentes', icon: 'person', path: '/(tabs)/atendentes' },
-  { label: 'Usuários', icon: 'settings', path: '/(tabs)/usuarios' },
-  // Empresas e Perfis apenas para ADMIN
-]
+/** Mapeamento path do menu (web) -> path no app (tabs). */
+const MENU_PATH_TO_APP: Record<string, { path: string; label: string; icon: keyof typeof Ionicons.glyphMap; paths?: string[] }> = {
+  '/': { path: '/(tabs)', label: 'Início', icon: 'home' },
+  '/agendamentos': { path: '/(tabs)/agendamentos', label: 'Agendamentos', icon: 'calendar', paths: ['/(tabs)/agendamentos', '/agendamentos'] },
+  '/empresas': { path: '/(tabs)/empresas', label: 'Empresas', icon: 'business' },
+  '/unidades': { path: '/(tabs)/unidades', label: 'Unidades', icon: 'business' },
+  '/servicos': { path: '/(tabs)/servicos', label: 'Serviços', icon: 'medical' },
+  '/usuarios': { path: '/(tabs)/usuarios', label: 'Usuários', icon: 'settings' },
+  '/perfis': { path: '/(tabs)/perfis', label: 'Perfis', icon: 'shield' },
+  '/notificacoes': { path: '/notificacoes', label: 'Notificações', icon: 'notifications' },
+}
 
 interface DrawerMenuProps {
   visible: boolean
@@ -33,11 +36,25 @@ interface DrawerMenuProps {
 
 export default function DrawerMenu({ visible, onClose }: DrawerMenuProps) {
   const pathname = usePathname()
+  const queryClient = useQueryClient()
   const slideAnim = useRef(new Animated.Value(-280)).current
-  const usuario = authService.getUsuario()
-  const podeVerNotificacoes = usuario?.perfil === 'ADMIN' || usuario?.perfil === 'GERENTE'
+  const { usuario } = useUsuario()
   const unidadeId = usuario?.unidadeId
   const isAdmin = usuario?.perfil === 'ADMIN'
+
+  const { data: perfilUsuario } = useQuery({
+    queryKey: ['perfil', 'meu'],
+    queryFn: () => perfilService.buscarMeuPerfil(),
+    enabled: !!usuario,
+  })
+
+  const temPermissaoMenu = (menuPath: string): boolean => {
+    if (!perfilUsuario?.permissoesGranulares) return true
+    const permissao = perfilUsuario.permissoesGranulares[menuPath]
+    return permissao === 'EDITAR' || permissao === 'VISUALIZAR'
+  }
+
+  const podeVerNotificacoes = (usuario?.perfil === 'ADMIN' || usuario?.perfil === 'GERENTE') && temPermissaoMenu('/notificacoes')
 
   const { data: contadorReclamacoes = 0 } = useQuery({
     queryKey: ['reclamacoes', 'contador', isAdmin ? 'todas' : 'unidade', unidadeId],
@@ -53,19 +70,44 @@ export default function DrawerMenu({ visible, onClose }: DrawerMenuProps) {
     refetchInterval: 30000,
   })
 
-  const menuItems: MenuItem[] = [
-    ...baseMenuItems,
-    // Adicionar Empresas e Perfis apenas para ADMIN
-    ...(isAdmin
-      ? [
-          { label: 'Empresas', icon: 'business', path: '/(tabs)/empresas' },
-          { label: 'Perfis', icon: 'shield', path: '/(tabs)/perfis' },
-        ]
-      : []),
-    ...(podeVerNotificacoes
-      ? [{ label: 'Notificações', icon: 'notifications', path: '/notificacoes', badge: contadorReclamacoes }]
-      : []),
-  ]
+  const menuItems: MenuItem[] = useMemo(() => {
+    const items: MenuItem[] = []
+    if (temPermissaoMenu('/')) {
+      items.push({ label: MENU_PATH_TO_APP['/'].label, icon: MENU_PATH_TO_APP['/'].icon, path: MENU_PATH_TO_APP['/'].path })
+    }
+    if (temPermissaoMenu('/empresas')) {
+      items.push({ label: MENU_PATH_TO_APP['/empresas'].label, icon: MENU_PATH_TO_APP['/empresas'].icon, path: MENU_PATH_TO_APP['/empresas'].path })
+    }
+    if (temPermissaoMenu('/unidades')) {
+      items.push({ label: MENU_PATH_TO_APP['/unidades'].label, icon: 'business', path: MENU_PATH_TO_APP['/unidades'].path })
+    }
+    if (temPermissaoMenu('/servicos')) {
+      items.push({ label: MENU_PATH_TO_APP['/servicos'].label, icon: MENU_PATH_TO_APP['/servicos'].icon, path: MENU_PATH_TO_APP['/servicos'].path })
+    }
+    if (temPermissaoMenu('/usuarios')) {
+      items.push({ label: MENU_PATH_TO_APP['/usuarios'].label, icon: MENU_PATH_TO_APP['/usuarios'].icon, path: MENU_PATH_TO_APP['/usuarios'].path })
+    }
+    if (temPermissaoMenu('/perfis')) {
+      items.push({ label: MENU_PATH_TO_APP['/perfis'].label, icon: MENU_PATH_TO_APP['/perfis'].icon, path: MENU_PATH_TO_APP['/perfis'].path })
+    }
+    if (temPermissaoMenu('/agendamentos')) {
+      items.push({
+        label: MENU_PATH_TO_APP['/agendamentos'].label,
+        icon: MENU_PATH_TO_APP['/agendamentos'].icon,
+        path: '/(tabs)/agendamentos',
+        paths: ['/(tabs)/agendamentos', '/agendamentos'],
+      })
+    }
+    if (podeVerNotificacoes) {
+      items.push({
+        label: MENU_PATH_TO_APP['/notificacoes'].label,
+        icon: MENU_PATH_TO_APP['/notificacoes'].icon,
+        path: '/notificacoes',
+        badge: contadorReclamacoes,
+      })
+    }
+    return items
+  }, [perfilUsuario, podeVerNotificacoes, contadorReclamacoes])
 
   useEffect(() => {
     if (visible) {
@@ -105,6 +147,8 @@ export default function DrawerMenu({ visible, onClose }: DrawerMenuProps) {
           text: 'Sair',
           style: 'destructive',
           onPress: async () => {
+            queryClient.removeQueries({ queryKey: ['usuario'] })
+            queryClient.removeQueries({ queryKey: ['perfil', 'meu'] })
             await authService.logout()
             router.replace('/login')
             onClose()

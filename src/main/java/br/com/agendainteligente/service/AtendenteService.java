@@ -256,6 +256,16 @@ public class AtendenteService {
         return toDTO(atendente);
     }
 
+    @Transactional(readOnly = true)
+    public AtendenteDTO buscarPorUsuarioId(Long usuarioId) {
+        Atendente atendente = atendenteRepository.findByUsuarioId(usuarioId)
+                .orElseThrow(() -> new ResourceNotFoundException("Atendente não encontrado para este usuário"));
+        if (!podeAcessarAtendente(atendente)) {
+            throw new ResourceNotFoundException("Atendente não encontrado");
+        }
+        return toDTO(atendente);
+    }
+
     @Transactional
     public AtendenteDTO criar(AtendenteDTO atendenteDTO) {
         normalizeAtendenteDTO(atendenteDTO);

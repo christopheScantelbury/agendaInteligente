@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert } from 'reac
 import { useQuery } from '@tanstack/react-query'
 import { usuarioService, Usuario } from '../../src/services/usuarioService'
 import { authService } from '../../src/services/authService'
+import { perfilService } from '../../src/services/perfilService'
 import Button from '../../src/components/Button'
 import FilterBar from '../../src/components/FilterBar'
+import HeaderWithMenu from '../../src/components/HeaderWithMenu'
 
 export default function UsuariosScreen() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -24,6 +26,12 @@ export default function UsuariosScreen() {
     queryKey: ['usuarios'],
     queryFn: usuarioService.listar,
     retry: false,
+    enabled: isAuthenticated,
+  })
+
+  const { data: perfis = [] } = useQuery({
+    queryKey: ['perfis', 'ativos'],
+    queryFn: () => perfilService.listarAtivos(),
     enabled: isAuthenticated,
   })
 
@@ -48,7 +56,7 @@ export default function UsuariosScreen() {
       filtered = filtered.filter((u) => (u.ativo ?? true) === isAtivo)
     }
 
-    // Filtro de perfil
+    // Filtro de perfil (nome do perfil vindo do banco)
     if (filters.perfil && filters.perfil !== '') {
       filtered = filtered.filter((u) => u.perfil === filters.perfil)
     }
@@ -75,17 +83,11 @@ export default function UsuariosScreen() {
   }
 
   const getPerfilColor = (perfil: string): string => {
-    switch (perfil) {
-      case 'ADMIN':
-        return '#DC2626'
-      case 'GERENTE':
-        return '#2563EB'
-      case 'PROFISSIONAL':
-      case 'ATENDENTE':
-        return '#059669'
-      default:
-        return '#6B7280'
-    }
+    const p = (perfil || '').toUpperCase()
+    if (p === 'ADMIN') return '#DC2626'
+    if (p === 'GERENTE') return '#2563EB'
+    if (p.includes('PROFISSIONAL') || p.includes('ATENDENTE')) return '#059669'
+    return '#6B7280'
   }
 
   const renderUsuarioItem = ({ item }: { item: Usuario }) => (
@@ -104,8 +106,14 @@ export default function UsuariosScreen() {
     </View>
   )
 
+  const perfilOptions = useMemo(
+    () => perfis.map((p) => ({ value: p.nome, label: p.descricao || p.nome })),
+    [perfis]
+  )
+
   return (
     <View style={styles.container}>
+      <HeaderWithMenu title="Usuários" />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Usuários</Text>
         <Button
@@ -135,11 +143,7 @@ export default function UsuariosScreen() {
             key: 'perfil',
             label: 'Perfil',
             type: 'select',
-            options: [
-              { value: 'ADMIN', label: 'Administrador' },
-              { value: 'GERENTE', label: 'Gerente' },
-              { value: 'PROFISSIONAL', label: 'Profissional/Atendente' },
-            ],
+            options: perfilOptions,
           },
         ]}
       />

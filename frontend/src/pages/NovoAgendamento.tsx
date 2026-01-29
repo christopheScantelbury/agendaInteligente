@@ -2,14 +2,16 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { agendamentoService, Agendamento } from '../services/agendamentoService'
 import { clienteService } from '../services/clienteService'
-import { servicoService } from '../services/servicoService'
+import { servicoService, Servico } from '../services/servicoService'
 import { unidadeService } from '../services/unidadeService'
 import { atendenteService } from '../services/atendenteService'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { useNotification } from '../contexts/NotificationContext'
 
 export default function NovoAgendamento() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { showNotification } = useNotification()
 
   const [formData, setFormData] = useState<Partial<Agendamento>>({
     clienteId: undefined,
@@ -32,15 +34,28 @@ export default function NovoAgendamento() {
   }, [location.state])
 
   const [servicosSelecionados, setServicosSelecionados] = useState<number[]>([])
+  const [filtroServicos, setFiltroServicos] = useState('')
 
   const { data: clientes = [] } = useQuery({
     queryKey: ['clientes'],
     queryFn: clienteService.listar,
   })
-  const { data: servicos = [] } = useQuery({
-    queryKey: ['servicos'],
-    queryFn: servicoService.listar,
+  const { data: servicosPorUnidade = [] } = useQuery({
+    queryKey: ['servicos', 'unidade', formData.unidadeId],
+    queryFn: () => formData.unidadeId ? servicoService.listarAtivosPorUnidade(formData.unidadeId!) : Promise.resolve([]),
+    enabled: !!formData.unidadeId,
   })
+  const servicos: Servico[] = formData.unidadeId ? servicosPorUnidade : []
+  const servicosFiltrados = useMemo(() => {
+    if (!filtroServicos.trim()) return servicos
+    const term = filtroServicos.toLowerCase().trim()
+    return servicos.filter(
+      (s) =>
+        s.nome?.toLowerCase().includes(term) ||
+        (typeof s.descricao === 'string' && s.descricao.toLowerCase().includes(term))
+    )
+  }, [servicos, filtroServicos])
+
   const { data: unidades = [] } = useQuery({
     queryKey: ['unidades'],
     queryFn: unidadeService.listarTodos,
@@ -54,32 +69,46 @@ export default function NovoAgendamento() {
   const createMutation = useMutation({
     mutationFn: agendamentoService.criar,
     onSuccess: () => {
+      showNotification('success', 'Agendamento criado com sucesso!')
       navigate('/agendamentos')
+    },
+    onError: (error: any) => {
+      const msg = error.response?.data?.message || 'Erro ao criar agendamento. Tente novamente.'
+      showNotification('error', msg)
     },
   })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (formData.clienteId && servicosSelecionados.length > 0 && formData.unidadeId && formData.atendenteId && formData.dataHoraInicio) {
-      const servicosParaEnvio: Array<{ servicoId: number; quantidade: number; valor: number; descricao?: string }> = servicosSelecionados.map((servicoId: number) => {
-        const servicoEncontrado = servicos.find((s) => s.id === servicoId)
-        return {
-          servicoId,
-          quantidade: 1,
-          valor: servicoEncontrado?.valor || 0,
-          descricao: servicoEncontrado?.descricao || servicoEncontrado?.nome
-        }
-      })
-
-      createMutation.mutate({
-        clienteId: formData.clienteId,
-        unidadeId: formData.unidadeId,
-        atendenteId: formData.atendenteId,
-        dataHoraInicio: formData.dataHoraInicio,
-        observacoes: formData.observacoes,
-        servicos: servicosParaEnvio,
-      } as Agendamento)
+    if (!formData.unidadeId) {
+      showNotification('error', 'Selecione uma unidade')
+      return
     }
+    if (servicosSelecionados.length === 0) {
+      showNotification('error', 'Selecione pelo menos um serviço')
+      return
+    }
+    if (!formData.clienteId || !formData.atendenteId || !formData.dataHoraInicio) {
+      showNotification('error', 'Preencha cliente, atendente e data/hora')
+      return
+    }
+    const servicosParaEnvio: Array<{ servicoId: number; quantidade: number; valor: number; descricao?: string }> = servicosSelecionados.map((servicoId: number) => {
+      const servicoEncontrado = servicos.find((s) => s.id === servicoId)
+      return {
+        servicoId,
+        quantidade: 1,
+        valor: servicoEncontrado?.valor || 0,
+        descricao: servicoEncontrado?.descricao || servicoEncontrado?.nome
+      }
+    })
+    createMutation.mutate({
+      clienteId: formData.clienteId,
+      unidadeId: formData.unidadeId,
+      atendenteId: formData.atendenteId,
+      dataHoraInicio: formData.dataHoraInicio,
+      observacoes: formData.observacoes,
+      servicos: servicosParaEnvio,
+    } as Agendamento)
   }
 
   const handleServicoToggle = (servicoId: number) => {
@@ -94,6 +123,8 @@ export default function NovoAgendamento() {
 
   const handleUnidadeChange = (unidadeId: number) => {
     setFormData({ ...formData, unidadeId, atendenteId: undefined })
+    setServicosSelecionados([])
+    setFiltroServicos('')
     refetchAtendentes()
   }
 
@@ -163,28 +194,45 @@ export default function NovoAgendamento() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Serviços {servicosSelecionados.length > 0 && `(${servicosSelecionados.length} selecionado${servicosSelecionados.length > 1 ? 's' : ''})`}
             </label>
-            <div className="mt-1 space-y-2 max-h-60 overflow-y-auto border border-gray-300 rounded-md p-3">
-              {servicos
-                .filter((s) => s.ativo)
-                .map((servico) => (
-                  <label key={servico.id} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
-                    <input
-                      type="checkbox"
-                      checked={servicosSelecionados.includes(servico.id)}
-                      onChange={() => handleServicoToggle(servico.id)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="flex-1">
-                      <span className="font-medium">{servico.nome}</span>
-                      <span className="text-gray-600 ml-2">
-                        - R$ {servico.valor.toFixed(2)} ({servico.duracaoMinutos} min)
-                      </span>
-                    </span>
-                  </label>
-                ))}
-            </div>
-            {servicosSelecionados.length === 0 && (
-              <p className="mt-1 text-sm text-red-600">Selecione pelo menos um serviço</p>
+            {!formData.unidadeId ? (
+              <p className="mt-1 text-sm text-gray-500">Selecione primeiro uma unidade para ver os serviços disponíveis.</p>
+            ) : (
+              <>
+                <input
+                  type="text"
+                  value={filtroServicos}
+                  onChange={(e) => setFiltroServicos(e.target.value)}
+                  placeholder="Buscar serviço por nome ou descrição..."
+                  className="mt-1 mb-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                />
+                <div className="mt-1 space-y-2 max-h-60 overflow-y-auto border border-gray-300 rounded-md p-3">
+                  {servicos.length === 0 ? (
+                    <p className="text-sm text-gray-500">Nenhum serviço ativo nesta unidade.</p>
+                  ) : servicosFiltrados.length === 0 ? (
+                    <p className="text-sm text-gray-500">Nenhum serviço encontrado com &quot;{filtroServicos}&quot;</p>
+                  ) : (
+                    servicosFiltrados.map((servico) => (
+                      <label key={servico.id} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                        <input
+                          type="checkbox"
+                          checked={servicosSelecionados.includes(servico.id)}
+                          onChange={() => handleServicoToggle(servico.id)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="flex-1">
+                          <span className="font-medium">{servico.nome}</span>
+                          <span className="text-gray-600 ml-2">
+                            - R$ {servico.valor.toFixed(2)} ({servico.duracaoMinutos} min)
+                          </span>
+                        </span>
+                      </label>
+                    ))
+                  )}
+                </div>
+                {servicosSelecionados.length === 0 && servicos.length > 0 && (
+                  <p className="mt-1 text-sm text-red-600">Selecione pelo menos um serviço</p>
+                )}
+              </>
             )}
           </div>
 

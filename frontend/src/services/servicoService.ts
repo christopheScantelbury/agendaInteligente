@@ -21,6 +21,11 @@ export const servicoService = {
     return response.data
   },
 
+  listarAtivosPorUnidade: async (unidadeId: number): Promise<Servico[]> => {
+    const response = await api.get<Servico[]>(`/servicos/unidade/${unidadeId}/ativos`)
+    return response.data
+  },
+
   buscarPorId: async (id: number): Promise<Servico> => {
     const response = await api.get<Servico>(`/servicos/${id}`)
     return response.data

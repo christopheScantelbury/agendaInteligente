@@ -5,8 +5,8 @@ import { useQuery } from '@tanstack/react-query'
 import { router } from 'expo-router'
 import DrawerMenu from './DrawerMenu'
 import { useDrawer } from '../contexts/DrawerContext'
-import { authService } from '../services/authService'
 import { reclamacaoService } from '../services/reclamacaoService'
+import { useUsuario } from '../hooks/useUsuario'
 
 interface HeaderWithMenuProps {
   title: string
@@ -14,7 +14,7 @@ interface HeaderWithMenuProps {
 
 export default function HeaderWithMenu({ title }: HeaderWithMenuProps) {
   const { isOpen, openDrawer, closeDrawer } = useDrawer()
-  const usuario = authService.getUsuario()
+  const { usuario } = useUsuario()
   const podeVerNotificacoes = usuario?.perfil === 'ADMIN' || usuario?.perfil === 'GERENTE'
   const unidadeId = usuario?.unidadeId
   const isAdmin = usuario?.perfil === 'ADMIN'

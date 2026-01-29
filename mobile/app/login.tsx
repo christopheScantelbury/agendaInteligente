@@ -1,11 +1,13 @@
 import React, { useState } from 'react'
 import { View, Text, TextInput, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native'
 import { router } from 'expo-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { authService } from '../src/services/authService'
 import Button from '../src/components/Button'
 import FormField from '../src/components/FormField'
 
 export default function Login() {
+  const queryClient = useQueryClient()
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [erro, setErro] = useState('')
@@ -17,7 +19,8 @@ export default function Login() {
     setLoading(true)
 
     try {
-      await authService.login({ email, senha })
+      const data = await authService.login({ email, senha })
+      queryClient.setQueryData(['usuario'], data)
       router.replace('/(tabs)')
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Erro ao fazer login'

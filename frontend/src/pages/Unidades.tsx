@@ -470,10 +470,10 @@ function AtendentesSection({ unidadeId }: { unidadeId: number }) {
           Funcionários (Atendentes)
         </h3>
         <Link
-          to="/atendentes"
+          to="/usuarios"
           className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
         >
-          Gerenciar Atendentes <ExternalLink className="h-3 w-3 ml-1" />
+          Gerenciar Usuários <ExternalLink className="h-3 w-3 ml-1" />
         </Link>
       </div>
 
@@ -482,9 +482,9 @@ function AtendentesSection({ unidadeId }: { unidadeId: number }) {
       ) : atendentes.length === 0 ? (
         <div className="bg-gray-50 rounded-lg p-4 text-center">
           <p className="text-sm text-gray-500 mb-2">Nenhum atendente vinculado a esta unidade.</p>
-          <Link to="/atendentes">
+          <Link to="/usuarios">
             <Button variant="secondary" size="sm">
-              Adicionar Novo Atendente
+              Adicionar Usuário
             </Button>
           </Link>
         </div>

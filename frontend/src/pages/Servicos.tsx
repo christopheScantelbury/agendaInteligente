@@ -366,6 +366,7 @@ function ServicoForm({
       </FormField>
 
       <FormField label="Unidade" required>
+        <p className="text-xs text-gray-500 mb-2">O serviço ficará disponível apenas nesta unidade.</p>
         <select
           required
           value={formData.unidadeId || ''}
