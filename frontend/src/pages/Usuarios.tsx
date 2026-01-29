@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { usuarioService, Usuario, PerfilUsuario } from '../services/usuarioService'
+import { usuarioService, Usuario } from '../services/usuarioService'
 import { unidadeService, Unidade } from '../services/unidadeService'
+import { perfilService, Perfil } from '../services/perfilService'
 import { authService } from '../services/authService'
 import { Plus, Trash2, Edit, Eye, EyeOff } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
@@ -22,6 +23,11 @@ export default function Usuarios() {
   const { data: usuarios = [], isLoading } = useQuery({
     queryKey: ['usuarios'],
     queryFn: usuarioService.listar,
+  })
+
+  const { data: perfis = [] } = useQuery({
+    queryKey: ['perfis'],
+    queryFn: perfilService.listarTodos,
   })
 
   const [searchTerm, setSearchTerm] = useState('')
@@ -49,9 +55,10 @@ export default function Usuarios() {
       filtered = filtered.filter((u) => (u.ativo ?? true) === isAtivo)
     }
 
-    // Filtro de perfil
+    // Filtro de perfil (por perfilId – lista vem da tela Perfis)
     if (filters.perfil && filters.perfil !== '') {
-      filtered = filtered.filter((u) => u.perfil === filters.perfil)
+      const perfilIdFiltro = Number(filters.perfil)
+      filtered = filtered.filter((u) => u.perfilId === perfilIdFiltro)
     }
 
     return filtered
@@ -168,12 +175,9 @@ export default function Usuarios() {
             key: 'perfil',
             label: 'Perfil',
             type: 'select',
-            options: [
-              { value: 'ADMIN', label: 'Administrador' },
-              { value: 'GERENTE', label: 'Gerente' },
-              { value: 'PROFISSIONAL', label: 'Profissional/Atendente' },
-              { value: 'CLIENTE', label: 'Cliente' },
-            ],
+            options: perfis
+              .filter((p) => p.id != null)
+              .map((p) => ({ value: String(p.id!), label: p.nome })),
           },
         ]}
       />
@@ -196,7 +200,9 @@ export default function Usuarios() {
                   <p className="text-sm font-medium text-gray-900">{usuario.nome}</p>
                   <p className="text-sm text-gray-500">Email: {usuario.email}</p>
                   <p className="text-sm text-gray-500">
-                    Perfil: <span className="font-medium">{usuario.perfil}</span>
+                    Perfil: <span className="font-medium">
+                      {perfis.find((p) => p.id === usuario.perfilId)?.nome ?? usuario.perfil ?? '—'}
+                    </span>
                   </p>
                   {usuario.nomesUnidades && usuario.nomesUnidades.length > 0 && (
                     <p className="text-sm text-gray-500">
@@ -258,6 +264,7 @@ export default function Usuarios() {
         <UsuarioForm
           usuario={editingUsuario}
           unidades={unidadesDisponiveis}
+          perfis={perfis}
           onClose={() => {
             setShowModal(false)
             setEditingUsuario(null)
@@ -282,10 +289,12 @@ export default function Usuarios() {
 function UsuarioForm({
   usuario,
   unidades,
+  perfis,
   onClose,
 }: {
   usuario: Usuario | null
   unidades: Unidade[]
+  perfis: Perfil[]
   onClose: () => void
 }) {
   const queryClient = useQueryClient()
@@ -293,36 +302,46 @@ function UsuarioForm({
   const [showPassword, setShowPassword] = useState(false)
   const usuarioLogado = authService.getUsuario()
   const perfilLogado = usuarioLogado?.perfil
-  const [formData, setFormData] = useState<Usuario>(
-    usuario || {
-      nome: '',
-      email: '',
-      senha: '',
-      perfil: 'ATENDENTE',
-      unidadesIds: [],
-      ativo: true,
-    }
+  const [formData, setFormData] = useState<Usuario & { perfilId?: number }>(
+    usuario
+      ? {
+          ...usuario,
+          perfilId: usuario.perfilId ?? undefined,
+          senha: '',
+        }
+      : {
+          nome: '',
+          email: '',
+          senha: '',
+          perfilId: undefined,
+          unidadesIds: [],
+          ativo: true,
+        }
   )
-  
-  // Inicializar formData quando o usuário mudar
+
+  // Inicializar formData quando o usuário ou a lista de perfis mudar
   useEffect(() => {
     if (usuario) {
-      // Determinar unidadesIds
       let unidadesIds: number[] = []
       if (usuario.unidadesIds && usuario.unidadesIds.length > 0) {
         unidadesIds = usuario.unidadesIds
       } else if (usuario.unidadeId) {
-        // Compatibilidade com código antigo
         unidadesIds = [usuario.unidadeId]
       }
-
+      // Se não tiver perfilId, tentar achar perfil pelo nome do enum (usuários antigos)
+      const perfilId =
+        usuario.perfilId ??
+        (usuario.perfil && perfis.length
+          ? perfis.find((p) => p.nome?.toUpperCase() === usuario.perfil)?.id
+          : undefined)
       setFormData({
         id: usuario.id,
         nome: usuario.nome,
         email: usuario.email,
         senha: '',
+        perfilId: perfilId ?? undefined,
         perfil: usuario.perfil,
-        unidadesIds: unidadesIds,
+        unidadesIds,
         ativo: usuario.ativo ?? true,
       })
     } else {
@@ -330,12 +349,12 @@ function UsuarioForm({
         nome: '',
         email: '',
         senha: '',
-        perfil: 'ATENDENTE',
+        perfilId: undefined,
         unidadesIds: [],
         ativo: true,
       })
     }
-  }, [usuario])
+  }, [usuario, perfis])
 
   const saveMutation = useMutation({
     mutationFn: (data: Usuario) =>
@@ -355,20 +374,25 @@ function UsuarioForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
-    // Validação: GERENTE, PROFISSIONAL/ATENDENTE e CLIENTE devem ter pelo menos uma unidade
-    const perfilRequerUnidades = ['GERENTE', 'PROFISSIONAL', 'ATENDENTE', 'CLIENTE'].includes(formData.perfil as string)
+
+    if (!formData.perfilId) {
+      showNotification('error', 'Selecione um perfil')
+      return
+    }
+
+    const perfilSelecionado = perfis.find((p) => p.id === formData.perfilId)
+    const perfilRequerUnidades = perfilSelecionado?.nome?.toUpperCase() !== 'ADMIN'
     if (perfilRequerUnidades && (!formData.unidadesIds || formData.unidadesIds.length === 0)) {
       showNotification('error', 'Selecione pelo menos uma unidade para este perfil')
       return
     }
-    
-    // Converter ATENDENTE para PROFISSIONAL antes de enviar
+
     const dadosEnvio = {
       ...formData,
-      perfil: formData.perfil === 'ATENDENTE' ? 'PROFISSIONAL' : formData.perfil,
+      perfilId: formData.perfilId,
+      perfil: undefined,
+      unidadesIds: formData.unidadesIds,
     }
-    
     saveMutation.mutate(dadosEnvio)
   }
 
@@ -422,44 +446,30 @@ function UsuarioForm({
       <FormField label="Perfil" required>
         <select
           required
-          value={formData.perfil}
+          value={formData.perfilId ?? ''}
           onChange={(e) => {
-            const novoPerfil = e.target.value as PerfilUsuario
-            const perfilAtual = formData.perfil
-            
-            // Se está mudando de um perfil que requer unidades para outro que também requer, manter unidades
-            // Se está mudando para um perfil que não requer unidades, limpar
-            // Se está mudando de um perfil que não requer para um que requer, manter vazio (usuário deve selecionar)
-            let novasUnidadesIds = formData.unidadesIds || []
-            
-            const perfilAtualRequerUnidades = ['GERENTE', 'PROFISSIONAL', 'ATENDENTE', 'CLIENTE'].includes(perfilAtual as string)
-            const novoPerfilRequerUnidades = ['GERENTE', 'PROFISSIONAL', 'ATENDENTE', 'CLIENTE'].includes(novoPerfil as string)
-            
-            if (!novoPerfilRequerUnidades) {
-              // Se o novo perfil não requer unidades, limpar
-              novasUnidadesIds = []
-            } else if (perfilAtualRequerUnidades && novoPerfilRequerUnidades) {
-              // Se ambos requerem unidades, manter as unidades existentes
-              novasUnidadesIds = formData.unidadesIds || []
-            }
-            // Se está mudando de um perfil que não requer para um que requer, manter vazio (usuário deve selecionar)
-            
+            const perfilId = e.target.value ? Number(e.target.value) : undefined
             setFormData({
               ...formData,
-              perfil: novoPerfil,
-              unidadesIds: novasUnidadesIds,
+              perfilId,
+              unidadesIds: perfilId ? (formData.unidadesIds ?? []) : [],
             })
           }}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         >
-          <option value="ADMIN">Administrador</option>
-          <option value="GERENTE">Gerente</option>
-          <option value="PROFISSIONAL">Profissional/Atendente</option>
-          <option value="CLIENTE">Cliente</option>
+          <option value="">Selecione um perfil</option>
+          {perfis
+            .filter((p) => p.id != null && p.ativo !== false)
+            .map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nome}
+              </option>
+            ))}
         </select>
       </FormField>
 
-      {['GERENTE', 'PROFISSIONAL', 'ATENDENTE', 'CLIENTE'].includes(formData.perfil as string) && (
+      {formData.perfilId != null &&
+        perfis.find((p) => p.id === formData.perfilId)?.nome?.toUpperCase() !== 'ADMIN' && (
         <FormField 
           label={`Unidades ${formData.unidadesIds && formData.unidadesIds.length > 0 ? `(${formData.unidadesIds.length} selecionada${formData.unidadesIds.length > 1 ? 's' : ''})` : ''}`} 
           required

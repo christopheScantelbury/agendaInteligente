@@ -220,6 +220,15 @@ public class UsuarioService {
             usuario.setUnidades(List.of(unidade));
         }
 
+        // Validar unidades quando o perfil exige (GERENTE, PROFISSIONAL, CLIENTE)
+        Usuario.PerfilUsuario perfilFinalCriar = usuario.getPerfil();
+        if (perfilFinalCriar == Usuario.PerfilUsuario.GERENTE || perfilFinalCriar == Usuario.PerfilUsuario.PROFISSIONAL
+                || perfilFinalCriar == Usuario.PerfilUsuario.CLIENTE) {
+            if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
+                throw new BusinessException("Usuários com este perfil devem ter pelo menos uma unidade associada");
+            }
+        }
+
         usuario = usuarioRepository.save(usuario);
         log.info("Usuário criado com sucesso. ID: {}, Email: {}, Perfil: {}", 
                 usuario.getId(), usuario.getEmail(), usuario.getPerfil());
@@ -271,8 +280,11 @@ public class UsuarioService {
             usuario.setSenha(passwordEncoder.encode(usuarioDTO.getSenha()));
         }
 
-        // Determinar o perfil final após atualização
+        // Determinar o perfil final após atualização (usa entity quando perfilId foi aplicado)
         Usuario.PerfilUsuario perfilFinal = usuario.getPerfilSistema();
+        if (perfilFinal == null && usuario.getPerfilEntity() != null) {
+            perfilFinal = usuario.getPerfil(); // deriva do perfil customizado
+        }
         if (perfilFinal == null && usuarioDTO.getPerfilSistema() != null) {
             perfilFinal = usuarioDTO.getPerfilSistema();
         } else if (perfilFinal == null && usuarioDTO.getPerfil() != null) {
