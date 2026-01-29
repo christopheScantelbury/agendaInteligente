@@ -114,16 +114,18 @@ public class UsuarioService {
                 
                 log.debug("Unidades acessíveis pelo gerente {}: {}", email, unidadesIds);
                 
-                // Filtrar usuários que têm pelo menos uma unidade nas empresas do gerente
                 List<Usuario> todosUsuarios = usuarioRepository.findAll();
                 List<Usuario> usuariosFiltrados = todosUsuarios.stream()
                         .filter(u -> {
+                            if (Usuario.PerfilUsuario.ADMIN.equals(u.getPerfil())) {
+                                return false;
+                            }
                             if (u.getUnidades() == null || u.getUnidades().isEmpty()) {
                                 return false;
                             }
-                            boolean temAcesso = u.getUnidades().stream()
-                                    .anyMatch(unidade -> unidadesIds.contains(unidade.getId()));
-                            return temAcesso;
+                            boolean todasUnidadesNaEmpresa = u.getUnidades().stream()
+                                    .allMatch(unidade -> unidadesIds.contains(unidade.getId()));
+                            return todasUnidadesNaEmpresa;
                         })
                         .collect(Collectors.toList());
                 
@@ -137,14 +139,15 @@ public class UsuarioService {
                     return List.of();
                 }
                 
-                // Obter IDs das unidades do profissional
                 List<Long> unidadesProfissional = usuarioLogado.getUnidades().stream()
                         .map(Unidade::getId)
                         .collect(Collectors.toList());
                 
-                // Filtrar usuários que têm pelo menos uma unidade em comum
                 return usuarioRepository.findAll().stream()
                         .filter(u -> {
+                            if (Usuario.PerfilUsuario.ADMIN.equals(u.getPerfil()) || Usuario.PerfilUsuario.GERENTE.equals(u.getPerfil())) {
+                                return false;
+                            }
                             if (u.getUnidades() == null || u.getUnidades().isEmpty()) {
                                 return false;
                             }
@@ -162,9 +165,11 @@ public class UsuarioService {
 
     @Transactional(readOnly = true)
     public UsuarioDTO buscarPorId(Long id) {
-        Usuario usuario = usuarioRepository.findById(id)
+        return filtrarPorPermissao().stream()
+                .filter(u -> u.getId().equals(id))
+                .findFirst()
+                .map(this::toDTO)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
-        return toDTO(usuario);
     }
 
     @Transactional
@@ -213,6 +218,15 @@ public class UsuarioService {
             Unidade unidade = unidadeRepository.findById(usuarioDTO.getUnidadeId())
                     .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada"));
             usuario.setUnidades(List.of(unidade));
+        }
+
+        // Validar unidades quando o perfil exige (GERENTE, PROFISSIONAL, CLIENTE)
+        Usuario.PerfilUsuario perfilFinalCriar = usuario.getPerfil();
+        if (perfilFinalCriar == Usuario.PerfilUsuario.GERENTE || perfilFinalCriar == Usuario.PerfilUsuario.PROFISSIONAL
+                || perfilFinalCriar == Usuario.PerfilUsuario.CLIENTE) {
+            if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
+                throw new BusinessException("Usuários com este perfil devem ter pelo menos uma unidade associada");
+            }
         }
 
         usuario = usuarioRepository.save(usuario);
@@ -266,8 +280,11 @@ public class UsuarioService {
             usuario.setSenha(passwordEncoder.encode(usuarioDTO.getSenha()));
         }
 
-        // Determinar o perfil final após atualização
+        // Determinar o perfil final após atualização (usa entity quando perfilId foi aplicado)
         Usuario.PerfilUsuario perfilFinal = usuario.getPerfilSistema();
+        if (perfilFinal == null && usuario.getPerfilEntity() != null) {
+            perfilFinal = usuario.getPerfil(); // deriva do perfil customizado
+        }
         if (perfilFinal == null && usuarioDTO.getPerfilSistema() != null) {
             perfilFinal = usuarioDTO.getPerfilSistema();
         } else if (perfilFinal == null && usuarioDTO.getPerfil() != null) {

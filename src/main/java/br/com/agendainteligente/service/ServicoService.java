@@ -12,14 +12,13 @@ import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,7 +32,6 @@ public class ServicoService {
     private final UsuarioRepository usuarioRepository;
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "servicos", unless = "#result.isEmpty()")
     public List<ServicoDTO> listarTodos() {
         log.debug("Listando todos os serviços");
         List<Servico> servicos = filtrarPorPermissao();
@@ -43,7 +41,6 @@ public class ServicoService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "servicos", key = "'ativos'", unless = "#result.isEmpty()")
     public List<ServicoDTO> listarAtivos() {
         log.debug("Listando serviços ativos");
         List<Servico> servicos = filtrarPorPermissao();
@@ -89,8 +86,31 @@ public class ServicoService {
                 return servicoRepository.findAll();
 
             case GERENTE:
+                log.debug("GERENTE: listando serviços das unidades da empresa");
+                if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
+                    log.warn("Gerente {} não tem unidades vinculadas", email);
+                    return List.of();
+                }
+                Set<Long> empresaIds = usuario.getUnidades().stream()
+                        .map(u -> {
+                            if (u.getEmpresa() == null) {
+                                Unidade uc = unidadeRepository.findById(u.getId()).orElse(null);
+                                return uc != null && uc.getEmpresa() != null ? uc.getEmpresa().getId() : null;
+                            }
+                            return u.getEmpresa().getId();
+                        })
+                        .filter(id -> id != null)
+                        .collect(Collectors.toSet());
+                if (empresaIds.isEmpty()) {
+                    return List.of();
+                }
+                return servicoRepository.findAll().stream()
+                        .filter(s -> s.getUnidade() != null && s.getUnidade().getEmpresa() != null
+                                && empresaIds.contains(s.getUnidade().getEmpresa().getId()))
+                        .collect(Collectors.toList());
+
             case PROFISSIONAL:
-                log.debug("{}: listando serviços das unidades do usuário", perfil);
+                log.debug("PROFISSIONAL: listando serviços das unidades do usuário");
                 if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
                     log.warn("Usuário {} não tem unidades vinculadas", email);
                     return List.of();
@@ -109,30 +129,51 @@ public class ServicoService {
         }
     }
 
-    private void validarAcessoUnidade(Long unidadeId) {
+    private Set<Long> obterUnidadesIdsPermitidas() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) {
-            return; // Se não autenticado, deixar passar (será validado em outro lugar)
+            return Set.of();
         }
-
-        String email = auth.getName();
-        Usuario usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
-
-        Usuario.PerfilUsuario perfil = usuario.getPerfil();
-
-        if (perfil == Usuario.PerfilUsuario.ADMIN) {
-            return; // Admin tem acesso a tudo
+        Usuario usuario = usuarioRepository.findByEmail(auth.getName()).orElse(null);
+        if (usuario == null) {
+            return Set.of();
         }
-
-        if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
-            throw new BusinessException("Você não tem permissão para acessar esta unidade");
+        switch (usuario.getPerfil()) {
+            case ADMIN:
+                return unidadeRepository.findAll().stream().map(Unidade::getId).collect(Collectors.toSet());
+            case GERENTE:
+                if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
+                    return Set.of();
+                }
+                Set<Long> empresaIds = usuario.getUnidades().stream()
+                        .map(u -> {
+                            if (u.getEmpresa() == null) {
+                                Unidade uc = unidadeRepository.findById(u.getId()).orElse(null);
+                                return uc != null && uc.getEmpresa() != null ? uc.getEmpresa().getId() : null;
+                            }
+                            return u.getEmpresa().getId();
+                        })
+                        .filter(id -> id != null)
+                        .collect(Collectors.toSet());
+                if (empresaIds.isEmpty()) {
+                    return Set.of();
+                }
+                return unidadeRepository.findAll().stream()
+                        .filter(u -> u.getEmpresa() != null && empresaIds.contains(u.getEmpresa().getId()))
+                        .map(Unidade::getId)
+                        .collect(Collectors.toSet());
+            case PROFISSIONAL:
+                if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
+                    return Set.of();
+                }
+                return usuario.getUnidades().stream().map(Unidade::getId).collect(Collectors.toSet());
+            default:
+                return Set.of();
         }
+    }
 
-        boolean temAcesso = usuario.getUnidades().stream()
-                .anyMatch(u -> u.getId().equals(unidadeId));
-
-        if (!temAcesso) {
+    private void validarAcessoUnidade(Long unidadeId) {
+        if (!obterUnidadesIdsPermitidas().contains(unidadeId)) {
             throw new BusinessException("Você não tem permissão para acessar esta unidade");
         }
     }
@@ -142,6 +183,9 @@ public class ServicoService {
         log.debug("Buscando serviço com id: {}", id);
         Servico servico = servicoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Serviço não encontrado com id: " + id));
+        if (servico.getUnidade() == null || !obterUnidadesIdsPermitidas().contains(servico.getUnidade().getId())) {
+            throw new ResourceNotFoundException("Serviço não encontrado com id: " + id);
+        }
         return servicoMapper.toDTO(servico);
     }
 
@@ -206,7 +250,9 @@ public class ServicoService {
     @Transactional
     public void excluir(Long id) {
         log.debug("Excluindo serviço com id: {}", id);
-        if (!servicoRepository.existsById(id)) {
+        Servico servico = servicoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Serviço não encontrado com id: " + id));
+        if (servico.getUnidade() == null || !obterUnidadesIdsPermitidas().contains(servico.getUnidade().getId())) {
             throw new ResourceNotFoundException("Serviço não encontrado com id: " + id);
         }
         servicoRepository.deleteById(id);

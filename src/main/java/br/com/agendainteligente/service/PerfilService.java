@@ -1,15 +1,19 @@
 package br.com.agendainteligente.service;
 
 import br.com.agendainteligente.domain.entity.Perfil;
+import br.com.agendainteligente.domain.entity.Usuario;
 import br.com.agendainteligente.dto.PerfilDTO;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
 import br.com.agendainteligente.mapper.PerfilMapper;
 import br.com.agendainteligente.repository.PerfilRepository;
+import br.com.agendainteligente.repository.UsuarioRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +27,7 @@ public class PerfilService {
 
     private final PerfilRepository perfilRepository;
     private final PerfilMapper perfilMapper;
+    private final UsuarioRepository usuarioRepository;
 
     @Transactional(readOnly = true)
     public List<PerfilDTO> listarTodos() {
@@ -57,6 +62,28 @@ public class PerfilService {
         Perfil perfil = perfilRepository.findByNome(nome)
                 .orElseThrow(() -> new ResourceNotFoundException("Perfil não encontrado"));
         return perfilMapper.toDTO(perfil);
+    }
+
+    /**
+     * Retorna o perfil do usuário autenticado (customizado ou do sistema), para uso nas permissões do frontend.
+     */
+    @Transactional(readOnly = true)
+    public PerfilDTO buscarPerfilDoUsuarioLogado() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new BusinessException("Usuário não autenticado");
+        }
+        String email = auth.getName();
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+        Perfil perfil = usuario.getPerfilEntity();
+        if (perfil != null) {
+            return perfilMapper.toDTO(perfil);
+        }
+        // Perfil de sistema sem entidade: tentar carregar por nome do enum (ex: GERENTE, ADMIN)
+        return perfilRepository.findByNome(usuario.getPerfil().name())
+                .map(perfilMapper::toDTO)
+                .orElseThrow(() -> new ResourceNotFoundException("Perfil do usuário não encontrado"));
     }
 
     @Transactional

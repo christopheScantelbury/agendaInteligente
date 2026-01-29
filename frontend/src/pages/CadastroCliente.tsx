@@ -26,6 +26,7 @@ export default function CadastroCliente() {
   const [rg, setRg] = useState('')
   const [erro, setErro] = useState('')
   const [loading, setLoading] = useState(false)
+  const [irAgendarAposCadastro, setIrAgendarAposCadastro] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -56,8 +57,23 @@ export default function CadastroCliente() {
       }
 
       await clientePublicoService.cadastrar(dadosEnvio)
-      showNotification('success', 'Cadastro realizado com sucesso! Faça login para continuar.')
-      navigate('/cliente/login')
+
+      if (irAgendarAposCadastro && formData.email && formData.senha) {
+        try {
+          await clientePublicoService.login({
+            emailOuCpf: formData.email,
+            senha: formData.senha,
+          })
+          showNotification('success', 'Cadastro realizado! Agora escolha unidade, serviço e horário.')
+          navigate('/cliente/agendar')
+        } catch (_) {
+          showNotification('success', 'Cadastro realizado com sucesso! Faça login para agendar.')
+          navigate('/cliente/login')
+        }
+      } else {
+        showNotification('success', 'Cadastro realizado com sucesso! Faça login para continuar.')
+        navigate('/cliente/login')
+      }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Erro ao realizar cadastro. Tente novamente.'
       setErro(errorMessage)
@@ -317,13 +333,27 @@ export default function CadastroCliente() {
             </FormField>
           </div>
 
+          <div className="border-t border-gray-200 pt-4">
+            <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-gray-200 hover:bg-gray-50">
+              <input
+                type="checkbox"
+                checked={irAgendarAposCadastro}
+                onChange={(e) => setIrAgendarAposCadastro(e.target.checked)}
+                className="mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 flex-shrink-0"
+              />
+              <span className="text-sm text-gray-700">
+                Após o cadastro, já quero agendar uma consulta (será feita o login automático e você escolhe unidade, serviço e horário na próxima tela).
+              </span>
+            </label>
+          </div>
+
           <div className="flex flex-col sm:flex-row gap-4">
             <button
               type="submit"
               disabled={loading}
               className="flex-1 flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
             >
-              {loading ? 'Cadastrando...' : 'Cadastrar'}
+              {loading ? 'Cadastrando...' : irAgendarAposCadastro ? 'Cadastrar e ir agendar' : 'Cadastrar'}
             </button>
             <button
               type="button"

@@ -1,13 +1,15 @@
 import api from './api'
 
-export type PerfilUsuario = 'ADMIN' | 'PROFISSIONAL' | 'GERENTE' | 'CLIENTE' | 'ATENDENTE' // ATENDENTE mantido para compatibilidade, mas será convertido para PROFISSIONAL
+/** Nome do perfil do usuário – valor vindo do banco/API (tela Perfis e Permissões). Não usar union estático. */
+export type PerfilNome = string
 
 export interface Usuario {
   id?: number
   nome: string
   email: string
   senha?: string
-  perfil: PerfilUsuario
+  perfil?: PerfilNome // nome do perfil (vem do banco via API)
+  perfilId?: number // ID do perfil cadastrado em Perfis e Permissões
   unidadeId?: number // DEPRECATED - usar unidadesIds
   unidadesIds?: number[] // Lista de IDs das unidades
   ativo?: boolean

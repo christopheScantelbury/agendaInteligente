@@ -40,11 +40,11 @@ export default function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false) // Mobile toggle
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
-  // Buscar perfil do usuário para verificar permissões granulares
+  // Buscar perfil do usuário para verificar permissões granulares (endpoint que qualquer usuário autenticado pode chamar)
   const { data: perfilUsuario } = useQuery({
-    queryKey: ['perfil', usuario?.perfil],
-    queryFn: () => perfilService.buscarPorNome(usuario!.perfil!),
-    enabled: !!usuario?.perfil,
+    queryKey: ['perfil', 'meu'],
+    queryFn: () => perfilService.buscarMeuPerfil(),
+    enabled: !!usuario,
   })
 
   // Função para verificar permissão de menu

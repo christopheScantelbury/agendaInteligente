@@ -16,7 +16,6 @@ import br.com.agendainteligente.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -43,7 +42,6 @@ public class ClienteService {
     private static final Pattern ONLY_DIGITS = Pattern.compile("\\D");
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "clientes", unless = "#result.isEmpty()")
     public List<ClienteDTO> listarTodos() {
         log.debug("Listando clientes com filtro de permissão");
         List<Cliente> clientes = filtrarPorPermissao();
@@ -153,12 +151,65 @@ public class ClienteService {
         }
     }
 
+    private boolean podeAcessarCliente(Cliente cliente) {
+        if (cliente == null || cliente.getUnidade() == null) {
+            return false;
+        }
+        return obterUnidadesIdsPermitidas().contains(cliente.getUnidade().getId());
+    }
+
+    private Set<Long> obterUnidadesIdsPermitidas() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return Set.of();
+        }
+        Usuario usuarioLogado = usuarioRepository.findByEmail(auth.getName())
+                .orElse(null);
+        if (usuarioLogado == null) {
+            return Set.of();
+        }
+        switch (usuarioLogado.getPerfil()) {
+            case ADMIN:
+                return unidadeRepository.findAll().stream().map(Unidade::getId).collect(Collectors.toSet());
+            case GERENTE:
+                if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
+                    return Set.of();
+                }
+                Set<Long> empresaIds = usuarioLogado.getUnidades().stream()
+                        .map(u -> {
+                            if (u.getEmpresa() == null) {
+                                Unidade uc = unidadeRepository.findById(u.getId()).orElse(null);
+                                return uc != null && uc.getEmpresa() != null ? uc.getEmpresa().getId() : null;
+                            }
+                            return u.getEmpresa().getId();
+                        })
+                        .filter(id -> id != null)
+                        .collect(Collectors.toSet());
+                if (empresaIds.isEmpty()) {
+                    return Set.of();
+                }
+                return unidadeRepository.findAll().stream()
+                        .filter(u -> u.getEmpresa() != null && empresaIds.contains(u.getEmpresa().getId()))
+                        .map(Unidade::getId)
+                        .collect(Collectors.toSet());
+            case PROFISSIONAL:
+                if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
+                    return Set.of();
+                }
+                return usuarioLogado.getUnidades().stream().map(Unidade::getId).collect(Collectors.toSet());
+            default:
+                return Set.of();
+        }
+    }
+
     @Transactional(readOnly = true)
-    @Cacheable(value = "clientes", key = "#id")
     public ClienteDTO buscarPorId(Long id) {
         log.debug("Buscando cliente com id: {}", id);
         Cliente cliente = clienteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado com id: " + id));
+        if (!podeAcessarCliente(cliente)) {
+            throw new ResourceNotFoundException("Cliente não encontrado com id: " + id);
+        }
         return toDTO(cliente);
     }
 
@@ -167,6 +218,9 @@ public class ClienteService {
         log.debug("Buscando cliente com CPF/CNPJ: {}", cpfCnpj);
         Cliente cliente = clienteRepository.findByCpfCnpj(cpfCnpj)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado com CPF/CNPJ: " + cpfCnpj));
+        if (!podeAcessarCliente(cliente)) {
+            throw new ResourceNotFoundException("Cliente não encontrado com CPF/CNPJ: " + cpfCnpj);
+        }
         return clienteMapper.toDTO(cliente);
     }
 
@@ -249,8 +303,10 @@ public class ClienteService {
         
         Cliente cliente = clienteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado com id: " + id));
+        if (!podeAcessarCliente(cliente)) {
+            throw new ResourceNotFoundException("Cliente não encontrado com id: " + id);
+        }
         
-        // Verifica se o CPF/CNPJ está sendo alterado e se já existe outro cliente com ele
         if (!cliente.getCpfCnpj().equals(clienteDTO.getCpfCnpj()) 
                 && clienteRepository.existsByCpfCnpj(clienteDTO.getCpfCnpj())) {
             throw new BusinessException("Já existe outro cliente cadastrado com este CPF/CNPJ");
@@ -290,11 +346,11 @@ public class ClienteService {
     @CacheEvict(value = "clientes", allEntries = true)
     public void excluir(Long id) {
         log.debug("Excluindo cliente com id: {}", id);
-        
-        if (!clienteRepository.existsById(id)) {
+        Cliente cliente = clienteRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado com id: " + id));
+        if (!podeAcessarCliente(cliente)) {
             throw new ResourceNotFoundException("Cliente não encontrado com id: " + id);
         }
-        
         clienteRepository.deleteById(id);
         log.info("Cliente excluído com sucesso. ID: {}", id);
     }

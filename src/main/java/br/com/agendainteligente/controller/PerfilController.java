@@ -49,6 +49,13 @@ public class PerfilController {
         return ResponseEntity.ok(perfilService.buscarPorId(id));
     }
 
+    @GetMapping("/meu")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Buscar perfil do usuário logado (para permissões)")
+    public ResponseEntity<PerfilDTO> buscarMeuPerfil() {
+        return ResponseEntity.ok(perfilService.buscarPerfilDoUsuarioLogado());
+    }
+
     @GetMapping("/nome/{nome}")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Buscar perfil por nome")
