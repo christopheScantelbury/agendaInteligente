@@ -1,8 +1,6 @@
 package br.com.agendainteligente.dto;
 
 import br.com.agendainteligente.domain.enums.StatusAgendamento;
-import br.com.agendainteligente.validation.FutureOrPresent;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,7 +28,6 @@ public class AgendamentoDTO {
     private Long atendenteId;
     
     @NotNull(message = "Data/hora de início é obrigatória")
-    @FutureOrPresent(message = "Data/hora deve ser atual ou futura")
     private LocalDateTime dataHoraInicio;
     
     private LocalDateTime dataHoraFim;

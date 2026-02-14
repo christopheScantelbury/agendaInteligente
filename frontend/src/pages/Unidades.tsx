@@ -12,6 +12,7 @@ import FilterBar from '../components/FilterBar'
 import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { maskPhone, maskCEP, maskNumber } from '../utils/masks'
+import { matchSearch } from '../utils/normalize'
 
 export default function Unidades() {
   const { showNotification } = useNotification()
@@ -32,19 +33,16 @@ export default function Unidades() {
     queryFn: empresaService.listarTodos,
   })
 
-  // Filtrar unidades
   const unidadesFiltradas = useMemo(() => {
     let filtered = [...unidades]
 
-    // Filtro de busca
     if (searchTerm) {
-      const term = searchTerm.toLowerCase()
       filtered = filtered.filter(
         (u) =>
-          u.nome.toLowerCase().includes(term) ||
-          u.descricao?.toLowerCase().includes(term) ||
-          u.cidade?.toLowerCase().includes(term) ||
-          u.telefone?.includes(term)
+          matchSearch(u.nome, searchTerm) ||
+          matchSearch(u.descricao ?? '', searchTerm) ||
+          matchSearch(u.cidade ?? '', searchTerm) ||
+          (u.telefone && u.telefone.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, '')))
       )
     }
 
@@ -471,9 +469,10 @@ function AtendentesSection({ unidadeId }: { unidadeId: number }) {
         </h3>
         <Link
           to="/usuarios"
+          state={{ unidadeId }}
           className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
         >
-          Gerenciar Usuários <ExternalLink className="h-3 w-3 ml-1" />
+          Adicionar usuário <ExternalLink className="h-3 w-3 ml-1" />
         </Link>
       </div>
 
@@ -482,9 +481,9 @@ function AtendentesSection({ unidadeId }: { unidadeId: number }) {
       ) : atendentes.length === 0 ? (
         <div className="bg-gray-50 rounded-lg p-4 text-center">
           <p className="text-sm text-gray-500 mb-2">Nenhum atendente vinculado a esta unidade.</p>
-          <Link to="/usuarios">
+          <Link to="/usuarios" state={{ unidadeId }}>
             <Button variant="secondary" size="sm">
-              Adicionar Usuário
+              Adicionar usuário
             </Button>
           </Link>
         </div>

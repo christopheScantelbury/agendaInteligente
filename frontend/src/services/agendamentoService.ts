@@ -60,6 +60,11 @@ export const agendamentoService = {
     return response.data
   },
 
+  atualizar: async (id: number, agendamento: Agendamento): Promise<Agendamento> => {
+    const response = await api.put<Agendamento>(`/agendamentos/${id}`, agendamento)
+    return response.data
+  },
+
   cancelar: async (id: number): Promise<void> => {
     await api.post(`/agendamentos/${id}/cancelar`)
   },

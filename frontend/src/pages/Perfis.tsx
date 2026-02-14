@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { perfilService, Perfil } from '../services/perfilService'
+import { authService } from '../services/authService'
 import { Plus, Trash2, Edit, Shield, Lock, Eye, Pencil, X } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import Modal from '../components/Modal'
@@ -7,6 +8,7 @@ import Button from '../components/Button'
 import FormField from '../components/FormField'
 import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { podeEditar } from '../utils/permissions'
 
 type TipoPermissao = 'EDITAR' | 'VISUALIZAR' | 'SEM_ACESSO'
 
@@ -28,6 +30,14 @@ export default function Perfis() {
   const [editingPerfil, setEditingPerfil] = useState<Perfil | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null })
   const queryClient = useQueryClient()
+  const usuario = authService.getUsuario()
+
+  const { data: perfilUsuario } = useQuery({
+    queryKey: ['perfil', 'meu'],
+    queryFn: () => perfilService.buscarMeuPerfil(),
+    enabled: !!usuario,
+  })
+  const podeEditarPerfis = podeEditar(perfilUsuario, '/perfis')
 
   const { data: perfis = [], isLoading } = useQuery({
     queryKey: ['perfis'],
@@ -65,15 +75,17 @@ export default function Perfis() {
     <div className="w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Perfis e Permissões</h1>
-        <Button
-          onClick={() => {
-            setEditingPerfil(null)
-            setShowModal(true)
-          }}
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Novo Perfil
-        </Button>
+        {podeEditarPerfis && (
+          <Button
+            onClick={() => {
+              setEditingPerfil(null)
+              setShowModal(true)
+            }}
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Novo Perfil
+          </Button>
+        )}
       </div>
 
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
@@ -113,27 +125,29 @@ export default function Perfis() {
                     )}
                   </div>
                 </div>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => {
-                          setEditingPerfil(perfil)
-                          setShowModal(true)
-                        }}
-                        className="text-blue-600 hover:text-blue-800 transition-colors"
-                        aria-label="Editar perfil"
-                      >
-                        <Edit className="h-5 w-5" />
-                      </button>
-                      {!perfil.sistema && (
+                    {podeEditarPerfis && (
+                      <div className="flex space-x-2">
                         <button
-                          onClick={() => handleDelete(perfil.id!)}
-                          className="text-red-600 hover:text-red-800 transition-colors"
-                          aria-label="Excluir perfil"
+                          onClick={() => {
+                            setEditingPerfil(perfil)
+                            setShowModal(true)
+                          }}
+                          className="text-blue-600 hover:text-blue-800 transition-colors"
+                          aria-label="Editar perfil"
                         >
-                          <Trash2 className="h-5 w-5" />
+                          <Edit className="h-5 w-5" />
                         </button>
-                      )}
-                    </div>
+                        {!perfil.sistema && (
+                          <button
+                            onClick={() => handleDelete(perfil.id!)}
+                            className="text-red-600 hover:text-red-800 transition-colors"
+                            aria-label="Excluir perfil"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </button>
+                        )}
+                      </div>
+                    )}
               </div>
             </li>
           ))}

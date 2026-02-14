@@ -73,9 +73,9 @@ export default function TimelineView({ agendamentos, selectedDate, onEventClick,
   }
 
   return (
-    <div className="flex flex-col bg-white rounded-lg shadow-sm overflow-hidden">
+    <div className="flex flex-col bg-white rounded-lg shadow-sm overflow-hidden min-w-0">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3 sm:px-6 sm:py-4">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3 sm:px-6 sm:py-4 shrink-0">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-white font-semibold text-sm sm:text-base">
@@ -89,10 +89,10 @@ export default function TimelineView({ agendamentos, selectedDate, onEventClick,
       </div>
 
       {/* Timeline */}
-      <div className="flex-1 overflow-y-auto max-h-[600px] sm:max-h-[700px]">
-        <div className="relative">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden max-h-[600px] sm:max-h-[700px] min-h-0">
+        <div className="relative min-w-0">
           {/* Linha do tempo */}
-          <div className="absolute left-12 sm:left-16 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+          <div className="absolute left-12 sm:left-16 top-0 bottom-0 w-0.5 bg-gray-200 pointer-events-none"></div>
 
           {HOURS.map((hour) => {
             const agendamentosNestaHora = agendamentosPorHora.get(hour) || []
@@ -101,13 +101,13 @@ export default function TimelineView({ agendamentos, selectedDate, onEventClick,
             const hora12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
 
             return (
-              <div key={hour} className="relative">
+              <div key={hour} className="relative min-w-0">
                 {/* Marcador de hora */}
-                <div className="flex items-start px-4 sm:px-6 py-3 sm:py-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center min-w-[3rem] sm:min-w-[4rem]">
+                <div className="flex items-start px-3 sm:px-6 py-3 sm:py-4 hover:bg-gray-50 transition-colors gap-2 sm:gap-0 min-w-0">
+                  <div className="flex items-center min-w-[2.5rem] sm:min-w-[4rem] shrink-0">
                     <div className="relative z-10 flex items-center">
                       <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-blue-500 border-2 border-white shadow-sm"></div>
-                      <div className="ml-2 sm:ml-3">
+                      <div className="ml-1.5 sm:ml-3">
                         <span className="text-xs sm:text-sm font-semibold text-gray-900">
                           {horaFormatada}
                         </span>
@@ -119,7 +119,7 @@ export default function TimelineView({ agendamentos, selectedDate, onEventClick,
                   </div>
 
                   {/* Área de eventos */}
-                  <div className="flex-1 ml-4 sm:ml-6">
+                  <div className="flex-1 min-w-0 overflow-hidden ml-2 sm:ml-6">
                     {agendamentosNestaHora.length === 0 ? (
                       <button
                         onClick={() => handleSlotClick(hour)}
@@ -146,43 +146,43 @@ export default function TimelineView({ agendamentos, selectedDate, onEventClick,
                             <button
                               key={agendamento.id}
                               onClick={() => onEventClick?.(agendamento)}
-                              className={`w-full text-left p-3 sm:p-4 rounded-lg border-l-4 ${getStatusBorderColor(agendamento.status)} bg-white shadow-sm hover:shadow-md transition-all transform hover:scale-[1.02] group`}
+                              className={`w-full min-w-0 text-left p-3 sm:p-4 rounded-lg border-l-4 ${getStatusBorderColor(agendamento.status)} bg-white shadow-sm hover:shadow-md transition-all group`}
                             >
-                              <div className="flex items-start justify-between mb-2">
-                                <div className="flex-1">
-                                  <h4 className="font-semibold text-gray-900 text-sm sm:text-base mb-1 group-hover:text-blue-600 transition-colors">
+                              <div className="flex items-start justify-between gap-2 mb-2 min-w-0">
+                                <div className="flex-1 min-w-0 overflow-hidden">
+                                  <h4 className="font-semibold text-gray-900 text-sm sm:text-base mb-1 group-hover:text-blue-600 transition-colors truncate">
                                     {agendamento.cliente?.nome || 'Cliente não informado'}
                                   </h4>
-                                  <p className="text-xs sm:text-sm text-gray-600 line-clamp-1">
+                                  <p className="text-xs sm:text-sm text-gray-600 line-clamp-1 truncate">
                                     {servicosNomes}
                                   </p>
                                 </div>
-                                <span className={`ml-2 px-2 py-1 rounded-full text-xs font-semibold text-white ${getStatusColor(agendamento.status)}`}>
+                                <span className={`shrink-0 px-2 py-1 rounded-full text-xs font-semibold text-white ${getStatusColor(agendamento.status)}`}>
                                   {agendamento.status === 'CONFIRMADO' ? 'Confirmado' :
                                    agendamento.status === 'CANCELADO' ? 'Cancelado' :
                                    agendamento.status === 'FINALIZADO' ? 'Finalizado' : 'Pendente'}
                                 </span>
                               </div>
 
-                              <div className="flex flex-wrap gap-3 sm:gap-4 mt-3 text-xs sm:text-sm text-gray-500">
-                                <div className="flex items-center">
-                                  <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 text-gray-400" />
+                              <div className="flex flex-wrap gap-x-3 gap-y-1 sm:gap-4 mt-3 text-xs sm:text-sm text-gray-500 min-w-0">
+                                <div className="flex items-center shrink-0">
+                                  <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 text-gray-400 shrink-0" />
                                   <span>
                                     {format(inicio, 'HH:mm')} - {format(fim, 'HH:mm')}
                                   </span>
                                 </div>
                                 {agendamento.atendente?.nome && (
-                                  <div className="flex items-center">
-                                    <User className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 text-gray-400" />
-                                    <span className="truncate max-w-[120px] sm:max-w-none">
+                                  <div className="flex items-center min-w-0 max-w-full">
+                                    <User className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 text-gray-400 shrink-0" />
+                                    <span className="truncate max-w-[80px] sm:max-w-[120px]">
                                       {agendamento.atendente.nome}
                                     </span>
                                   </div>
                                 )}
                                 {agendamento.unidade?.nome && (
-                                  <div className="flex items-center">
-                                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 text-gray-400" />
-                                    <span className="truncate max-w-[120px] sm:max-w-none">
+                                  <div className="flex items-center min-w-0 max-w-full">
+                                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 text-gray-400 shrink-0" />
+                                    <span className="truncate max-w-[80px] sm:max-w-[120px]">
                                       {agendamento.unidade.nome}
                                     </span>
                                   </div>

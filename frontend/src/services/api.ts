@@ -1,4 +1,5 @@
 import axios, { AxiosError } from 'axios'
+import { getApiErrorMessage } from '../utils/apiError'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api',
@@ -15,22 +16,20 @@ const generateTransactionId = (): string => {
 
 // Interceptor para adicionar token e transaction ID
 api.interceptors.request.use((config) => {
-  // Adiciona Transaction ID para rastreamento
   const transactionId = generateTransactionId()
   config.headers['X-Transaction-ID'] = transactionId
-  
-  // Prioriza token de cliente, depois token de usuário
+
   const clienteToken = localStorage.getItem('clienteToken')
   const usuarioToken = localStorage.getItem('token')
   const token = clienteToken || usuarioToken
-  
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
 })
 
-// Interceptor para tratar erros de autenticação
+// Interceptor para tratar erros de autenticação e log consistente
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
@@ -39,17 +38,17 @@ api.interceptors.response.use(
       localStorage.removeItem('usuario')
       window.location.href = '/login'
     }
-    
-    // Log de erros para debug (apenas em desenvolvimento)
+
     if (import.meta.env.DEV) {
+      const msg = getApiErrorMessage(error)
       console.error('API Error:', {
         url: error.config?.url,
         method: error.config?.method,
         status: error.response?.status,
-        data: error.response?.data,
+        message: msg,
       })
     }
-    
+
     return Promise.reject(error)
   }
 )

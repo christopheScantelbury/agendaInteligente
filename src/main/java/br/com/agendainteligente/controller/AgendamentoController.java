@@ -23,25 +23,33 @@ public class AgendamentoController {
     private final AgendamentoService agendamentoService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'PROFISSIONAL')")
-    @Operation(summary = "Listar agendamentos (filtrado por permissão)")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'PROFISSIONAL', 'CLIENTE')")
+    @Operation(summary = "Listar agendamentos (filtrado por permissão; CLIENTE vê só os próprios)")
     public ResponseEntity<List<AgendamentoDTO>> listarTodos() {
         return ResponseEntity.ok(agendamentoService.listarTodos());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'PROFISSIONAL')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'PROFISSIONAL', 'CLIENTE')")
     @Operation(summary = "Buscar agendamento por ID")
     public ResponseEntity<AgendamentoDTO> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(agendamentoService.buscarPorId(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'PROFISSIONAL')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'PROFISSIONAL', 'CLIENTE')")
     @Operation(summary = "Criar novo agendamento")
     public ResponseEntity<AgendamentoDTO> criar(@Valid @RequestBody AgendamentoDTO agendamentoDTO) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(agendamentoService.criar(agendamentoDTO));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'PROFISSIONAL', 'CLIENTE')")
+    @Operation(summary = "Atualizar agendamento")
+    public ResponseEntity<AgendamentoDTO> atualizar(@PathVariable Long id,
+                                                    @Valid @RequestBody AgendamentoDTO agendamentoDTO) {
+        return ResponseEntity.ok(agendamentoService.atualizar(id, agendamentoDTO));
     }
 
     @PatchMapping("/{id}/status")
@@ -53,7 +61,7 @@ public class AgendamentoController {
     }
 
     @PostMapping("/{id}/cancelar")
-    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'PROFISSIONAL')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'PROFISSIONAL', 'CLIENTE')")
     @Operation(summary = "Cancelar agendamento")
     public ResponseEntity<Void> cancelar(@PathVariable Long id) {
         agendamentoService.cancelar(id);

@@ -27,6 +27,15 @@ export const clienteService = {
     return response.data
   },
 
+  buscarMeuPerfil: async (): Promise<Cliente | null> => {
+    try {
+      const response = await api.get<Cliente>('/clientes/meu-perfil')
+      return response.status === 200 && response.data ? response.data : null
+    } catch {
+      return null
+    }
+  },
+
   buscarPorId: async (id: number): Promise<Cliente> => {
     const response = await api.get<Cliente>(`/clientes/${id}`)
     return response.data

@@ -1,10 +1,11 @@
 import { useMutation, useQueryClient, UseMutationOptions } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import { useCallback } from 'react'
+import { getApiErrorMessage } from '../utils/apiError'
 
 interface ErrorResponse {
   message?: string
-  errors?: Record<string, string>
+  errors?: Record<string, string | string[]>
 }
 
 export function useMutationWithError<TData, TVariables>(
@@ -27,25 +28,19 @@ export function useMutationWithError<TData, TVariables>(
         })
       }
       if (options?.successMessage) {
-        // Aqui você pode integrar com um sistema de notificações
         console.log(options.successMessage)
       }
       options?.onSuccess?.(data, variables)
     },
     onError: (error: AxiosError<ErrorResponse>, variables) => {
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        'Ocorreu um erro inesperado'
-      
+      const errorMessage = getApiErrorMessage(error)
       console.error('Erro na mutação:', errorMessage)
       options?.onError?.(error, variables)
     },
   } as UseMutationOptions<TData, AxiosError<ErrorResponse>, TVariables>)
 
   const getErrorMessage = useCallback((error: AxiosError<ErrorResponse> | null): string => {
-    if (!error) return ''
-    return error.response?.data?.message || error.message || 'Ocorreu um erro inesperado'
+    return error ? getApiErrorMessage(error) : ''
   }, [])
 
   return {

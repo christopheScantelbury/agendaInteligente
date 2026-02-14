@@ -105,8 +105,8 @@ export default function Layout({ children }: LayoutProps) {
   const navItems: NavItem[] = useMemo(() => {
     const items: NavItem[] = []
     
-    // Início - sempre disponível
-    if (temPermissaoMenu('/')) {
+    // Início (Dashboard) - desabilitado para CLIENTE (ele vai direto para Agendamentos)
+    if (!authService.isPerfilCliente() && temPermissaoMenu('/')) {
       items.push({ path: '/', label: 'Início', icon: <HomeIcon className="h-5 w-5" /> })
     }
     
@@ -130,13 +130,13 @@ export default function Layout({ children }: LayoutProps) {
       items.push({ path: '/usuarios', label: 'Usuários', icon: <Settings className="h-5 w-5" /> })
     }
     
-    // Perfis - apenas para ADMIN e se tiver permissão
-    if (usuario?.perfil === 'ADMIN' && temPermissaoMenu('/perfis')) {
+    // Perfis - exibir para quem tiver permissão granular (ADMIN ou GERENTE com permissão)
+    if (temPermissaoMenu('/perfis')) {
       items.push({ path: '/perfis', label: 'Perfis', icon: <Shield className="h-5 w-5" /> })
     }
     
-    // Agendamentos
-    if (temPermissaoMenu('/agendamentos')) {
+    // Agendamentos (CLIENTE sempre vê; outros perfis conforme permissão granular)
+    if (authService.isPerfilCliente() || temPermissaoMenu('/agendamentos')) {
       items.push({
         path: '/agendamentos',
         label: 'Agendamentos',
@@ -180,7 +180,7 @@ export default function Layout({ children }: LayoutProps) {
       >
         {/* Logo Header */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100">
-          <Link to="/" className="flex items-center space-x-2 overflow-hidden">
+          <Link to={authService.isPerfilCliente() ? '/agendamentos' : '/'} className="flex items-center space-x-2 overflow-hidden">
             <Calendar className="h-8 w-8 text-blue-600 flex-shrink-0" />
             <span className="font-bold text-xl text-gray-900">
               Agenda
@@ -274,7 +274,7 @@ export default function Layout({ children }: LayoutProps) {
           )}
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden min-w-0">
           {children}
         </main>
       </div>

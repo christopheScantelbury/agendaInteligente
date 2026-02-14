@@ -11,6 +11,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import FilterBar from '../components/FilterBar'
 import RecorrenciaConfig, { RecorrenciaConfig as RecorrenciaConfigType } from '../components/RecorrenciaConfig'
 import { maskCPF, maskCNPJ, maskPhone, maskEmail } from '../utils/masks'
+import { matchSearch } from '../utils/normalize'
 import { authService } from '../services/authService'
 import { perfilService } from '../services/perfilService'
 import { podeEditar } from '../utils/permissions'
@@ -38,19 +39,16 @@ export default function Clientes() {
     queryFn: clienteService.listar,
   })
 
-  // Filtrar clientes
   const clientesFiltrados = useMemo(() => {
     let filtered = [...clientes]
 
-    // Filtro de busca
     if (searchTerm) {
-      const term = searchTerm.toLowerCase()
       filtered = filtered.filter(
         (c) =>
-          c.nome.toLowerCase().includes(term) ||
-          c.cpfCnpj.includes(term) ||
-          c.email?.toLowerCase().includes(term) ||
-          c.telefone?.includes(term)
+          matchSearch(c.nome, searchTerm) ||
+          c.cpfCnpj.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, '')) ||
+          matchSearch(c.email ?? '', searchTerm) ||
+          (c.telefone && c.telefone.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, '')))
       )
     }
 

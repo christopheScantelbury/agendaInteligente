@@ -22,14 +22,14 @@ public class PerfilController {
     private final PerfilService perfilService;
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE')")
     @Operation(summary = "Listar todos os perfis")
     public ResponseEntity<List<PerfilDTO>> listarTodas() {
         return ResponseEntity.ok(perfilService.listarTodos());
     }
 
     @GetMapping("/ativos")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE')")
     @Operation(summary = "Listar apenas perfis ativos")
     public ResponseEntity<List<PerfilDTO>> listarAtivos() {
         return ResponseEntity.ok(perfilService.listarAtivos());
@@ -64,7 +64,7 @@ public class PerfilController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE')")
     @Operation(summary = "Criar novo perfil customizado")
     public ResponseEntity<PerfilDTO> criar(@Valid @RequestBody PerfilDTO perfilDTO) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -72,7 +72,7 @@ public class PerfilController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE')")
     @Operation(summary = "Atualizar perfil customizado")
     public ResponseEntity<PerfilDTO> atualizar(@PathVariable Long id,
                                                 @Valid @RequestBody PerfilDTO perfilDTO) {
@@ -80,7 +80,7 @@ public class PerfilController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE')")
     @Operation(summary = "Excluir perfil customizado")
     public ResponseEntity<Void> excluir(@PathVariable Long id) {
         perfilService.excluir(id);

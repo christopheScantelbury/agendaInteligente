@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useApiQuery, getApiErrorMessage } from '../hooks/useApiQuery'
 import { agendamentoService, Agendamento } from '../services/agendamentoService'
 import { clienteService, Cliente } from '../services/clienteService'
 import { servicoService, Servico } from '../services/servicoService'
@@ -13,13 +14,14 @@ import CalendarMonth from '../components/CalendarMonth'
 import { SlotInfo, View } from 'react-big-calendar'
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, Clock, Calendar, User, Building2, Search, X, CalendarDays, List } from 'lucide-react'
+import { Plus, Clock, Calendar, User, Building2, Search, X, CalendarDays, List, Pencil } from 'lucide-react'
 import Modal from '../components/Modal'
 import FormField from '../components/FormField'
 import Button from '../components/Button'
 import RecorrenciaConfig, { RecorrenciaConfig as RecorrenciaConfigType } from '../components/RecorrenciaConfig'
 import { format, parseISO, addDays, startOfDay, isBefore, isAfter } from 'date-fns'
 import { useNotification } from '../contexts/NotificationContext'
+import { matchSearch } from '../utils/normalize'
 
 interface CalendarEvent {
   id?: number
@@ -30,13 +32,6 @@ interface CalendarEvent {
   status?: string
 }
 
-interface HorarioDisponivel {
-  id?: number
-  atendenteId: number
-  atendenteNome?: string
-  dataHoraInicio: string
-  dataHoraFim: string
-}
 
 export default function Agendamentos() {
   const queryClient = useQueryClient()
@@ -59,16 +54,22 @@ export default function Agendamentos() {
     servicos: [],
   })
   const [servicosSelecionados, setServicosSelecionados] = useState<number[]>([])
-  const [horariosDisponiveis, setHorariosDisponiveis] = useState<HorarioDisponivel[]>([])
-  const [carregandoHorarios, setCarregandoHorarios] = useState(false)
   const [buscaCliente, setBuscaCliente] = useState('')
   const [buscaServico, setBuscaServico] = useState('')
   const [mostrarModalCliente, setMostrarModalCliente] = useState(false)
   const [mostrarModalServico, setMostrarModalServico] = useState(false)
   const [agendamentoDetalhes, setAgendamentoDetalhes] = useState<Agendamento | null>(null)
+  const [editingAgendamento, setEditingAgendamento] = useState<Agendamento | null>(null)
+  const [editFormData, setEditFormData] = useState<Partial<Agendamento>>({})
+  const [editServicosSelecionados, setEditServicosSelecionados] = useState<number[]>([])
   const [recorrenciaConfig, setRecorrenciaConfig] = useState<RecorrenciaConfigType>({
     recorrente: false,
   })
+
+  const usuario = authService.getUsuario()
+  const perfil = usuario?.perfil ?? ''
+  const perfilNorm = perfil.toUpperCase()
+  const isCliente = perfilNorm === 'CLIENTE'
 
   // Verifica se há parâmetro de data na URL (vindo da Home)
   useEffect(() => {
@@ -107,6 +108,7 @@ export default function Agendamentos() {
   const { data: clientes = [] } = useQuery({
     queryKey: ['clientes'],
     queryFn: clienteService.listar,
+    enabled: !isCliente,
   })
 
   const { data: servicos = [] } = useQuery({
@@ -114,28 +116,26 @@ export default function Agendamentos() {
     queryFn: servicoService.listar,
   })
 
-  const clientesFiltrados = useMemo(() => {
-    if (!buscaCliente) return clientes
-    const buscaLower = buscaCliente.toLowerCase()
-    return clientes.filter(c => 
-      c.nome.toLowerCase().includes(buscaLower) || 
-      c.cpfCnpj.includes(buscaCliente)
-    )
-  }, [clientes, buscaCliente])
-
   const servicosFiltrados = useMemo(() => {
-    if (!buscaServico) return servicos.filter(s => s.ativo)
-    const buscaLower = buscaServico.toLowerCase()
-    return servicos.filter(s => 
-      s.ativo && (
-        s.nome.toLowerCase().includes(buscaLower) ||
-        s.descricao?.toLowerCase().includes(buscaLower)
-      )
+    if (!buscaServico.trim()) return servicos.filter((s) => s.ativo)
+    return servicos.filter(
+      (s) =>
+        s.ativo &&
+        (matchSearch(s.nome ?? '', buscaServico) ||
+          matchSearch(s.descricao ?? '', buscaServico))
     )
   }, [servicos, buscaServico])
 
-  const usuario = authService.getUsuario()
-  const perfil = usuario?.perfil
+  const { data: meuPerfilCliente } = useQuery({
+    queryKey: ['cliente-meu-perfil'],
+    queryFn: clienteService.buscarMeuPerfil,
+    enabled: isCliente,
+  })
+
+  const clientesParaSelecao = useMemo(() => {
+    if (isCliente && meuPerfilCliente) return [meuPerfilCliente]
+    return clientes
+  }, [isCliente, meuPerfilCliente, clientes])
 
   // Buscar usuário completo para obter suas unidades (se não for admin)
   const { data: usuarioCompleto } = useQuery({
@@ -144,12 +144,20 @@ export default function Agendamentos() {
       if (!usuario?.usuarioId) return Promise.resolve(null)
       return usuarioService.buscarPorId(usuario.usuarioId)
     },
-    enabled: !!usuario?.usuarioId && perfil !== 'ADMIN',
+    enabled: !!usuario?.usuarioId && perfilNorm !== 'ADMIN',
   })
 
-  // Filtrar unidades baseado no perfil
-  // O backend já filtra corretamente, então podemos usar todas as unidades retornadas
-  const { data: todasUnidades = [] } = useQuery({
+  const clientesFiltrados = useMemo(() => {
+    if (!buscaCliente.trim()) return clientesParaSelecao
+    return clientesParaSelecao.filter(
+      (c) =>
+        matchSearch(c.nome, buscaCliente) ||
+        (c.cpfCnpj && c.cpfCnpj.replace(/\D/g, '').includes(buscaCliente.replace(/\D/g, '')))
+    )
+  }, [clientesParaSelecao, buscaCliente])
+
+  // Filtrar unidades baseado no perfil (backend filtra por perfil; retry limitado para evitar 5xx em loop)
+  const { data: todasUnidades = [] } = useApiQuery({
     queryKey: ['unidades'],
     queryFn: unidadeService.listarTodos,
   })
@@ -157,24 +165,32 @@ export default function Agendamentos() {
   const unidadesFiltradas = useMemo(() => {
     // O backend já filtra por empresa/unidade, então podemos usar todas as unidades retornadas
     // Mas mantemos o filtro no frontend como segurança adicional
-    if (perfil === 'ADMIN') {
+    if (perfilNorm === 'ADMIN') {
       return todasUnidades
     }
     // Para GERENTE, usar todas as unidades retornadas pelo backend (já filtradas por empresa)
-    if (perfil === 'GERENTE') {
+    if (perfilNorm === 'GERENTE') {
       // O backend já retorna apenas unidades da mesma empresa
       return todasUnidades
     }
     // Para PROFISSIONAL/ATENDENTE, usar unidadesIds do usuário completo
-    if ((perfil === 'PROFISSIONAL' || perfil === 'ATENDENTE') && usuarioCompleto?.unidadesIds && usuarioCompleto.unidadesIds.length > 0) {
+    if ((perfilNorm === 'PROFISSIONAL' || perfilNorm === 'ATENDENTE') && usuarioCompleto?.unidadesIds && usuarioCompleto.unidadesIds.length > 0) {
       return todasUnidades.filter(u => usuarioCompleto.unidadesIds?.includes(u.id!))
     }
     // Fallback: usar unidadeId se existir
-    if ((perfil === 'PROFISSIONAL' || perfil === 'ATENDENTE') && usuario?.unidadeId) {
+    if ((perfilNorm === 'PROFISSIONAL' || perfilNorm === 'ATENDENTE') && usuario?.unidadeId) {
       return todasUnidades.filter(u => u.id === usuario.unidadeId)
     }
+    // CLIENTE: apenas unidades do seu perfil (unidade principal ou adicionais)
+    if (isCliente && meuPerfilCliente?.unidadesIds?.length) {
+      return todasUnidades.filter(u => meuPerfilCliente.unidadesIds!.includes(u.id!))
+    }
+    if (isCliente && meuPerfilCliente?.unidades?.length) {
+      const ids = meuPerfilCliente.unidades.map(u => u.id!).filter(Boolean)
+      return todasUnidades.filter(u => ids.includes(u.id!))
+    }
     return todasUnidades
-  }, [todasUnidades, perfil, usuarioCompleto?.unidadesIds, usuario?.unidadeId])
+  }, [todasUnidades, perfilNorm, isCliente, usuarioCompleto?.unidadesIds, usuario?.unidadeId, meuPerfilCliente])
 
   // Filtrar atendentes baseado na unidade, serviços selecionados e perfil
   const { data: todosAtendentes = [], refetch: refetchAtendentes } = useQuery({
@@ -190,15 +206,15 @@ export default function Agendamentos() {
   })
 
   const atendentesFiltrados = useMemo(() => {
-    if (perfil === 'ADMIN' || perfil === 'GERENTE') {
+    if (perfilNorm === 'ADMIN' || perfilNorm === 'GERENTE') {
       return todosAtendentes
     }
-    if ((perfil === 'PROFISSIONAL' || perfil === 'ATENDENTE') && usuario?.usuarioId) {
+    if ((perfilNorm === 'PROFISSIONAL' || perfilNorm === 'ATENDENTE') && usuario?.usuarioId) {
       // PROFISSIONAL só pode criar agendamentos para si mesmo
       return todosAtendentes.filter(a => a.usuarioId === usuario.usuarioId)
     }
     return todosAtendentes
-  }, [todosAtendentes, perfil, usuario?.usuarioId])
+  }, [todosAtendentes, perfilNorm, usuario?.usuarioId])
 
   // Auto-selecionar unidade e atendente para PROFISSIONAL
   useEffect(() => {
@@ -208,7 +224,7 @@ export default function Agendamentos() {
         unidadeId: prev.unidadeId || usuario.unidadeId
       }))
     }
-  }, [perfil, usuario?.unidadeId, unidadesFiltradas])
+  }, [perfilNorm, usuario?.unidadeId, unidadesFiltradas])
 
   useEffect(() => {
     if ((perfil === 'PROFISSIONAL' || perfil === 'ATENDENTE') && atendentesFiltrados.length > 0) {
@@ -220,49 +236,109 @@ export default function Agendamentos() {
         }))
       }
     }
-  }, [perfil, atendentesFiltrados, usuario?.usuarioId])
+  }, [perfilNorm, atendentesFiltrados, usuario?.usuarioId])
 
-  // Buscar horários disponíveis quando unidade, serviços e data estiverem selecionados
+  // CLIENTE: pre-selecionar o próprio cliente ao abrir o modal de novo agendamento
   useEffect(() => {
-    const buscarHorarios = async () => {
-      if (!formData.unidadeId || servicosSelecionados.length === 0 || !formData.dataHoraInicio) {
-        setHorariosDisponiveis([])
-        return
-      }
-
-      setCarregandoHorarios(true)
-      try {
-        const dataSelecionada = parseISO(formData.dataHoraInicio)
-        const dataInicio = format(startOfDay(dataSelecionada), 'yyyy-MM-dd')
-        const dataFim = format(addDays(startOfDay(dataSelecionada), 1), 'yyyy-MM-dd')
-
-        // Buscar horários para o primeiro serviço (podemos melhorar isso depois para múltiplos serviços)
-        const servicoId = servicosSelecionados[0]
-        const horarios = await horarioDisponivelService.buscarHorariosDisponiveis(
-          formData.unidadeId!,
-          servicoId,
-          dataInicio,
-          dataFim
-        )
-
-        // Filtrar apenas horários que não estão no passado e estão disponíveis
-        const agora = new Date()
-        const horariosValidos = horarios.filter(horario => {
-          const inicio = parseISO(horario.dataHoraInicio)
-          return isAfter(inicio, agora) && horario.disponivel !== false
-        })
-
-        setHorariosDisponiveis(horariosValidos)
-      } catch (error: any) {
-        console.error('Erro ao buscar horários:', error)
-        setHorariosDisponiveis([])
-      } finally {
-        setCarregandoHorarios(false)
-      }
+    if (isCliente && criarModal && meuPerfilCliente?.id) {
+      setFormData(prev => ({
+        ...prev,
+        clienteId: prev.clienteId || meuPerfilCliente.id
+      }))
     }
+  }, [isCliente, criarModal, meuPerfilCliente])
 
-    buscarHorarios()
-  }, [formData.unidadeId, servicosSelecionados, formData.dataHoraInicio])
+  const { data: horariosDisponiveis = [], isLoading: carregandoHorariosQuery } = useQuery({
+    queryKey: [
+      'horariosDisponiveis',
+      formData.unidadeId,
+      servicosSelecionados,
+      formData.dataHoraInicio,
+    ],
+    queryFn: async () => {
+      if (!formData.unidadeId || servicosSelecionados.length === 0 || !formData.dataHoraInicio) {
+        return []
+      }
+      const dataSelecionada = parseISO(formData.dataHoraInicio)
+      const dataInicio = format(startOfDay(dataSelecionada), 'yyyy-MM-dd')
+      const dataFim = format(addDays(startOfDay(dataSelecionada), 1), 'yyyy-MM-dd')
+      const servicoId = servicosSelecionados[0]
+      const horarios = await horarioDisponivelService.buscarHorariosDisponiveis(
+        formData.unidadeId!,
+        servicoId,
+        dataInicio,
+        dataFim
+      )
+      const agora = new Date()
+      return horarios.filter((horario) => {
+        const inicio = parseISO(horario.dataHoraInicio)
+        return isAfter(inicio, agora) && horario.disponivel !== false
+      })
+    },
+    enabled: !!formData.unidadeId && servicosSelecionados.length > 0 && !!formData.dataHoraInicio,
+  })
+
+  const carregandoHorarios = carregandoHorariosQuery
+
+  useEffect(() => {
+    if (editingAgendamento) {
+      const clienteId = editingAgendamento.clienteId ?? editingAgendamento.cliente?.id
+      const unidadeId = editingAgendamento.unidadeId ?? editingAgendamento.unidade?.id
+      const atendenteId = editingAgendamento.atendenteId ?? editingAgendamento.atendente?.id
+      const servicosIds = editingAgendamento.servicos?.map((s) => s.servicoId) ?? []
+      setEditFormData({
+        clienteId,
+        unidadeId,
+        atendenteId,
+        dataHoraInicio: editingAgendamento.dataHoraInicio?.includes('T')
+          ? editingAgendamento.dataHoraInicio.slice(0, 16)
+          : editingAgendamento.dataHoraInicio,
+        observacoes: editingAgendamento.observacoes ?? '',
+      })
+      setEditServicosSelecionados(servicosIds)
+    }
+  }, [editingAgendamento])
+
+  const { data: editHorariosDisponiveis = [] } = useQuery({
+    queryKey: [
+      'horariosDisponiveis',
+      'edit',
+      editFormData.unidadeId,
+      editServicosSelecionados,
+      editFormData.dataHoraInicio,
+    ],
+    queryFn: async () => {
+      if (!editFormData.unidadeId || editServicosSelecionados.length === 0 || !editFormData.dataHoraInicio) return []
+      const dataSelecionada = parseISO(editFormData.dataHoraInicio)
+      const dataInicio = format(startOfDay(dataSelecionada), 'yyyy-MM-dd')
+      const dataFim = format(addDays(startOfDay(dataSelecionada), 1), 'yyyy-MM-dd')
+      const horarios = await horarioDisponivelService.buscarHorariosDisponiveis(
+        editFormData.unidadeId,
+        editServicosSelecionados[0],
+        dataInicio,
+        dataFim
+      )
+      const agora = new Date()
+      return horarios.filter((h) => isAfter(parseISO(h.dataHoraInicio), agora) && h.disponivel !== false)
+    },
+    enabled: !!editingAgendamento && !!editFormData.unidadeId && editServicosSelecionados.length > 0 && !!editFormData.dataHoraInicio,
+  })
+
+  const { data: editAtendentes = [] } = useQuery({
+    queryKey: ['atendentes', editFormData.unidadeId, editServicosSelecionados],
+    queryFn: () => {
+      if (!editFormData.unidadeId) return Promise.resolve([])
+      if (editServicosSelecionados.length === 0) return atendenteService.listarPorUnidade(editFormData.unidadeId)
+      return atendenteService.listarPorUnidadeEServicos(editFormData.unidadeId, editServicosSelecionados)
+    },
+    enabled: !!editingAgendamento && !!editFormData.unidadeId,
+  })
+
+  const editAtendentesComHorarios = useMemo(() => {
+    if (editHorariosDisponiveis.length === 0) return editAtendentes
+    const ids = new Set(editHorariosDisponiveis.map((h) => h.atendenteId))
+    return editAtendentes.filter((a) => ids.has(a.id!))
+  }, [editAtendentes, editHorariosDisponiveis])
 
   // Filtrar atendentes que têm horários disponíveis
   const atendentesComHorarios = useMemo(() => {
@@ -276,12 +352,12 @@ export default function Agendamentos() {
     mutationFn: (id: number) => agendamentoService.cancelar(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agendamentos'] })
+      queryClient.invalidateQueries({ queryKey: ['horariosDisponiveis'] })
       setAgendamentoDetalhes(null)
       showNotification('success', 'Agendamento cancelado com sucesso!')
     },
-    onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || 'Erro ao cancelar agendamento'
-      showNotification('error', errorMessage)
+    onError: (error: unknown) => {
+      showNotification('error', getApiErrorMessage(error, 'Erro ao cancelar agendamento'))
     },
   })
 
@@ -294,9 +370,8 @@ export default function Agendamentos() {
       setAgendamentoDetalhes(null)
       showNotification('success', 'Agendamento finalizado! A nota fiscal será emitida automaticamente.')
     },
-    onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || 'Erro ao finalizar agendamento'
-      showNotification('error', errorMessage)
+    onError: (error: unknown) => {
+      showNotification('error', getApiErrorMessage(error, 'Erro ao finalizar agendamento'))
     },
   })
 
@@ -304,6 +379,7 @@ export default function Agendamentos() {
     mutationFn: agendamentoService.criar,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agendamentos'] })
+      queryClient.invalidateQueries({ queryKey: ['horariosDisponiveis'] })
       setCriarModal(null)
       setFormData({
         clienteId: undefined,
@@ -314,16 +390,27 @@ export default function Agendamentos() {
         servicos: [],
       })
       setServicosSelecionados([])
-      setHorariosDisponiveis([])
       showNotification('success', 'Agendamento criado com sucesso!')
     },
-    onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.errors?.dataHoraInicio ||
-                          error.response?.data?.errors?.dataHoraInicio?.[0] ||
-                          'Erro ao criar agendamento. Verifique os dados e tente novamente.'
-      showNotification('error', errorMessage)
-      console.error('Erro ao criar agendamento:', error)
+    onError: (error: unknown) => {
+      const msg = getApiErrorMessage(error, 'Erro ao criar agendamento. Verifique os dados e tente novamente.')
+      showNotification('error', msg)
+      if (import.meta.env.DEV) console.error('Erro ao criar agendamento:', error)
+    },
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Agendamento }) =>
+      agendamentoService.atualizar(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agendamentos'] })
+      queryClient.invalidateQueries({ queryKey: ['horariosDisponiveis'] })
+      setEditingAgendamento(null)
+      setAgendamentoDetalhes(null)
+      showNotification('success', 'Agendamento atualizado com sucesso!')
+    },
+    onError: (error: unknown) => {
+      showNotification('error', getApiErrorMessage(error, 'Erro ao atualizar agendamento'))
     },
   })
 
@@ -345,7 +432,6 @@ export default function Agendamentos() {
         servicos: [],
       })
       setServicosSelecionados([])
-      setHorariosDisponiveis([])
       setRecorrenciaConfig({ recorrente: false })
   }
 
@@ -487,13 +573,32 @@ export default function Agendamentos() {
 
   const handleUnidadeChange = (unidadeId: number) => {
     setFormData({ ...formData, unidadeId, atendenteId: undefined })
-    setHorariosDisponiveis([])
     refetchAtendentes()
+  }
+
+  const handleSalvarEdicao = () => {
+    if (!editingAgendamento?.id || !editFormData.clienteId || !editFormData.unidadeId || !editFormData.atendenteId || !editFormData.dataHoraInicio || editServicosSelecionados.length === 0) {
+      showNotification('error', 'Preencha todos os campos obrigatórios')
+      return
+    }
+    const dataHora = editFormData.dataHoraInicio.includes('T') ? editFormData.dataHoraInicio : `${editFormData.dataHoraInicio}:00`
+    const servicosPayload = editServicosSelecionados.map((servicoId) => {
+      const s = servicos.find((sv) => sv.id === servicoId)
+      return { servicoId, quantidade: 1, valor: s?.valor ?? 0, descricao: s?.nome }
+    })
+    const payload: Agendamento = {
+      clienteId: editFormData.clienteId,
+      unidadeId: editFormData.unidadeId,
+      atendenteId: editFormData.atendenteId,
+      dataHoraInicio: dataHora,
+      observacoes: editFormData.observacoes,
+      servicos: servicosPayload,
+    }
+    updateMutation.mutate({ id: editingAgendamento.id, data: payload })
   }
 
   const handleDataHoraChange = (dataHora: string) => {
     setFormData({ ...formData, dataHoraInicio: dataHora, atendenteId: undefined })
-    setHorariosDisponiveis([])
   }
 
   // Validar se a data selecionada não está no passado
@@ -504,8 +609,8 @@ export default function Agendamentos() {
   }
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden px-2 sm:px-0">
-      <div className="w-full max-w-full overflow-x-hidden px-2 sm:px-0">
+    <div className="w-full min-w-0 max-w-full overflow-x-hidden px-2 sm:px-0">
+      <div className="w-full min-w-0 max-w-full overflow-x-hidden px-2 sm:px-0">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 sm:mb-6">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Agendamentos</h1>
@@ -540,17 +645,16 @@ export default function Agendamentos() {
                 const agora = new Date()
                 const umaHoraDepois = new Date(agora.getTime() + 3600000)
                 setCriarModal({ start: agora, end: umaHoraDepois })
-                setFormData({
-                  clienteId: undefined,
-                  unidadeId: undefined,
-                  atendenteId: undefined,
-                  dataHoraInicio: format(agora, "yyyy-MM-dd'T'HH:mm"),
-                  observacoes: '',
-                  servicos: [],
-                })
-                setServicosSelecionados([])
-                setHorariosDisponiveis([])
-              }}
+            setFormData({
+              clienteId: undefined,
+              unidadeId: undefined,
+              atendenteId: undefined,
+              dataHoraInicio: format(agora, "yyyy-MM-dd'T'HH:mm"),
+              observacoes: '',
+              servicos: [],
+            })
+            setServicosSelecionados([])
+          }}
               variant="primary"
               className="flex items-center flex-1 sm:flex-initial"
             >
@@ -562,9 +666,9 @@ export default function Agendamentos() {
 
         {/* View Mode: Timeline */}
         {viewMode === 'timeline' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6 min-w-0">
             {/* Calendário Mensal */}
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 min-w-0">
               <CalendarMonth
                 selectedDate={selectedDate}
                 onDateSelect={(date) => {
@@ -576,7 +680,7 @@ export default function Agendamentos() {
             </div>
 
             {/* Timeline */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 min-w-0 overflow-hidden">
               <TimelineView
                 agendamentos={agendamentos}
                 selectedDate={selectedDate}
@@ -593,7 +697,6 @@ export default function Agendamentos() {
                     servicos: [],
                   })
                   setServicosSelecionados([])
-                  setHorariosDisponiveis([])
                 }}
               />
             </div>
@@ -603,7 +706,7 @@ export default function Agendamentos() {
         {/* View Mode: Calendar (Original) */}
         {viewMode === 'calendar' && (
           <>
-            <div className="mb-4 sm:mb-6">
+            <div className="mb-4 sm:mb-6 min-w-0 overflow-hidden">
               <CalendarView
                 agendamentos={agendamentos}
                 onSelectSlot={handleSelectSlot}
@@ -620,20 +723,20 @@ export default function Agendamentos() {
             </div>
 
             {/* Legenda */}
-            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 mb-4 sm:mb-6">
+            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 mb-4 sm:mb-6 min-w-0">
               <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 sm:mb-3">Legenda:</h3>
-              <div className="flex flex-wrap gap-3 sm:gap-4">
-                <div className="flex items-center">
-                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-blue-500 rounded mr-2"></div>
-                  <span className="text-xs sm:text-sm text-gray-600">Agendado</span>
+              <div className="flex flex-wrap gap-x-4 gap-y-2 sm:gap-4">
+                <div className="flex items-center shrink-0">
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-blue-500 rounded mr-2 flex-shrink-0"></div>
+                  <span className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">Agendado</span>
                 </div>
-                <div className="flex items-center">
-                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded mr-2"></div>
-                  <span className="text-xs sm:text-sm text-gray-600">Concluído</span>
+                <div className="flex items-center shrink-0">
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded mr-2 flex-shrink-0"></div>
+                  <span className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">Concluído</span>
                 </div>
-                <div className="flex items-center">
-                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-red-500 rounded mr-2"></div>
-                  <span className="text-xs sm:text-sm text-gray-600">Cancelado</span>
+                <div className="flex items-center shrink-0">
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-red-500 rounded mr-2 flex-shrink-0"></div>
+                  <span className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">Cancelado</span>
                 </div>
               </div>
             </div>
@@ -656,7 +759,6 @@ export default function Agendamentos() {
               servicos: [],
             })
             setServicosSelecionados([])
-            setHorariosDisponiveis([])
             setRecorrenciaConfig({ recorrente: false })
           }}
           title="Novo Agendamento"
@@ -712,7 +814,7 @@ export default function Agendamentos() {
                     </option>
                   ))}
                 </select>
-                {clientesFiltrados.length === 0 && buscaCliente && (
+                {clientesFiltrados.length === 0 && buscaCliente && perfil !== 'CLIENTE' && (
                   <div className="flex items-center justify-between p-2 bg-yellow-50 border border-yellow-200 rounded-md">
                     <span className="text-sm text-yellow-800">Cliente não encontrado</span>
                     <Button
@@ -912,7 +1014,6 @@ export default function Agendamentos() {
                     servicos: [],
                   })
                   setServicosSelecionados([])
-                  setHorariosDisponiveis([])
                   setRecorrenciaConfig({ recorrente: false })
                 }}
               >
@@ -995,23 +1096,36 @@ export default function Agendamentos() {
             )}
             <div className="flex justify-between items-center pt-4 border-t">
               <div className="flex gap-2">
-                {perfil === 'ADMIN' || perfil === 'GERENTE' || perfil === 'PROFISSIONAL' ? (
+                {(perfilNorm === 'ADMIN' || perfilNorm === 'GERENTE' || perfilNorm === 'PROFISSIONAL' || perfilNorm === 'ATENDENTE' || isCliente) && (
                   <>
-                    {agendamentoDetalhes.status !== 'CANCELADO' && agendamentoDetalhes.status !== 'FINALIZADO' && (
-                      <Button
-                        variant="danger"
-                        onClick={() => {
-                          if (window.confirm('Tem certeza que deseja cancelar este agendamento?')) {
-                            cancelarMutation.mutate(agendamentoDetalhes.id!)
-                          }
-                        }}
-                        disabled={cancelarMutation.isPending}
-                        isLoading={cancelarMutation.isPending}
-                      >
-                        Cancelar
-                      </Button>
+                    {agendamentoDetalhes.status !== 'CANCELADO' && agendamentoDetalhes.status !== 'FINALIZADO' && agendamentoDetalhes.status !== 'CONCLUIDO' && (
+                      <>
+                        <Button
+                          variant="secondary"
+                          onClick={() => {
+                            setEditingAgendamento(agendamentoDetalhes)
+                            setAgendamentoDetalhes(null)
+                          }}
+                          className="flex items-center gap-1"
+                        >
+                          <Pencil className="h-4 w-4" />
+                          Editar
+                        </Button>
+                        <Button
+                          variant="danger"
+                          onClick={() => {
+                            if (window.confirm('Tem certeza que deseja cancelar este agendamento?')) {
+                              cancelarMutation.mutate(agendamentoDetalhes.id!)
+                            }
+                          }}
+                          disabled={cancelarMutation.isPending}
+                          isLoading={cancelarMutation.isPending}
+                        >
+                          Cancelar
+                        </Button>
+                      </>
                     )}
-                    {agendamentoDetalhes.status !== 'FINALIZADO' && agendamentoDetalhes.status !== 'CANCELADO' && (
+                    {!isCliente && agendamentoDetalhes.status !== 'CONCLUIDO' && agendamentoDetalhes.status !== 'CANCELADO' && (
                       <Button
                         variant="success"
                         onClick={() => {
@@ -1023,10 +1137,120 @@ export default function Agendamentos() {
                       </Button>
                     )}
                   </>
-                ) : null}
+                )}
               </div>
               <Button variant="secondary" onClick={() => setAgendamentoDetalhes(null)}>
                 Fechar
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal Editar Agendamento */}
+      {editingAgendamento && (
+        <Modal
+          isOpen={true}
+          onClose={() => setEditingAgendamento(null)}
+          title="Editar Agendamento"
+          size="lg"
+        >
+          <div className="space-y-4">
+            <FormField label="Cliente" required>
+              {isCliente ? (
+                <p className="text-gray-700 py-2">
+                  {editingAgendamento?.cliente?.nome ?? clientesParaSelecao.find(c => c.id === editFormData.clienteId)?.nome ?? 'Você'}
+                </p>
+              ) : (
+                <select
+                  value={editFormData.clienteId ?? ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, clienteId: parseInt(e.target.value) })}
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                >
+                  <option value="">Selecione</option>
+                  {clientes.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nome} - {c.cpfCnpj}</option>
+                  ))}
+                </select>
+              )}
+            </FormField>
+            <FormField label="Unidade" required>
+              <select
+                value={editFormData.unidadeId ?? ''}
+                onChange={(e) => {
+                  const id = parseInt(e.target.value)
+                  setEditFormData({ ...editFormData, unidadeId: id, atendenteId: undefined })
+                }}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              >
+                <option value="">Selecione</option>
+                {unidadesFiltradas.map((u) => (
+                  <option key={u.id} value={u.id}>{u.nome}</option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label="Serviços" required>
+              <div className="max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3 space-y-2 bg-gray-50">
+                {servicos.filter((s) => s.ativo).map((servico) => (
+                  <label key={servico.id} className="flex items-center space-x-3 cursor-pointer hover:bg-white p-2 rounded">
+                    <input
+                      type="checkbox"
+                      checked={editServicosSelecionados.includes(servico.id!)}
+                      onChange={() => {
+                        setEditServicosSelecionados((prev) =>
+                          prev.includes(servico.id!)
+                            ? prev.filter((id) => id !== servico.id)
+                            : [...prev, servico.id!]
+                        )
+                      }}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm">{servico.nome} - R$ {servico.valor?.toFixed(2)}</span>
+                  </label>
+                ))}
+              </div>
+            </FormField>
+            <FormField label="Data e Hora" required>
+              <input
+                type="datetime-local"
+                value={editFormData.dataHoraInicio ?? ''}
+                onChange={(e) => setEditFormData({ ...editFormData, dataHoraInicio: e.target.value })}
+                min={format(new Date(), "yyyy-MM-dd'T'HH:mm")}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
+            </FormField>
+            <FormField label="Atendente" required>
+              <select
+                value={editFormData.atendenteId ?? ''}
+                onChange={(e) => setEditFormData({ ...editFormData, atendenteId: parseInt(e.target.value) })}
+                disabled={editAtendentesComHorarios.length === 0}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              >
+                <option value="">Selecione</option>
+                {editAtendentesComHorarios.map((a) => (
+                  <option key={a.id} value={a.id}>{a.nomeUsuario}</option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label="Observações">
+              <textarea
+                value={editFormData.observacoes ?? ''}
+                onChange={(e) => setEditFormData({ ...editFormData, observacoes: e.target.value })}
+                rows={2}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
+            </FormField>
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button variant="secondary" onClick={() => setEditingAgendamento(null)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleSalvarEdicao}
+                disabled={updateMutation.isPending || editAtendentesComHorarios.length === 0}
+                isLoading={updateMutation.isPending}
+              >
+                Salvar
               </Button>
             </div>
           </div>
