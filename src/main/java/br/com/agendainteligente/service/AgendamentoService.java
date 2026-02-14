@@ -97,48 +97,16 @@ public class AgendamentoService {
                 return agendamentoRepository.findAll();
                 
             case GERENTE:
-                log.debug("GERENTE: listando agendamentos das unidades do gerente");
+                log.debug("GERENTE: listando agendamentos apenas das unidades vinculadas ao gerente");
                 if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
                     log.warn("Gerente {} não tem unidades vinculadas", email);
                     return new ArrayList<>();
                 }
-                
-                // Obter IDs das empresas das unidades do gerente
-                Set<Long> empresaIds = usuario.getUnidades().stream()
-                        .map(u -> {
-                            if (u.getEmpresa() == null) {
-                                Unidade unidadeCompleta = unidadeRepository.findById(u.getId())
-                                        .orElse(null);
-                                if (unidadeCompleta != null && unidadeCompleta.getEmpresa() != null) {
-                                    return unidadeCompleta.getEmpresa().getId();
-                                }
-                                return null;
-                            }
-                            return u.getEmpresa().getId();
-                        })
-                        .filter(id -> id != null)
-                        .collect(Collectors.toSet());
-                
-                if (empresaIds.isEmpty()) {
-                    log.warn("Gerente {} não tem empresas vinculadas", email);
-                    return new ArrayList<>();
-                }
-                
-                // Obter IDs de todas as unidades das mesmas empresas
-                List<Unidade> todasUnidades = unidadeRepository.findAll();
-                List<Long> unidadesIds = todasUnidades.stream()
-                        .filter(u -> {
-                            if (u.getEmpresa() == null) {
-                                return false;
-                            }
-                            return empresaIds.contains(u.getEmpresa().getId());
-                        })
+                Set<Long> unidadesGerenteIds = usuario.getUnidades().stream()
                         .map(Unidade::getId)
-                        .collect(Collectors.toList());
-                
-                // Retornar agendamentos de todas as unidades da mesma empresa
+                        .collect(Collectors.toSet());
                 return agendamentoRepository.findAll().stream()
-                        .filter(a -> unidadesIds.contains(a.getUnidade().getId()))
+                        .filter(a -> a.getUnidade() != null && unidadesGerenteIds.contains(a.getUnidade().getId()))
                         .collect(Collectors.toList());
                 
             case PROFISSIONAL:
@@ -148,8 +116,12 @@ public class AgendamentoService {
                 return agendamentoRepository.findByAtendenteId(atendente.getId());
                 
             case CLIENTE:
+                log.debug("CLIENTE: listando apenas agendamentos do próprio cliente");
+                return clienteRepository.findByEmail(email)
+                        .map(c -> agendamentoRepository.findByClienteId(c.getId()))
+                        .orElse(new ArrayList<>());
             default:
-                log.debug("CLIENTE ou perfil desconhecido: retornando lista vazia (deve usar endpoint público)");
+                log.debug("Perfil desconhecido: retornando lista vazia");
                 return new ArrayList<>();
         }
     }
@@ -181,7 +153,7 @@ public class AgendamentoService {
         return dto;
     }
     
-    private void validarPermissaoCriarAgendamento(Long unidadeId, Long atendenteId) {
+    private void validarPermissaoCriarAgendamento(Long clienteId, Long unidadeId, Long atendenteId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) {
             throw new BusinessException("Usuário não autenticado");
@@ -195,36 +167,16 @@ public class AgendamentoService {
         
         switch (perfil) {
             case ADMIN:
-                // ADMIN pode criar agendamentos em qualquer unidade/atendente
                 return;
                 
             case GERENTE:
                 if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
                     throw new BusinessException("Gerente não está vinculado a uma unidade");
                 }
-                
-                // Obter IDs das empresas das unidades do gerente
-                Set<Long> empresaIds = usuario.getUnidades().stream()
-                        .map(u -> {
-                            if (u.getEmpresa() == null) {
-                                Unidade unidadeCompleta = unidadeRepository.findById(u.getId())
-                                        .orElse(null);
-                                if (unidadeCompleta != null && unidadeCompleta.getEmpresa() != null) {
-                                    return unidadeCompleta.getEmpresa().getId();
-                                }
-                                return null;
-                            }
-                            return u.getEmpresa().getId();
-                        })
-                        .filter(id -> id != null)
+                Set<Long> unidadesGerenteIdsCriar = usuario.getUnidades().stream()
+                        .map(Unidade::getId)
                         .collect(Collectors.toSet());
-                
-                // Verificar se a unidade do agendamento pertence a uma das empresas do gerente
-                Unidade unidadeAgendamento = unidadeRepository.findById(unidadeId)
-                        .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada"));
-                
-                if (unidadeAgendamento.getEmpresa() == null || 
-                    !empresaIds.contains(unidadeAgendamento.getEmpresa().getId())) {
+                if (!unidadesGerenteIdsCriar.contains(unidadeId)) {
                     throw new BusinessException("Você não tem permissão para criar agendamentos nesta unidade");
                 }
                 return;
@@ -241,6 +193,15 @@ public class AgendamentoService {
                 return;
                 
             case CLIENTE:
+                Cliente meuCliente = clienteRepository.findByEmail(email)
+                        .orElseThrow(() -> new BusinessException("Cliente não encontrado para seu usuário"));
+                if (!meuCliente.getId().equals(clienteId)) {
+                    throw new BusinessException("Você só pode criar agendamentos para si mesmo");
+                }
+                if (meuCliente.getUnidade() == null || !meuCliente.getUnidade().getId().equals(unidadeId)) {
+                    throw new BusinessException("Você não tem permissão para agendar nesta unidade");
+                }
+                return;
             default:
                 throw new BusinessException("Você não tem permissão para criar agendamentos");
         }
@@ -262,28 +223,23 @@ public class AgendamentoService {
                 if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
                     return Set.of();
                 }
-                Set<Long> empresaIds = usuario.getUnidades().stream()
-                        .map(u -> {
-                            if (u.getEmpresa() == null) {
-                                Unidade uc = unidadeRepository.findById(u.getId()).orElse(null);
-                                return uc != null && uc.getEmpresa() != null ? uc.getEmpresa().getId() : null;
-                            }
-                            return u.getEmpresa().getId();
-                        })
-                        .filter(id -> id != null)
-                        .collect(Collectors.toSet());
-                if (empresaIds.isEmpty()) {
-                    return Set.of();
-                }
-                return unidadeRepository.findAll().stream()
-                        .filter(u -> u.getEmpresa() != null && empresaIds.contains(u.getEmpresa().getId()))
-                        .map(Unidade::getId)
-                        .collect(Collectors.toSet());
+                return usuario.getUnidades().stream().map(Unidade::getId).collect(Collectors.toSet());
             case PROFISSIONAL:
                 if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
                     return Set.of();
                 }
                 return usuario.getUnidades().stream().map(Unidade::getId).collect(Collectors.toSet());
+            case CLIENTE:
+                return clienteRepository.findByEmail(auth.getName())
+                        .map(c -> {
+                            Set<Long> ids = new java.util.HashSet<>();
+                            if (c.getUnidade() != null) ids.add(c.getUnidade().getId());
+                            if (c.getUnidades() != null) {
+                                c.getUnidades().stream().map(Unidade::getId).forEach(ids::add);
+                            }
+                            return ids;
+                        })
+                        .orElse(Set.of());
             default:
                 return Set.of();
         }
@@ -310,26 +266,10 @@ public class AgendamentoService {
                 if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
                     throw new BusinessException("Gerente não está vinculado a uma unidade");
                 }
-                
-                // Obter IDs das empresas das unidades do gerente
-                Set<Long> empresaIds = usuario.getUnidades().stream()
-                        .map(u -> {
-                            if (u.getEmpresa() == null) {
-                                Unidade unidadeCompleta = unidadeRepository.findById(u.getId())
-                                        .orElse(null);
-                                if (unidadeCompleta != null && unidadeCompleta.getEmpresa() != null) {
-                                    return unidadeCompleta.getEmpresa().getId();
-                                }
-                                return null;
-                            }
-                            return u.getEmpresa().getId();
-                        })
-                        .filter(id -> id != null)
+                Set<Long> unidadesGerenteIds = usuario.getUnidades().stream()
+                        .map(Unidade::getId)
                         .collect(Collectors.toSet());
-                
-                // Verificar se a unidade do agendamento pertence a uma das empresas do gerente
-                if (agendamento.getUnidade() == null || agendamento.getUnidade().getEmpresa() == null ||
-                    !empresaIds.contains(agendamento.getUnidade().getEmpresa().getId())) {
+                if (agendamento.getUnidade() == null || !unidadesGerenteIds.contains(agendamento.getUnidade().getId())) {
                     throw new BusinessException("Você não tem permissão para visualizar este agendamento");
                 }
                 return;
@@ -343,6 +283,12 @@ public class AgendamentoService {
                 return;
                 
             case CLIENTE:
+                Cliente clienteVisualizar = clienteRepository.findByEmail(email)
+                        .orElseThrow(() -> new BusinessException("Cliente não encontrado para seu usuário"));
+                if (agendamento.getCliente() == null || !agendamento.getCliente().getId().equals(clienteVisualizar.getId())) {
+                    throw new BusinessException("Você não tem permissão para visualizar este agendamento");
+                }
+                return;
             default:
                 throw new BusinessException("Você não tem permissão para visualizar este agendamento");
         }
@@ -366,7 +312,7 @@ public class AgendamentoService {
         Atendente atendente = atendenteRepository.findById(agendamentoDTO.getAtendenteId())
                 .orElseThrow(() -> new ResourceNotFoundException("Atendente não encontrado"));
         
-        validarPermissaoCriarAgendamento(unidade.getId(), atendente.getId());
+        validarPermissaoCriarAgendamento(cliente.getId(), unidade.getId(), atendente.getId());
         Set<Long> unidadesPermitidas = obterUnidadesIdsPermitidas();
         if (cliente.getUnidade() == null || !unidadesPermitidas.contains(cliente.getUnidade().getId())) {
             throw new BusinessException("Cliente não pertence a uma unidade que você pode acessar");
@@ -506,6 +452,135 @@ public class AgendamentoService {
                 agendamento.getId(), agendamentoServicos.size(), valorTotal);
         
         return agendamentoMapper.toDTO(agendamento);
+    }
+
+    @Transactional
+    public AgendamentoDTO atualizar(Long id, AgendamentoDTO agendamentoDTO) {
+        log.debug("Atualizando agendamento: {}", id);
+
+        Agendamento agendamento = agendamentoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Agendamento não encontrado"));
+        validarPermissaoVisualizarAgendamento(agendamento);
+
+        if (agendamento.getStatus() == StatusAgendamento.CANCELADO) {
+            throw new BusinessException("Não é possível editar um agendamento cancelado");
+        }
+        if (agendamento.getStatus() == StatusAgendamento.CONCLUIDO) {
+            throw new BusinessException("Não é possível editar um agendamento concluído");
+        }
+
+        if (agendamentoDTO.getServicos() == null || agendamentoDTO.getServicos().isEmpty()) {
+            throw new BusinessException("É necessário informar pelo menos um serviço");
+        }
+
+        Cliente cliente = clienteRepository.findById(agendamentoDTO.getClienteId())
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado"));
+        Unidade unidade = unidadeRepository.findById(agendamentoDTO.getUnidadeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada"));
+        Atendente atendente = atendenteRepository.findById(agendamentoDTO.getAtendenteId())
+                .orElseThrow(() -> new ResourceNotFoundException("Atendente não encontrado"));
+        validarPermissaoCriarAgendamento(cliente.getId(), unidade.getId(), atendente.getId());
+
+        Set<Long> unidadesPermitidas = obterUnidadesIdsPermitidas();
+        if (cliente.getUnidade() == null || !unidadesPermitidas.contains(cliente.getUnidade().getId())) {
+            throw new BusinessException("Cliente não pertence a uma unidade que você pode acessar");
+        }
+        if (!unidade.getAtivo()) {
+            throw new BusinessException("Unidade não está ativa");
+        }
+        if (!atendente.getAtivo()) {
+            throw new BusinessException("Atendente não está ativo");
+        }
+
+        List<Long> servicosIds = agendamentoDTO.getServicos().stream()
+                .map(AgendamentoServicoDTO::getServicoId)
+                .collect(Collectors.toList());
+        List<Servico> servicos = servicoRepository.findAllById(servicosIds);
+        if (servicos.size() != servicosIds.size()) {
+            throw new ResourceNotFoundException("Um ou mais serviços não foram encontrados");
+        }
+        for (Servico s : servicos) {
+            if (s.getUnidade() == null || !unidadesPermitidas.contains(s.getUnidade().getId())) {
+                throw new BusinessException("Um ou mais serviços não pertencem a unidades que você pode acessar");
+            }
+        }
+        List<Long> servicosDoAtendente = atendente.getServicos().stream()
+                .map(Servico::getId)
+                .collect(Collectors.toList());
+        for (Long servicoId : servicosIds) {
+            if (!servicosDoAtendente.contains(servicoId)) {
+                throw new BusinessException("Atendente não está habilitado para prestar um dos serviços selecionados");
+            }
+        }
+
+        int duracaoTotal = servicos.stream()
+                .mapToInt(Servico::getDuracaoMinutos)
+                .max()
+                .orElse(30);
+        BigDecimal valorTotal = BigDecimal.ZERO;
+        for (AgendamentoServicoDTO servicoDTO : agendamentoDTO.getServicos()) {
+            Servico servico = servicos.stream()
+                    .filter(s -> s.getId().equals(servicoDTO.getServicoId()))
+                    .findFirst()
+                    .orElseThrow();
+            if (!servico.getAtivo()) {
+                throw new BusinessException("Serviço " + servico.getNome() + " não está ativo");
+            }
+            BigDecimal valor = servicoDTO.getValor() != null ? servicoDTO.getValor() : servico.getValor();
+            Integer quantidade = servicoDTO.getQuantidade() != null ? servicoDTO.getQuantidade() : 1;
+            valorTotal = valorTotal.add(valor.multiply(BigDecimal.valueOf(quantidade)));
+        }
+
+        LocalDateTime dataHoraInicio = agendamentoDTO.getDataHoraInicio();
+        if (dataHoraInicio.isBefore(LocalDateTime.now())) {
+            throw new BusinessException("Data/hora de início deve ser atual ou futura");
+        }
+        LocalDateTime dataHoraFim = dataHoraInicio.plusMinutes(duracaoTotal);
+
+        if (agendamentoRepository.findConflitoHorarioExcluindoId(atendente.getId(), dataHoraInicio, dataHoraFim, id).isPresent()) {
+            throw new BusinessException("Já existe um agendamento neste horário para este atendente");
+        }
+
+        agendamento.setCliente(cliente);
+        agendamento.setUnidade(unidade);
+        agendamento.setAtendente(atendente);
+        agendamento.setDataHoraInicio(dataHoraInicio);
+        agendamento.setDataHoraFim(dataHoraFim);
+        agendamento.setValorTotal(valorTotal);
+        agendamento.setObservacoes(agendamentoDTO.getObservacoes());
+
+        agendamentoServicoRepository.deleteByAgendamentoId(agendamento.getId());
+        List<AgendamentoServico> agendamentoServicos = new ArrayList<>();
+        for (AgendamentoServicoDTO servicoDTO : agendamentoDTO.getServicos()) {
+            Servico servico = servicos.stream()
+                    .filter(s -> s.getId().equals(servicoDTO.getServicoId()))
+                    .findFirst()
+                    .orElseThrow();
+            BigDecimal valor = servicoDTO.getValor() != null ? servicoDTO.getValor() : servico.getValor();
+            Integer quantidade = servicoDTO.getQuantidade() != null ? servicoDTO.getQuantidade() : 1;
+            BigDecimal valorItem = valor.multiply(BigDecimal.valueOf(quantidade));
+            AgendamentoServico agendamentoServico = AgendamentoServico.builder()
+                    .agendamento(agendamento)
+                    .servico(servico)
+                    .valor(valor)
+                    .descricao(servicoDTO.getDescricao() != null ? servicoDTO.getDescricao() : servico.getDescricao())
+                    .quantidade(quantidade)
+                    .valorTotal(valorItem)
+                    .build();
+            agendamentoServicos.add(agendamentoServico);
+        }
+        agendamentoServicoRepository.saveAll(agendamentoServicos);
+        agendamento.setServicos(agendamentoServicos);
+        agendamento = agendamentoRepository.save(agendamento);
+
+        log.info("Agendamento atualizado. ID: {}", id);
+        AgendamentoDTO dto = agendamentoMapper.toDTO(agendamento);
+        if (agendamento.getServicos() != null && !agendamento.getServicos().isEmpty()) {
+            dto.setServicos(agendamento.getServicos().stream()
+                    .map(agendamentoServicoMapper::toDTO)
+                    .collect(Collectors.toList()));
+        }
+        return dto;
     }
 
     @Transactional

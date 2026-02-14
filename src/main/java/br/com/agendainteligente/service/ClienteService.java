@@ -10,6 +10,7 @@ import br.com.agendainteligente.exception.ResourceNotFoundException;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.mapper.ClienteMapper;
 import br.com.agendainteligente.mapper.UnidadeMapper;
+import br.com.agendainteligente.repository.AtendenteRepository;
 import br.com.agendainteligente.repository.ClienteRepository;
 import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.repository.UsuarioRepository;
@@ -37,6 +38,7 @@ public class ClienteService {
     private final UnidadeMapper unidadeMapper;
     private final UsuarioRepository usuarioRepository;
     private final UnidadeRepository unidadeRepository;
+    private final AtendenteRepository atendenteRepository;
     private final PasswordEncoder passwordEncoder;
     
     private static final Pattern ONLY_DIGITS = Pattern.compile("\\D");
@@ -48,6 +50,24 @@ public class ClienteService {
         return clientes.stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Retorna o cliente associado ao usuário logado (por email).
+     * Usado quando o perfil é CLIENTE, para pre-selecionar o próprio cliente na tela de agendamentos.
+     */
+    @Transactional(readOnly = true)
+    public java.util.Optional<ClienteDTO> buscarMeuPerfil() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return java.util.Optional.empty();
+        }
+        Usuario usuario = usuarioRepository.findByEmail(auth.getName()).orElse(null);
+        if (usuario == null || usuario.getPerfil() != Usuario.PerfilUsuario.CLIENTE) {
+            return java.util.Optional.empty();
+        }
+        return clienteRepository.findByEmail(usuario.getEmail())
+                .map(this::toDTO);
     }
 
     /**
@@ -76,70 +96,37 @@ public class ClienteService {
                 return clienteRepository.findAll();
 
             case GERENTE:
-                log.debug("GERENTE: listando clientes das unidades da mesma empresa");
+                log.debug("GERENTE: listando clientes apenas das unidades vinculadas ao gerente");
                 if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
                     log.warn("Gerente {} não tem unidades vinculadas", email);
                     return List.of();
                 }
-                
-                // Obter IDs das empresas das unidades do gerente
-                Set<Long> empresaIds = usuarioLogado.getUnidades().stream()
-                        .map(u -> {
-                            // Forçar carregamento da empresa
-                            if (u.getEmpresa() == null) {
-                                Unidade unidadeCompleta = unidadeRepository.findById(u.getId())
-                                        .orElse(null);
-                                if (unidadeCompleta != null && unidadeCompleta.getEmpresa() != null) {
-                                    return unidadeCompleta.getEmpresa().getId();
-                                }
-                                return null;
-                            }
-                            return u.getEmpresa().getId();
-                        })
-                        .filter(id -> id != null)
-                        .collect(Collectors.toSet());
-                
-                if (empresaIds.isEmpty()) {
-                    log.warn("Gerente {} não tem empresas vinculadas", email);
-                    return List.of();
-                }
-                
-                log.debug("Gerente {} tem acesso às empresas: {}", email, empresaIds);
-                
-                // Obter IDs de todas as unidades das mesmas empresas
-                List<Unidade> todasUnidades = unidadeRepository.findAll();
-                List<Long> unidadesIds = todasUnidades.stream()
-                        .filter(u -> {
-                            if (u.getEmpresa() == null) {
-                                return false;
-                            }
-                            return empresaIds.contains(u.getEmpresa().getId());
-                        })
+                Set<Long> unidadesGerenteIds = usuarioLogado.getUnidades().stream()
                         .map(Unidade::getId)
+                        .collect(Collectors.toSet());
+                return clienteRepository.findAll().stream()
+                        .filter(c -> c.getUnidade() != null && unidadesGerenteIds.contains(c.getUnidade().getId()))
                         .collect(Collectors.toList());
-                
-                // Retornar clientes das unidades da mesma empresa
-                List<Cliente> todosClientes = clienteRepository.findAll();
-                List<Cliente> clientesFiltrados = todosClientes.stream()
-                        .filter(c -> c.getUnidade() != null && unidadesIds.contains(c.getUnidade().getId()))
-                        .collect(Collectors.toList());
-                
-                log.debug("Gerente {} pode ver {} clientes de {} total", email, clientesFiltrados.size(), todosClientes.size());
-                return clientesFiltrados;
 
             case PROFISSIONAL:
                 log.debug("PROFISSIONAL: listando apenas clientes da mesma unidade");
-                if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
-                    log.warn("Profissional {} não tem unidades vinculadas", email);
-                    return List.of();
+                List<Long> unidadesProfissionalIds;
+                if (usuarioLogado.getUnidades() != null && !usuarioLogado.getUnidades().isEmpty()) {
+                    unidadesProfissionalIds = usuarioLogado.getUnidades().stream()
+                            .map(Unidade::getId)
+                            .collect(Collectors.toList());
+                } else {
+                    // Fallback: obter unidade do atendente vinculado ao usuário
+                    unidadesProfissionalIds = atendenteRepository.findByUsuarioId(usuarioLogado.getId())
+                            .map(a -> a.getUnidade() != null ? a.getUnidade().getId() : null)
+                            .filter(java.util.Objects::nonNull)
+                            .stream()
+                            .collect(Collectors.toList());
+                    if (unidadesProfissionalIds.isEmpty()) {
+                        log.warn("Profissional {} não tem unidades vinculadas (nem em usuario_unidades nem como atendente)", email);
+                        return List.of();
+                    }
                 }
-                
-                // Obter IDs das unidades do profissional
-                List<Long> unidadesProfissionalIds = usuarioLogado.getUnidades().stream()
-                        .map(Unidade::getId)
-                        .collect(Collectors.toList());
-                
-                // Retornar clientes das mesmas unidades
                 return clienteRepository.findAll().stream()
                         .filter(c -> c.getUnidade() != null && unidadesProfissionalIds.contains(c.getUnidade().getId()))
                         .collect(Collectors.toList());
@@ -175,23 +162,7 @@ public class ClienteService {
                 if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
                     return Set.of();
                 }
-                Set<Long> empresaIds = usuarioLogado.getUnidades().stream()
-                        .map(u -> {
-                            if (u.getEmpresa() == null) {
-                                Unidade uc = unidadeRepository.findById(u.getId()).orElse(null);
-                                return uc != null && uc.getEmpresa() != null ? uc.getEmpresa().getId() : null;
-                            }
-                            return u.getEmpresa().getId();
-                        })
-                        .filter(id -> id != null)
-                        .collect(Collectors.toSet());
-                if (empresaIds.isEmpty()) {
-                    return Set.of();
-                }
-                return unidadeRepository.findAll().stream()
-                        .filter(u -> u.getEmpresa() != null && empresaIds.contains(u.getEmpresa().getId()))
-                        .map(Unidade::getId)
-                        .collect(Collectors.toSet());
+                return usuarioLogado.getUnidades().stream().map(Unidade::getId).collect(Collectors.toSet());
             case PROFISSIONAL:
                 if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
                     return Set.of();

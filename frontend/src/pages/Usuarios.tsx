@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { usuarioService, Usuario } from '../services/usuarioService'
 import { unidadeService, Unidade } from '../services/unidadeService'
 import { perfilService, Perfil } from '../services/perfilService'
@@ -7,6 +8,7 @@ import { servicoService, Servico } from '../services/servicoService'
 import { authService } from '../services/authService'
 import { Plus, Trash2, Edit, Eye, EyeOff, Stethoscope } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
+import { matchSearch } from '../utils/normalize'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
 import FormField from '../components/FormField'
@@ -35,19 +37,20 @@ export default function Usuarios() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filters, setFilters] = useState<{ ativo?: string; perfil?: string }>({})
 
-  // Filtrar usuários
+  const location = useLocation()
+  const navigate = useNavigate()
+  const unidadeIdFromState = (location.state as { unidadeId?: number })?.unidadeId
+
   const usuariosFiltrados = useMemo(() => {
     let filtered = [...usuarios]
 
-    // Filtro de busca
     if (searchTerm) {
-      const term = searchTerm.toLowerCase()
       filtered = filtered.filter(
         (u) =>
-          u.nome.toLowerCase().includes(term) ||
-          u.email.toLowerCase().includes(term) ||
-          u.nomesUnidades?.some(nome => nome.toLowerCase().includes(term)) ||
-          (u.nomeUnidade && u.nomeUnidade.toLowerCase().includes(term))
+          matchSearch(u.nome, searchTerm) ||
+          matchSearch(u.email, searchTerm) ||
+          u.nomesUnidades?.some((nome) => matchSearch(nome, searchTerm)) ||
+          (u.nomeUnidade && matchSearch(u.nomeUnidade, searchTerm))
       )
     }
 
@@ -68,6 +71,14 @@ export default function Usuarios() {
 
   const usuarioLogado = authService.getUsuario()
   const perfilLogado = usuarioLogado?.perfil
+
+  useEffect(() => {
+    if (unidadeIdFromState) {
+      setEditingUsuario(null)
+      setShowModal(true)
+      navigate(location.pathname, { replace: true, state: {} })
+    }
+  }, [unidadeIdFromState, navigate, location.pathname])
 
   // Buscar usuário completo do logado para obter suas unidades
   const { data: usuarioCompleto } = useQuery({
@@ -267,6 +278,7 @@ export default function Usuarios() {
           usuario={editingUsuario}
           unidades={unidadesDisponiveis}
           perfis={perfis}
+          initialUnidadeId={unidadeIdFromState ?? undefined}
           onClose={() => {
             setShowModal(false)
             setEditingUsuario(null)
@@ -307,11 +319,13 @@ function UsuarioForm({
   usuario,
   unidades,
   perfis,
+  initialUnidadeId,
   onClose,
 }: {
   usuario: Usuario | null
   unidades: Unidade[]
   perfis: Perfil[]
+  initialUnidadeId?: number
   onClose: () => void
 }) {
   const queryClient = useQueryClient()
@@ -351,7 +365,6 @@ function UsuarioForm({
     retry: false,
   })
 
-  // Inicializar formData quando o usuário ou a lista de perfis mudar
   useEffect(() => {
     if (usuario) {
       let unidadesIds: number[] = []
@@ -381,12 +394,16 @@ function UsuarioForm({
         atendenteServicosIds: [],
       })
     } else {
+      const unidadesIds =
+        initialUnidadeId && unidades.some((u) => u.id === initialUnidadeId)
+          ? [initialUnidadeId]
+          : []
       setFormData({
         nome: '',
         email: '',
         senha: '',
         perfilId: undefined,
-        unidadesIds: [],
+        unidadesIds,
         ativo: true,
         atendenteCpf: '',
         atendenteTelefone: '',
@@ -394,7 +411,7 @@ function UsuarioForm({
         atendenteServicosIds: [],
       })
     }
-  }, [usuario, perfis])
+  }, [usuario, perfis, initialUnidadeId, unidades])
 
   // Preencher dados do atendente quando carregar (edição)
   useEffect(() => {

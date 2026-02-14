@@ -17,8 +17,8 @@ export default function Login() {
     setLoading(true)
 
     try {
-      await authService.login({ email, senha })
-      navigate('/')
+      const data = await authService.login({ email, senha })
+      navigate((data.perfil ?? '').toUpperCase() === 'CLIENTE' ? '/agendamentos' : '/')
     } catch (error: any) {
       setErro(error.response?.data?.message || 'Erro ao fazer login')
     } finally {

@@ -9,5 +9,6 @@ import java.util.List;
 @Repository
 public interface AgendamentoServicoRepository extends JpaRepository<AgendamentoServico, Long> {
     List<AgendamentoServico> findByAgendamentoId(Long agendamentoId);
+    void deleteByAgendamentoId(Long agendamentoId);
 }
 

@@ -25,6 +25,17 @@ import Notificacoes from './pages/Notificacoes'
 import Empresas from './pages/Empresas'
 import Perfis from './pages/Perfis'
 
+function NavigateToAfterLogin() {
+  return <Navigate to={authService.isPerfilCliente() ? '/agendamentos' : '/'} replace />
+}
+
+function DashboardOrAgendamentos() {
+  if (authService.isPerfilCliente()) {
+    return <Navigate to="/agendamentos" replace />
+  }
+  return <Dashboard />
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -66,7 +77,7 @@ function App() {
               {/* Rotas administrativas */}
               <Route
                 path="/login"
-                element={authService.isAuthenticated() ? <Navigate to="/" /> : <Login />}
+                element={authService.isAuthenticated() ? <NavigateToAfterLogin /> : <Login />}
               />
               <Route
                 path="/*"
@@ -74,7 +85,7 @@ function App() {
                   <ProtectedRoute>
                     <Layout>
                       <Routes>
-                        <Route path="/" element={<Dashboard />} />
+                        <Route path="/" element={<DashboardOrAgendamentos />} />
                         <Route path="/clientes" element={<Navigate to="/usuarios" replace />} />
                         <Route path="/unidades" element={<Unidades />} />
                         <Route path="/servicos" element={<Servicos />} />

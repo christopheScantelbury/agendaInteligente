@@ -43,5 +43,11 @@ export const authService = {
   isAuthenticated: (): boolean => {
     return !!localStorage.getItem('token')
   },
+
+  /** Compara perfil ignorando maiúsculas (backend pode retornar "Cliente" ou "CLIENTE"). */
+  isPerfilCliente: (): boolean => {
+    const u = authService.getUsuario()
+    return (u?.perfil ?? '').toUpperCase() === 'CLIENTE'
+  },
 }
 

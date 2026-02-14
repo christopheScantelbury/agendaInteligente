@@ -12,6 +12,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -86,9 +87,25 @@ public class PerfilService {
                 .orElseThrow(() -> new ResourceNotFoundException("Perfil do usuário não encontrado"));
     }
 
+    private void validarPermissaoEditarPerfis() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new AccessDeniedException("Sem permissão para editar perfis");
+        }
+        if (auth.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()))) {
+            return;
+        }
+        PerfilDTO meuPerfil = buscarPerfilDoUsuarioLogado();
+        if (meuPerfil.getPermissoesGranulares() != null
+                && "EDITAR".equals(meuPerfil.getPermissoesGranulares().get("/perfis"))) {
+            return;
+        }
+        throw new AccessDeniedException("Sem permissão para editar perfis. Apenas visualização permitida.");
+    }
+
     @Transactional
     public PerfilDTO criar(PerfilDTO perfilDTO) {
-        // Validar nome único
+        validarPermissaoEditarPerfis();
         if (perfilRepository.existsByNome(perfilDTO.getNome())) {
             throw new BusinessException("Já existe um perfil com este nome");
         }
@@ -104,6 +121,7 @@ public class PerfilService {
 
     @Transactional
     public PerfilDTO atualizar(Long id, PerfilDTO perfilDTO) {
+        validarPermissaoEditarPerfis();
         Perfil perfil = perfilRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Perfil não encontrado"));
 
@@ -139,6 +157,7 @@ public class PerfilService {
 
     @Transactional
     public void excluir(Long id) {
+        validarPermissaoEditarPerfis();
         Perfil perfil = perfilRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Perfil não encontrado"));
 

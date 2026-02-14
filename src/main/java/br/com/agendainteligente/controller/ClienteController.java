@@ -28,6 +28,14 @@ public class ClienteController {
         return ResponseEntity.ok(clienteService.listarTodos());
     }
 
+    @GetMapping("/meu-perfil")
+    @Operation(summary = "Buscar meu perfil de cliente (usuário logado com perfil CLIENTE)")
+    public ResponseEntity<ClienteDTO> buscarMeuPerfil() {
+        return clienteService.buscarMeuPerfil()
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.noContent().build());
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Buscar cliente por ID")
     public ResponseEntity<ClienteDTO> buscarPorId(@PathVariable Long id) {

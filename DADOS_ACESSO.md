@@ -23,11 +23,11 @@
 | `charles@forfit.com` | `123456` | Charles | Apenas ForFit (Unidade Principal) |
 
 **Permissões:**
-- ✅ Visualizar e editar usuários da ForFit
-- ✅ Visualizar e editar clientes da ForFit
+
 - ✅ Visualizar e editar agendamentos da ForFit
 - ✅ Visualizar e editar serviços da ForFit
 - ✅ Visualizar unidades da ForFit
+Vizualizar perfil
 - ❌ **NÃO** pode ver dados do Salão Alef
 
 ---
@@ -40,7 +40,7 @@
 
 **Permissões:**
 - ✅ Visualizar e editar agendamentos da ForFit
-- ✅ Visualizar clientes da ForFit
+- ✅ Visualizar Usuario da ForFit
 - ✅ Visualizar serviços da ForFit
 - ❌ **NÃO** pode ver dados do Salão Alef
 - ❌ **NÃO** pode ver dados de outras unidades
@@ -84,9 +84,9 @@
 
 **Permissões:**
 - ✅ Visualizar e editar usuários do Salão Alef
-- ✅ Visualizar e editar clientes do Salão Alef
 - ✅ Visualizar e editar agendamentos do Salão Alef
 - ✅ Visualizar e editar serviços do Salão Alef
+Vizualizar peril
 - ✅ Visualizar unidades do Salão Alef
 - ❌ **NÃO** pode ver dados da ForFit
 
@@ -100,7 +100,7 @@
 
 **Permissões:**
 - ✅ Visualizar e editar agendamentos do Salão Alef
-- ✅ Visualizar clientes do Salão Alef
+- ✅ Visualizar usuarios do Salão Alef
 - ✅ Visualizar serviços do Salão Alef
 - ❌ **NÃO** pode ver dados da ForFit
 - ❌ **NÃO** pode ver dados de outras unidades

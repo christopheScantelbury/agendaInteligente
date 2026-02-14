@@ -85,7 +85,7 @@ export default function CalendarMonth({
   }
 
   return (
-    <div className={`bg-white rounded-lg shadow-sm p-4 sm:p-6 ${className}`}>
+    <div className={`bg-white rounded-lg shadow-sm p-4 sm:p-6 min-w-0 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2 sm:gap-4">

@@ -1,5 +1,6 @@
 package br.com.agendainteligente.service;
 
+import br.com.agendainteligente.domain.entity.Cliente;
 import br.com.agendainteligente.domain.entity.Empresa;
 import br.com.agendainteligente.domain.entity.Unidade;
 import br.com.agendainteligente.domain.entity.Usuario;
@@ -7,6 +8,8 @@ import br.com.agendainteligente.dto.UnidadeDTO;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
 import br.com.agendainteligente.mapper.UnidadeMapper;
+import br.com.agendainteligente.repository.AtendenteRepository;
+import br.com.agendainteligente.repository.ClienteRepository;
 import br.com.agendainteligente.repository.EmpresaRepository;
 import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.repository.UsuarioRepository;
@@ -17,6 +20,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -31,6 +36,8 @@ public class UnidadeService {
     private final UnidadeMapper unidadeMapper;
     private final EmpresaRepository empresaRepository;
     private final UsuarioRepository usuarioRepository;
+    private final ClienteRepository clienteRepository;
+    private final AtendenteRepository atendenteRepository;
 
     private static final Pattern ONLY_DIGITS = Pattern.compile("\\D");
 
@@ -68,64 +75,43 @@ public class UnidadeService {
                 return unidadeRepository.findAll();
 
             case GERENTE:
-                log.debug("GERENTE: listando unidades das empresas do gerente");
-                if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
+                log.debug("GERENTE: listando apenas unidades vinculadas ao gerente");
+                List<Unidade> unidadesGerente = safeGetUnidadesUsuario(usuarioLogado);
+                if (unidadesGerente.isEmpty()) {
                     log.warn("Gerente {} não tem unidades vinculadas", email);
                     return List.of();
                 }
-                
-                // Obter IDs das empresas das unidades do gerente
-                Set<Long> empresaIds = usuarioLogado.getUnidades().stream()
-                        .map(u -> {
-                            // Forçar carregamento da empresa
-                            if (u.getEmpresa() == null) {
-                                Unidade unidadeCompleta = unidadeRepository.findById(u.getId())
-                                        .orElse(null);
-                                if (unidadeCompleta != null && unidadeCompleta.getEmpresa() != null) {
-                                    return unidadeCompleta.getEmpresa().getId();
-                                }
-                                return null;
-                            }
-                            return u.getEmpresa().getId();
-                        })
-                        .filter(id -> id != null)
-                        .collect(Collectors.toSet());
-                
-                if (empresaIds.isEmpty()) {
-                    log.warn("Gerente {} não tem empresas vinculadas", email);
-                    return List.of();
-                }
-                
-                log.debug("Gerente {} tem acesso às empresas: {}", email, empresaIds);
-                
-                // Retornar todas as unidades das mesmas empresas
-                List<Unidade> todasUnidades = unidadeRepository.findAll();
-                List<Unidade> unidadesFiltradas = todasUnidades.stream()
-                        .filter(u -> {
-                            if (u.getEmpresa() == null) {
-                                return false;
-                            }
-                            return empresaIds.contains(u.getEmpresa().getId());
-                        })
-                        .collect(Collectors.toList());
-                
-                log.debug("Gerente {} pode ver {} unidades de {} total", email, unidadesFiltradas.size(), todasUnidades.size());
-                return unidadesFiltradas;
+                return unidadesGerente;
 
             case PROFISSIONAL:
-            case CLIENTE:
-                log.debug("{}: listando apenas unidades do usuário", perfil);
-                if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
-                    log.warn("Usuário {} não tem unidades vinculadas", email);
+                log.debug("PROFISSIONAL: listando apenas unidades do atendente");
+                List<Unidade> unidadesProf = safeGetUnidadesUsuario(usuarioLogado);
+                if (unidadesProf.isEmpty()) {
+                    unidadesProf = atendenteRepository.findByUsuarioId(usuarioLogado.getId())
+                            .map(a -> a.getUnidade() != null ? List.<Unidade>of(a.getUnidade()) : List.<Unidade>of())
+                            .orElse(List.of());
+                }
+                if (unidadesProf.isEmpty()) {
+                    log.warn("Profissional {} não tem unidade vinculada", email);
                     return List.of();
                 }
-                
-                // Retornar apenas as unidades do usuário
-                List<Long> unidadesIds = usuarioLogado.getUnidades().stream()
-                        .map(Unidade::getId)
-                        .collect(Collectors.toList());
-                
-                return unidadeRepository.findAllById(unidadesIds);
+                return unidadesProf;
+
+            case CLIENTE:
+                log.debug("CLIENTE: listando apenas unidades do cliente");
+                List<Unidade> unidadesCliente = clienteRepository.findByEmail(email)
+                        .map(c -> {
+                            Set<Unidade> set = new LinkedHashSet<>();
+                            if (c.getUnidade() != null) set.add(c.getUnidade());
+                            if (c.getUnidades() != null) set.addAll(c.getUnidades());
+                            return List.<Unidade>copyOf(set);
+                        })
+                        .orElse(List.of());
+                if (unidadesCliente.isEmpty()) {
+                    log.warn("Cliente {} não tem unidade vinculada", email);
+                    return List.of();
+                }
+                return unidadesCliente;
 
             default:
                 log.debug("Perfil desconhecido: retornando lista vazia");
@@ -192,6 +178,21 @@ public class UnidadeService {
         unidade = unidadeRepository.save(unidade);
         log.info("Unidade atualizada. ID: {}", id);
         return unidadeMapper.toDTO(unidade);
+    }
+
+    /**
+     * Obtém as unidades do usuário de forma segura (evita LazyInitializationException).
+     * Retorna lista vazia se o usuário não tiver unidades ou em caso de falha ao acessar a relação.
+     */
+    private List<Unidade> safeGetUnidadesUsuario(Usuario usuario) {
+        if (usuario == null) return List.of();
+        try {
+            List<Unidade> list = usuario.getUnidades();
+            return (list != null && !list.isEmpty()) ? list : List.of();
+        } catch (Exception e) {
+            log.debug("Não foi possível obter unidades do usuário (pode ser LazyInit): {}", e.getMessage());
+            return List.of();
+        }
     }
 
     /**
