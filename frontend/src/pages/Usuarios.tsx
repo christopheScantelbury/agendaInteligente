@@ -6,7 +6,7 @@ import { perfilService, Perfil } from '../services/perfilService'
 import { atendenteService, Atendente } from '../services/atendenteService'
 import { servicoService, Servico } from '../services/servicoService'
 import { authService } from '../services/authService'
-import { Plus, Trash2, Edit, Eye, EyeOff, Stethoscope } from 'lucide-react'
+import { Plus, Trash2, Edit, Eye, EyeOff, Stethoscope, Lock } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { matchSearch } from '../utils/normalize'
 import Modal from '../components/Modal'
@@ -22,6 +22,8 @@ export default function Usuarios() {
   const [showModal, setShowModal] = useState(false)
   const [editingUsuario, setEditingUsuario] = useState<Usuario | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null })
+  const [senhaModal, setSenhaModal] = useState<{ open: boolean; usuario: Usuario | null }>({ open: false, usuario: null })
+  const [novaSenhaInput, setNovaSenhaInput] = useState('')
   const queryClient = useQueryClient()
 
   const { data: usuarios = [], isLoading } = useQuery({
@@ -40,6 +42,9 @@ export default function Usuarios() {
   const location = useLocation()
   const navigate = useNavigate()
   const unidadeIdFromState = (location.state as { unidadeId?: number })?.unidadeId
+  const usuarioLogado = authService.getUsuario()
+  const perfilLogado = usuarioLogado?.perfil
+  const isAdmin = (perfilLogado ?? '').toUpperCase() === 'ADMIN'
 
   const usuariosFiltrados = useMemo(() => {
     let filtered = [...usuarios]
@@ -69,9 +74,6 @@ export default function Usuarios() {
     return filtered
   }, [usuarios, searchTerm, filters])
 
-  const usuarioLogado = authService.getUsuario()
-  const perfilLogado = usuarioLogado?.perfil
-
   useEffect(() => {
     if (unidadeIdFromState) {
       setEditingUsuario(null)
@@ -80,11 +82,11 @@ export default function Usuarios() {
     }
   }, [unidadeIdFromState, navigate, location.pathname])
 
-  // Buscar usuário completo do logado para obter suas unidades
+  // Buscar usuário completo do logado para obter suas unidades (não necessário para ADMIN)
   const { data: usuarioCompleto } = useQuery({
     queryKey: ['usuario', usuarioLogado?.usuarioId],
     queryFn: () => usuarioService.buscarPorId(usuarioLogado!.usuarioId),
-    enabled: !!usuarioLogado?.usuarioId && perfilLogado !== 'ADMIN',
+    enabled: !!usuarioLogado?.usuarioId && !isAdmin,
   })
 
   const { data: todasUnidades = [] } = useQuery({
@@ -94,10 +96,9 @@ export default function Usuarios() {
 
   // Filtrar unidades baseado no perfil do usuário logado
   const unidadesDisponiveis = useMemo(() => {
-    if (perfilLogado === 'ADMIN') {
+    if (isAdmin) {
       return todasUnidades
     }
-    
     if (perfilLogado === 'GERENTE' && usuarioCompleto?.unidadesIds && usuarioCompleto.unidadesIds.length > 0) {
       // Obter empresaIds das unidades do gerente
       const unidadesDoGerente = todasUnidades.filter(u => 
@@ -140,12 +141,26 @@ export default function Usuarios() {
     }
   }
 
+  const alterarSenhaMutation = useMutation({
+    mutationFn: ({ id, novaSenha }: { id: number; novaSenha: string }) =>
+      usuarioService.alterarSenha(id, novaSenha),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] })
+      showNotification('success', 'Senha alterada com sucesso.')
+      setSenhaModal({ open: false, usuario: null })
+    },
+    onError: (error: any) => {
+      const msg = error.response?.data?.message || 'Erro ao alterar senha'
+      showNotification('error', msg)
+    },
+  })
+
   if (isLoading) {
     return <div className="text-center py-8">Carregando...</div>
   }
 
   // Verificar permissão de acesso
-  if (perfilLogado !== 'ADMIN' && perfilLogado !== 'GERENTE') {
+  if (!isAdmin && perfilLogado !== 'GERENTE') {
     return (
       <div className="text-center py-8">
         <p className="text-red-600 font-semibold">Acesso negado</p>
@@ -235,6 +250,15 @@ export default function Usuarios() {
                   </span>
                 </div>
                 <div className="flex space-x-2">
+                  {isAdmin && (
+                    <button
+                      onClick={() => setSenhaModal({ open: true, usuario })}
+                      className="text-amber-600 hover:text-amber-800 transition-colors"
+                      aria-label="Alterar senha"
+                    >
+                      <Lock className="h-5 w-5" />
+                    </button>
+                  )}
                   <button
                     onClick={() => {
                       setEditingUsuario(usuario)
@@ -296,6 +320,61 @@ export default function Usuarios() {
         onConfirm={confirmDeleteAction}
         onCancel={() => setConfirmDelete({ isOpen: false, id: null })}
       />
+
+      {isAdmin && (
+        <Modal
+          isOpen={senhaModal.open}
+          onClose={() => {
+            setSenhaModal({ open: false, usuario: null })
+            setNovaSenhaInput('')
+          }}
+          title="Alterar senha"
+          size="sm"
+        >
+          {senhaModal.usuario && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Usuário: <strong>{senhaModal.usuario.nome}</strong> ({senhaModal.usuario.email})
+              </p>
+              <FormField
+                label="Nova senha"
+                type="password"
+                value={novaSenhaInput}
+                onChange={(e) => setNovaSenhaInput(e.target.value)}
+                placeholder="Digite a nova senha"
+                autoComplete="new-password"
+              />
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setSenhaModal({ open: false, usuario: null })
+                    setNovaSenhaInput('')
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={() => {
+                    const senha = novaSenhaInput.trim()
+                    if (!senha) {
+                      showNotification('error', 'Informe a nova senha.')
+                      return
+                    }
+                    alterarSenhaMutation.mutate({
+                      id: senhaModal.usuario!.id!,
+                      novaSenha: senha,
+                    })
+                  }}
+                  disabled={alterarSenhaMutation.isPending || !novaSenhaInput.trim()}
+                >
+                  {alterarSenhaMutation.isPending ? 'Salvando...' : 'Salvar'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </Modal>
+      )}
     </div>
   )
 }

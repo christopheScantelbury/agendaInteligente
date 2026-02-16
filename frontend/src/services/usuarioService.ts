@@ -41,5 +41,10 @@ export const usuarioService = {
   excluir: async (id: number): Promise<void> => {
     await api.delete(`/usuarios/${id}`)
   },
+
+  /** Altera a senha de um usuário. Somente ADMIN pode chamar. */
+  alterarSenha: async (id: number, novaSenha: string): Promise<void> => {
+    await api.put(`/usuarios/${id}/senha`, { novaSenha })
+  },
 }
 

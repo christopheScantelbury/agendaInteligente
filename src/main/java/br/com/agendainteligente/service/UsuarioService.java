@@ -338,6 +338,30 @@ public class UsuarioService {
         return toDTO(usuario);
     }
 
+    /**
+     * Altera a senha de qualquer usuário. Somente ADMIN pode executar.
+     */
+    @Transactional
+    public void alterarSenhaPorAdmin(Long id, String novaSenha) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new BusinessException("Não autorizado");
+        }
+        Usuario admin = usuarioRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+        if (admin.getPerfil() != Usuario.PerfilUsuario.ADMIN) {
+            throw new BusinessException("Somente o perfil ADMIN pode alterar a senha de outros usuários");
+        }
+        if (novaSenha == null || novaSenha.trim().isEmpty()) {
+            throw new BusinessException("Nova senha é obrigatória");
+        }
+        Usuario alvo = usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
+        alvo.setSenha(passwordEncoder.encode(novaSenha.trim()));
+        usuarioRepository.save(alvo);
+        log.info("Senha do usuário ID={} alterada por ADMIN email={}", id, admin.getEmail());
+    }
+
     @Transactional
     public void excluir(Long id) {
         if (!usuarioRepository.existsById(id)) {

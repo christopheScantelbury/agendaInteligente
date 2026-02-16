@@ -8,9 +8,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/usuarios")
@@ -44,6 +46,16 @@ public class UsuarioController {
     public ResponseEntity<UsuarioDTO> atualizar(@PathVariable Long id,
                                                 @Valid @RequestBody UsuarioDTO usuarioDTO) {
         return ResponseEntity.ok(usuarioService.atualizar(id, usuarioDTO));
+    }
+
+    @PutMapping("/{id}/senha")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Alterar senha do usuário (somente ADMIN)")
+    public ResponseEntity<Void> alterarSenha(@PathVariable Long id,
+                                             @RequestBody Map<String, String> body) {
+        String novaSenha = body != null ? body.get("novaSenha") : null;
+        usuarioService.alterarSenhaPorAdmin(id, novaSenha);
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}")
