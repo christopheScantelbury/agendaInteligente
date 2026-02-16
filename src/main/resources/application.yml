@@ -78,6 +78,10 @@ payment:
     api-key: ${PAYMENT_API_KEY:}
     webhook-secret: ${PAYMENT_WEBHOOK_SECRET:}
 
+# Chave para endpoint temporario de correcao de senha do admin (env: FIX_ADMIN_KEY). Deixe vazio ou remova apos usar.
+app:
+  fix-admin-key: ${FIX_ADMIN_KEY:}
+
 # JWT
 jwt:
   secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890}

@@ -1,5 +1,6 @@
 package br.com.agendainteligente.controller;
 
+import br.com.agendainteligente.domain.entity.Usuario;
 import br.com.agendainteligente.dto.LoginDTO;
 import br.com.agendainteligente.dto.TokenDTO;
 import br.com.agendainteligente.repository.UsuarioRepository;
@@ -8,6 +9,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +24,9 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final UsuarioRepository usuarioRepository;
 
+    @Value("${app.fix-admin-key:}")
+    private String fixAdminKey;
+
     @PostMapping("/login")
     @Operation(summary = "Realizar login")
     public ResponseEntity<TokenDTO> login(@Valid @RequestBody LoginDTO loginDTO) {
@@ -35,18 +40,28 @@ public class AuthController {
         return ResponseEntity.ok(hash);
     }
 
-    // Endpoint temporário para resetar senha do admin - REMOVER EM PRODUÇÃO
-    // @PostMapping("/reset-admin")
-    // @Operation(summary = "Resetar senha do admin (temporário)")
-    // public ResponseEntity<String> resetAdminPassword() {
-    //     var admin = usuarioRepository.findByEmail("admin@agendainteligente.com")
-    //             .orElseThrow(() -> new RuntimeException("Admin não encontrado"));
-    //     
-    //     String novoHash = passwordEncoder.encode("admin123");
-    //     admin.setSenha(novoHash);
-    //     usuarioRepository.save(admin);
-    //     
-    //     return ResponseEntity.ok("Senha do admin resetada. Hash: " + novoHash);
-    // }
+    /**
+     * Corrige a senha do admin usando o mesmo PasswordEncoder da aplicacao.
+     * So funciona se app.fix-admin-key (env FIX_ADMIN_KEY) estiver definido e for igual ao key enviado.
+     * Usar uma unica vez em prod e depois remover a variavel.
+     */
+    @PostMapping("/fix-admin-senha")
+    @Operation(summary = "Corrigir senha do admin (temporario, requer app.fix-admin-key)")
+    public ResponseEntity<String> fixAdminSenha(
+            @RequestParam String senha,
+            @RequestParam String key) {
+        if (fixAdminKey == null || fixAdminKey.isBlank()) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!fixAdminKey.equals(key)) {
+            return ResponseEntity.status(403).body("key invalido");
+        }
+        Usuario admin = usuarioRepository.findByEmail("admin@agendainteligente.com")
+                .orElseThrow(() -> new RuntimeException("Admin nao encontrado"));
+        String novoHash = passwordEncoder.encode(senha);
+        admin.setSenha(novoHash);
+        usuarioRepository.save(admin);
+        return ResponseEntity.ok("Senha do admin atualizada com sucesso. Faca login com a senha informada.");
+    }
 }
 
