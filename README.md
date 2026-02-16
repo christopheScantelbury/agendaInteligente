@@ -84,6 +84,10 @@ docker-compose restart postgres
 docker-compose restart backend
 ```
 
+**Login do admin falha (Bad credentials) em produção:**
+- Use a senha **123456** (não admin123). A migration V37 garante o hash correto após o deploy.
+- Faça um novo deploy para rodar as migrations pendentes (V37) e tente novamente.
+
 **Limpar tudo e recomeçar:**
 ```bash
 # ⚠️ ATENÇÃO: Isso apaga todos os dados!
@@ -98,7 +102,7 @@ docker-compose up -d
 **Interface Administrativa**: http://localhost:5173/login
 
 - **Email**: `admin@agendainteligente.com`
-- **Senha**: `admin123`
+- **Senha**: `123456` (conforme DADOS_ACESSO.md; migration V37 garante este hash em produção)
 
 **Perfil**: ADMIN (acesso total a todas as empresas e funcionalidades)
 
