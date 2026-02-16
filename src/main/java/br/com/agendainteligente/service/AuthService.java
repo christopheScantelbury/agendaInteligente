@@ -44,7 +44,14 @@ public class AuthService {
                 throw new BusinessException("Usuário inativo");
             }
 
-            log.debug("Usuário encontrado. Verificando senha...");
+            // Logs de diagnostico para login em producao (sem expor senha ou hash)
+            String senhaArmazenada = usuario.getSenha();
+            int lenSenha = senhaArmazenada != null ? senhaArmazenada.length() : 0;
+            int lenSenhaTrim = senhaArmazenada != null ? senhaArmazenada.trim().length() : 0;
+            boolean matchComRaw = senhaArmazenada != null && passwordEncoder.matches(loginDTO.getSenha(), senhaArmazenada);
+            boolean matchComTrim = senhaArmazenada != null && passwordEncoder.matches(loginDTO.getSenha(), senhaArmazenada.trim());
+            log.info("[LOGIN-DEBUG] email={} | hashLen={} hashTrimLen={} | matchRaw={} matchTrim={}",
+                    loginDTO.getEmail(), lenSenha, lenSenhaTrim, matchComRaw, matchComTrim);
 
             // Tentar autenticar
             Authentication authentication = authenticationManager.authenticate(
@@ -81,7 +88,7 @@ public class AuthService {
                     .build();
 
         } catch (org.springframework.security.authentication.BadCredentialsException e) {
-            log.error("Credenciais inválidas para email: {}", loginDTO.getEmail(), e);
+            log.error("[LOGIN-DEBUG] BadCredentials para email={} - verifique log anterior (hashLen, matchRaw, matchTrim)", loginDTO.getEmail(), e);
             throw new BusinessException("Email ou senha inválidos");
         } catch (BusinessException e) {
             throw e;
