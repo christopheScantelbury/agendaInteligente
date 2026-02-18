@@ -8,6 +8,8 @@ import { atendenteService } from '../services/atendenteService'
 import { horarioDisponivelService } from '../services/horarioDisponivelService'
 import { authService } from '../services/authService'
 import { usuarioService } from '../services/usuarioService'
+import { perfilService } from '../services/perfilService'
+import { podeEditar } from '../utils/permissions'
 import CalendarView from '../components/CalendarView'
 import TimelineView from '../components/TimelineView'
 import CalendarMonth from '../components/CalendarMonth'
@@ -70,6 +72,14 @@ export default function Agendamentos() {
   const perfil = usuario?.perfil ?? ''
   const perfilNorm = perfil.toUpperCase()
   const isCliente = perfilNorm === 'CLIENTE'
+
+  const { data: perfilPermissoes } = useQuery({
+    queryKey: ['perfil', 'meu'],
+    queryFn: () => perfilService.buscarMeuPerfil(),
+    enabled: !!usuario,
+  })
+  const podeEditarAgendamentos = isCliente || podeEditar(perfilPermissoes, '/agendamentos')
+  const podeEditarServicos = podeEditar(perfilPermissoes, '/servicos')
 
   // Verifica se há parâmetro de data na URL (vindo da Home)
   useEffect(() => {
@@ -238,15 +248,24 @@ export default function Agendamentos() {
     }
   }, [perfilNorm, atendentesFiltrados, usuario?.usuarioId])
 
-  // CLIENTE: pre-selecionar o próprio cliente ao abrir o modal de novo agendamento
+  // CLIENTE: pre-selecionar cliente e unidade ao abrir o modal; permitir trocar só unidade se tiver mais de uma
+  const primeiraUnidadeCliente = useMemo(() => {
+    if (!meuPerfilCliente || !isCliente) return undefined
+    if (meuPerfilCliente.unidadesIds?.length) return meuPerfilCliente.unidadesIds[0]
+    if (meuPerfilCliente.unidades?.length && meuPerfilCliente.unidades[0]?.id) return meuPerfilCliente.unidades[0].id
+    return undefined
+  }, [meuPerfilCliente, isCliente])
+
   useEffect(() => {
     if (isCliente && criarModal && meuPerfilCliente?.id) {
       setFormData(prev => ({
         ...prev,
-        clienteId: prev.clienteId || meuPerfilCliente.id
+        clienteId: prev.clienteId ?? meuPerfilCliente.id,
+        unidadeId: prev.unidadeId ?? primeiraUnidadeCliente ?? prev.unidadeId,
+        dataHoraInicio: prev.dataHoraInicio || (criarModal ? format(criarModal.start, "yyyy-MM-dd'T'HH:mm") : prev.dataHoraInicio),
       }))
     }
-  }, [isCliente, criarModal, meuPerfilCliente])
+  }, [isCliente, criarModal, meuPerfilCliente, primeiraUnidadeCliente])
 
   const { data: horariosDisponiveis = [], isLoading: carregandoHorariosQuery } = useQuery({
     queryKey: [
@@ -415,6 +434,7 @@ export default function Agendamentos() {
   })
 
   const handleSelectSlot = (slotInfo: SlotInfo) => {
+    if (!podeEditarAgendamentos) return
     const start = slotInfo.start
     const end = slotInfo.end || new Date(start.getTime() + 60 * 60 * 1000) // 1 hora padrão
 
@@ -422,17 +442,17 @@ export default function Agendamentos() {
     const agora = new Date()
     const dataSelecionada = start < agora ? agora : start
 
-      setCriarModal({ start: dataSelecionada, end })
-      setFormData({
-        clienteId: undefined,
-        unidadeId: undefined,
-        atendenteId: undefined,
-        dataHoraInicio: format(dataSelecionada, "yyyy-MM-dd'T'HH:mm"),
-        observacoes: '',
-        servicos: [],
-      })
-      setServicosSelecionados([])
-      setRecorrenciaConfig({ recorrente: false })
+    setCriarModal({ start: dataSelecionada, end })
+    setFormData({
+      clienteId: undefined,
+      unidadeId: undefined,
+      atendenteId: undefined,
+      dataHoraInicio: format(dataSelecionada, "yyyy-MM-dd'T'HH:mm"),
+      observacoes: '',
+      servicos: [],
+    })
+    setServicosSelecionados([])
+    setRecorrenciaConfig({ recorrente: false })
   }
 
   const handleSelectEvent = (eventOrAgendamento: CalendarEvent | Agendamento) => {
@@ -640,27 +660,29 @@ export default function Agendamentos() {
                 <span className="hidden sm:inline">Calendário</span>
               </button>
             </div>
-            <Button
-              onClick={() => {
-                const agora = new Date()
-                const umaHoraDepois = new Date(agora.getTime() + 3600000)
-                setCriarModal({ start: agora, end: umaHoraDepois })
-            setFormData({
-              clienteId: undefined,
-              unidadeId: undefined,
-              atendenteId: undefined,
-              dataHoraInicio: format(agora, "yyyy-MM-dd'T'HH:mm"),
-              observacoes: '',
-              servicos: [],
-            })
-            setServicosSelecionados([])
-          }}
-              variant="primary"
-              className="flex items-center flex-1 sm:flex-initial"
-            >
-              <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              <span className="text-sm sm:text-base">Novo Agendamento</span>
-            </Button>
+            {podeEditarAgendamentos && (
+              <Button
+                onClick={() => {
+                  const agora = new Date()
+                  const umaHoraDepois = new Date(agora.getTime() + 3600000)
+                  setCriarModal({ start: agora, end: umaHoraDepois })
+                  setFormData({
+                    clienteId: undefined,
+                    unidadeId: undefined,
+                    atendenteId: undefined,
+                    dataHoraInicio: format(agora, "yyyy-MM-dd'T'HH:mm"),
+                    observacoes: '',
+                    servicos: [],
+                  })
+                  setServicosSelecionados([])
+                }}
+                variant="primary"
+                className="flex items-center flex-1 sm:flex-initial"
+              >
+                <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                <span className="text-sm sm:text-base">Novo Agendamento</span>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -685,7 +707,7 @@ export default function Agendamentos() {
                 agendamentos={agendamentos}
                 selectedDate={selectedDate}
                 onEventClick={handleSelectEvent}
-                onSlotClick={(date) => {
+                onSlotClick={podeEditarAgendamentos ? (date) => {
                   const umaHoraDepois = new Date(date.getTime() + 3600000)
                   setCriarModal({ start: date, end: umaHoraDepois })
                   setFormData({
@@ -697,7 +719,7 @@ export default function Agendamentos() {
                     servicos: [],
                   })
                   setServicosSelecionados([])
-                }}
+                } : undefined}
               />
             </div>
           </div>
@@ -777,61 +799,68 @@ export default function Agendamentos() {
               </p>
             </div>
 
-            {/* Cliente */}
+            {/* Cliente: para CLIENTE fixo (ela mesma); para outros perfis seleção livre */}
             <FormField label="Cliente" required>
-              <div className="space-y-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Buscar cliente por nome ou CPF/CNPJ..."
-                    value={buscaCliente}
-                    onChange={(e) => setBuscaCliente(e.target.value)}
-                    className="block w-full pl-10 pr-10 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  />
-                  {buscaCliente && (
-                    <button
-                      type="button"
-                      onClick={() => setBuscaCliente('')}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+              {isCliente && meuPerfilCliente ? (
+                <div className="block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-700">
+                  Você: <strong>{meuPerfilCliente.nome}</strong>
+                  {meuPerfilCliente.cpfCnpj && ` - ${meuPerfilCliente.cpfCnpj}`}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Buscar cliente por nome ou CPF/CNPJ..."
+                      value={buscaCliente}
+                      onChange={(e) => setBuscaCliente(e.target.value)}
+                      className="block w-full pl-10 pr-10 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    />
+                    {buscaCliente && (
+                      <button
+                        type="button"
+                        onClick={() => setBuscaCliente('')}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  <select
+                    required
+                    value={formData.clienteId || ''}
+                    onChange={(e) =>
+                      setFormData({ ...formData, clienteId: parseInt(e.target.value) })
+                    }
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  >
+                    <option value="">Selecione um cliente</option>
+                    {clientesFiltrados.map((cliente) => (
+                      <option key={cliente.id} value={cliente.id}>
+                        {cliente.nome} - {cliente.cpfCnpj}
+                      </option>
+                    ))}
+                  </select>
+                  {clientesFiltrados.length === 0 && buscaCliente && (
+                    <div className="flex items-center justify-between p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                      <span className="text-sm text-yellow-800">Cliente não encontrado</span>
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        onClick={() => setMostrarModalCliente(true)}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Adicionar Novo
+                      </Button>
+                    </div>
                   )}
                 </div>
-                <select
-                  required
-                  value={formData.clienteId || ''}
-                  onChange={(e) =>
-                    setFormData({ ...formData, clienteId: parseInt(e.target.value) })
-                  }
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                >
-                  <option value="">Selecione um cliente</option>
-                  {clientesFiltrados.map((cliente) => (
-                    <option key={cliente.id} value={cliente.id}>
-                      {cliente.nome} - {cliente.cpfCnpj}
-                    </option>
-                  ))}
-                </select>
-                {clientesFiltrados.length === 0 && buscaCliente && perfil !== 'CLIENTE' && (
-                  <div className="flex items-center justify-between p-2 bg-yellow-50 border border-yellow-200 rounded-md">
-                    <span className="text-sm text-yellow-800">Cliente não encontrado</span>
-                    <Button
-                      type="button"
-                      variant="primary"
-                      size="sm"
-                      onClick={() => setMostrarModalCliente(true)}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Adicionar Novo
-                    </Button>
-                  </div>
-                )}
-              </div>
+              )}
             </FormField>
 
-            {/* Unidade */}
+            {/* Unidade: para CLIENTE só pode trocar se tiver mais de uma; pré-preenchida */}
             <FormField label="Unidade" required>
               <div className="relative">
                 <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -839,7 +868,8 @@ export default function Agendamentos() {
                   required
                   value={formData.unidadeId || ''}
                   onChange={(e) => handleUnidadeChange(parseInt(e.target.value))}
-                  className="block w-full pl-10 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  disabled={isCliente && unidadesFiltradas.length <= 1}
+                  className="block w-full pl-10 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-50 disabled:cursor-default"
                 >
                   <option value="">Selecione uma unidade</option>
                   {unidadesFiltradas.map((unidade) => (
@@ -880,15 +910,17 @@ export default function Agendamentos() {
                   {servicosFiltrados.length === 0 ? (
                     <div className="flex items-center justify-between p-2 bg-yellow-50 border border-yellow-200 rounded-md">
                       <span className="text-sm text-yellow-800">Serviço não encontrado</span>
-                      <Button
-                        type="button"
-                        variant="primary"
-                        size="sm"
-                        onClick={() => setMostrarModalServico(true)}
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Adicionar Novo
-                      </Button>
+                      {podeEditarServicos && (
+                        <Button
+                          type="button"
+                          variant="primary"
+                          size="sm"
+                          onClick={() => setMostrarModalServico(true)}
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Adicionar Novo
+                        </Button>
+                      )}
                     </div>
                   ) : (
                     servicosFiltrados.map((servico) => (
@@ -1096,7 +1128,7 @@ export default function Agendamentos() {
             )}
             <div className="flex justify-between items-center pt-4 border-t">
               <div className="flex gap-2">
-                {(perfilNorm === 'ADMIN' || perfilNorm === 'GERENTE' || perfilNorm === 'PROFISSIONAL' || perfilNorm === 'ATENDENTE' || isCliente) && (
+                {podeEditarAgendamentos && (perfilNorm === 'ADMIN' || perfilNorm === 'GERENTE' || perfilNorm === 'PROFISSIONAL' || perfilNorm === 'ATENDENTE' || isCliente) && (
                   <>
                     {agendamentoDetalhes.status !== 'CANCELADO' && agendamentoDetalhes.status !== 'FINALIZADO' && agendamentoDetalhes.status !== 'CONCLUIDO' && (
                       <>

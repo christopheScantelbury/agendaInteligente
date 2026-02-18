@@ -45,13 +45,13 @@ export default function Layout({ children }: LayoutProps) {
     enabled: !!usuario,
   })
 
-  // Função para verificar permissão de menu
+  // Função para verificar permissão de menu (respeita configuração do perfil)
   const temPermissaoMenu = (menuPath: string): boolean => {
     if (!perfilUsuario) {
-      // Fallback: usar lógica antiga baseada em perfil
+      // Enquanto perfil não carrega: não mostrar Início; outros menus mantêm fallback
+      if (menuPath === '/') return false
       return true
     }
-
     const permissao = perfilUsuario.permissoesGranulares?.[menuPath]
     return permissao === 'EDITAR' || permissao === 'VISUALIZAR'
   }

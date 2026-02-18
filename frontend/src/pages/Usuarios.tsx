@@ -6,6 +6,7 @@ import { perfilService, Perfil } from '../services/perfilService'
 import { atendenteService, Atendente } from '../services/atendenteService'
 import { servicoService, Servico } from '../services/servicoService'
 import { authService } from '../services/authService'
+import { podeEditar } from '../utils/permissions'
 import { Plus, Trash2, Edit, Eye, EyeOff, Stethoscope, Lock } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { matchSearch } from '../utils/normalize'
@@ -45,6 +46,13 @@ export default function Usuarios() {
   const usuarioLogado = authService.getUsuario()
   const perfilLogado = usuarioLogado?.perfil
   const isAdmin = (perfilLogado ?? '').toUpperCase() === 'ADMIN'
+
+  const { data: perfilUsuarioPermissoes } = useQuery({
+    queryKey: ['perfil', 'meu'],
+    queryFn: () => perfilService.buscarMeuPerfil(),
+    enabled: !!usuarioLogado,
+  })
+  const podeEditarUsuarios = podeEditar(perfilUsuarioPermissoes, '/usuarios')
 
   const usuariosFiltrados = useMemo(() => {
     let filtered = [...usuarios]
@@ -173,15 +181,17 @@ export default function Usuarios() {
     <div className="w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Usuários</h1>
-        <Button
-          onClick={() => {
-            setEditingUsuario(null)
-            setShowModal(true)
-          }}
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Novo Usuário
-        </Button>
+        {podeEditarUsuarios && (
+          <Button
+            onClick={() => {
+              setEditingUsuario(null)
+              setShowModal(true)
+            }}
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Novo Usuário
+          </Button>
+        )}
       </div>
 
       {/* Barra de Filtros */}
@@ -259,23 +269,27 @@ export default function Usuarios() {
                       <Lock className="h-5 w-5" />
                     </button>
                   )}
-                  <button
-                    onClick={() => {
-                      setEditingUsuario(usuario)
-                      setShowModal(true)
-                    }}
-                    className="text-blue-600 hover:text-blue-800 transition-colors"
-                    aria-label="Editar usuário"
-                  >
-                    <Edit className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(usuario.id!)}
-                    className="text-red-600 hover:text-red-800 transition-colors"
-                    aria-label="Excluir usuário"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </button>
+                  {podeEditarUsuarios && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setEditingUsuario(usuario)
+                          setShowModal(true)
+                        }}
+                        className="text-blue-600 hover:text-blue-800 transition-colors"
+                        aria-label="Editar usuário"
+                      >
+                        <Edit className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(usuario.id!)}
+                        className="text-red-600 hover:text-red-800 transition-colors"
+                        aria-label="Excluir usuário"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </li>
@@ -336,14 +350,16 @@ export default function Usuarios() {
               <p className="text-sm text-gray-600">
                 Usuário: <strong>{senhaModal.usuario.nome}</strong> ({senhaModal.usuario.email})
               </p>
-              <FormField
-                label="Nova senha"
-                type="password"
-                value={novaSenhaInput}
-                onChange={(e) => setNovaSenhaInput(e.target.value)}
-                placeholder="Digite a nova senha"
-                autoComplete="new-password"
-              />
+              <FormField label="Nova senha">
+                <input
+                  type="password"
+                  value={novaSenhaInput}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNovaSenhaInput(e.target.value)}
+                  placeholder="Digite a nova senha"
+                  autoComplete="new-password"
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm"
+                />
+              </FormField>
               <div className="flex justify-end gap-2 pt-2">
                 <Button
                   variant="secondary"

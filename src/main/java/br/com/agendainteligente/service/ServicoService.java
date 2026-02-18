@@ -3,6 +3,7 @@ package br.com.agendainteligente.service;
 import br.com.agendainteligente.domain.entity.Servico;
 import br.com.agendainteligente.domain.entity.Unidade;
 import br.com.agendainteligente.domain.entity.Usuario;
+import br.com.agendainteligente.dto.PerfilDTO;
 import br.com.agendainteligente.dto.ServicoDTO;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
@@ -12,6 +13,7 @@ import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,7 @@ public class ServicoService {
     private final ServicoMapper servicoMapper;
     private final UnidadeRepository unidadeRepository;
     private final UsuarioRepository usuarioRepository;
+    private final PerfilService perfilService;
 
     @Transactional(readOnly = true)
     public List<ServicoDTO> listarTodos() {
@@ -178,6 +181,24 @@ public class ServicoService {
         }
     }
 
+    /** Exige permissão EDITAR em /servicos (ADMIN sempre pode). Quem tem só VISUALIZAR não pode criar/editar/excluir. */
+    private void validarPermissaoEditarServicos() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new AccessDeniedException("Não autorizado");
+        }
+        Usuario usuario = usuarioRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+        if (usuario.getPerfil() == Usuario.PerfilUsuario.ADMIN) {
+            return;
+        }
+        PerfilDTO perfil = perfilService.buscarPerfilDoUsuarioLogado();
+        if (perfil.getPermissoesGranulares() == null
+                || !"EDITAR".equals(perfil.getPermissoesGranulares().get("/servicos"))) {
+            throw new AccessDeniedException("Sem permissão para editar serviços. Apenas visualização permitida.");
+        }
+    }
+
     @Transactional(readOnly = true)
     public ServicoDTO buscarPorId(Long id) {
         log.debug("Buscando serviço com id: {}", id);
@@ -191,6 +212,7 @@ public class ServicoService {
 
     @Transactional
     public ServicoDTO criar(ServicoDTO servicoDTO) {
+        validarPermissaoEditarServicos();
         log.debug("Criando novo serviço: {}", servicoDTO);
         
         if (servicoDTO.getUnidadeId() == null) {
@@ -217,6 +239,7 @@ public class ServicoService {
 
     @Transactional
     public ServicoDTO atualizar(Long id, ServicoDTO servicoDTO) {
+        validarPermissaoEditarServicos();
         log.debug("Atualizando serviço com id: {}", id);
         Servico servico = servicoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Serviço não encontrado com id: " + id));
@@ -249,6 +272,7 @@ public class ServicoService {
 
     @Transactional
     public void excluir(Long id) {
+        validarPermissaoEditarServicos();
         log.debug("Excluindo serviço com id: {}", id);
         Servico servico = servicoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Serviço não encontrado com id: " + id));

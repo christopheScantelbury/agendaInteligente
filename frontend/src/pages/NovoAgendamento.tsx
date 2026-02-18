@@ -5,6 +5,7 @@ import { clienteService } from '../services/clienteService'
 import { servicoService, Servico } from '../services/servicoService'
 import { unidadeService } from '../services/unidadeService'
 import { atendenteService } from '../services/atendenteService'
+import { authService } from '../services/authService'
 import { useState, useEffect, useMemo } from 'react'
 import { useNotification } from '../contexts/NotificationContext'
 
@@ -12,6 +13,8 @@ export default function NovoAgendamento() {
   const navigate = useNavigate()
   const location = useLocation()
   const { showNotification } = useNotification()
+  const usuario = authService.getUsuario()
+  const isCliente = (usuario?.perfil ?? '').toUpperCase() === 'CLIENTE'
 
   const [formData, setFormData] = useState<Partial<Agendamento>>({
     clienteId: undefined,
@@ -22,16 +25,39 @@ export default function NovoAgendamento() {
     servicos: [],
   })
 
+  const { data: meuPerfilCliente } = useQuery({
+    queryKey: ['cliente-meu-perfil'],
+    queryFn: clienteService.buscarMeuPerfil,
+    enabled: isCliente,
+  })
+
+  const primeiraUnidadeCliente = useMemo(() => {
+    if (!meuPerfilCliente || !isCliente) return undefined
+    if (meuPerfilCliente.unidadesIds?.length) return meuPerfilCliente.unidadesIds[0]
+    if (meuPerfilCliente.unidades?.length && meuPerfilCliente.unidades[0]?.id) return meuPerfilCliente.unidades[0].id
+    return undefined
+  }, [meuPerfilCliente, isCliente])
+
   useEffect(() => {
     if (location.state) {
-      const { dataHoraInicio, unidadeId } = location.state
+      const { dataHoraInicio, unidadeId } = location.state as { dataHoraInicio?: string; unidadeId?: number }
       setFormData(prev => ({
         ...prev,
         dataHoraInicio: dataHoraInicio || prev.dataHoraInicio,
-        unidadeId: unidadeId || prev.unidadeId
+        unidadeId: unidadeId ?? prev.unidadeId
       }))
     }
   }, [location.state])
+
+  useEffect(() => {
+    if (isCliente && meuPerfilCliente?.id) {
+      setFormData(prev => ({
+        ...prev,
+        clienteId: prev.clienteId ?? meuPerfilCliente.id,
+        unidadeId: prev.unidadeId ?? primeiraUnidadeCliente ?? prev.unidadeId,
+      }))
+    }
+  }, [isCliente, meuPerfilCliente, primeiraUnidadeCliente])
 
   const [servicosSelecionados, setServicosSelecionados] = useState<number[]>([])
   const [filtroServicos, setFiltroServicos] = useState('')
@@ -56,10 +82,19 @@ export default function NovoAgendamento() {
     )
   }, [servicos, filtroServicos])
 
-  const { data: unidades = [] } = useQuery({
+  const { data: todasUnidades = [] } = useQuery({
     queryKey: ['unidades'],
     queryFn: unidadeService.listarTodos,
   })
+  const unidades = useMemo(() => {
+    if (!isCliente || !meuPerfilCliente) return todasUnidades
+    if (meuPerfilCliente.unidadesIds?.length) return todasUnidades.filter(u => meuPerfilCliente.unidadesIds!.includes(u.id!))
+    if (meuPerfilCliente.unidades?.length) {
+      const ids = meuPerfilCliente.unidades.map(u => u.id!).filter(Boolean)
+      return todasUnidades.filter(u => ids.includes(u.id!))
+    }
+    return todasUnidades
+  }, [todasUnidades, isCliente, meuPerfilCliente])
   const { data: atendentes = [], refetch: refetchAtendentes } = useQuery({
     queryKey: ['atendentes', formData.unidadeId],
     queryFn: () => formData.unidadeId ? atendenteService.listarPorUnidade(formData.unidadeId!) : Promise.resolve([]),
@@ -136,21 +171,28 @@ export default function NovoAgendamento() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700">Cliente</label>
-            <select
-              required
-              value={formData.clienteId || ''}
-              onChange={(e) =>
-                setFormData({ ...formData, clienteId: parseInt(e.target.value) })
-              }
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            >
-              <option value="">Selecione um cliente</option>
-              {clientes.map((cliente) => (
-                <option key={cliente.id} value={cliente.id}>
-                  {cliente.nome} - {cliente.cpfCnpj}
-                </option>
-              ))}
-            </select>
+            {isCliente && meuPerfilCliente ? (
+              <div className="mt-1 block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-700">
+                Você: <strong>{meuPerfilCliente.nome}</strong>
+                {meuPerfilCliente.cpfCnpj && ` - ${meuPerfilCliente.cpfCnpj}`}
+              </div>
+            ) : (
+              <select
+                required
+                value={formData.clienteId || ''}
+                onChange={(e) =>
+                  setFormData({ ...formData, clienteId: parseInt(e.target.value) })
+                }
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              >
+                <option value="">Selecione um cliente</option>
+                {clientes.map((cliente) => (
+                  <option key={cliente.id} value={cliente.id}>
+                    {cliente.nome} - {cliente.cpfCnpj}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div>
@@ -159,7 +201,8 @@ export default function NovoAgendamento() {
               required
               value={formData.unidadeId || ''}
               onChange={(e) => handleUnidadeChange(parseInt(e.target.value))}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              disabled={isCliente && unidades.length <= 1}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-50"
             >
               <option value="">Selecione uma unidade</option>
               {unidades.map((unidade) => (

@@ -1,8 +1,10 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { authService } from './services/authService'
 import { clientePublicoService } from './services/clientePublicoService'
+import { perfilService } from './services/perfilService'
+import { ORDEM_REDIRECT_SEM_INICIO } from './constants/menusPermissoes'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
@@ -24,15 +26,38 @@ import Reclamacoes from './pages/Reclamacoes'
 import Notificacoes from './pages/Notificacoes'
 import Empresas from './pages/Empresas'
 import Perfis from './pages/Perfis'
+import RequirePermissao from './components/RequirePermissao'
+
 
 function NavigateToAfterLogin() {
   return <Navigate to={authService.isPerfilCliente() ? '/agendamentos' : '/'} replace />
 }
 
 function DashboardOrAgendamentos() {
+  const location = useLocation()
+  const usuario = authService.getUsuario()
+  const { data: perfil, isLoading } = useQuery({
+    queryKey: ['perfil', 'meu'],
+    queryFn: () => perfilService.buscarMeuPerfil(),
+    enabled: !!usuario && !authService.isPerfilCliente(),
+  })
+
   if (authService.isPerfilCliente()) {
     return <Navigate to="/agendamentos" replace />
   }
+
+  if (isLoading || !perfil) {
+    return <div className="flex justify-center items-center min-h-[200px]">Carregando...</div>
+  }
+
+  const podeVerInicio = perfil.permissoesGranulares?.['/'] === 'EDITAR' || perfil.permissoesGranulares?.['/'] === 'VISUALIZAR'
+  if (location.pathname === '/' && !podeVerInicio) {
+    const primeiroPermitido = ORDEM_REDIRECT_SEM_INICIO.find(
+      (path) => perfil.permissoesGranulares?.[path] === 'EDITAR' || perfil.permissoesGranulares?.[path] === 'VISUALIZAR'
+    )
+    return <Navigate to={primeiroPermitido || '/agendamentos'} replace />
+  }
+
   return <Dashboard />
 }
 
@@ -87,15 +112,15 @@ function App() {
                       <Routes>
                         <Route path="/" element={<DashboardOrAgendamentos />} />
                         <Route path="/clientes" element={<Navigate to="/usuarios" replace />} />
-                        <Route path="/unidades" element={<Unidades />} />
-                        <Route path="/servicos" element={<Servicos />} />
-                        <Route path="/usuarios" element={<Usuarios />} />
+                        <Route path="/unidades" element={<RequirePermissao path="/unidades"><Unidades /></RequirePermissao>} />
+                        <Route path="/servicos" element={<RequirePermissao path="/servicos"><Servicos /></RequirePermissao>} />
+                        <Route path="/usuarios" element={<RequirePermissao path="/usuarios"><Usuarios /></RequirePermissao>} />
                         <Route path="/atendentes" element={<Navigate to="/usuarios" replace />} />
-                        <Route path="/agendamentos" element={<Agendamentos />} />
-                        <Route path="/agendamentos/novo" element={<NovoAgendamento />} />
-                        <Route path="/notificacoes" element={<Notificacoes />} />
-                        <Route path="/empresas" element={<Empresas />} />
-                        <Route path="/perfis" element={<Perfis />} />
+                        <Route path="/agendamentos" element={<RequirePermissao path="/agendamentos"><Agendamentos /></RequirePermissao>} />
+                        <Route path="/agendamentos/novo" element={<RequirePermissao path="/agendamentos"><NovoAgendamento /></RequirePermissao>} />
+                        <Route path="/notificacoes" element={<RequirePermissao path="/notificacoes"><Notificacoes /></RequirePermissao>} />
+                        <Route path="/empresas" element={<RequirePermissao path="/empresas"><Empresas /></RequirePermissao>} />
+                        <Route path="/perfis" element={<RequirePermissao path="/perfis"><Perfis /></RequirePermissao>} />
                       </Routes>
                     </Layout>
                   </ProtectedRoute>

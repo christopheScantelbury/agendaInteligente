@@ -1,5 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { empresaService, Empresa } from '../services/empresaService'
+import { authService } from '../services/authService'
+import { perfilService } from '../services/perfilService'
+import { podeEditar } from '../utils/permissions'
 import { Plus, Trash2, Edit } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import Modal from '../components/Modal'
@@ -15,6 +18,14 @@ export default function Empresas() {
   const [editingEmpresa, setEditingEmpresa] = useState<Empresa | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null })
   const queryClient = useQueryClient()
+  const usuario = authService.getUsuario()
+
+  const { data: perfil } = useQuery({
+    queryKey: ['perfil', 'meu'],
+    queryFn: () => perfilService.buscarMeuPerfil(),
+    enabled: !!usuario,
+  })
+  const podeEditarEmpresas = podeEditar(perfil, '/empresas')
 
   const { data: empresas = [], isLoading } = useQuery({
     queryKey: ['empresas'],
@@ -52,15 +63,17 @@ export default function Empresas() {
     <div className="w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Empresas</h1>
-        <Button
-          onClick={() => {
-            setEditingEmpresa(null)
-            setShowModal(true)
-          }}
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Nova Empresa
-        </Button>
+        {podeEditarEmpresas && (
+          <Button
+            onClick={() => {
+              setEditingEmpresa(null)
+              setShowModal(true)
+            }}
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Nova Empresa
+          </Button>
+        )}
       </div>
 
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
@@ -98,25 +111,27 @@ export default function Empresas() {
                     )}
                   </div>
                 </div>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => {
-                      setEditingEmpresa(empresa)
-                      setShowModal(true)
-                    }}
-                    className="text-blue-600 hover:text-blue-800 transition-colors"
-                    aria-label="Editar empresa"
-                  >
-                    <Edit className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(empresa.id!)}
-                    className="text-red-600 hover:text-red-800 transition-colors"
-                    aria-label="Excluir empresa"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </button>
-                </div>
+                {podeEditarEmpresas && (
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => {
+                        setEditingEmpresa(empresa)
+                        setShowModal(true)
+                      }}
+                      className="text-blue-600 hover:text-blue-800 transition-colors"
+                      aria-label="Editar empresa"
+                    >
+                      <Edit className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(empresa.id!)}
+                      className="text-red-600 hover:text-red-800 transition-colors"
+                      aria-label="Excluir empresa"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </button>
+                  </div>
+                )}
               </div>
             </li>
           ))}

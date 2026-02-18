@@ -2,6 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { unidadeService, Unidade } from '../services/unidadeService'
 import { empresaService } from '../services/empresaService'
 import { atendenteService } from '../services/atendenteService'
+import { authService } from '../services/authService'
+import { perfilService } from '../services/perfilService'
+import { podeEditar } from '../utils/permissions'
 import { Plus, Trash2, Edit, Clock, UserCog, ExternalLink } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
@@ -22,6 +25,14 @@ export default function Unidades() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filters, setFilters] = useState<{ ativo?: string; empresaId?: string }>({})
   const queryClient = useQueryClient()
+  const usuario = authService.getUsuario()
+
+  const { data: perfil } = useQuery({
+    queryKey: ['perfil', 'meu'],
+    queryFn: () => perfilService.buscarMeuPerfil(),
+    enabled: !!usuario,
+  })
+  const podeEditarUnidades = podeEditar(perfil, '/unidades')
 
   const { data: unidades = [], isLoading } = useQuery({
     queryKey: ['unidades'],
@@ -91,15 +102,17 @@ export default function Unidades() {
     <div className="w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Unidades</h1>
-        <Button
-          onClick={() => {
-            setEditingUnidade(null)
-            setShowModal(true)
-          }}
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Nova Unidade
-        </Button>
+        {podeEditarUnidades && (
+          <Button
+            onClick={() => {
+              setEditingUnidade(null)
+              setShowModal(true)
+            }}
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Nova Unidade
+          </Button>
+        )}
       </div>
 
       {/* Barra de Filtros */}
@@ -169,25 +182,27 @@ export default function Unidades() {
                     )}
                   </div>
                 </div>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => {
-                      setEditingUnidade(unidade)
-                      setShowModal(true)
-                    }}
-                    className="text-blue-600 hover:text-blue-800 transition-colors"
-                    aria-label="Editar unidade"
-                  >
-                    <Edit className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(unidade.id!)}
-                    className="text-red-600 hover:text-red-800 transition-colors"
-                    aria-label="Excluir unidade"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </button>
-                </div>
+                {podeEditarUnidades && (
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => {
+                        setEditingUnidade(unidade)
+                        setShowModal(true)
+                      }}
+                      className="text-blue-600 hover:text-blue-800 transition-colors"
+                      aria-label="Editar unidade"
+                    >
+                      <Edit className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(unidade.id!)}
+                      className="text-red-600 hover:text-red-800 transition-colors"
+                      aria-label="Excluir unidade"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </button>
+                  </div>
+                )}
               </div>
             </li>
             ))}

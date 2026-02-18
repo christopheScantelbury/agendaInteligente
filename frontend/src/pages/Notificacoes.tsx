@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { reclamacaoService, Reclamacao } from '../services/reclamacaoService'
 import { authService } from '../services/authService'
 import { unidadeService } from '../services/unidadeService'
+import { perfilService } from '../services/perfilService'
+import { podeEditar } from '../utils/permissions'
 import { Bell, Check, AlertCircle } from 'lucide-react'
 import Button from '../components/Button'
 import { useNotification } from '../contexts/NotificationContext'
@@ -12,6 +14,13 @@ export default function Notificacoes() {
   const { showNotification } = useNotification()
   const queryClient = useQueryClient()
   const usuario = authService.getUsuario()
+
+  const { data: perfil } = useQuery({
+    queryKey: ['perfil', 'meu'],
+    queryFn: () => perfilService.buscarMeuPerfil(),
+    enabled: !!usuario,
+  })
+  const podeEditarNotificacoes = podeEditar(perfil, '/notificacoes')
 
   // Determinar qual query usar baseado no perfil
   const isAdmin = usuario?.perfil === 'ADMIN'
@@ -103,7 +112,7 @@ export default function Notificacoes() {
                 key={reclamacao.id}
                 reclamacao={reclamacao}
                 unidades={unidades}
-                onMarcarComoLida={() => reclamacao.id && marcarComoLidaMutation.mutate(reclamacao.id)}
+                onMarcarComoLida={podeEditarNotificacoes ? () => reclamacao.id && marcarComoLidaMutation.mutate(reclamacao.id) : undefined}
                 isLoading={marcarComoLidaMutation.isPending}
               />
             ))}
@@ -124,7 +133,7 @@ export default function Notificacoes() {
                 key={reclamacao.id}
                 reclamacao={reclamacao}
                 unidades={unidades}
-                onMarcarComoLida={() => reclamacao.id && marcarComoLidaMutation.mutate(reclamacao.id)}
+                onMarcarComoLida={podeEditarNotificacoes ? () => reclamacao.id && marcarComoLidaMutation.mutate(reclamacao.id) : undefined}
                 isLoading={marcarComoLidaMutation.isPending}
                 isLida
               />
@@ -152,7 +161,7 @@ function ReclamacaoCard({
 }: {
   reclamacao: Reclamacao
   unidades: any[]
-  onMarcarComoLida: () => void
+  onMarcarComoLida?: () => void
   isLoading: boolean
   isLida?: boolean
 }) {
@@ -185,7 +194,7 @@ function ReclamacaoCard({
             </span>
           )}
         </div>
-        {!isLida && (
+        {!isLida && onMarcarComoLida && (
           <Button variant="secondary" size="sm" onClick={onMarcarComoLida} isLoading={isLoading}>
             <Check className="h-4 w-4 mr-2" />
             Marcar como lida

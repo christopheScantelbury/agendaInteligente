@@ -3,6 +3,8 @@ import { servicoService, Servico } from '../services/servicoService'
 import { unidadeService } from '../services/unidadeService'
 import { usuarioService } from '../services/usuarioService'
 import { authService } from '../services/authService'
+import { perfilService } from '../services/perfilService'
+import { podeEditar } from '../utils/permissions'
 import { Plus, Trash2, Edit } from 'lucide-react'
 import { useState, useMemo, useEffect } from 'react'
 import Modal from '../components/Modal'
@@ -20,6 +22,14 @@ export default function Servicos() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filters, setFilters] = useState<{ ativo?: string }>({})
   const queryClient = useQueryClient()
+  const usuario = authService.getUsuario()
+
+  const { data: perfil } = useQuery({
+    queryKey: ['perfil', 'meu'],
+    queryFn: () => perfilService.buscarMeuPerfil(),
+    enabled: !!usuario,
+  })
+  const podeEditarServicos = podeEditar(perfil, '/servicos')
 
   const { data: servicos = [], isLoading } = useQuery({
     queryKey: ['servicos'],
@@ -90,15 +100,17 @@ export default function Servicos() {
     <div className="w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Serviços</h1>
-        <Button
-          onClick={() => {
-            setEditingServico(null)
-            setShowModal(true)
-          }}
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Novo Serviço
-        </Button>
+        {podeEditarServicos && (
+          <Button
+            onClick={() => {
+              setEditingServico(null)
+              setShowModal(true)
+            }}
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Novo Serviço
+          </Button>
+        )}
       </div>
 
       {/* Barra de Filtros */}
@@ -156,25 +168,27 @@ export default function Servicos() {
                     </span>
                   </div>
                 </div>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => {
-                      setEditingServico(servico)
-                      setShowModal(true)
-                    }}
-                    className="text-blue-600 hover:text-blue-800 transition-colors"
-                    aria-label="Editar serviço"
-                  >
-                    <Edit className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(servico.id)}
-                    className="text-red-600 hover:text-red-800 transition-colors"
-                    aria-label="Excluir serviço"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </button>
-                </div>
+                {podeEditarServicos && (
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => {
+                        setEditingServico(servico)
+                        setShowModal(true)
+                      }}
+                      className="text-blue-600 hover:text-blue-800 transition-colors"
+                      aria-label="Editar serviço"
+                    >
+                      <Edit className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(servico.id)}
+                      className="text-red-600 hover:text-red-800 transition-colors"
+                      aria-label="Excluir serviço"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </button>
+                  </div>
+                )}
               </div>
             </li>
             ))}

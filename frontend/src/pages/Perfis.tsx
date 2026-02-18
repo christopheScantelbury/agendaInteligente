@@ -9,20 +9,9 @@ import FormField from '../components/FormField'
 import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { podeEditar } from '../utils/permissions'
+import { MENUS_CONFIG } from '../constants/menusPermissoes'
 
 type TipoPermissao = 'EDITAR' | 'VISUALIZAR' | 'SEM_ACESSO'
-
-// Lista de menus disponíveis no sistema (Clientes e Atendentes unificados em Usuários)
-const MENUS_DISPONIVEIS = [
-  { path: '/', label: 'Início' },
-  { path: '/empresas', label: 'Empresas' },
-  { path: '/unidades', label: 'Unidades' },
-  { path: '/servicos', label: 'Serviços' },
-  { path: '/usuarios', label: 'Usuários' },
-  { path: '/perfis', label: 'Perfis' },
-  { path: '/agendamentos', label: 'Agendamentos' },
-  { path: '/notificacoes', label: 'Notificações' },
-]
 
 export default function Perfis() {
   const { showNotification } = useNotification()
@@ -351,7 +340,7 @@ function PerfilForm({
         <div className="pt-4 border-t">
           <FormField label="Permissões de Menu">
             <div className="mt-2 space-y-3 max-h-96 overflow-y-auto">
-              {MENUS_DISPONIVEIS.map((menu) => {
+              {MENUS_CONFIG.map((menu) => {
                 const permissaoAtual = getPermissaoMenu(menu.path)
                 return (
                   <div
