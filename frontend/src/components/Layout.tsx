@@ -13,6 +13,7 @@ import {
   Bell,
   Building2,
   Shield,
+  Users,
 } from 'lucide-react'
 import { authService } from '../services/authService'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -119,15 +120,20 @@ export default function Layout({ children }: LayoutProps) {
     if (temPermissaoMenu('/unidades')) {
       items.push({ path: '/unidades', label: 'Unidades', icon: <Briefcase className="h-5 w-5" /> })
     }
+
+     // Clientes
+    if (temPermissaoMenu('/clientes')) {
+      items.push({ path: '/clientes', label: 'Clientes', icon: <Users className="h-5 w-5" /> })
+    }
     
     // Serviços
     if (temPermissaoMenu('/servicos')) {
       items.push({ path: '/servicos', label: 'Serviços', icon: <Stethoscope className="h-5 w-5" /> })
     }
     
-    // Usuários
+    // Profissionais (ajustar o tem permisao para verificar o menu correto, ex: /usuarios ou /profissionais)
     if (temPermissaoMenu('/usuarios')) {
-      items.push({ path: '/usuarios', label: 'Usuários', icon: <Settings className="h-5 w-5" /> })
+      items.push({ path: '/usuarios', label: 'Profissionais', icon: <Settings className="h-5 w-5" /> })
     }
     
     // Perfis - exibir para quem tiver permissão granular (ADMIN ou GERENTE com permissão)
