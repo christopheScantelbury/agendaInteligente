@@ -9,6 +9,8 @@ import type { Perfil } from '../services/perfilService'
 interface RequirePermissaoProps {
   /** Path do menu (ex: /unidades, /servicos). Para /agendamentos/novo use /agendamentos */
   path: string
+  /** Paths alternativos aceitos para compatibilidade de permissões antigas */
+  fallbackPaths?: string[]
   children: React.ReactNode
 }
 
@@ -16,7 +18,7 @@ interface RequirePermissaoProps {
  * Garante que apenas usuários com permissão (EDITAR ou VISUALIZAR) para o path acessem a tela.
  * CLIENTE sempre pode acessar /agendamentos. Redireciona para o primeiro menu permitido se não tiver acesso.
  */
-export default function RequirePermissao({ path, children }: RequirePermissaoProps) {
+export default function RequirePermissao({ path, fallbackPaths = [], children }: RequirePermissaoProps) {
   const usuario = authService.getUsuario()
   const { data: perfil, isLoading } = useQuery({
     queryKey: ['perfil', 'meu'],
@@ -41,7 +43,9 @@ export default function RequirePermissao({ path, children }: RequirePermissaoPro
     )
   }
 
-  if (!temPermissaoMenu(perfil, path)) {
+  const temAcessoPrimario = temPermissaoMenu(perfil, path)
+  const temAcessoFallback = fallbackPaths.some((fallbackPath) => temPermissaoMenu(perfil, fallbackPath))
+  if (!temAcessoPrimario && !temAcessoFallback) {
     const primeiroPermitido = getPrimeiroPathPermitido(perfil)
     return <Navigate to={primeiroPermitido} replace />
   }

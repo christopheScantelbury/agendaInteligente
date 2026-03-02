@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -72,59 +73,31 @@ public class ServicoService {
     }
 
     private List<Servico> filtrarPorPermissao() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) {
-            return servicoRepository.findAll();
-        }
-
-        String email = auth.getName();
-        Usuario usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
-
+        Usuario usuario = getUsuarioLogado();
         Usuario.PerfilUsuario perfil = usuario.getPerfil();
+        Long adminUnicoId = getAdminUnicoIdDoUsuario(usuario);
 
         switch (perfil) {
             case ADMIN:
                 log.debug("ADMIN: listando todos os serviços");
                 return servicoRepository.findAll();
-
+            case ADMINISTRADOR:
+                log.debug("ADMINISTRADOR: listando serviços vinculados ao admin_unico_id={}", usuario.getId());
+                return servicoRepository.findByAdminUnicoId(usuario.getId());
             case GERENTE:
-                log.debug("GERENTE: listando serviços das unidades da empresa");
-                if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
-                    log.warn("Gerente {} não tem unidades vinculadas", email);
+                log.debug("GERENTE: listando serviços vinculados ao admin_unico_id={}", adminUnicoId);
+                if (adminUnicoId == null) {
+                    log.warn("Gerente {} sem admin_unico_id vinculado", usuario.getEmail());
                     return List.of();
                 }
-                Set<Long> empresaIds = usuario.getUnidades().stream()
-                        .map(u -> {
-                            if (u.getEmpresa() == null) {
-                                Unidade uc = unidadeRepository.findById(u.getId()).orElse(null);
-                                return uc != null && uc.getEmpresa() != null ? uc.getEmpresa().getId() : null;
-                            }
-                            return u.getEmpresa().getId();
-                        })
-                        .filter(id -> id != null)
-                        .collect(Collectors.toSet());
-                if (empresaIds.isEmpty()) {
-                    return List.of();
-                }
-                return servicoRepository.findAll().stream()
-                        .filter(s -> s.getUnidade() != null && s.getUnidade().getEmpresa() != null
-                                && empresaIds.contains(s.getUnidade().getEmpresa().getId()))
-                        .collect(Collectors.toList());
-
+                return servicoRepository.findByAdminUnicoId(adminUnicoId);
             case PROFISSIONAL:
-                log.debug("PROFISSIONAL: listando serviços das unidades do usuário");
-                if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
-                    log.warn("Usuário {} não tem unidades vinculadas", email);
+                log.debug("PROFISSIONAL: listando serviços vinculados ao admin_unico_id={}", adminUnicoId);
+                if (adminUnicoId == null) {
+                    log.warn("Profissional {} sem admin_unico_id vinculado", usuario.getEmail());
                     return List.of();
                 }
-                List<Long> unidadesIds = usuario.getUnidades().stream()
-                        .map(Unidade::getId)
-                        .collect(Collectors.toList());
-                return servicoRepository.findAll().stream()
-                        .filter(s -> s.getUnidade() != null && unidadesIds.contains(s.getUnidade().getId()))
-                        .collect(Collectors.toList());
-
+                return servicoRepository.findByAdminUnicoId(adminUnicoId);
             case CLIENTE:
             default:
                 log.debug("CLIENTE ou perfil desconhecido: retornando lista vazia");
@@ -133,18 +106,21 @@ public class ServicoService {
     }
 
     private Set<Long> obterUnidadesIdsPermitidas() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) {
-            return Set.of();
-        }
-        Usuario usuario = usuarioRepository.findByEmail(auth.getName()).orElse(null);
-        if (usuario == null) {
-            return Set.of();
-        }
+        Usuario usuario = getUsuarioLogado();
         switch (usuario.getPerfil()) {
             case ADMIN:
                 return unidadeRepository.findAll().stream().map(Unidade::getId).collect(Collectors.toSet());
+            case ADMINISTRADOR:
+                return unidadeRepository.findByAdminUnicoId(usuario.getId()).stream()
+                        .map(Unidade::getId)
+                        .collect(Collectors.toSet());
             case GERENTE:
+                Long adminUnicoIdGerente = getAdminUnicoIdDoUsuario(usuario);
+                if (adminUnicoIdGerente != null) {
+                    return unidadeRepository.findByAdminUnicoId(adminUnicoIdGerente).stream()
+                            .map(Unidade::getId)
+                            .collect(Collectors.toSet());
+                }
                 if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
                     return Set.of();
                 }
@@ -166,6 +142,12 @@ public class ServicoService {
                         .map(Unidade::getId)
                         .collect(Collectors.toSet());
             case PROFISSIONAL:
+                Long adminUnicoIdProfissional = getAdminUnicoIdDoUsuario(usuario);
+                if (adminUnicoIdProfissional != null) {
+                    return unidadeRepository.findByAdminUnicoId(adminUnicoIdProfissional).stream()
+                            .map(Unidade::getId)
+                            .collect(Collectors.toSet());
+                }
                 if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
                     return Set.of();
                 }
@@ -189,7 +171,7 @@ public class ServicoService {
         }
         Usuario usuario = usuarioRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
-        if (usuario.getPerfil() == Usuario.PerfilUsuario.ADMIN) {
+        if (usuario.getPerfil() == Usuario.PerfilUsuario.ADMIN || usuario.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR) {
             return;
         }
         PerfilDTO perfil = perfilService.buscarPerfilDoUsuarioLogado();
@@ -204,6 +186,7 @@ public class ServicoService {
         log.debug("Buscando serviço com id: {}", id);
         Servico servico = servicoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Serviço não encontrado com id: " + id));
+        validarAcessoAdminUnico(getUsuarioLogado(), servico);
         if (servico.getUnidade() == null || !obterUnidadesIdsPermitidas().contains(servico.getUnidade().getId())) {
             throw new ResourceNotFoundException("Serviço não encontrado com id: " + id);
         }
@@ -214,6 +197,14 @@ public class ServicoService {
     public ServicoDTO criar(ServicoDTO servicoDTO) {
         validarPermissaoEditarServicos();
         log.debug("Criando novo serviço: {}", servicoDTO);
+        Usuario usuarioLogado = getUsuarioLogado();
+
+        if (servicoDTO.getUnidadeId() == null && usuarioLogado.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR) {
+            Set<Long> unidadesPermitidas = obterUnidadesIdsPermitidas();
+            if (unidadesPermitidas.size() == 1) {
+                servicoDTO.setUnidadeId(unidadesPermitidas.iterator().next());
+            }
+        }
         
         if (servicoDTO.getUnidadeId() == null) {
             throw new BusinessException("Unidade é obrigatória para criar um serviço");
@@ -232,6 +223,7 @@ public class ServicoService {
 
         Servico servico = servicoMapper.toEntity(servicoDTO);
         servico.setUnidade(unidade);
+        servico.setAdminUnicoId(getAdminUnicoIdDoUsuario(usuarioLogado));
         servico = servicoRepository.save(servico);
         log.info("Serviço criado com sucesso. ID: {}, Unidade: {}", servico.getId(), unidade.getId());
         return servicoMapper.toDTO(servico);
@@ -241,8 +233,10 @@ public class ServicoService {
     public ServicoDTO atualizar(Long id, ServicoDTO servicoDTO) {
         validarPermissaoEditarServicos();
         log.debug("Atualizando serviço com id: {}", id);
+        Usuario usuarioLogado = getUsuarioLogado();
         Servico servico = servicoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Serviço não encontrado com id: " + id));
+        validarAcessoAdminUnico(usuarioLogado, servico);
 
         // Validar acesso à unidade do serviço atual
         if (servico.getUnidade() != null) {
@@ -265,6 +259,7 @@ public class ServicoService {
         }
 
         servicoMapper.updateEntityFromDTO(servicoDTO, servico);
+        servico.setAdminUnicoId(getAdminUnicoIdDoUsuario(usuarioLogado));
         servico = servicoRepository.save(servico);
         log.info("Serviço atualizado com sucesso. ID: {}", servico.getId());
         return servicoMapper.toDTO(servico);
@@ -274,13 +269,42 @@ public class ServicoService {
     public void excluir(Long id) {
         validarPermissaoEditarServicos();
         log.debug("Excluindo serviço com id: {}", id);
+        Usuario usuarioLogado = getUsuarioLogado();
         Servico servico = servicoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Serviço não encontrado com id: " + id));
+        validarAcessoAdminUnico(usuarioLogado, servico);
         if (servico.getUnidade() == null || !obterUnidadesIdsPermitidas().contains(servico.getUnidade().getId())) {
             throw new ResourceNotFoundException("Serviço não encontrado com id: " + id);
         }
         servicoRepository.deleteById(id);
         log.info("Serviço excluído com sucesso. ID: {}", id);
     }
-}
 
+    private Usuario getUsuarioLogado() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new BusinessException("Não autorizado");
+        }
+        return usuarioRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+    }
+
+    private Long getAdminUnicoIdDoUsuario(Usuario usuario) {
+        if (usuario == null) return null;
+        if (usuario.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR) return usuario.getId();
+        return usuario.getAdminUnicoId();
+    }
+
+    private void validarAcessoAdminUnico(Usuario usuarioLogado, Servico servico) {
+        if (usuarioLogado == null || servico == null) {
+            return;
+        }
+        if (usuarioLogado.getPerfil() == Usuario.PerfilUsuario.ADMIN) {
+            return;
+        }
+        Long adminUnicoIdUsuario = getAdminUnicoIdDoUsuario(usuarioLogado);
+        if (!Objects.equals(adminUnicoIdUsuario, servico.getAdminUnicoId())) {
+            throw new ResourceNotFoundException("Serviço não encontrado");
+        }
+    }
+}

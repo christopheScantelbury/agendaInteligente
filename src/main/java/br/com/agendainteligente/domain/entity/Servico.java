@@ -41,6 +41,9 @@ public class Servico {
     @JoinColumn(name = "unidade_id", nullable = false)
     private Unidade unidade;
 
+    @Column(name = "admin_unico_id")
+    private Long adminUnicoId;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataCriacao;
 
@@ -58,4 +61,3 @@ public class Servico {
         dataAtualizacao = LocalDateTime.now();
     }
 }
-

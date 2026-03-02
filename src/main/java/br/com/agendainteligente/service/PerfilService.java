@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -83,6 +84,12 @@ public class PerfilService {
         }
         // Perfil de sistema sem entidade: tentar carregar por nome do enum (ex: GERENTE, ADMIN)
         return perfilRepository.findByNome(usuario.getPerfil().name())
+                .or(() -> {
+                    if (usuario.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR) {
+                        return perfilRepository.findByNome(Usuario.PerfilUsuario.ADMIN.name());
+                    }
+                    return java.util.Optional.empty();
+                })
                 .map(perfilMapper::toDTO)
                 .orElseThrow(() -> new ResourceNotFoundException("Perfil do usuário não encontrado"));
     }
@@ -125,16 +132,25 @@ public class PerfilService {
         Perfil perfil = perfilRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Perfil não encontrado"));
 
-        // Se for perfil do sistema, permitir editar apenas permissões de menu
+        // Se for perfil do sistema, permitir editar apenas permissões de acesso
+        // (mantendo nome/descrição/sistema fixos).
         if (perfil.getSistema()) {
-            // Apenas atualizar permissões de menu, mantendo nome, descrição e sistema inalterados
-            if (perfilDTO.getPermissoesMenu() != null) {
-                // Converter List<String> para JSON String
-                String permissoesJson = serializePermissoesMenu(perfilDTO.getPermissoesMenu());
-                perfil.setPermissoesMenu(permissoesJson);
+            Map<String, String> granulares = perfilDTO.getPermissoesGranulares();
+            List<String> menus = perfilDTO.getPermissoesMenu();
+
+            // Se vier apenas granular, deriva a lista de menus para compatibilidade.
+            if ((menus == null || menus.isEmpty()) && granulares != null && !granulares.isEmpty()) {
+                menus = extrairMenusPermitidos(granulares);
             }
+            // Se vier apenas menu (compatibilidade), deriva granular como VISUALIZAR.
+            if ((granulares == null || granulares.isEmpty()) && menus != null && !menus.isEmpty()) {
+                granulares = menus.stream().collect(Collectors.toMap(m -> m, m -> "VISUALIZAR"));
+            }
+
+            perfil.setPermissoesMenu(serializePermissoesMenu(menus));
+            perfil.setPermissoesGranulares(serializePermissoesGranulares(granulares));
             perfil = perfilRepository.save(perfil);
-            log.info("Permissões de menu do perfil do sistema atualizadas. ID: {}, Nome: {}", id, perfil.getNome());
+            log.info("Permissões do perfil do sistema atualizadas. ID: {}, Nome: {}", id, perfil.getNome());
             return perfilMapper.toDTO(perfil);
         }
 
@@ -189,5 +205,26 @@ public class PerfilService {
             log.error("Erro ao serializar permissões de menu", e);
             return null;
         }
+    }
+
+    private String serializePermissoesGranulares(Map<String, String> permissoes) {
+        if (permissoes == null || permissoes.isEmpty()) {
+            return null;
+        }
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            return mapper.writeValueAsString(permissoes);
+        } catch (Exception e) {
+            log.error("Erro ao serializar permissões granulares", e);
+            return null;
+        }
+    }
+
+    private List<String> extrairMenusPermitidos(Map<String, String> granulares) {
+        return granulares.entrySet().stream()
+                .filter(e -> e.getValue() != null && !"SEM_ACESSO".equalsIgnoreCase(e.getValue()))
+                .map(Map.Entry::getKey)
+                .distinct()
+                .collect(Collectors.toList());
     }
 }

@@ -5,6 +5,15 @@ export interface LoginRequest {
   senha: string
 }
 
+export interface CadastroRequest {
+  nome: string
+  email: string
+  areaAtuacao: string
+  quantidadeUnidades: number
+  telefone?: string
+  senha: string
+}
+
 export interface TokenResponse {
   token: string
   tipo: string
@@ -15,6 +24,10 @@ export interface TokenResponse {
 }
 
 export const authService = {
+  cadastrar: async (dados: CadastroRequest): Promise<void> => {
+    await api.post('/auth/cadastro', dados)
+  },
+
   login: async (credentials: LoginRequest): Promise<TokenResponse> => {
     const response = await api.post<TokenResponse>('/auth/login', credentials)
     const token = response.data.token
@@ -49,5 +62,10 @@ export const authService = {
     const u = authService.getUsuario()
     return (u?.perfil ?? '').toUpperCase() === 'CLIENTE'
   },
-}
 
+  isPerfilAdmin: (): boolean => {
+    const u = authService.getUsuario()
+    const perfil = (u?.perfil ?? '').toUpperCase().replace('-', '_')
+    return perfil === 'ADMIN' || perfil === 'ADMINISTRADOR'
+  },
+}

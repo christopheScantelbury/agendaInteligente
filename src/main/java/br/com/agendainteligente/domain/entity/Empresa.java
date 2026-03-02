@@ -64,6 +64,9 @@ public class Empresa {
     @Builder.Default
     private Boolean ativo = true;
 
+    @Column(name = "admin_unico_id")
+    private Long adminUnicoId;
+
     @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Unidade> unidades;
 

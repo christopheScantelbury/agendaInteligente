@@ -9,6 +9,7 @@ export interface Atendente {
   percentualComissao?: number
   ativo?: boolean
   nomeUsuario?: string
+  emailUsuario?: string
   nomeUnidade?: string
   servicosIds?: number[]
 }
@@ -65,4 +66,3 @@ export const atendenteService = {
     await api.delete(`/atendentes/${id}`)
   },
 }
-

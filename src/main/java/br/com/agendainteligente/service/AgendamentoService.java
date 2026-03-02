@@ -93,6 +93,7 @@ public class AgendamentoService {
         
         switch (perfil) {
             case ADMIN:
+            case ADMINISTRADOR:
                 log.debug("ADMIN: listando todos os agendamentos");
                 return agendamentoRepository.findAll();
                 
@@ -167,6 +168,7 @@ public class AgendamentoService {
         
         switch (perfil) {
             case ADMIN:
+            case ADMINISTRADOR:
                 return;
                 
             case GERENTE:
@@ -218,6 +220,7 @@ public class AgendamentoService {
         }
         switch (usuario.getPerfil()) {
             case ADMIN:
+            case ADMINISTRADOR:
                 return unidadeRepository.findAll().stream().map(Unidade::getId).collect(Collectors.toSet());
             case GERENTE:
                 if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
@@ -259,6 +262,7 @@ public class AgendamentoService {
         
         switch (perfil) {
             case ADMIN:
+            case ADMINISTRADOR:
                 // ADMIN pode visualizar qualquer agendamento
                 return;
                 

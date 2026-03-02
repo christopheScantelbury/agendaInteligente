@@ -7,6 +7,7 @@ import br.com.agendainteligente.dto.UsuarioDTO;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
 import br.com.agendainteligente.mapper.UsuarioMapper;
+import br.com.agendainteligente.repository.AtendenteRepository;
 import br.com.agendainteligente.repository.PerfilRepository;
 import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.repository.UsuarioRepository;
@@ -30,6 +31,7 @@ public class UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final UnidadeRepository unidadeRepository;
     private final PerfilRepository perfilRepository;
+    private final AtendenteRepository atendenteRepository;
     private final PasswordEncoder passwordEncoder;
     private final UsuarioMapper usuarioMapper;
 
@@ -65,6 +67,16 @@ public class UsuarioService {
             case ADMIN:
                 log.debug("ADMIN: listando todos os usuários");
                 return usuarioRepository.findAll();
+            case ADMINISTRADOR:
+                log.debug("ADMINISTRADOR: listando o próprio admin, administradores filhos e profissionais vinculados ao admin_unico_id={}", usuarioLogado.getId());
+                return usuarioRepository.findAll().stream()
+                        .filter(u -> pertenceAoEscopoDoAdministrador(usuarioLogado, u))
+                        .filter(u -> usuarioLogado.getId().equals(u.getId())
+                                || Usuario.PerfilUsuario.ADMINISTRADOR.equals(u.getPerfil())
+                                || Usuario.PerfilUsuario.PROFISSIONAL.equals(u.getPerfil())
+                                || (u.getPerfilEntity() != null && Boolean.TRUE.equals(u.getPerfilEntity().getAtendente()))
+                                || atendenteRepository.findByUsuarioId(u.getId()).isPresent())
+                        .collect(Collectors.toList());
 
             case GERENTE:
                 log.debug("GERENTE: listando usuários das unidades da mesma empresa");
@@ -117,7 +129,8 @@ public class UsuarioService {
                 List<Usuario> todosUsuarios = usuarioRepository.findAll();
                 List<Usuario> usuariosFiltrados = todosUsuarios.stream()
                         .filter(u -> {
-                            if (Usuario.PerfilUsuario.ADMIN.equals(u.getPerfil())) {
+                            if (Usuario.PerfilUsuario.ADMIN.equals(u.getPerfil())
+                                    || Usuario.PerfilUsuario.ADMINISTRADOR.equals(u.getPerfil())) {
                                 return false;
                             }
                             if (u.getUnidades() == null || u.getUnidades().isEmpty()) {
@@ -145,7 +158,9 @@ public class UsuarioService {
                 
                 return usuarioRepository.findAll().stream()
                         .filter(u -> {
-                            if (Usuario.PerfilUsuario.ADMIN.equals(u.getPerfil()) || Usuario.PerfilUsuario.GERENTE.equals(u.getPerfil())) {
+                            if (Usuario.PerfilUsuario.ADMIN.equals(u.getPerfil())
+                                    || Usuario.PerfilUsuario.ADMINISTRADOR.equals(u.getPerfil())
+                                    || Usuario.PerfilUsuario.GERENTE.equals(u.getPerfil())) {
                                 return false;
                             }
                             if (u.getUnidades() == null || u.getUnidades().isEmpty()) {
@@ -174,6 +189,8 @@ public class UsuarioService {
 
     @Transactional
     public UsuarioDTO criar(UsuarioDTO usuarioDTO) {
+        Usuario usuarioLogado = getUsuarioLogado();
+
         if (usuarioRepository.existsByEmail(usuarioDTO.getEmail())) {
             throw new BusinessException("Já existe um usuário com este email");
         }
@@ -230,6 +247,15 @@ public class UsuarioService {
         }
 
         usuario = usuarioRepository.save(usuario);
+
+        if (perfilSistema == Usuario.PerfilUsuario.ADMINISTRADOR) {
+            usuario.setAdminUnicoId(usuario.getId());
+            usuario = usuarioRepository.save(usuario);
+        } else if (usuarioLogado.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR) {
+            usuario.setAdminUnicoId(usuarioLogado.getId());
+            usuario = usuarioRepository.save(usuario);
+        }
+
         log.info("Usuário criado com sucesso. ID: {}, Email: {}, Perfil: {}", 
                 usuario.getId(), usuario.getEmail(), usuario.getPerfil());
         return toDTO(usuario);
@@ -237,8 +263,10 @@ public class UsuarioService {
 
     @Transactional
     public UsuarioDTO atualizar(Long id, UsuarioDTO usuarioDTO) {
+        Usuario usuarioLogado = getUsuarioLogado();
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
+        validarAcessoAdminUnico(usuarioLogado, usuario);
 
         // Verifica se email está sendo alterado e se já existe outro usuário com ele
         if (!usuario.getEmail().equals(usuarioDTO.getEmail())
@@ -333,6 +361,10 @@ public class UsuarioService {
             }
         }
 
+        if (usuarioLogado.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR) {
+            usuario.setAdminUnicoId(usuarioLogado.getId());
+        }
+
         usuario = usuarioRepository.save(usuario);
         log.info("Usuário atualizado com sucesso. ID: {}, Perfil: {}", usuario.getId(), usuario.getPerfil());
         return toDTO(usuario);
@@ -349,30 +381,87 @@ public class UsuarioService {
         }
         Usuario admin = usuarioRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
-        if (admin.getPerfil() != Usuario.PerfilUsuario.ADMIN) {
-            throw new BusinessException("Somente o perfil ADMIN pode alterar a senha de outros usuários");
+        if (admin.getPerfil() != Usuario.PerfilUsuario.ADMIN && admin.getPerfil() != Usuario.PerfilUsuario.ADMINISTRADOR) {
+            throw new BusinessException("Somente ADMIN e ADMINISTRADOR podem alterar a senha de outros usuários");
         }
         if (novaSenha == null || novaSenha.trim().isEmpty()) {
             throw new BusinessException("Nova senha é obrigatória");
         }
         Usuario alvo = usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
+        validarAcessoAdminUnico(admin, alvo);
         alvo.setSenha(passwordEncoder.encode(novaSenha.trim()));
         usuarioRepository.save(alvo);
-        log.info("Senha do usuário ID={} alterada por ADMIN email={}", id, admin.getEmail());
+        log.info("Senha do usuário ID={} alterada por {} email={}", id, admin.getPerfil(), admin.getEmail());
     }
 
     @Transactional
     public void excluir(Long id) {
-        if (!usuarioRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Usuário não encontrado");
-        }
+        Usuario usuarioLogado = getUsuarioLogado();
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
+        validarAcessoAdminUnico(usuarioLogado, usuario);
         usuarioRepository.deleteById(id);
         log.info("Usuário excluído com sucesso. ID: {}", id);
     }
 
+    private Usuario getUsuarioLogado() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new BusinessException("Não autorizado");
+        }
+        return usuarioRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+    }
+
+    private void validarAcessoAdminUnico(Usuario usuarioLogado, Usuario alvo) {
+        if (usuarioLogado == null || alvo == null) {
+            return;
+        }
+        if (usuarioLogado.getPerfil() != Usuario.PerfilUsuario.ADMINISTRADOR) {
+            return;
+        }
+        if (pertenceAoEscopoDoAdministrador(usuarioLogado, alvo)) {
+            return;
+        }
+        throw new ResourceNotFoundException("Usuário não encontrado");
+    }
+
+    private boolean pertenceAoEscopoDoAdministrador(Usuario administrador, Usuario alvo) {
+        if (administrador == null || alvo == null) {
+            return false;
+        }
+        if (administrador.getId().equals(alvo.getId())) {
+            return true;
+        }
+        if (administrador.getId().equals(alvo.getAdminUnicoId())) {
+            return true;
+        }
+        if (alvo.getAdminUnicoId() != null) {
+            return false;
+        }
+
+        boolean pertenceSomenteUnidadesDoAdmin = alvo.getUnidades() != null
+                && !alvo.getUnidades().isEmpty()
+                && alvo.getUnidades().stream()
+                .allMatch(unidade -> administrador.getId().equals(unidade.getAdminUnicoId()));
+
+        boolean atendenteDaUnidadeDoAdmin = atendenteRepository.findByUsuarioId(alvo.getId())
+                .map(atendente -> atendente.getUnidade() != null
+                        && administrador.getId().equals(atendente.getUnidade().getAdminUnicoId()))
+                .orElse(false);
+
+        return pertenceSomenteUnidadesDoAdmin || atendenteDaUnidadeDoAdmin;
+    }
+
     private UsuarioDTO toDTO(Usuario usuario) {
         UsuarioDTO dto = usuarioMapper.toDTO(usuario);
+
+        if (usuario.getPerfilEntity() != null && usuario.getPerfilEntity().getNome() != null) {
+            dto.setNomePerfil(usuario.getPerfilEntity().getNome());
+        } else if (usuario.getPerfil() != null) {
+            dto.setNomePerfil(usuario.getPerfil().name());
+        }
         
         // Preencher lista de IDs de unidades
         if (usuario.getUnidades() != null && !usuario.getUnidades().isEmpty()) {

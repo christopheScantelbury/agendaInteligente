@@ -18,7 +18,8 @@ import { Link } from 'react-router-dom'
 
 export default function Dashboard() {
     const usuario = authService.getUsuario()
-    const isAdmin = usuario?.perfil === 'ADMIN'
+    const perfilNorm = (usuario?.perfil ?? '').toUpperCase().replace('-', '_')
+    const isAdmin = perfilNorm === 'ADMIN' || perfilNorm === 'ADMINISTRADOR'
     const isGerente = usuario?.perfil === 'GERENTE'
     const podeVerReclamacoes = isAdmin || isGerente
     const unidadeId = usuario?.unidadeId

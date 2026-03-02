@@ -50,6 +50,7 @@ public class ReclamacaoService {
         }
         switch (usuario.getPerfil()) {
             case ADMIN:
+            case ADMINISTRADOR:
                 return unidadeRepository.findAll().stream().map(Unidade::getId).collect(Collectors.toSet());
             case GERENTE:
                 if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {

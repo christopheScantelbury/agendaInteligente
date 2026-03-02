@@ -8,6 +8,7 @@ export interface Cliente {
   email?: string
   telefone?: string
   endereco?: string
+  observacao?: string
   numero?: string
   complemento?: string
   bairro?: string
@@ -17,6 +18,7 @@ export interface Cliente {
   dataNascimento?: string
   rg?: string
   ativo?: boolean
+  unidadeId?: number
   unidadesIds?: number[]
   unidades?: Unidade[]
 }
@@ -55,4 +57,3 @@ export const clienteService = {
     await api.delete(`/clientes/${id}`)
   },
 }
-
