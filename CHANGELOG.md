@@ -37,9 +37,20 @@ e este projeto adota versionamento semântico quando aplicável.
 - Ajustado o redirecionamento automático do frontend para evitar navegação para `/usuarios` quando o perfil logado for `ADMINISTRADOR`.
 - Ajustados os atalhos internos da tela de unidades para redirecionar o perfil `ADMINISTRADOR` para `/profissionais` em vez de `/usuarios`.
 - Ajustado o fluxo de abertura da tela de profissionais a partir de unidades para preservar o `unidadeId` recebido via navegação e manter o pré-preenchimento correto do formulário.
+- Atualizada a tela web de agendamentos para iniciar por padrão na visualização `Calendário`.
+- Modernizada a interface da tela web de agendamentos, com foco nas áreas de `Visão de calendário` e `Visão diária em linha do tempo`.
+- Removido o bloco textual superior da tela web de agendamentos para deixar o cabeçalho mais limpo.
+- Ajustados os controles principais da tela web de agendamentos (`Linha do tempo`, `Calendário` e `Novo agendamento`) para um formato mais compacto no topo da seção.
+- Atualizada a navegação do calendário para o formato visual `< Hoje >`.
+- Ajustada a visualização do calendário para português do Brasil (`pt-BR`), incluindo títulos e cabeçalhos de datas.
+- Padronizado o cabeçalho dos dias do calendário no formato abreviado, como `Dom 01/03`, `Seg 02/03`.
+- Configurado o calendário para exibir intervalos de horário de 30 em 30 minutos.
+- Refinado o estilo visual do calendário, incluindo toolbar, botões, bordas, sombras e legenda.
 
 #### Fixed
 - Corrigida a ausência do perfil `ADMINISTRADOR` na tela web de profissionais.
+- Corrigida a inconsistência do status de conclusão no frontend web de agendamentos, padronizando a exibição para `FINALIZADO`.
+- Corrigidos erros de estrutura JSX e ajustes de tipagem identificados durante a build do frontend na tela web de agendamentos.
 
 ### Documentação
 

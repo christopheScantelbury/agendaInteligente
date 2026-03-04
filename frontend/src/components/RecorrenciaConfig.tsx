@@ -19,13 +19,13 @@ interface RecorrenciaConfigProps {
 }
 
 const DIAS_SEMANA = [
-  { value: 1, label: 'Segunda', short: 'Seg' },
-  { value: 2, label: 'Terça', short: 'Ter' },
-  { value: 3, label: 'Quarta', short: 'Qua' },
-  { value: 4, label: 'Quinta', short: 'Qui' },
-  { value: 5, label: 'Sexta', short: 'Sex' },
-  { value: 6, label: 'Sábado', short: 'Sáb' },
-  { value: 7, label: 'Domingo', short: 'Dom' },
+  { value: 1, label: 'Seg', short: 'Seg' },
+  { value: 2, label: 'Ter', short: 'Ter' },
+  { value: 3, label: 'Qua', short: 'Qua' },
+  { value: 4, label: 'Qui', short: 'Qui' },
+  { value: 5, label: 'Sex', short: 'Sex' },
+  { value: 6, label: 'Sáb', short: 'Sáb' },
+  { value: 7, label: 'Dom', short: 'Dom' },
 ]
 
 export default function RecorrenciaConfig({ value, onChange, onClose }: RecorrenciaConfigProps) {

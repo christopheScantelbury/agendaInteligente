@@ -469,8 +469,8 @@ public class AgendamentoService {
         if (agendamento.getStatus() == StatusAgendamento.CANCELADO) {
             throw new BusinessException("Não é possível editar um agendamento cancelado");
         }
-        if (agendamento.getStatus() == StatusAgendamento.CONCLUIDO) {
-            throw new BusinessException("Não é possível editar um agendamento concluído");
+        if (agendamento.getStatus() == StatusAgendamento.FINALIZADO) {
+            throw new BusinessException("Não é possível editar um agendamento finalizado");
         }
 
         if (agendamentoDTO.getServicos() == null || agendamentoDTO.getServicos().isEmpty()) {
@@ -617,8 +617,8 @@ public class AgendamentoService {
             throw new BusinessException("Agendamento já está cancelado");
         }
         
-        if (agendamento.getStatus() == StatusAgendamento.CONCLUIDO) {
-            throw new BusinessException("Não é possível cancelar um agendamento concluído");
+        if (agendamento.getStatus() == StatusAgendamento.FINALIZADO) {
+            throw new BusinessException("Não é possível cancelar um agendamento finalizado");
         }
         
         agendamento.setStatus(StatusAgendamento.CANCELADO);
@@ -636,8 +636,8 @@ public class AgendamentoService {
         // Validar permissão para finalizar agendamento
         validarPermissaoVisualizarAgendamento(agendamento);
         
-        if (agendamento.getStatus() == StatusAgendamento.CONCLUIDO) {
-            throw new BusinessException("Agendamento já está concluído");
+        if (agendamento.getStatus() == StatusAgendamento.FINALIZADO) {
+            throw new BusinessException("Agendamento já está finalizado");
         }
         
         if (agendamento.getStatus() == StatusAgendamento.CANCELADO) {
@@ -649,7 +649,7 @@ public class AgendamentoService {
             throw new BusinessException("Valor final deve ser maior que zero");
         }
         
-        agendamento.setStatus(StatusAgendamento.CONCLUIDO);
+        agendamento.setStatus(StatusAgendamento.FINALIZADO);
         agendamento.setValorFinal(valorFinal);
         agendamento = agendamentoRepository.save(agendamento);
         
@@ -661,4 +661,3 @@ public class AgendamentoService {
         return agendamentoMapper.toDTO(agendamento);
     }
 }
-

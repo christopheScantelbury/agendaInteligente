@@ -55,14 +55,14 @@ export default function Dashboard() {
         return a.dataHoraInicio.startsWith(hoje)
     }).length
 
-    const agendamentosConcluidos = agendamentos.filter(a => a.status === 'CONCLUIDO').length
+    const agendamentosFinalizados = agendamentos.filter(a => a.status === 'FINALIZADO').length
     const agendamentosCancelados = agendamentos.filter(a => a.status === 'CANCELADO').length
 
     const faturamentoTotal = agendamentos
-        .filter(a => a.status === 'CONCLUIDO')
+        .filter(a => a.status === 'FINALIZADO')
         .reduce((acc, curr) => acc + (curr.valorTotal || 0), 0)
 
-    const ticketMedio = agendamentosConcluidos > 0 ? faturamentoTotal / agendamentosConcluidos : 0
+    const ticketMedio = agendamentosFinalizados > 0 ? faturamentoTotal / agendamentosFinalizados : 0
 
     if (isLoadingAgendamentos || isLoadingClientes) {
         return (
@@ -171,16 +171,16 @@ export default function Dashboard() {
                         <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                             <div className="flex items-center gap-3">
                                 <CheckCircle2 className="h-5 w-5 text-green-500" />
-                                <span className="text-sm font-medium text-gray-700">Concluídos</span>
+                                <span className="text-sm font-medium text-gray-700">Finalizados</span>
                             </div>
-                            <span className="font-bold text-gray-900">{agendamentosConcluidos}</span>
+                                <span className="font-bold text-gray-900">{agendamentosFinalizados}</span>
                         </div>
                         <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                             <div className="flex items-center gap-3">
                                 <Clock className="h-5 w-5 text-blue-500" />
                                 <span className="text-sm font-medium text-gray-700">Agendados/Pendentes</span>
                             </div>
-                            <span className="font-bold text-gray-900">{totalAgendamentos - agendamentosConcluidos - agendamentosCancelados}</span>
+                            <span className="font-bold text-gray-900">{totalAgendamentos - agendamentosFinalizados - agendamentosCancelados}</span>
                         </div>
                         <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                             <div className="flex items-center gap-3">

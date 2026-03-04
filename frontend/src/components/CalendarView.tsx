@@ -5,11 +5,81 @@ import 'moment/locale/pt-br'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import './CalendarView.css'
 import { Agendamento } from '../services/agendamentoService'
-import { format } from 'date-fns'
+import { format, startOfWeek, endOfWeek, startOfMonth, getDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 moment.locale('pt-br')
 const localizer = momentLocalizer(moment)
+
+const capitalizar = (texto: string): string =>
+  texto.charAt(0).toUpperCase() + texto.slice(1)
+
+const DIAS_SEMANA_ABREVIADOS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab']
+
+const formatarDiaCabecalho = (date: Date): string =>
+  `${DIAS_SEMANA_ABREVIADOS[getDay(date)]} ${format(date, 'dd/MM', { locale: ptBR })}`
+
+interface ToolbarProps {
+  date: Date
+  view: View
+  onNavigate: (action: 'PREV' | 'NEXT' | 'TODAY') => void
+  onView: (view: View) => void
+}
+
+function CalendarToolbar({
+  date,
+  view,
+  onNavigate,
+  onView,
+}: ToolbarProps) {
+  const label = useMemo(() => {
+    if (view === 'month') {
+      return capitalizar(format(startOfMonth(date), 'MMMM yyyy', { locale: ptBR }))
+    }
+
+    if (view === 'week') {
+      const start = startOfWeek(date, { locale: ptBR })
+      const end = endOfWeek(date, { locale: ptBR })
+      return `${capitalizar(format(start, 'MMMM', { locale: ptBR }))} ${format(start, 'dd')} - ${format(end, 'dd')}`
+    }
+
+    return capitalizar(format(date, "EEEE, dd 'de' MMMM", { locale: ptBR }))
+  }, [date, view])
+
+  return (
+    <div className="rbc-toolbar">
+      <div className="rbc-btn-group">
+        <button type="button" onClick={() => onNavigate('PREV')} aria-label="Anterior">
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <button type="button" onClick={() => onNavigate('TODAY')}>
+          Hoje
+        </button>
+        <button type="button" onClick={() => onNavigate('NEXT')} aria-label="Próximo">
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      </div>
+      <span className="rbc-toolbar-label">{label}</span>
+      <div className="rbc-btn-group">
+        <button
+          type="button"
+          onClick={() => onView('day')}
+          className={view === 'day' ? 'rbc-active' : ''}
+        >
+          Dia
+        </button>
+        <button
+          type="button"
+          onClick={() => onView('week')}
+          className={view === 'week' ? 'rbc-active' : ''}
+        >
+          Semana
+        </button>
+      </div>
+    </div>
+  )
+}
 
 interface CalendarEvent {
   id?: number
@@ -130,7 +200,7 @@ export default function CalendarView({
     let backgroundColor = '#3174ad'
     let borderColor = '#3174ad'
 
-    if (event.status === 'CONCLUIDO') {
+    if (event.status === 'FINALIZADO') {
       backgroundColor = '#10b981'
       borderColor = '#059669'
     } else if (event.status === 'CANCELADO') {
@@ -204,6 +274,9 @@ export default function CalendarView({
       )}
       <Calendar
         localizer={localizer}
+        components={{
+          toolbar: CalendarToolbar,
+        }}
         events={events}
         startAccessor="start"
         endAccessor="end"
@@ -217,8 +290,8 @@ export default function CalendarView({
         eventPropGetter={eventStyleGetter}
         slotPropGetter={slotPropGetter}
         messages={{
-          next: 'Próximo',
-          previous: 'Anterior',
+          next: '>',
+          previous: '<',
           today: 'Hoje',
           month: 'Mês',
           week: 'Semana',
@@ -230,9 +303,17 @@ export default function CalendarView({
           noEventsInRange: 'Não há agendamentos neste período.',
         }}
         formats={{
-          dayHeaderFormat: (date) => format(date, isMobile ? 'dd/MM' : 'EEEE, dd/MM', { locale: ptBR }),
-          dayFormat: 'dd/MM',
-          weekdayFormat: (date) => format(date, isMobile ? 'dd' : 'EEE', { locale: ptBR }),
+          dayHeaderFormat: (date) => {
+            return isMobile ? format(date, 'dd/MM', { locale: ptBR }) : formatarDiaCabecalho(date)
+          },
+          dayFormat: (date) => {
+            return formatarDiaCabecalho(date)
+          },
+          weekdayFormat: (date) => {
+            return isMobile ? format(date, 'dd', { locale: ptBR }) : formatarDiaCabecalho(date)
+          },
+          dayRangeHeaderFormat: ({ start, end }) =>
+            `${capitalizar(format(start, 'MMMM', { locale: ptBR }))} ${format(start, 'dd')} - ${format(end, 'dd')}`,
           timeGutterFormat: isMobile ? 'HH:mm' : 'HH:mm',
           eventTimeRangeFormat: ({ start, end }) =>
             `${format(start, 'HH:mm', { locale: ptBR })} - ${format(end, 'HH:mm', { locale: ptBR })}`,
@@ -240,11 +321,10 @@ export default function CalendarView({
         min={new Date(2024, 0, 1, 6, 0, 0)} // 6:00 AM
         max={new Date(2024, 0, 1, 22, 0, 0)} // 10:00 PM
         step={30} // Intervalo de 30 minutos
-        timeslots={2} // 2 slots por hora (30 min cada)
+        timeslots={1} // Exibir grade e marcação a cada 30 minutos
         defaultView={isMobile ? 'day' : 'week'}
         culture="pt-BR"
       />
     </div>
   )
 }
-
