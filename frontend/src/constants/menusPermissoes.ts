@@ -9,6 +9,8 @@ export const MENUS_CONFIG = [
   { path: '/servicos', label: 'Serviços' },
   { path: '/usuarios', label: 'Usuários' },
   { path: '/perfis', label: 'Perfis e Permissões' },
+  { path: '/convites-acesso', label: 'Links de venda de acesso' },
+  { path: '/convites-cliente', label: 'Links de cadastro de clientes' },
   { path: '/agendamentos', label: 'Agendamentos' },
   { path: '/notificacoes', label: 'Notificações' },
 ] as const
@@ -21,6 +23,8 @@ export const ORDEM_REDIRECT_SEM_INICIO: MenuPath[] = [
   '/unidades',
   '/usuarios',
   '/perfis',
+  '/convites-acesso',
+  '/convites-cliente',
   '/agendamentos',
   '/notificacoes',
   '/empresas',

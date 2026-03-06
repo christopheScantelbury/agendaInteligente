@@ -28,6 +28,8 @@ public class EmpresaDTO {
     private String cidade;
     private String uf;
     private Boolean ativo;
+
+    private java.time.LocalDate dataExpiracaoAcesso;
     
     private String logo;
     private String corApp;

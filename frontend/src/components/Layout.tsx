@@ -13,6 +13,8 @@ import {
   Bell,
   Building2,
   Shield,
+  Link2,
+  UserPlus,
 } from 'lucide-react'
 import { authService } from '../services/authService'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -133,6 +135,14 @@ export default function Layout({ children }: LayoutProps) {
     // Perfis - exibir para quem tiver permissão granular (ADMIN ou GERENTE com permissão)
     if (temPermissaoMenu('/perfis')) {
       items.push({ path: '/perfis', label: 'Perfis', icon: <Shield className="h-5 w-5" /> })
+    }
+    
+    if (temPermissaoMenu('/convites-acesso')) {
+      items.push({ path: '/convites-acesso', label: 'Links de venda de acesso', icon: <Link2 className="h-5 w-5" /> })
+    }
+    
+    if (temPermissaoMenu('/convites-cliente')) {
+      items.push({ path: '/convites-cliente', label: 'Links para clientes', icon: <UserPlus className="h-5 w-5" /> })
     }
     
     // Agendamentos (CLIENTE sempre vê; outros perfis conforme permissão granular)

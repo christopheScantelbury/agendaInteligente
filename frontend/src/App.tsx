@@ -26,6 +26,8 @@ import Reclamacoes from './pages/Reclamacoes'
 import Notificacoes from './pages/Notificacoes'
 import Empresas from './pages/Empresas'
 import Perfis from './pages/Perfis'
+import ConvitesAcesso from './pages/ConvitesAcesso'
+import ConvitesCliente from './pages/ConvitesCliente'
 import RequirePermissao from './components/RequirePermissao'
 
 
@@ -121,6 +123,8 @@ function App() {
                         <Route path="/notificacoes" element={<RequirePermissao path="/notificacoes"><Notificacoes /></RequirePermissao>} />
                         <Route path="/empresas" element={<RequirePermissao path="/empresas"><Empresas /></RequirePermissao>} />
                         <Route path="/perfis" element={<RequirePermissao path="/perfis"><Perfis /></RequirePermissao>} />
+                        <Route path="/convites-acesso" element={<RequirePermissao path="/convites-acesso"><ConvitesAcesso /></RequirePermissao>} />
+                        <Route path="/convites-cliente" element={<RequirePermissao path="/convites-cliente"><ConvitesCliente /></RequirePermissao>} />
                       </Routes>
                     </Layout>
                   </ProtectedRoute>
