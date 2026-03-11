@@ -15,6 +15,8 @@ import java.util.Optional;
 public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> {
     
     List<Agendamento> findByClienteId(Long clienteId);
+
+    List<Agendamento> findByClienteIdAndStatusOrderByDataHoraInicioDesc(Long clienteId, StatusAgendamento status);
     
     List<Agendamento> findByStatus(StatusAgendamento status);
     
@@ -49,4 +51,3 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     
     List<Agendamento> findByAtendenteId(Long atendenteId);
 }
-

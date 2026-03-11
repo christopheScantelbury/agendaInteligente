@@ -9,6 +9,7 @@ export default function MeusAgendamentosCliente() {
   const { showNotification } = useNotification()
   const { confirm, ConfirmComponent } = useConfirm()
   const [agendamentos, setAgendamentos] = useState<any[]>([])
+  const [cancelamentos, setCancelamentos] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -24,8 +25,13 @@ export default function MeusAgendamentosCliente() {
     setLoading(true)
 
     try {
-      const dados = await clientePublicoService.meusAgendamentos()
-      setAgendamentos(dados)
+      const [ativos, historicoCancelamentos] = await Promise.all([
+        clientePublicoService.meusAgendamentos(),
+        clientePublicoService.meusCancelamentos(),
+      ])
+
+      setAgendamentos(ativos)
+      setCancelamentos(historicoCancelamentos)
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Erro ao carregar agendamentos'
       showNotification('error', errorMessage)
@@ -44,7 +50,7 @@ export default function MeusAgendamentosCliente() {
 
         try {
           await clientePublicoService.cancelarAgendamento(id)
-          showNotification('success', 'Agendamento cancelado com sucesso!')
+          showNotification('success', 'Agendamento cancelado e movido para o histórico.')
           await carregarAgendamentos()
         } catch (error: any) {
           const errorMessage = error.response?.data?.message || 'Erro ao cancelar agendamento'
@@ -83,6 +89,65 @@ export default function MeusAgendamentosCliente() {
   }
 
   const cliente = clientePublicoService.getCliente()
+  const semDados = agendamentos.length === 0 && cancelamentos.length === 0
+
+  const renderAgendamentoCard = (agendamento: any, mostrarAcaoCancelar: boolean) => (
+    <div
+      key={agendamento.id}
+      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition"
+    >
+      <div className="flex justify-between items-start">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <span
+              className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
+                agendamento.status
+              )}`}
+            >
+              {agendamento.status}
+            </span>
+          </div>
+          <div className="text-sm text-gray-600 space-y-1">
+            <div>
+              <strong>Data/Hora:</strong> {formatarDataHora(agendamento.dataHoraInicio)}
+            </div>
+            {agendamento.unidade && (
+              <div>
+                <strong>Unidade:</strong> {agendamento.unidade.nome}
+              </div>
+            )}
+            {agendamento.atendente && (
+              <div>
+                <strong>Atendente:</strong> {agendamento.atendente.usuario?.nome || agendamento.atendente.nome}
+              </div>
+            )}
+            {agendamento.servicos && agendamento.servicos.length > 0 && (
+              <div>
+                <strong>Serviços:</strong>{' '}
+                {agendamento.servicos
+                  .map((s: any) => s.servico?.nome || s.descricao)
+                  .join(', ')}
+              </div>
+            )}
+            {agendamento.valorTotal && (
+              <div>
+                <strong>Valor:</strong> R$ {Number(agendamento.valorTotal).toFixed(2)}
+              </div>
+            )}
+          </div>
+        </div>
+        {mostrarAcaoCancelar && agendamento.status === 'AGENDADO' && (
+          <button
+            onClick={() => cancelarAgendamento(agendamento.id)}
+            disabled={loading}
+            className="ml-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 text-sm"
+          >
+            Cancelar
+          </button>
+        )}
+      </div>
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -114,9 +179,9 @@ export default function MeusAgendamentosCliente() {
             </div>
           </div>
 
-          {loading && agendamentos.length === 0 ? (
+          {loading && semDados ? (
             <div className="text-center py-8">Carregando...</div>
-          ) : agendamentos.length === 0 ? (
+          ) : semDados ? (
             <div className="text-center py-8 text-gray-500">
               Você não possui agendamentos.
               <br />
@@ -128,65 +193,28 @@ export default function MeusAgendamentosCliente() {
               </button>
             </div>
           ) : (
-            <div className="space-y-4">
-              {agendamentos.map((agendamento) => (
-                <div
-                  key={agendamento.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
-                            agendamento.status
-                          )}`}
-                        >
-                          {agendamento.status}
-                        </span>
-                      </div>
-                      <div className="text-sm text-gray-600 space-y-1">
-                        <div>
-                          <strong>Data/Hora:</strong> {formatarDataHora(agendamento.dataHoraInicio)}
-                        </div>
-                        {agendamento.unidade && (
-                          <div>
-                            <strong>Unidade:</strong> {agendamento.unidade.nome}
-                          </div>
-                        )}
-                        {agendamento.atendente && (
-                          <div>
-                            <strong>Atendente:</strong> {agendamento.atendente.usuario?.nome}
-                          </div>
-                        )}
-                        {agendamento.servicos && agendamento.servicos.length > 0 && (
-                          <div>
-                            <strong>Serviços:</strong>{' '}
-                            {agendamento.servicos
-                              .map((s: any) => s.servico?.nome || s.descricao)
-                              .join(', ')}
-                          </div>
-                        )}
-                        {agendamento.valorTotal && (
-                          <div>
-                            <strong>Valor:</strong> R${' '}
-                            {Number(agendamento.valorTotal).toFixed(2)}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {agendamento.status === 'AGENDADO' && (
-                      <button
-                        onClick={() => cancelarAgendamento(agendamento.id)}
-                        disabled={loading}
-                        className="ml-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 text-sm"
-                      >
-                        Cancelar
-                      </button>
-                    )}
+            <div className="space-y-8">
+              <section className="space-y-3">
+                <h2 className="text-lg font-semibold text-gray-900">Agendamentos ativos</h2>
+                {agendamentos.length === 0 ? (
+                  <p className="text-sm text-gray-500">Você não possui agendamentos ativos.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {agendamentos.map((agendamento) => renderAgendamentoCard(agendamento, true))}
                   </div>
-                </div>
-              ))}
+                )}
+              </section>
+
+              <section className="space-y-3 border-t border-gray-100 pt-6">
+                <h2 className="text-lg font-semibold text-gray-900">Histórico de cancelamentos</h2>
+                {cancelamentos.length === 0 ? (
+                  <p className="text-sm text-gray-500">Nenhum cancelamento registrado.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {cancelamentos.map((agendamento) => renderAgendamentoCard(agendamento, false))}
+                  </div>
+                )}
+              </section>
             </div>
           )}
         </div>
@@ -195,4 +223,3 @@ export default function MeusAgendamentosCliente() {
     </div>
   )
 }
-

@@ -69,9 +69,12 @@ export const agendamentoService = {
     await api.post(`/agendamentos/${id}/cancelar`)
   },
 
+  excluir: async (id: number): Promise<void> => {
+    await api.delete(`/agendamentos/${id}`)
+  },
+
   finalizar: async (id: number, valorFinal: number): Promise<Agendamento> => {
     const response = await api.post<Agendamento>(`/agendamentos/${id}/finalizar`, { valorFinal })
     return response.data
   },
 }
-

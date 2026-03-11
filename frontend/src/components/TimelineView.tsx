@@ -11,7 +11,7 @@ interface TimelineViewProps {
   onSlotClick?: (date: Date) => void
 }
 
-const HOURS = Array.from({ length: 14 }, (_, i) => i + 7) // 7:00 até 20:00
+const HOURS = Array.from({ length: 14 }, (_, i) => i + 7)
 
 const getStatusColor = (status?: string): string => {
   switch (status) {
@@ -41,8 +41,7 @@ const getStatusBorderColor = (status?: string): string => {
 
 export default function TimelineView({ agendamentos, selectedDate, onEventClick, onSlotClick }: TimelineViewProps) {
   const dayStart = startOfDay(selectedDate)
-  
-  // Agrupar agendamentos por hora
+
   const agendamentosPorHora = useMemo(() => {
     const agendamentosDoDia = agendamentos.filter((ag) => {
       if (!ag.dataHoraInicio) return false
@@ -51,11 +50,11 @@ export default function TimelineView({ agendamentos, selectedDate, onEventClick,
     })
 
     const porHora: Map<number, Agendamento[]> = new Map()
-    
+
     agendamentosDoDia.forEach((ag) => {
       const agDate = parseISO(ag.dataHoraInicio)
       const hora = agDate.getHours()
-      
+
       if (!porHora.has(hora)) {
         porHora.set(hora, [])
       }
@@ -73,26 +72,26 @@ export default function TimelineView({ agendamentos, selectedDate, onEventClick,
   }
 
   return (
-    <div className="flex flex-col bg-white rounded-lg shadow-sm overflow-hidden min-w-0">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3 sm:px-6 sm:py-4 shrink-0">
+    <div className="flex min-w-0 flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_50px_-30px_rgba(15,23,42,0.35)]">
+      <div className="shrink-0 border-b border-slate-100 bg-gradient-to-r from-slate-900 via-slate-800 to-sky-900 px-4 py-4 sm:px-6 sm:py-5">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-white font-semibold text-sm sm:text-base">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-sky-200/80">
+              Agenda do dia
+            </p>
+            <h3 className="mt-1 text-sm font-semibold text-white sm:text-base">
               {format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
             </h3>
-            <p className="text-blue-100 text-xs sm:text-sm mt-1">
-              {agendamentosPorHora.size} {agendamentosPorHora.size === 1 ? 'agendamento' : 'agendamentos'}
+            <p className="mt-1 text-xs text-slate-300 sm:text-sm">
+              {agendamentosPorHora.size} {agendamentosPorHora.size === 1 ? 'faixa ocupada' : 'faixas ocupadas'}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Timeline */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden max-h-[600px] sm:max-h-[700px] min-h-0">
+      <div className="flex-1 min-h-0 max-h-[600px] overflow-y-auto overflow-x-hidden sm:max-h-[700px]">
         <div className="relative min-w-0">
-          {/* Linha do tempo */}
-          <div className="absolute left-12 sm:left-16 top-0 bottom-0 w-0.5 bg-gray-200 pointer-events-none"></div>
+          <div className="pointer-events-none absolute bottom-0 left-12 top-0 w-0.5 bg-slate-200 sm:left-16"></div>
 
           {HOURS.map((hour) => {
             const agendamentosNestaHora = agendamentosPorHora.get(hour) || []
@@ -102,31 +101,29 @@ export default function TimelineView({ agendamentos, selectedDate, onEventClick,
 
             return (
               <div key={hour} className="relative min-w-0">
-                {/* Marcador de hora */}
-                <div className="flex items-start px-3 sm:px-6 py-3 sm:py-4 hover:bg-gray-50 transition-colors gap-2 sm:gap-0 min-w-0">
-                  <div className="flex items-center min-w-[2.5rem] sm:min-w-[4rem] shrink-0">
+                <div className="flex min-w-0 items-start gap-2 px-3 py-3 transition-colors hover:bg-slate-50 sm:gap-0 sm:px-6 sm:py-4">
+                  <div className="flex min-w-[2.5rem] shrink-0 items-center sm:min-w-[4rem]">
                     <div className="relative z-10 flex items-center">
-                      <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-blue-500 border-2 border-white shadow-sm"></div>
+                      <div className="h-3 w-3 rounded-full border-2 border-white bg-sky-500 shadow-sm sm:h-4 sm:w-4"></div>
                       <div className="ml-1.5 sm:ml-3">
-                        <span className="text-xs sm:text-sm font-semibold text-gray-900">
+                        <span className="text-xs font-semibold text-slate-900 sm:text-sm">
                           {horaFormatada}
                         </span>
-                        <span className="text-xs text-gray-500 ml-1 hidden sm:inline">
+                        <span className="ml-1 hidden text-xs text-slate-500 sm:inline">
                           {hora12}:00 {periodo}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Área de eventos */}
-                  <div className="flex-1 min-w-0 overflow-hidden ml-2 sm:ml-6">
+                  <div className="ml-2 min-w-0 flex-1 overflow-hidden sm:ml-6">
                     {agendamentosNestaHora.length === 0 ? (
                       <button
                         onClick={() => handleSlotClick(hour)}
-                        className="w-full text-left py-2 px-3 rounded-lg border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 transition-all text-sm text-gray-500 hover:text-blue-600"
+                        className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-left text-sm text-slate-500 transition-all hover:border-sky-400 hover:bg-sky-50 hover:text-sky-700"
                       >
                         <span className="flex items-center">
-                          <CalendarIcon className="h-4 w-4 mr-2" />
+                          <CalendarIcon className="mr-2 h-4 w-4" />
                           Clique para agendar
                         </span>
                       </button>
@@ -134,10 +131,10 @@ export default function TimelineView({ agendamentos, selectedDate, onEventClick,
                       <div className="space-y-2 sm:space-y-3">
                         {agendamentosNestaHora.map((agendamento) => {
                           const inicio = parseISO(agendamento.dataHoraInicio)
-                          const fim = agendamento.dataHoraFim 
+                          const fim = agendamento.dataHoraFim
                             ? parseISO(agendamento.dataHoraFim)
                             : addHours(inicio, 1)
-                          
+
                           const servicosNomes = agendamento.servicos
                             ?.map((s) => s.descricao || 'Serviço')
                             .join(', ') || 'Sem serviço'
@@ -146,43 +143,43 @@ export default function TimelineView({ agendamentos, selectedDate, onEventClick,
                             <button
                               key={agendamento.id}
                               onClick={() => onEventClick?.(agendamento)}
-                              className={`w-full min-w-0 text-left p-3 sm:p-4 rounded-lg border-l-4 ${getStatusBorderColor(agendamento.status)} bg-white shadow-sm hover:shadow-md transition-all group`}
+                              className={`group w-full min-w-0 rounded-2xl border border-slate-200 border-l-4 ${getStatusBorderColor(agendamento.status)} bg-white p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg sm:p-4`}
                             >
-                              <div className="flex items-start justify-between gap-2 mb-2 min-w-0">
-                                <div className="flex-1 min-w-0 overflow-hidden">
-                                  <h4 className="font-semibold text-gray-900 text-sm sm:text-base mb-1 group-hover:text-blue-600 transition-colors truncate">
+                              <div className="mb-2 flex min-w-0 items-start justify-between gap-2">
+                                <div className="min-w-0 flex-1 overflow-hidden">
+                                  <h4 className="mb-1 truncate text-sm font-semibold text-slate-900 transition-colors group-hover:text-sky-700 sm:text-base">
                                     {agendamento.cliente?.nome || 'Cliente não informado'}
                                   </h4>
-                                  <p className="text-xs sm:text-sm text-gray-600 line-clamp-1 truncate">
+                                  <p className="line-clamp-1 truncate text-xs text-slate-600 sm:text-sm">
                                     {servicosNomes}
                                   </p>
                                 </div>
-                                <span className={`shrink-0 px-2 py-1 rounded-full text-xs font-semibold text-white ${getStatusColor(agendamento.status)}`}>
+                                <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold text-white ${getStatusColor(agendamento.status)}`}>
                                   {agendamento.status === 'CONFIRMADO' ? 'Confirmado' :
                                    agendamento.status === 'CANCELADO' ? 'Cancelado' :
                                    agendamento.status === 'FINALIZADO' ? 'Finalizado' : 'Pendente'}
                                 </span>
                               </div>
 
-                              <div className="flex flex-wrap gap-x-3 gap-y-1 sm:gap-4 mt-3 text-xs sm:text-sm text-gray-500 min-w-0">
-                                <div className="flex items-center shrink-0">
-                                  <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 text-gray-400 shrink-0" />
+                              <div className="mt-3 flex min-w-0 flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500 sm:gap-4 sm:text-sm">
+                                <div className="flex shrink-0 items-center">
+                                  <Clock className="mr-1.5 h-3 w-3 shrink-0 text-slate-400 sm:h-4 sm:w-4" />
                                   <span>
                                     {format(inicio, 'HH:mm')} - {format(fim, 'HH:mm')}
                                   </span>
                                 </div>
                                 {agendamento.atendente?.nome && (
-                                  <div className="flex items-center min-w-0 max-w-full">
-                                    <User className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 text-gray-400 shrink-0" />
-                                    <span className="truncate max-w-[80px] sm:max-w-[120px]">
+                                  <div className="flex min-w-0 max-w-full items-center">
+                                    <User className="mr-1.5 h-3 w-3 shrink-0 text-slate-400 sm:h-4 sm:w-4" />
+                                    <span className="max-w-[80px] truncate sm:max-w-[120px]">
                                       {agendamento.atendente.nome}
                                     </span>
                                   </div>
                                 )}
                                 {agendamento.unidade?.nome && (
-                                  <div className="flex items-center min-w-0 max-w-full">
-                                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 text-gray-400 shrink-0" />
-                                    <span className="truncate max-w-[80px] sm:max-w-[120px]">
+                                  <div className="flex min-w-0 max-w-full items-center">
+                                    <MapPin className="mr-1.5 h-3 w-3 shrink-0 text-slate-400 sm:h-4 sm:w-4" />
+                                    <span className="max-w-[80px] truncate sm:max-w-[120px]">
                                       {agendamento.unidade.nome}
                                     </span>
                                   </div>
@@ -190,8 +187,8 @@ export default function TimelineView({ agendamentos, selectedDate, onEventClick,
                               </div>
 
                               {agendamento.valorTotal && (
-                                <div className="mt-2 pt-2 border-t border-gray-100">
-                                  <span className="text-xs sm:text-sm font-semibold text-green-600">
+                                <div className="mt-2 border-t border-slate-100 pt-2">
+                                  <span className="text-xs font-semibold text-emerald-600 sm:text-sm">
                                     R$ {agendamento.valorTotal.toFixed(2)}
                                   </span>
                                 </div>
@@ -209,14 +206,13 @@ export default function TimelineView({ agendamentos, selectedDate, onEventClick,
         </div>
       </div>
 
-      {/* Empty state */}
       {agendamentosPorHora.size === 0 && (
-        <div className="flex flex-col items-center justify-center py-12 px-4">
-          <CalendarIcon className="h-12 w-12 sm:h-16 sm:w-16 text-gray-300 mb-4" />
-          <p className="text-gray-500 text-sm sm:text-base font-medium mb-1">
+        <div className="flex flex-col items-center justify-center px-4 py-12">
+          <CalendarIcon className="mb-4 h-12 w-12 text-slate-300 sm:h-16 sm:w-16" />
+          <p className="mb-1 text-sm font-medium text-slate-500 sm:text-base">
             Nenhum agendamento neste dia
           </p>
-          <p className="text-gray-400 text-xs sm:text-sm text-center">
+          <p className="text-center text-xs text-slate-400 sm:text-sm">
             Clique em um horário acima para criar um novo agendamento
           </p>
         </div>

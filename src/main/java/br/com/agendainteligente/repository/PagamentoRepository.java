@@ -10,5 +10,5 @@ import java.util.Optional;
 public interface PagamentoRepository extends JpaRepository<Pagamento, Long> {
     Optional<Pagamento> findByAgendamentoId(Long agendamentoId);
     Optional<Pagamento> findByIdTransacaoGateway(String idTransacaoGateway);
+    void deleteByAgendamentoId(Long agendamentoId);
 }
-

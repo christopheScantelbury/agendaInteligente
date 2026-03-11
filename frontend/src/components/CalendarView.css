@@ -1,157 +1,182 @@
-/* Estilos customizados para o calendário responsivo */
+.calendar-view-shell .rbc-calendar {
+  font-size: 14px;
+  color: #0f172a;
+}
 
-/* Mobile: Forçar visualização de dia e ajustar layout */
+.calendar-view-shell .rbc-time-view {
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.calendar-view-shell .rbc-time-header {
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.calendar-view-shell .rbc-time-header-content {
+  border-left: 1px solid #e2e8f0;
+}
+
+.calendar-view-shell .rbc-header {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 8px 6px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #334155;
+  text-transform: none;
+}
+
+.calendar-view-shell .rbc-time-content {
+  border-top: none;
+}
+
+.calendar-view-shell .rbc-time-gutter,
+.calendar-view-shell .rbc-time-header-gutter {
+  width: 58px;
+  min-width: 58px;
+  background: #f8fafc;
+}
+
+.calendar-view-shell .rbc-time-gutter .rbc-timeslot-group {
+  border-right: 1px solid #e2e8f0;
+}
+
+.calendar-view-shell .rbc-label {
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.calendar-view-shell .rbc-time-slot {
+  min-height: 34px;
+  border-top: 1px solid #edf2f7;
+}
+
+.calendar-view-shell .rbc-timeslot-group {
+  min-height: 68px;
+}
+
+.calendar-view-shell .rbc-day-bg {
+  background: #ffffff;
+}
+
+.calendar-view-shell .rbc-day-bg + .rbc-day-bg {
+  border-left: 1px solid #e7edf4;
+}
+
+.calendar-view-shell .rbc-day-bg.rbc-today,
+.calendar-view-shell .rbc-day-slot.rbc-today {
+  background: #eff6ff;
+}
+
+.calendar-view-shell .rbc-off-range-bg {
+  background: #f8fafc;
+}
+
+.calendar-view-shell .rbc-current-time-indicator {
+  height: 2px;
+  background-color: #2563eb;
+}
+
+.calendar-view-shell .rbc-allday-cell {
+  display: none !important;
+}
+
+.calendar-view-shell .rbc-event {
+  overflow: hidden;
+  min-height: 42px;
+  border-radius: 10px;
+  border-width: 1px !important;
+  padding: 0 !important;
+}
+
+.calendar-view-shell .rbc-event-label {
+  display: none;
+}
+
+.calendar-view-shell .calendar-event-card {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  line-height: 1.25;
+}
+
+.calendar-view-shell .calendar-event-time {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.96;
+}
+
+.calendar-view-shell .calendar-event-title {
+  overflow: hidden;
+  display: -webkit-box;
+  font-size: 12px;
+  font-weight: 600;
+  word-break: break-word;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.calendar-view-shell .calendar-slot-disabled {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(148, 163, 184, 0.1),
+    rgba(148, 163, 184, 0.1) 2px,
+    rgba(255, 255, 255, 0.9) 2px,
+    rgba(255, 255, 255, 0.9) 6px
+  );
+}
+
+.calendar-view-shell .rbc-show-more {
+  font-size: 12px;
+  font-weight: 600;
+  color: #2563eb;
+}
+
+@media (max-width: 1024px) {
+  .calendar-view-shell .rbc-time-gutter,
+  .calendar-view-shell .rbc-time-header-gutter {
+    width: 52px;
+    min-width: 52px;
+  }
+
+  .calendar-view-shell .rbc-header {
+    min-height: 42px;
+    font-size: 0.82rem;
+    padding: 8px 6px;
+  }
+}
+
 @media (max-width: 768px) {
-  .rbc-calendar {
-    font-size: 12px;
-  }
-
-  .rbc-header {
-    padding: 8px 4px;
-    font-size: 11px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .rbc-time-header {
-    display: none !important;
-  }
-
-  .rbc-time-content {
-    border-top: none !important;
-  }
-
-  .rbc-time-view {
-    border-top: none !important;
-  }
-
-  .rbc-day-slot {
-    min-height: 60px;
-  }
-
-  .rbc-time-slot {
-    min-height: 40px;
-  }
-
-  .rbc-event {
-    font-size: 10px;
-    padding: 2px 4px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .rbc-event-label {
-    display: none;
-  }
-
-  .rbc-toolbar {
-    flex-direction: column;
-    gap: 8px;
-    padding: 8px;
-  }
-
-  .rbc-toolbar button {
-    font-size: 12px;
-    padding: 6px 10px;
-  }
-
-  .rbc-toolbar-label {
-    font-size: 14px;
-    font-weight: 600;
-    margin: 4px 0;
-  }
-
-  /* Ocultar visualização semanal no mobile */
-  .rbc-toolbar button[type="button"]:nth-child(3),
-  .rbc-toolbar button[type="button"]:nth-child(4) {
-    display: none;
-  }
-
-  /* Ajustar gutter de tempo */
-  .rbc-time-gutter {
-    min-width: 50px;
-    font-size: 10px;
-  }
-
-  .rbc-time-gutter .rbc-timeslot-group {
-    min-height: 40px;
-  }
-
-  /* Ajustar colunas dos dias */
-  .rbc-day-bg {
-    min-width: 0;
-  }
-
-  /* Melhorar scroll horizontal se necessário */
-  .rbc-time-content {
+  .calendar-view-shell {
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-}
-
-/* Tablet: Ajustes intermediários */
-@media (min-width: 769px) and (max-width: 1024px) {
-  .rbc-calendar {
-    font-size: 13px;
   }
 
-  .rbc-header {
-    padding: 10px 6px;
-    font-size: 12px;
+  .calendar-view-shell .rbc-time-view {
+    min-width: 620px;
   }
 
-  .rbc-event {
+  .calendar-view-shell .rbc-time-slot {
+    min-height: 32px;
+  }
+
+  .calendar-view-shell .rbc-timeslot-group {
+    min-height: 64px;
+  }
+
+  .calendar-view-shell .rbc-event {
+    min-height: 38px;
+  }
+
+  .calendar-view-shell .calendar-event-title {
     font-size: 11px;
-    padding: 3px 5px;
+    -webkit-line-clamp: 1;
   }
-
-  .rbc-time-gutter {
-    min-width: 60px;
-  }
-}
-
-/* Melhorias gerais para mobile */
-@media (max-width: 640px) {
-  .rbc-calendar {
-    font-size: 11px;
-  }
-
-  .rbc-header {
-    padding: 6px 2px;
-    font-size: 10px;
-  }
-
-  .rbc-toolbar {
-    padding: 6px;
-  }
-
-  .rbc-toolbar button {
-    font-size: 11px;
-    padding: 5px 8px;
-  }
-
-  .rbc-event {
-    font-size: 9px;
-    padding: 1px 3px;
-  }
-
-  .rbc-time-gutter {
-    min-width: 45px;
-    font-size: 9px;
-  }
-}
-
-/* Melhorar a experiência de toque */
-.rbc-event {
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* Ajustar scroll suave */
-.rbc-time-content,
-.rbc-day-slot {
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
 }

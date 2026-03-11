@@ -16,7 +16,7 @@ import CalendarMonth from '../components/CalendarMonth'
 import { SlotInfo, View } from 'react-big-calendar'
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, Clock, Calendar, User, Building2, Search, X, CalendarDays, List, Pencil } from 'lucide-react'
+import { Plus, Building2, Search, X, CalendarDays, Calendar, Clock, List, Pencil, ChevronDown, ChevronUp, UserRound, Trash2 } from 'lucide-react'
 import Modal from '../components/Modal'
 import FormField from '../components/FormField'
 import Button from '../components/Button'
@@ -34,6 +34,20 @@ interface CalendarEvent {
   status?: string
 }
 
+const inputBaseClass =
+  'block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100'
+
+const inputWithIconClass =
+  'block w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-sm text-slate-900 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100'
+
+const lineInputClass =
+  'block w-full border-0 border-b border-slate-300 bg-transparent px-0 pb-1.5 pt-1 text-sm text-slate-900 transition focus:border-violet-500 focus:outline-none focus:ring-0'
+
+const moneyFormatter = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+})
+
 
 export default function Agendamentos() {
   const queryClient = useQueryClient()
@@ -44,7 +58,7 @@ export default function Agendamentos() {
   const [view, setView] = useState<View>('week')
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
-  const [viewMode, setViewMode] = useState<'timeline' | 'calendar'>('timeline')
+  const [viewMode, setViewMode] = useState<'timeline' | 'calendar'>('calendar')
 
   // Form data para criar agendamento
   const [formData, setFormData] = useState<Partial<Agendamento>>({
@@ -58,12 +72,20 @@ export default function Agendamentos() {
   const [servicosSelecionados, setServicosSelecionados] = useState<number[]>([])
   const [buscaCliente, setBuscaCliente] = useState('')
   const [buscaServico, setBuscaServico] = useState('')
+  const [clienteFieldActive, setClienteFieldActive] = useState(false)
+  const [servicoFieldActive, setServicoFieldActive] = useState(false)
   const [mostrarModalCliente, setMostrarModalCliente] = useState(false)
   const [mostrarModalServico, setMostrarModalServico] = useState(false)
   const [agendamentoDetalhes, setAgendamentoDetalhes] = useState<Agendamento | null>(null)
   const [editingAgendamento, setEditingAgendamento] = useState<Agendamento | null>(null)
   const [editFormData, setEditFormData] = useState<Partial<Agendamento>>({})
   const [editServicosSelecionados, setEditServicosSelecionados] = useState<number[]>([])
+  const [editBuscaCliente, setEditBuscaCliente] = useState('')
+  const [editBuscaServico, setEditBuscaServico] = useState('')
+  const [editClienteFieldActive, setEditClienteFieldActive] = useState(false)
+  const [editServicoFieldActive, setEditServicoFieldActive] = useState(false)
+  const [editProfissionalNomeSelecionado, setEditProfissionalNomeSelecionado] = useState('')
+  const [showAdvancedCreateFields, setShowAdvancedCreateFields] = useState(false)
   const [recorrenciaConfig, setRecorrenciaConfig] = useState<RecorrenciaConfigType>({
     recorrente: false,
   })
@@ -71,6 +93,7 @@ export default function Agendamentos() {
   const usuario = authService.getUsuario()
   const perfil = usuario?.perfil ?? ''
   const perfilNorm = perfil.toUpperCase()
+  const isAdmin = perfilNorm === 'ADMIN' || perfilNorm === 'ADMINISTRADOR'
   const isCliente = perfilNorm === 'CLIENTE'
 
   const { data: perfilPermissoes } = useQuery({
@@ -136,6 +159,36 @@ export default function Agendamentos() {
     )
   }, [servicos, buscaServico])
 
+  const servicosSelecionadosDetalhes = useMemo(
+    () => servicos.filter((servico) => servicosSelecionados.includes(servico.id!)),
+    [servicos, servicosSelecionados]
+  )
+
+  const editServicosSelecionadosDetalhes = useMemo(
+    () => servicos.filter((servico) => editServicosSelecionados.includes(servico.id!)),
+    [servicos, editServicosSelecionados]
+  )
+
+  const valorEstimadoCriacao = useMemo(
+    () => servicosSelecionadosDetalhes.reduce((total, servico) => total + (servico.valor || 0), 0),
+    [servicosSelecionadosDetalhes]
+  )
+
+  const duracaoEstimadaCriacao = useMemo(
+    () => servicosSelecionadosDetalhes.reduce((total, servico) => total + (servico.duracaoMinutos || 0), 0),
+    [servicosSelecionadosDetalhes]
+  )
+
+  const valorEstimadoEdicao = useMemo(
+    () => editServicosSelecionadosDetalhes.reduce((total, servico) => total + (servico.valor || 0), 0),
+    [editServicosSelecionadosDetalhes]
+  )
+
+  const duracaoEstimadaEdicao = useMemo(
+    () => editServicosSelecionadosDetalhes.reduce((total, servico) => total + (servico.duracaoMinutos || 0), 0),
+    [editServicosSelecionadosDetalhes]
+  )
+
   const { data: meuPerfilCliente } = useQuery({
     queryKey: ['cliente-meu-perfil'],
     queryFn: clienteService.buscarMeuPerfil,
@@ -165,6 +218,25 @@ export default function Agendamentos() {
         (c.cpfCnpj && c.cpfCnpj.replace(/\D/g, '').includes(buscaCliente.replace(/\D/g, '')))
     )
   }, [clientesParaSelecao, buscaCliente])
+
+  const editClientesFiltrados = useMemo(() => {
+    if (!editBuscaCliente.trim()) return clientesParaSelecao
+    return clientesParaSelecao.filter(
+      (c) =>
+        matchSearch(c.nome, editBuscaCliente) ||
+        (c.cpfCnpj && c.cpfCnpj.replace(/\D/g, '').includes(editBuscaCliente.replace(/\D/g, '')))
+    )
+  }, [clientesParaSelecao, editBuscaCliente])
+
+  const editServicosFiltrados = useMemo(() => {
+    if (!editBuscaServico.trim()) return servicos.filter((s) => s.ativo)
+    return servicos.filter(
+      (s) =>
+        s.ativo &&
+        (matchSearch(s.nome ?? '', editBuscaServico) ||
+          matchSearch(s.descricao ?? '', editBuscaServico))
+    )
+  }, [servicos, editBuscaServico])
 
   // Filtrar unidades baseado no perfil (backend filtra por perfil; retry limitado para evitar 5xx em loop)
   const { data: todasUnidades = [] } = useApiQuery({
@@ -202,15 +274,21 @@ export default function Agendamentos() {
     return todasUnidades
   }, [todasUnidades, perfilNorm, isCliente, usuarioCompleto?.unidadesIds, usuario?.unidadeId, meuPerfilCliente])
 
-  // Filtrar atendentes baseado na unidade, serviços selecionados e perfil
+  const unidadeUnicaModal = useMemo(() => {
+    const isAtendenteOuProfissional = perfilNorm === 'ATENDENTE' || perfilNorm === 'PROFISSIONAL'
+    const podeOcultarUnidade = isAdmin || perfilNorm === 'GERENTE' || isAtendenteOuProfissional
+    if (!podeOcultarUnidade || unidadesFiltradas.length !== 1) return undefined
+    return unidadesFiltradas[0]
+  }, [isAdmin, perfilNorm, unidadesFiltradas])
+
+  const editUnidadeIdAtiva = editFormData.unidadeId ?? unidadeUnicaModal?.id
+
+  // Listar profissionais da unidade (studio)
   const { data: todosAtendentes = [], refetch: refetchAtendentes } = useQuery({
-    queryKey: ['atendentes', formData.unidadeId, servicosSelecionados],
+    queryKey: ['atendentes', formData.unidadeId],
     queryFn: () => {
       if (!formData.unidadeId) return Promise.resolve([])
-      if (servicosSelecionados.length === 0) {
-        return atendenteService.listarPorUnidade(formData.unidadeId!)
-      }
-      return atendenteService.listarPorUnidadeEServicos(formData.unidadeId!, servicosSelecionados)
+      return atendenteService.listarPorUnidade(formData.unidadeId)
     },
     enabled: !!formData.unidadeId,
   })
@@ -267,7 +345,15 @@ export default function Agendamentos() {
     }
   }, [isCliente, criarModal, meuPerfilCliente, primeiraUnidadeCliente])
 
-  const { data: horariosDisponiveis = [], isLoading: carregandoHorariosQuery } = useQuery({
+  useEffect(() => {
+    if (!criarModal || !unidadeUnicaModal?.id) return
+    setFormData((prev) => ({
+      ...prev,
+      unidadeId: unidadeUnicaModal.id,
+    }))
+  }, [criarModal, unidadeUnicaModal])
+
+  const { data: horariosDisponiveis = [] } = useQuery({
     queryKey: [
       'horariosDisponiveis',
       formData.unidadeId,
@@ -297,42 +383,86 @@ export default function Agendamentos() {
     enabled: !!formData.unidadeId && servicosSelecionados.length > 0 && !!formData.dataHoraInicio,
   })
 
-  const carregandoHorarios = carregandoHorariosQuery
+  useEffect(() => {
+    if (!editingAgendamento) {
+      setEditBuscaCliente('')
+      setEditBuscaServico('')
+      setEditClienteFieldActive(false)
+      setEditServicoFieldActive(false)
+      setEditProfissionalNomeSelecionado('')
+      return
+    }
+
+    const clienteId =
+      editingAgendamento.clienteId ??
+      editingAgendamento.cliente?.id ??
+      editingAgendamento.cliente?.clienteId
+    const unidadeId =
+      editingAgendamento.unidadeId ??
+      editingAgendamento.unidade?.id ??
+      editingAgendamento.unidade?.unidadeId
+    const atendenteId =
+      editingAgendamento.atendenteId ??
+      editingAgendamento.atendente?.id ??
+      editingAgendamento.atendente?.atendenteId
+    const servicosIds =
+      editingAgendamento.servicos
+        ?.map((s) => s.servicoId ?? (s as unknown as { servico?: { id?: number } }).servico?.id)
+        .filter((id): id is number => typeof id === 'number') ?? []
+
+    setEditFormData({
+      clienteId,
+      unidadeId,
+      atendenteId,
+      dataHoraInicio: editingAgendamento.dataHoraInicio?.includes('T')
+        ? editingAgendamento.dataHoraInicio.slice(0, 16)
+        : editingAgendamento.dataHoraInicio,
+      observacoes: editingAgendamento.observacoes ?? '',
+    })
+    setEditServicosSelecionados(servicosIds)
+    setEditBuscaCliente(editingAgendamento.cliente?.nome ?? '')
+    setEditBuscaServico('')
+    setEditClienteFieldActive(false)
+    setEditServicoFieldActive(false)
+    setEditProfissionalNomeSelecionado(
+      editingAgendamento.atendente?.nomeUsuario ??
+        editingAgendamento.atendente?.nome ??
+        ''
+    )
+  }, [editingAgendamento])
 
   useEffect(() => {
-    if (editingAgendamento) {
-      const clienteId = editingAgendamento.clienteId ?? editingAgendamento.cliente?.id
-      const unidadeId = editingAgendamento.unidadeId ?? editingAgendamento.unidade?.id
-      const atendenteId = editingAgendamento.atendenteId ?? editingAgendamento.atendente?.id
-      const servicosIds = editingAgendamento.servicos?.map((s) => s.servicoId) ?? []
-      setEditFormData({
-        clienteId,
-        unidadeId,
-        atendenteId,
-        dataHoraInicio: editingAgendamento.dataHoraInicio?.includes('T')
-          ? editingAgendamento.dataHoraInicio.slice(0, 16)
-          : editingAgendamento.dataHoraInicio,
-        observacoes: editingAgendamento.observacoes ?? '',
-      })
-      setEditServicosSelecionados(servicosIds)
+    if (!editingAgendamento || !unidadeUnicaModal?.id) return
+    setEditFormData((prev) => ({
+      ...prev,
+      unidadeId: prev.unidadeId ?? unidadeUnicaModal.id,
+    }))
+  }, [editingAgendamento, unidadeUnicaModal])
+
+  useEffect(() => {
+    if (!editingAgendamento || !editFormData.clienteId) return
+    if (editBuscaCliente.trim()) return
+    const clienteSelecionado = clientesParaSelecao.find((c) => c.id === editFormData.clienteId)
+    if (clienteSelecionado?.nome) {
+      setEditBuscaCliente(clienteSelecionado.nome)
     }
-  }, [editingAgendamento])
+  }, [editingAgendamento, editFormData.clienteId, editBuscaCliente, clientesParaSelecao])
 
   const { data: editHorariosDisponiveis = [] } = useQuery({
     queryKey: [
       'horariosDisponiveis',
       'edit',
-      editFormData.unidadeId,
+      editUnidadeIdAtiva,
       editServicosSelecionados,
       editFormData.dataHoraInicio,
     ],
     queryFn: async () => {
-      if (!editFormData.unidadeId || editServicosSelecionados.length === 0 || !editFormData.dataHoraInicio) return []
+      if (!editUnidadeIdAtiva || editServicosSelecionados.length === 0 || !editFormData.dataHoraInicio) return []
       const dataSelecionada = parseISO(editFormData.dataHoraInicio)
       const dataInicio = format(startOfDay(dataSelecionada), 'yyyy-MM-dd')
       const dataFim = format(addDays(startOfDay(dataSelecionada), 1), 'yyyy-MM-dd')
       const horarios = await horarioDisponivelService.buscarHorariosDisponiveis(
-        editFormData.unidadeId,
+        editUnidadeIdAtiva,
         editServicosSelecionados[0],
         dataInicio,
         dataFim
@@ -340,24 +470,47 @@ export default function Agendamentos() {
       const agora = new Date()
       return horarios.filter((h) => isAfter(parseISO(h.dataHoraInicio), agora) && h.disponivel !== false)
     },
-    enabled: !!editingAgendamento && !!editFormData.unidadeId && editServicosSelecionados.length > 0 && !!editFormData.dataHoraInicio,
+    enabled: !!editingAgendamento && !!editUnidadeIdAtiva && editServicosSelecionados.length > 0 && !!editFormData.dataHoraInicio,
   })
 
   const { data: editAtendentes = [] } = useQuery({
-    queryKey: ['atendentes', editFormData.unidadeId, editServicosSelecionados],
+    queryKey: ['atendentes', editUnidadeIdAtiva, editServicosSelecionados],
     queryFn: () => {
-      if (!editFormData.unidadeId) return Promise.resolve([])
-      if (editServicosSelecionados.length === 0) return atendenteService.listarPorUnidade(editFormData.unidadeId)
-      return atendenteService.listarPorUnidadeEServicos(editFormData.unidadeId, editServicosSelecionados)
+      if (!editUnidadeIdAtiva) return Promise.resolve([])
+      if (editServicosSelecionados.length === 0) return atendenteService.listarPorUnidade(editUnidadeIdAtiva)
+      return atendenteService.listarPorUnidadeEServicos(editUnidadeIdAtiva, editServicosSelecionados)
     },
-    enabled: !!editingAgendamento && !!editFormData.unidadeId,
+    enabled: !!editingAgendamento && !!editUnidadeIdAtiva,
   })
 
+  const editAtendentesFiltrados = useMemo(() => {
+    if (perfilNorm === 'ADMIN' || perfilNorm === 'GERENTE') {
+      return editAtendentes
+    }
+    if ((perfilNorm === 'PROFISSIONAL' || perfilNorm === 'ATENDENTE') && usuario?.usuarioId) {
+      return editAtendentes.filter((a) => a.usuarioId === usuario.usuarioId)
+    }
+    return editAtendentes
+  }, [editAtendentes, perfilNorm, usuario?.usuarioId])
+
   const editAtendentesComHorarios = useMemo(() => {
-    if (editHorariosDisponiveis.length === 0) return editAtendentes
+    if (editHorariosDisponiveis.length === 0) return editAtendentesFiltrados
     const ids = new Set(editHorariosDisponiveis.map((h) => h.atendenteId))
-    return editAtendentes.filter((a) => ids.has(a.id!))
-  }, [editAtendentes, editHorariosDisponiveis])
+    return editAtendentesFiltrados.filter((a) => ids.has(a.id!))
+  }, [editAtendentesFiltrados, editHorariosDisponiveis])
+
+  const editProfissionaisDisponiveis = useMemo(
+    () => editAtendentesComHorarios.filter((a) => (a.perfilUsuario ?? '').toUpperCase() === 'PROFISSIONAL'),
+    [editAtendentesComHorarios]
+  )
+
+  const editProfissionalSelecionado = useMemo(
+    () => editProfissionaisDisponiveis.find((a) => a.id === editFormData.atendenteId),
+    [editProfissionaisDisponiveis, editFormData.atendenteId]
+  )
+
+  const editProfissionalSelecionadoNome =
+    editProfissionalSelecionado?.nomeUsuario ?? editProfissionalNomeSelecionado
 
   // Filtrar atendentes que têm horários disponíveis
   const atendentesComHorarios = useMemo(() => {
@@ -366,6 +519,35 @@ export default function Agendamentos() {
     const atendentesIdsComHorarios = new Set(horariosDisponiveis.map(h => h.atendenteId))
     return atendentesFiltrados.filter(a => atendentesIdsComHorarios.has(a.id!))
   }, [atendentesFiltrados, horariosDisponiveis])
+
+  const profissionaisDisponiveis = useMemo(
+    () => atendentesComHorarios.filter((a) => (a.perfilUsuario ?? '').toUpperCase() === 'PROFISSIONAL'),
+    [atendentesComHorarios]
+  )
+
+  const profissionalSelecionado = useMemo(
+    () => profissionaisDisponiveis.find((a) => a.id === formData.atendenteId),
+    [profissionaisDisponiveis, formData.atendenteId]
+  )
+
+  useEffect(() => {
+    if (!formData.atendenteId) return
+    const selecionadoEhProfissional = profissionaisDisponiveis.some((a) => a.id === formData.atendenteId)
+    if (!selecionadoEhProfissional) {
+      setFormData((prev) => ({ ...prev, atendenteId: undefined }))
+    }
+  }, [formData.atendenteId, profissionaisDisponiveis])
+
+  useEffect(() => {
+    if (!editFormData.atendenteId) {
+      setEditProfissionalNomeSelecionado('')
+      return
+    }
+    const profissionalDisponivel = editProfissionaisDisponiveis.find((a) => a.id === editFormData.atendenteId)
+    if (profissionalDisponivel?.nomeUsuario) {
+      setEditProfissionalNomeSelecionado(profissionalDisponivel.nomeUsuario)
+    }
+  }, [editFormData.atendenteId, editProfissionaisDisponiveis])
 
   const cancelarMutation = useMutation({
     mutationFn: (id: number) => agendamentoService.cancelar(id),
@@ -377,6 +559,20 @@ export default function Agendamentos() {
     },
     onError: (error: unknown) => {
       showNotification('error', getApiErrorMessage(error, 'Erro ao cancelar agendamento'))
+    },
+  })
+
+  const excluirMutation = useMutation({
+    mutationFn: (id: number) => agendamentoService.excluir(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agendamentos'] })
+      queryClient.invalidateQueries({ queryKey: ['horariosDisponiveis'] })
+      setAgendamentoDetalhes(null)
+      setEditingAgendamento(null)
+      showNotification('success', 'Agendamento excluído com sucesso!')
+    },
+    onError: (error: unknown) => {
+      showNotification('error', getApiErrorMessage(error, 'Erro ao excluir agendamento'))
     },
   })
 
@@ -399,16 +595,7 @@ export default function Agendamentos() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agendamentos'] })
       queryClient.invalidateQueries({ queryKey: ['horariosDisponiveis'] })
-      setCriarModal(null)
-      setFormData({
-        clienteId: undefined,
-        unidadeId: undefined,
-        atendenteId: undefined,
-        dataHoraInicio: '',
-        observacoes: '',
-        servicos: [],
-      })
-      setServicosSelecionados([])
+      resetCreateModal()
       showNotification('success', 'Agendamento criado com sucesso!')
     },
     onError: (error: unknown) => {
@@ -438,16 +625,12 @@ export default function Agendamentos() {
     const start = slotInfo.start
     const end = slotInfo.end || new Date(start.getTime() + 60 * 60 * 1000) // 1 hora padrão
 
-    // Garantir que a data não está no passado
-    const agora = new Date()
-    const dataSelecionada = start < agora ? agora : start
-
-    setCriarModal({ start: dataSelecionada, end })
+    setCriarModal({ start, end })
     setFormData({
       clienteId: undefined,
       unidadeId: undefined,
       atendenteId: undefined,
-      dataHoraInicio: format(dataSelecionada, "yyyy-MM-dd'T'HH:mm"),
+      dataHoraInicio: format(start, "yyyy-MM-dd'T'HH:mm"),
       observacoes: '',
       servicos: [],
     })
@@ -475,103 +658,136 @@ export default function Agendamentos() {
     finalizarMutation.mutate({ id: finalizarModal.agendamento.id!, valorFinal: valor })
   }
 
+  const resetCreateModal = () => {
+    setCriarModal(null)
+    setFormData({
+      clienteId: undefined,
+      unidadeId: undefined,
+      atendenteId: undefined,
+      dataHoraInicio: '',
+      observacoes: '',
+      servicos: [],
+    })
+    setServicosSelecionados([])
+    setBuscaCliente('')
+    setBuscaServico('')
+    setClienteFieldActive(false)
+    setServicoFieldActive(false)
+    setShowAdvancedCreateFields(false)
+    setRecorrenciaConfig({ recorrente: false })
+  }
+
   const handleCriarAgendamento = () => {
-    if (
-      formData.clienteId &&
-      servicosSelecionados.length > 0 &&
-      formData.unidadeId &&
-      formData.atendenteId &&
-      formData.dataHoraInicio
-    ) {
-      // Validar se a data não está no passado
-      const dataSelecionada = parseISO(formData.dataHoraInicio)
-      const agora = new Date()
-      
-      if (isBefore(dataSelecionada, agora)) {
-        showNotification('error', 'A data/hora selecionada não pode ser no passado. Por favor, selecione uma data futura.')
-        return
-      }
+    let clienteIdParaCriar = formData.clienteId
+    const unidadeIdParaCriar = formData.unidadeId ?? unidadeUnicaModal?.id
 
-      // Validar se o atendente tem horário disponível no horário selecionado
-      const horarioValido = horariosDisponiveis.some(h => {
-        const inicio = parseISO(h.dataHoraInicio)
-        const fim = parseISO(h.dataHoraFim)
-        return h.atendenteId === formData.atendenteId && 
-               (isBefore(inicio, dataSelecionada) || inicio.getTime() === dataSelecionada.getTime()) &&
-               isAfter(fim, dataSelecionada)
+    // Se digitou cliente sem clicar na lista, tenta resolver por correspondência exata
+    if (!clienteIdParaCriar && !isCliente && buscaCliente.trim()) {
+      const termo = buscaCliente.trim().toLowerCase()
+      const termoNumerico = buscaCliente.replace(/\D/g, '')
+      const candidatos = clientesParaSelecao.filter((cliente) => {
+        if (!cliente.id) return false
+        const nomeExato = (cliente.nome ?? '').trim().toLowerCase() === termo
+        const docExato = termoNumerico.length > 0 && (cliente.cpfCnpj ?? '').replace(/\D/g, '') === termoNumerico
+        return nomeExato || docExato
       })
-
-      if (!horarioValido && horariosDisponiveis.length > 0) {
-        showNotification('error', 'O atendente selecionado não tem horário disponível neste horário. Por favor, selecione um horário válido.')
-        return
+      if (candidatos.length === 1 && candidatos[0].id) {
+        clienteIdParaCriar = candidatos[0].id
+        setFormData((prev) => ({ ...prev, clienteId: candidatos[0].id }))
       }
-
-      const servicosParaEnvio: Array<{
-        servicoId: number
-        quantidade: number
-        valor: number
-        descricao?: string
-      }> = servicosSelecionados.map((servicoId: number) => {
-        const servicoEncontrado = servicos.find((s) => s.id === servicoId)
-        return {
-          servicoId,
-          quantidade: 1,
-          valor: servicoEncontrado?.valor || 0,
-          descricao: servicoEncontrado?.descricao || servicoEncontrado?.nome,
-        }
-      })
-
-      // Garantir que a data está no formato correto (ISO string)
-      const dataHoraFormatada = formData.dataHoraInicio.includes('T') 
-        ? formData.dataHoraInicio 
-        : `${formData.dataHoraInicio}:00`
-
-      const payload: any = {
-        clienteId: formData.clienteId,
-        unidadeId: formData.unidadeId,
-        atendenteId: formData.atendenteId,
-        dataHoraInicio: dataHoraFormatada,
-        observacoes: formData.observacoes,
-        servicos: servicosParaEnvio,
-      }
-
-      // Adiciona configuração de recorrência se estiver habilitada
-      if (recorrenciaConfig.recorrente) {
-        // Validação para recorrência semanal
-        if (recorrenciaConfig.tipoRecorrencia === 'SEMANAL' && 
-            (!recorrenciaConfig.diasDaSemana || recorrenciaConfig.diasDaSemana.length === 0)) {
-          showNotification('error', 'Selecione pelo menos um dia da semana para recorrência semanal')
-          return
-        }
-
-        // Validação para término por data
-        if (recorrenciaConfig.tipoTermino === 'DATA' && !recorrenciaConfig.dataTermino) {
-          showNotification('error', 'Informe a data de término para a recorrência')
-          return
-        }
-
-        // Validação para término por ocorrências
-        if (recorrenciaConfig.tipoTermino === 'OCORRENCIAS' && 
-            (!recorrenciaConfig.numeroOcorrencias || recorrenciaConfig.numeroOcorrencias < 1)) {
-          showNotification('error', 'Informe o número de ocorrências (mínimo 1)')
-          return
-        }
-
-        payload.recorrencia = {
-          recorrente: true,
-          tipoRecorrencia: recorrenciaConfig.tipoRecorrencia,
-          diasDaSemana: recorrenciaConfig.diasDaSemana,
-          tipoTermino: recorrenciaConfig.tipoTermino,
-          dataTermino: recorrenciaConfig.dataTermino,
-          numeroOcorrencias: recorrenciaConfig.numeroOcorrencias,
-          intervalo: recorrenciaConfig.intervalo || 1,
-        }
-      }
-
-      createMutation.mutate(payload)
-    } else {
-      showNotification('error', 'Por favor, preencha todos os campos obrigatórios')
     }
+
+    const camposFaltantes: string[] = []
+    if (!clienteIdParaCriar) camposFaltantes.push('cliente')
+    if (servicosSelecionados.length === 0) camposFaltantes.push('serviço')
+    if (!unidadeIdParaCriar) camposFaltantes.push('unidade')
+    if (!formData.atendenteId) camposFaltantes.push('profissional')
+    if (!formData.dataHoraInicio) camposFaltantes.push('data e hora')
+
+    if (camposFaltantes.length > 0) {
+      showNotification('error', `Preencha os campos obrigatórios: ${camposFaltantes.join(', ')}.`)
+      return
+    }
+
+    const dataSelecionada = parseISO(formData.dataHoraInicio!)
+
+    // Validar se o atendente tem horário disponível no horário selecionado
+    const horarioValido = horariosDisponiveis.some((h) => {
+      const inicio = parseISO(h.dataHoraInicio)
+      const fim = parseISO(h.dataHoraFim)
+      return h.atendenteId === formData.atendenteId &&
+        (isBefore(inicio, dataSelecionada) || inicio.getTime() === dataSelecionada.getTime()) &&
+        isAfter(fim, dataSelecionada)
+    })
+
+    if (!horarioValido && horariosDisponiveis.length > 0) {
+      showNotification('error', 'O atendente selecionado não tem horário disponível neste horário. Por favor, selecione um horário válido.')
+      return
+    }
+
+    const servicosParaEnvio: Array<{
+      servicoId: number
+      quantidade: number
+      valor: number
+      descricao?: string
+    }> = servicosSelecionados.map((servicoId: number) => {
+      const servicoEncontrado = servicos.find((s) => s.id === servicoId)
+      return {
+        servicoId,
+        quantidade: 1,
+        valor: servicoEncontrado?.valor || 0,
+        descricao: servicoEncontrado?.descricao || servicoEncontrado?.nome,
+      }
+    })
+
+    // Garantir que a data está no formato correto (ISO string)
+    const dataHoraFormatada = formData.dataHoraInicio!.includes('T')
+      ? formData.dataHoraInicio!
+      : `${formData.dataHoraInicio}:00`
+
+    const payload: any = {
+      clienteId: clienteIdParaCriar,
+      unidadeId: unidadeIdParaCriar,
+      atendenteId: formData.atendenteId,
+      dataHoraInicio: dataHoraFormatada,
+      observacoes: formData.observacoes,
+      servicos: servicosParaEnvio,
+    }
+
+    // Adiciona configuração de recorrência se estiver habilitada
+    if (recorrenciaConfig.recorrente) {
+      // Validação para recorrência semanal
+      if (recorrenciaConfig.tipoRecorrencia === 'SEMANAL' &&
+          (!recorrenciaConfig.diasDaSemana || recorrenciaConfig.diasDaSemana.length === 0)) {
+        showNotification('error', 'Selecione pelo menos um dia da semana para recorrência semanal')
+        return
+      }
+
+      // Validação para término por data
+      if (recorrenciaConfig.tipoTermino === 'DATA' && !recorrenciaConfig.dataTermino) {
+        showNotification('error', 'Informe a data de término para a recorrência')
+        return
+      }
+
+      // Validação para término por ocorrências
+      if (recorrenciaConfig.tipoTermino === 'OCORRENCIAS' &&
+          (!recorrenciaConfig.numeroOcorrencias || recorrenciaConfig.numeroOcorrencias < 1)) {
+        showNotification('error', 'Informe o número de ocorrências (mínimo 1)')
+        return
+      }
+
+      payload.recorrencia = {
+        recorrente: true,
+        tipoRecorrencia: recorrenciaConfig.tipoRecorrencia,
+        diasDaSemana: recorrenciaConfig.diasDaSemana,
+        tipoTermino: recorrenciaConfig.tipoTermino,
+        dataTermino: recorrenciaConfig.dataTermino,
+        numeroOcorrencias: recorrenciaConfig.numeroOcorrencias,
+        intervalo: recorrenciaConfig.intervalo || 1,
+      }
+    }
+
+    createMutation.mutate(payload)
   }
 
   const handleServicoToggle = (servicoId: number) => {
@@ -596,8 +812,18 @@ export default function Agendamentos() {
     refetchAtendentes()
   }
 
+  const handleEditServicoToggle = (servicoId: number) => {
+    setEditServicosSelecionados((prev) => {
+      const novo = prev.includes(servicoId)
+        ? prev.filter((id) => id !== servicoId)
+        : [...prev, servicoId]
+      return novo
+    })
+  }
+
   const handleSalvarEdicao = () => {
-    if (!editingAgendamento?.id || !editFormData.clienteId || !editFormData.unidadeId || !editFormData.atendenteId || !editFormData.dataHoraInicio || editServicosSelecionados.length === 0) {
+    const unidadeIdParaEdicao = editUnidadeIdAtiva
+    if (!editingAgendamento?.id || !editFormData.clienteId || !unidadeIdParaEdicao || !editFormData.atendenteId || !editFormData.dataHoraInicio || editServicosSelecionados.length === 0) {
       showNotification('error', 'Preencha todos os campos obrigatórios')
       return
     }
@@ -608,7 +834,7 @@ export default function Agendamentos() {
     })
     const payload: Agendamento = {
       clienteId: editFormData.clienteId,
-      unidadeId: editFormData.unidadeId,
+      unidadeId: unidadeIdParaEdicao,
       atendenteId: editFormData.atendenteId,
       dataHoraInicio: dataHora,
       observacoes: editFormData.observacoes,
@@ -617,12 +843,71 @@ export default function Agendamentos() {
     updateMutation.mutate({ id: editingAgendamento.id, data: payload })
   }
 
-  const handleDataHoraChange = (dataHora: string) => {
-    setFormData({ ...formData, dataHoraInicio: dataHora, atendenteId: undefined })
+  const dataHoraCriacao = useMemo(() => {
+    if (formData.dataHoraInicio) {
+      const parsed = parseISO(formData.dataHoraInicio)
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed
+      }
+    }
+    return criarModal?.start ?? new Date()
+  }, [formData.dataHoraInicio, criarModal])
+
+  const handleDataCriacaoChange = (novaData: string) => {
+    if (!novaData) return
+    const horaAtual = format(dataHoraCriacao, 'HH:mm')
+    setFormData((prev) => ({
+      ...prev,
+      dataHoraInicio: `${novaData}T${horaAtual}`,
+      atendenteId: undefined,
+    }))
   }
 
-  // Validar se a data selecionada não está no passado
-  const minDateTime = format(new Date(), "yyyy-MM-dd'T'HH:mm")
+  const handleHoraCriacaoChange = (novaHora: string) => {
+    if (!novaHora) return
+    const dataAtual = format(dataHoraCriacao, 'yyyy-MM-dd')
+    setFormData((prev) => ({
+      ...prev,
+      dataHoraInicio: `${dataAtual}T${novaHora}`,
+      atendenteId: undefined,
+    }))
+  }
+
+  const dataHoraEdicao = useMemo(() => {
+    if (editFormData.dataHoraInicio) {
+      const parsed = parseISO(editFormData.dataHoraInicio)
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed
+      }
+    }
+    if (editingAgendamento?.dataHoraInicio) {
+      const parsedOriginal = parseISO(editingAgendamento.dataHoraInicio)
+      if (!Number.isNaN(parsedOriginal.getTime())) {
+        return parsedOriginal
+      }
+    }
+    return new Date()
+  }, [editFormData.dataHoraInicio, editingAgendamento])
+
+  const handleDataEdicaoChange = (novaData: string) => {
+    if (!novaData) return
+    const horaAtual = format(dataHoraEdicao, 'HH:mm')
+    setEditFormData((prev) => ({
+      ...prev,
+      dataHoraInicio: `${novaData}T${horaAtual}`,
+      atendenteId: undefined,
+    }))
+  }
+
+  const handleHoraEdicaoChange = (novaHora: string) => {
+    if (!novaHora) return
+    const dataAtual = format(dataHoraEdicao, 'yyyy-MM-dd')
+    setEditFormData((prev) => ({
+      ...prev,
+      dataHoraInicio: `${dataAtual}T${novaHora}`,
+      atendenteId: undefined,
+    }))
+  }
 
   if (isLoading) {
     return <div className="text-center py-8">Carregando...</div>
@@ -630,435 +915,518 @@ export default function Agendamentos() {
 
   return (
     <div className="w-full min-w-0 max-w-full overflow-x-hidden px-2 sm:px-0">
-      <div className="w-full min-w-0 max-w-full overflow-x-hidden px-2 sm:px-0">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 sm:mb-6">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Agendamentos</h1>
-          <div className="flex gap-2 w-full sm:w-auto">
-            {/* Toggle View Mode */}
-            <div className="flex bg-gray-100 rounded-lg p-1">
-              <button
-                onClick={() => setViewMode('timeline')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
-                  viewMode === 'timeline'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <List className="h-4 w-4" />
-                <span className="hidden sm:inline">Timeline</span>
-              </button>
-              <button
-                onClick={() => setViewMode('calendar')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
-                  viewMode === 'calendar'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <CalendarDays className="h-4 w-4" />
-                <span className="hidden sm:inline">Calendário</span>
-              </button>
-            </div>
-            {podeEditarAgendamentos && (
-              <Button
-                onClick={() => {
-                  const agora = new Date()
-                  const umaHoraDepois = new Date(agora.getTime() + 3600000)
-                  setCriarModal({ start: agora, end: umaHoraDepois })
-                  setFormData({
-                    clienteId: undefined,
-                    unidadeId: undefined,
-                    atendenteId: undefined,
-                    dataHoraInicio: format(agora, "yyyy-MM-dd'T'HH:mm"),
-                    observacoes: '',
-                    servicos: [],
-                  })
-                  setServicosSelecionados([])
-                }}
-                variant="primary"
-                className="flex items-center flex-1 sm:flex-initial"
-              >
-                <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                <span className="text-sm sm:text-base">Novo Agendamento</span>
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* View Mode: Timeline */}
-        {viewMode === 'timeline' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6 min-w-0">
-            {/* Calendário Mensal */}
-            <div className="lg:col-span-1 min-w-0">
-              <CalendarMonth
-                selectedDate={selectedDate}
-                onDateSelect={(date) => {
-                  setSelectedDate(date)
-                  setCurrentDate(date)
-                }}
-                agendamentos={agendamentos}
-              />
-            </div>
-
-            {/* Timeline */}
-            <div className="lg:col-span-2 min-w-0 overflow-hidden">
-              <TimelineView
-                agendamentos={agendamentos}
-                selectedDate={selectedDate}
-                onEventClick={handleSelectEvent}
-                onSlotClick={podeEditarAgendamentos ? (date) => {
-                  const umaHoraDepois = new Date(date.getTime() + 3600000)
-                  setCriarModal({ start: date, end: umaHoraDepois })
-                  setFormData({
-                    clienteId: undefined,
-                    unidadeId: undefined,
-                    atendenteId: undefined,
-                    dataHoraInicio: format(date, "yyyy-MM-dd'T'HH:mm"),
-                    observacoes: '',
-                    servicos: [],
-                  })
-                  setServicosSelecionados([])
-                } : undefined}
-              />
+      <div className="space-y-6">
+        <div className="rounded-[28px] border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-3 shadow-sm sm:p-4 lg:p-5">
+          <div className="mb-4 flex flex-col gap-3 px-1 sm:px-2 lg:flex-row lg:items-center lg:justify-between">
+            <h2 className="text-lg font-semibold text-slate-900 sm:text-xl">
+              {viewMode === 'timeline' ? 'Visão diária em linha do tempo' : 'Visão de calendário'}
+            </h2>
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+              <div className="inline-flex rounded-2xl border border-slate-200/80 bg-white/85 p-1 shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)] backdrop-blur">
+                <button
+                  onClick={() => setViewMode('timeline')}
+                  type="button"
+                  title="Linha do tempo"
+                  aria-label="Linha do tempo"
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 ${
+                    viewMode === 'timeline'
+                      ? 'bg-slate-900 text-white shadow-[0_10px_24px_-18px_rgba(15,23,42,0.9)]'
+                      : 'text-slate-500 hover:bg-slate-100/90 hover:text-slate-900'
+                  }`}
+                >
+                  <List className="h-7 w-7" strokeWidth={2.4} />
+                </button>
+                <button
+                  onClick={() => setViewMode('calendar')}
+                  type="button"
+                  title="Calendário"
+                  aria-label="Calendário"
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 ${
+                    viewMode === 'calendar'
+                      ? 'bg-slate-900 text-white shadow-[0_10px_24px_-18px_rgba(15,23,42,0.9)]'
+                      : 'text-slate-500 hover:bg-slate-100/90 hover:text-slate-900'
+                  }`}
+                >
+                  <CalendarDays className="h-7 w-7" strokeWidth={2.4} />
+                </button>
+              </div>
+              {podeEditarAgendamentos && (
+                <Button
+                  onClick={() => {
+                    const agora = new Date()
+                    const umaHoraDepois = new Date(agora.getTime() + 3600000)
+                    setCriarModal({ start: agora, end: umaHoraDepois })
+                    setFormData({
+                      clienteId: undefined,
+                      unidadeId: undefined,
+                      atendenteId: undefined,
+                      dataHoraInicio: format(agora, "yyyy-MM-dd'T'HH:mm"),
+                      observacoes: '',
+                      servicos: [],
+                    })
+                    setServicosSelecionados([])
+                  }}
+                  variant="primary"
+                  title="Novo agendamento"
+                  aria-label="Novo agendamento"
+                  className="h-12 w-full rounded-2xl border border-blue-400/20 bg-gradient-to-r from-blue-600 to-cyan-500 px-0 text-sm font-semibold shadow-[0_14px_34px_-20px_rgba(37,99,235,0.9)] hover:from-blue-700 hover:to-cyan-600 sm:h-10 sm:w-10"
+                >
+                  <Plus className="h-8 w-8" strokeWidth={2.6} />
+                </Button>
+              )}
             </div>
           </div>
-        )}
 
-        {/* View Mode: Calendar (Original) */}
-        {viewMode === 'calendar' && (
-          <>
-            <div className="mb-4 sm:mb-6 min-w-0 overflow-hidden">
-              <CalendarView
-                agendamentos={agendamentos}
-                onSelectSlot={handleSelectSlot}
-                onSelectEvent={handleSelectEvent}
-                view={view}
-                onViewChange={setView}
-                date={currentDate}
-                onNavigate={(date) => {
-                  setCurrentDate(date)
-                  setSelectedDate(date)
-                }}
-                disabled={!!criarModal || !!finalizarModal}
-              />
+          {viewMode === 'timeline' && (
+            <div className="grid min-w-0 grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
+              <div className="min-w-0">
+                <CalendarMonth
+                  selectedDate={selectedDate}
+                  onDateSelect={(date) => {
+                    setSelectedDate(date)
+                    setCurrentDate(date)
+                  }}
+                  agendamentos={agendamentos}
+                />
+              </div>
+
+              <div className="min-w-0 overflow-hidden">
+                <TimelineView
+                  agendamentos={agendamentos}
+                  selectedDate={selectedDate}
+                  onEventClick={handleSelectEvent}
+                  onSlotClick={podeEditarAgendamentos ? (date) => {
+                    const umaHoraDepois = new Date(date.getTime() + 3600000)
+                    setCriarModal({ start: date, end: umaHoraDepois })
+                    setFormData({
+                      clienteId: undefined,
+                      unidadeId: undefined,
+                      atendenteId: undefined,
+                      dataHoraInicio: format(date, "yyyy-MM-dd'T'HH:mm"),
+                      observacoes: '',
+                      servicos: [],
+                    })
+                    setServicosSelecionados([])
+                  } : undefined}
+                />
+              </div>
             </div>
+          )}
 
-            {/* Legenda */}
-            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 mb-4 sm:mb-6 min-w-0">
-              <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 sm:mb-3">Legenda:</h3>
-              <div className="flex flex-wrap gap-x-4 gap-y-2 sm:gap-4">
-                <div className="flex items-center shrink-0">
-                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-blue-500 rounded mr-2 flex-shrink-0"></div>
-                  <span className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">Agendado</span>
-                </div>
-                <div className="flex items-center shrink-0">
-                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded mr-2 flex-shrink-0"></div>
-                  <span className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">Concluído</span>
-                </div>
-                <div className="flex items-center shrink-0">
-                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-red-500 rounded mr-2 flex-shrink-0"></div>
-                  <span className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">Cancelado</span>
+          {viewMode === 'calendar' && (
+            <div className="space-y-4">
+              <div className="min-w-0 overflow-hidden">
+                <CalendarView
+                  agendamentos={agendamentos}
+                  onSelectSlot={handleSelectSlot}
+                  onSelectEvent={handleSelectEvent}
+                  view={view}
+                  onViewChange={setView}
+                  date={currentDate}
+                  onNavigate={(date) => {
+                    setCurrentDate(date)
+                    setSelectedDate(date)
+                  }}
+                  disabled={!!criarModal || !!finalizarModal}
+                />
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm">
+                <h3 className="text-sm font-semibold text-slate-900">Legenda da agenda</h3>
+                <div className="mt-3 flex flex-wrap gap-3 sm:gap-4">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1.5 text-sm text-slate-700">
+                    <div className="h-2.5 w-2.5 rounded-full bg-blue-500" />
+                    Agendado
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-sm text-slate-700">
+                    <div className="h-2.5 w-2.5 rounded-full bg-green-500" />
+                    Finalizado
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1.5 text-sm text-slate-700">
+                    <div className="h-2.5 w-2.5 rounded-full bg-red-500" />
+                    Cancelado
+                  </div>
                 </div>
               </div>
             </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Modal de Criar Agendamento */}
       {criarModal && (
         <Modal
           isOpen={true}
-          onClose={() => {
-            setCriarModal(null)
-            setFormData({
-              clienteId: undefined,
-              unidadeId: undefined,
-              atendenteId: undefined,
-              dataHoraInicio: '',
-              observacoes: '',
-              servicos: [],
-            })
-            setServicosSelecionados([])
-            setRecorrenciaConfig({ recorrente: false })
-          }}
+          onClose={resetCreateModal}
           title="Novo Agendamento"
-          size="lg"
+          size="md"
         >
-          <div className="space-y-6">
-            {/* Informação do horário selecionado */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-blue-800">
-                <Calendar className="h-5 w-5" />
-                <span className="font-semibold">Horário Selecionado:</span>
-              </div>
-              <p className="text-sm text-blue-700 mt-1">
-                {format(criarModal.start, "dd/MM/yyyy 'às' HH:mm")} até{' '}
-                {format(criarModal.end, 'HH:mm')}
-              </p>
-            </div>
-
-            {/* Cliente: para CLIENTE fixo (ela mesma); para outros perfis seleção livre */}
-            <FormField label="Cliente" required>
-              {isCliente && meuPerfilCliente ? (
-                <div className="block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-700">
-                  Você: <strong>{meuPerfilCliente.nome}</strong>
-                  {meuPerfilCliente.cpfCnpj && ` - ${meuPerfilCliente.cpfCnpj}`}
+          <div className="space-y-4">
+            <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-200 bg-slate-50/80 px-4 py-3 sm:px-5">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="text-xs font-medium text-slate-600">Data</label>
+                    <div className="relative mt-1">
+                      <input
+                        type="date"
+                        value={format(dataHoraCriacao, 'yyyy-MM-dd')}
+                        onChange={(e) => handleDataCriacaoChange(e.target.value)}
+                        className={`${lineInputClass} pr-8`}
+                      />
+                      <Calendar className="pointer-events-none absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-600">Hora Início</label>
+                    <div className="relative mt-1">
+                      <input
+                        type="time"
+                        value={format(dataHoraCriacao, 'HH:mm')}
+                        onChange={(e) => handleHoraCriacaoChange(e.target.value)}
+                        className={`${lineInputClass} pr-8`}
+                      />
+                      <Clock className="pointer-events-none absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Buscar cliente por nome ou CPF/CNPJ..."
-                      value={buscaCliente}
-                      onChange={(e) => setBuscaCliente(e.target.value)}
-                      className="block w-full pl-10 pr-10 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    />
-                    {buscaCliente && (
-                      <button
-                        type="button"
-                        onClick={() => setBuscaCliente('')}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              </div>
+              <div className="space-y-4 px-4 py-4 sm:px-5">
+                {!unidadeUnicaModal && (
+                  <FormField label="Unidade" required>
+                    <div className="relative">
+                      <Building2 className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                      <select
+                        required
+                        value={formData.unidadeId || ''}
+                        onChange={(e) => handleUnidadeChange(parseInt(e.target.value))}
+                        disabled={isCliente && unidadesFiltradas.length <= 1}
+                        className={`${inputWithIconClass} disabled:cursor-default disabled:bg-slate-50 disabled:text-slate-500`}
                       >
-                        <X className="h-4 w-4" />
-                      </button>
+                        <option value="">Selecione uma unidade</option>
+                        {unidadesFiltradas.map((unidade) => (
+                          <option key={unidade.id} value={unidade.id}>
+                            {unidade.nome}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </FormField>
+                )}
+
+                <FormField
+                  label="Profissional"
+                  required
+                  hint={
+                    formData.unidadeId && servicosSelecionados.length > 0 && profissionaisDisponiveis.length === 0
+                      ? 'Nenhum profissional disponível para os filtros atuais.'
+                      : undefined
+                  }
+                >
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <UserRound className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                      <select
+                        required
+                        value={formData.atendenteId ?? ''}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            atendenteId: e.target.value ? parseInt(e.target.value) : undefined,
+                          })
+                        }
+                        disabled={!formData.unidadeId || profissionaisDisponiveis.length === 0}
+                        className={`${inputWithIconClass} appearance-none pr-11 ${!formData.unidadeId || profissionaisDisponiveis.length === 0 ? 'cursor-not-allowed bg-slate-50 text-slate-500' : ''}`}
+                      >
+                        <option value="">Selecione um profissional</option>
+                        {profissionaisDisponiveis.map((profissional) => (
+                          <option key={profissional.id} value={profissional.id}>
+                            {profissional.nomeUsuario}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    </div>
+                    {profissionalSelecionado?.nomeUsuario && (
+                      <div className="inline-flex items-center rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700">
+                        Selecionado: {profissionalSelecionado.nomeUsuario}
+                      </div>
                     )}
                   </div>
-                  <select
-                    required
-                    value={formData.clienteId || ''}
-                    onChange={(e) =>
-                      setFormData({ ...formData, clienteId: parseInt(e.target.value) })
-                    }
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  >
-                    <option value="">Selecione um cliente</option>
-                    {clientesFiltrados.map((cliente) => (
-                      <option key={cliente.id} value={cliente.id}>
-                        {cliente.nome} - {cliente.cpfCnpj}
-                      </option>
-                    ))}
-                  </select>
-                  {clientesFiltrados.length === 0 && buscaCliente && (
-                    <div className="flex items-center justify-between p-2 bg-yellow-50 border border-yellow-200 rounded-md">
-                      <span className="text-sm text-yellow-800">Cliente não encontrado</span>
-                      <Button
-                        type="button"
-                        variant="primary"
-                        size="sm"
-                        onClick={() => setMostrarModalCliente(true)}
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Adicionar Novo
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </FormField>
+                </FormField>
 
-            {/* Unidade: para CLIENTE só pode trocar se tiver mais de uma; pré-preenchida */}
-            <FormField label="Unidade" required>
-              <div className="relative">
-                <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <select
-                  required
-                  value={formData.unidadeId || ''}
-                  onChange={(e) => handleUnidadeChange(parseInt(e.target.value))}
-                  disabled={isCliente && unidadesFiltradas.length <= 1}
-                  className="block w-full pl-10 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-50 disabled:cursor-default"
-                >
-                  <option value="">Selecione uma unidade</option>
-                  {unidadesFiltradas.map((unidade) => (
-                    <option key={unidade.id} value={unidade.id}>
-                      {unidade.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </FormField>
-
-            {/* Serviços */}
-            <FormField
-              label={`Serviços ${servicosSelecionados.length > 0 ? `(${servicosSelecionados.length} selecionado${servicosSelecionados.length > 1 ? 's' : ''})` : ''}`}
-              required
-            >
-              <div className="space-y-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Buscar serviço por nome..."
-                    value={buscaServico}
-                    onChange={(e) => setBuscaServico(e.target.value)}
-                    className="block w-full pl-10 pr-10 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  />
-                  {buscaServico && (
-                    <button
-                      type="button"
-                      onClick={() => setBuscaServico('')}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-                <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-md p-3 space-y-2 bg-gray-50">
-                  {servicosFiltrados.length === 0 ? (
-                    <div className="flex items-center justify-between p-2 bg-yellow-50 border border-yellow-200 rounded-md">
-                      <span className="text-sm text-yellow-800">Serviço não encontrado</span>
-                      {podeEditarServicos && (
-                        <Button
-                          type="button"
-                          variant="primary"
-                          size="sm"
-                          onClick={() => setMostrarModalServico(true)}
-                        >
-                          <Plus className="h-4 w-4 mr-1" />
-                          Adicionar Novo
-                        </Button>
-                      )}
+                <FormField label="Cliente" required>
+                  {isCliente && meuPerfilCliente ? (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700">
+                      Você: <strong>{meuPerfilCliente.nome}</strong>
+                      {meuPerfilCliente.cpfCnpj && ` - ${meuPerfilCliente.cpfCnpj}`}
                     </div>
                   ) : (
-                    servicosFiltrados.map((servico) => (
-                      <label
-                        key={servico.id}
-                        className="flex items-center space-x-3 cursor-pointer hover:bg-white p-2 rounded transition-colors"
-                      >
+                    <div
+                      className="space-y-2"
+                      onFocusCapture={() => setClienteFieldActive(true)}
+                      onBlurCapture={(e) => {
+                        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                          setClienteFieldActive(false)
+                        }
+                      }}
+                    >
+                      <div className="relative">
+                        <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                         <input
-                          type="checkbox"
-                          checked={servicosSelecionados.includes(servico.id)}
-                          onChange={() => handleServicoToggle(servico.id)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          type="text"
+                          placeholder="Digite para buscar..."
+                          value={buscaCliente}
+                          onFocus={() => setClienteFieldActive(true)}
+                          onChange={(e) => {
+                            setClienteFieldActive(true)
+                            setBuscaCliente(e.target.value)
+                            setFormData((prev) => ({ ...prev, clienteId: undefined }))
+                          }}
+                          className={inputWithIconClass}
                         />
-                        <span className="flex-1">
-                          <span className="font-medium text-gray-900">{servico.nome}</span>
-                          <span className="text-gray-600 ml-2">
-                            - R$ {servico.valor.toFixed(2)} ({servico.duracaoMinutos} min)
-                          </span>
-                        </span>
-                      </label>
-                    ))
+                        {buscaCliente && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setClienteFieldActive(true)
+                              setBuscaCliente('')
+                              setFormData((prev) => ({ ...prev, clienteId: undefined }))
+                            }}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      {clienteFieldActive && !buscaCliente.trim() && (
+                        <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                          <Button
+                            type="button"
+                            variant="success"
+                            size="sm"
+                            onClick={() => setMostrarModalCliente(true)}
+                            className="w-full rounded-lg py-2.5 font-semibold uppercase tracking-wide"
+                          >
+                            Adicionar cliente
+                          </Button>
+                        </div>
+                      )}
+
+                      {clienteFieldActive && buscaCliente.trim() && clientesFiltrados.length > 0 && (
+                        <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+                          <div className="space-y-1 p-2">
+                            {clientesFiltrados.map((cliente) => (
+                              <button
+                                key={cliente.id}
+                                type="button"
+                                onMouseDown={(e) => {
+                                  e.preventDefault()
+                                  if (!cliente.id) return
+                                  setFormData((prev) => ({ ...prev, clienteId: cliente.id }))
+                                  setBuscaCliente(cliente.nome)
+                                  setClienteFieldActive(false)
+                                }}
+                                className={`flex w-full items-start justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                                  formData.clienteId === cliente.id
+                                    ? 'bg-violet-50 ring-1 ring-violet-200'
+                                    : 'hover:bg-slate-50'
+                                }`}
+                              >
+                                <span className="min-w-0">
+                                  <span className="block truncate text-sm font-medium text-slate-900">
+                                    {cliente.nome}
+                                  </span>
+                                  <span className="block truncate text-xs text-slate-500">
+                                    {cliente.cpfCnpj}
+                                  </span>
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {clienteFieldActive && clientesFiltrados.length === 0 && buscaCliente.trim() && (
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                          Cliente não encontrado.
+                        </div>
+                      )}
+                    </div>
                   )}
-                </div>
-                {servicosSelecionados.length === 0 && servicosFiltrados.length > 0 && (
-                  <p className="mt-1 text-sm text-red-600">Selecione pelo menos um serviço</p>
-                )}
-                {servicosSelecionados.length > 0 && atendentesComHorarios.length === 0 && formData.unidadeId && (
-                  <p className="mt-1 text-sm text-yellow-600">
-                    Nenhum atendente disponível para os serviços selecionados nesta unidade
-                  </p>
-                )}
-              </div>
-            </FormField>
+                </FormField>
 
-            {/* Data e Hora */}
-            <FormField label="Data e Hora de Início" required>
-              <div className="relative">
-                <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="datetime-local"
+                <FormField
+                  label={`Serviços${servicosSelecionados.length > 0 ? ` (${servicosSelecionados.length})` : ''}`}
                   required
-                  min={minDateTime}
-                  value={formData.dataHoraInicio}
-                  onChange={(e) => handleDataHoraChange(e.target.value)}
-                  className="block w-full pl-10 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
-              </div>
-              {formData.dataHoraInicio && (
-                <p className="mt-1 text-xs text-gray-500">
-                  {format(parseISO(formData.dataHoraInicio), "dd/MM/yyyy 'às' HH:mm")}
-                </p>
-              )}
-            </FormField>
-
-            {/* Atendente */}
-            <FormField label="Atendente" required>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <select
-                  required
-                  value={formData.atendenteId || ''}
-                  onChange={(e) =>
-                    setFormData({ ...formData, atendenteId: parseInt(e.target.value) })
+                  hint={
+                    servicosSelecionados.length > 0 && profissionaisDisponiveis.length === 0 && formData.unidadeId
+                      ? 'Nenhum profissional disponível para os serviços selecionados.'
+                      : undefined
                   }
-                  disabled={!formData.unidadeId || servicosSelecionados.length === 0 || atendentesComHorarios.length === 0}
-                  className="block w-full pl-10 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
-                  <option value="">
-                    {!formData.unidadeId
-                      ? 'Selecione primeiro uma unidade'
-                      : servicosSelecionados.length === 0
-                      ? 'Selecione primeiro os serviços'
-                      : atendentesComHorarios.length === 0
-                      ? 'Nenhum atendente disponível para os serviços selecionados'
-                      : 'Selecione um atendente'}
-                  </option>
-                  {atendentesComHorarios.map((atendente) => (
-                    <option key={atendente.id} value={atendente.id}>
-                      {atendente.nomeUsuario}
-                    </option>
-                  ))}
-                </select>
+                  <div
+                    className="space-y-2"
+                    onFocusCapture={() => setServicoFieldActive(true)}
+                    onBlurCapture={(e) => {
+                      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                        setServicoFieldActive(false)
+                      }
+                    }}
+                  >
+                    <div className="relative">
+                      <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Digite para buscar..."
+                        value={buscaServico}
+                        onChange={(e) => setBuscaServico(e.target.value)}
+                        className={inputWithIconClass}
+                      />
+                      {buscaServico && (
+                        <button
+                          type="button"
+                          onClick={() => setBuscaServico('')}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    {servicosSelecionadosDetalhes.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {servicosSelecionadosDetalhes.map((servico) => (
+                          <button
+                            key={servico.id}
+                            type="button"
+                            onClick={() => handleServicoToggle(servico.id!)}
+                            className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-sm font-medium text-violet-700 transition hover:bg-violet-100"
+                          >
+                            <span>{servico.nome}</span>
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {servicoFieldActive && !buscaServico.trim() && podeEditarServicos && (
+                      <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                        <Button
+                          type="button"
+                          variant="success"
+                          size="sm"
+                          onClick={() => setMostrarModalServico(true)}
+                          className="w-full rounded-lg py-2.5 font-semibold uppercase tracking-wide"
+                        >
+                          Adicionar serviço
+                        </Button>
+                      </div>
+                    )}
+
+                    {buscaServico.trim() && (
+                      <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+                        {servicosFiltrados.length === 0 ? (
+                          <div className="p-2">
+                            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                              Serviço não encontrado.
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-1 p-2">
+                            {servicosFiltrados.map((servico) => (
+                              <button
+                                key={servico.id}
+                                type="button"
+                                onClick={() => {
+                                  handleServicoToggle(servico.id)
+                                  setBuscaServico('')
+                                }}
+                                className={`flex w-full items-start justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                                  servicosSelecionados.includes(servico.id)
+                                    ? 'bg-violet-50 ring-1 ring-violet-200'
+                                    : 'hover:bg-slate-50'
+                                }`}
+                              >
+                                <span className="flex-1">
+                                  <span className="block text-sm font-medium text-slate-900">{servico.nome}</span>
+                                  <span className="block text-xs text-slate-500">
+                                    {moneyFormatter.format(servico.valor)} • {servico.duracaoMinutos} min
+                                  </span>
+                                </span>
+                                <span className={`text-xs font-medium ${servicosSelecionados.includes(servico.id) ? 'text-violet-700' : 'text-slate-400'}`}>
+                                  {servicosSelecionados.includes(servico.id) ? 'Selecionado' : 'Selecionar'}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5">
+                      <div className="text-sm text-slate-600">
+                        Duração: <span className="font-semibold text-slate-900">{duracaoEstimadaCriacao > 0 ? `${duracaoEstimadaCriacao} min` : '0 min'}</span>
+                      </div>
+                      <div className="text-sm text-slate-600">
+                        Total: <span className="font-semibold text-slate-900">{moneyFormatter.format(valorEstimadoCriacao)}</span>
+                      </div>
+                    </div>
+
+                    {servicosSelecionados.length === 0 && servicosFiltrados.length > 0 && (
+                      <p className="text-sm text-rose-600">Selecione pelo menos um serviço.</p>
+                    )}
+                  </div>
+                </FormField>
+
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedCreateFields((prev) => !prev)}
+                  className="inline-flex items-center gap-2 text-sm font-medium text-violet-700 transition hover:text-violet-800"
+                >
+                  {showAdvancedCreateFields ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  Mais opções
+                </button>
+
+                {showAdvancedCreateFields && (
+                  <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                    <FormField label="Observações">
+                      <textarea
+                        value={formData.observacoes || ''}
+                        onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
+                        rows={3}
+                        className={`${inputBaseClass} min-h-[88px] resize-none`}
+                        placeholder="Observações adicionais sobre o agendamento"
+                      />
+                    </FormField>
+
+                    <RecorrenciaConfig
+                      value={recorrenciaConfig}
+                      onChange={setRecorrenciaConfig}
+                    />
+                  </div>
+                )}
               </div>
-              {carregandoHorarios && (
-                <p className="mt-1 text-xs text-gray-500">Buscando horários disponíveis...</p>
-              )}
-              {!carregandoHorarios && horariosDisponiveis.length > 0 && (
-                <p className="mt-1 text-xs text-green-600">
-                  {horariosDisponiveis.length} horário(s) disponível(is) encontrado(s)
-                </p>
-              )}
-            </FormField>
 
-            {/* Observações */}
-            <FormField label="Observações">
-              <textarea
-                value={formData.observacoes || ''}
-                onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                rows={3}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                placeholder="Observações adicionais sobre o agendamento..."
-              />
-            </FormField>
-
-            {/* Configuração de Recorrência */}
-            <RecorrenciaConfig
-              value={recorrenciaConfig}
-              onChange={setRecorrenciaConfig}
-            />
-
-            {/* Botões */}
-            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setCriarModal(null)
-                  setFormData({
-                    clienteId: undefined,
-                    unidadeId: undefined,
-                    atendenteId: undefined,
-                    dataHoraInicio: '',
-                    observacoes: '',
-                    servicos: [],
-                  })
-                  setServicosSelecionados([])
-                  setRecorrenciaConfig({ recorrente: false })
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleCriarAgendamento}
-                disabled={createMutation.isPending || atendentesComHorarios.length === 0}
-                isLoading={createMutation.isPending}
-              >
-                Criar Agendamento
-              </Button>
+              <div className="flex flex-col gap-2 border-t border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                <Button
+                  variant="secondary"
+                  onClick={resetCreateModal}
+                  className="rounded-xl px-4 py-2"
+                >
+                  Fechar
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleCriarAgendamento}
+                  disabled={createMutation.isPending || profissionaisDisponiveis.length === 0}
+                  isLoading={createMutation.isPending}
+                  className="rounded-xl bg-violet-600 px-5 py-2 hover:bg-violet-700"
+                >
+                  Salvar
+                </Button>
+              </div>
             </div>
           </div>
         </Modal>
@@ -1168,6 +1536,22 @@ export default function Agendamentos() {
                         Finalizar
                       </Button>
                     )}
+                    {agendamentoDetalhes.id && (
+                      <Button
+                        variant="danger"
+                        onClick={() => {
+                          if (window.confirm('Tem certeza que deseja excluir este agendamento? Esta ação não pode ser desfeita.')) {
+                            excluirMutation.mutate(agendamentoDetalhes.id!)
+                          }
+                        }}
+                        disabled={excluirMutation.isPending}
+                        isLoading={excluirMutation.isPending}
+                        className="flex items-center gap-1"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Excluir
+                      </Button>
+                    )}
                   </>
                 )}
               </div>
@@ -1185,105 +1569,377 @@ export default function Agendamentos() {
           isOpen={true}
           onClose={() => setEditingAgendamento(null)}
           title="Editar Agendamento"
-          size="lg"
+          size="md"
         >
           <div className="space-y-4">
-            <FormField label="Cliente" required>
-              {isCliente ? (
-                <p className="text-gray-700 py-2">
-                  {editingAgendamento?.cliente?.nome ?? clientesParaSelecao.find(c => c.id === editFormData.clienteId)?.nome ?? 'Você'}
-                </p>
-              ) : (
-                <select
-                  value={editFormData.clienteId ?? ''}
-                  onChange={(e) => setEditFormData({ ...editFormData, clienteId: parseInt(e.target.value) })}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                >
-                  <option value="">Selecione</option>
-                  {clientes.map((c) => (
-                    <option key={c.id} value={c.id}>{c.nome} - {c.cpfCnpj}</option>
-                  ))}
-                </select>
-              )}
-            </FormField>
-            <FormField label="Unidade" required>
-              <select
-                value={editFormData.unidadeId ?? ''}
-                onChange={(e) => {
-                  const id = parseInt(e.target.value)
-                  setEditFormData({ ...editFormData, unidadeId: id, atendenteId: undefined })
-                }}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="">Selecione</option>
-                {unidadesFiltradas.map((u) => (
-                  <option key={u.id} value={u.id}>{u.nome}</option>
-                ))}
-              </select>
-            </FormField>
-            <FormField label="Serviços" required>
-              <div className="max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3 space-y-2 bg-gray-50">
-                {servicos.filter((s) => s.ativo).map((servico) => (
-                  <label key={servico.id} className="flex items-center space-x-3 cursor-pointer hover:bg-white p-2 rounded">
-                    <input
-                      type="checkbox"
-                      checked={editServicosSelecionados.includes(servico.id!)}
-                      onChange={() => {
-                        setEditServicosSelecionados((prev) =>
-                          prev.includes(servico.id!)
-                            ? prev.filter((id) => id !== servico.id)
-                            : [...prev, servico.id!]
-                        )
-                      }}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm">{servico.nome} - R$ {servico.valor?.toFixed(2)}</span>
-                  </label>
-                ))}
+            <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-200 bg-slate-50/80 px-4 py-3 sm:px-5">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="text-xs font-medium text-slate-600">Data</label>
+                    <div className="relative mt-1">
+                      <input
+                        type="date"
+                        value={format(dataHoraEdicao, 'yyyy-MM-dd')}
+                        onChange={(e) => handleDataEdicaoChange(e.target.value)}
+                        className={`${lineInputClass} pr-8`}
+                      />
+                      <Calendar className="pointer-events-none absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-600">Hora Início</label>
+                    <div className="relative mt-1">
+                      <input
+                        type="time"
+                        value={format(dataHoraEdicao, 'HH:mm')}
+                        onChange={(e) => handleHoraEdicaoChange(e.target.value)}
+                        className={`${lineInputClass} pr-8`}
+                      />
+                      <Clock className="pointer-events-none absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                    </div>
+                  </div>
+                </div>
               </div>
-            </FormField>
-            <FormField label="Data e Hora" required>
-              <input
-                type="datetime-local"
-                value={editFormData.dataHoraInicio ?? ''}
-                onChange={(e) => setEditFormData({ ...editFormData, dataHoraInicio: e.target.value })}
-                min={format(new Date(), "yyyy-MM-dd'T'HH:mm")}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
-            </FormField>
-            <FormField label="Atendente" required>
-              <select
-                value={editFormData.atendenteId ?? ''}
-                onChange={(e) => setEditFormData({ ...editFormData, atendenteId: parseInt(e.target.value) })}
-                disabled={editAtendentesComHorarios.length === 0}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="">Selecione</option>
-                {editAtendentesComHorarios.map((a) => (
-                  <option key={a.id} value={a.id}>{a.nomeUsuario}</option>
-                ))}
-              </select>
-            </FormField>
-            <FormField label="Observações">
-              <textarea
-                value={editFormData.observacoes ?? ''}
-                onChange={(e) => setEditFormData({ ...editFormData, observacoes: e.target.value })}
-                rows={2}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
-            </FormField>
-            <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button variant="secondary" onClick={() => setEditingAgendamento(null)}>
-                Cancelar
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleSalvarEdicao}
-                disabled={updateMutation.isPending || editAtendentesComHorarios.length === 0}
-                isLoading={updateMutation.isPending}
-              >
-                Salvar
-              </Button>
+
+              <div className="space-y-4 px-4 py-4 sm:px-5">
+                {!unidadeUnicaModal && (
+                  <FormField label="Unidade" required>
+                    <div className="relative">
+                      <Building2 className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                      <select
+                        value={editFormData.unidadeId ?? ''}
+                        onChange={(e) => {
+                          const id = e.target.value ? parseInt(e.target.value, 10) : undefined
+                          setEditFormData((prev) => ({
+                            ...prev,
+                            unidadeId: id,
+                            atendenteId: undefined,
+                          }))
+                        }}
+                        disabled={isCliente && unidadesFiltradas.length <= 1}
+                        className={`${inputWithIconClass} appearance-none pr-11 disabled:cursor-default disabled:bg-slate-50 disabled:text-slate-500`}
+                      >
+                        <option value="">Selecione uma unidade</option>
+                        {unidadesFiltradas.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.nome}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    </div>
+                  </FormField>
+                )}
+
+                <FormField
+                  label="Profissional"
+                  required
+                  hint={
+                    editUnidadeIdAtiva && editServicosSelecionados.length > 0 && editProfissionaisDisponiveis.length === 0
+                      ? 'Nenhum profissional disponível para os filtros atuais.'
+                      : undefined
+                  }
+                >
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <UserRound className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                      <select
+                        value={editFormData.atendenteId ?? ''}
+                        onChange={(e) => {
+                          const atendenteId = e.target.value ? parseInt(e.target.value, 10) : undefined
+                          const profissionalSelecionadoLista = editProfissionaisDisponiveis.find((a) => a.id === atendenteId)
+                          setEditProfissionalNomeSelecionado((prevNome) => {
+                            if (!atendenteId) return ''
+                            return (profissionalSelecionadoLista?.nomeUsuario ?? prevNome) || 'Profissional selecionado'
+                          })
+                          setEditFormData((prev) => ({
+                            ...prev,
+                            atendenteId,
+                          }))
+                        }}
+                        disabled={!editUnidadeIdAtiva || (editProfissionaisDisponiveis.length === 0 && !editFormData.atendenteId)}
+                        className={`${inputWithIconClass} appearance-none pr-11 ${!editUnidadeIdAtiva || (editProfissionaisDisponiveis.length === 0 && !editFormData.atendenteId) ? 'cursor-not-allowed bg-slate-50 text-slate-500' : ''}`}
+                      >
+                        <option value="">Selecione um profissional</option>
+                        {!!editFormData.atendenteId &&
+                          !editProfissionaisDisponiveis.some((a) => a.id === editFormData.atendenteId) && (
+                            <option value={editFormData.atendenteId}>
+                              {editProfissionalSelecionadoNome || 'Profissional selecionado'}
+                            </option>
+                          )}
+                        {editProfissionaisDisponiveis.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.nomeUsuario}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    </div>
+                    {editProfissionalSelecionadoNome && (
+                      <div className="inline-flex items-center rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700">
+                        Selecionado: {editProfissionalSelecionadoNome}
+                      </div>
+                    )}
+                  </div>
+                </FormField>
+
+                <FormField label="Cliente" required>
+                  {isCliente ? (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700">
+                      Você: <strong>{editingAgendamento?.cliente?.nome ?? clientesParaSelecao.find((c) => c.id === editFormData.clienteId)?.nome ?? 'Você'}</strong>
+                    </div>
+                  ) : (
+                    <div
+                      className="space-y-2"
+                      onFocusCapture={() => setEditClienteFieldActive(true)}
+                      onBlurCapture={(e) => {
+                        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                          setEditClienteFieldActive(false)
+                        }
+                      }}
+                    >
+                      <div className="relative">
+                        <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="Digite para buscar..."
+                          value={editBuscaCliente}
+                          onFocus={() => setEditClienteFieldActive(true)}
+                          onChange={(e) => {
+                            setEditClienteFieldActive(true)
+                            setEditBuscaCliente(e.target.value)
+                            setEditFormData((prev) => ({ ...prev, clienteId: undefined }))
+                          }}
+                          className={inputWithIconClass}
+                        />
+                        {editBuscaCliente && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditClienteFieldActive(true)
+                              setEditBuscaCliente('')
+                              setEditFormData((prev) => ({ ...prev, clienteId: undefined }))
+                            }}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      {editClienteFieldActive && !editBuscaCliente.trim() && (
+                        <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                          <Button
+                            type="button"
+                            variant="success"
+                            size="sm"
+                            onClick={() => setMostrarModalCliente(true)}
+                            className="w-full rounded-lg py-2.5 font-semibold uppercase tracking-wide"
+                          >
+                            Adicionar cliente
+                          </Button>
+                        </div>
+                      )}
+
+                      {editClienteFieldActive && editBuscaCliente.trim() && editClientesFiltrados.length > 0 && (
+                        <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+                          <div className="space-y-1 p-2">
+                            {editClientesFiltrados.map((cliente) => (
+                              <button
+                                key={cliente.id}
+                                type="button"
+                                onMouseDown={(e) => {
+                                  e.preventDefault()
+                                  if (!cliente.id) return
+                                  setEditFormData((prev) => ({ ...prev, clienteId: cliente.id }))
+                                  setEditBuscaCliente(cliente.nome)
+                                  setEditClienteFieldActive(false)
+                                }}
+                                className={`flex w-full items-start justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                                  editFormData.clienteId === cliente.id
+                                    ? 'bg-violet-50 ring-1 ring-violet-200'
+                                    : 'hover:bg-slate-50'
+                                }`}
+                              >
+                                <span className="min-w-0">
+                                  <span className="block truncate text-sm font-medium text-slate-900">
+                                    {cliente.nome}
+                                  </span>
+                                  <span className="block truncate text-xs text-slate-500">
+                                    {cliente.cpfCnpj}
+                                  </span>
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {editClienteFieldActive && editBuscaCliente.trim() && editClientesFiltrados.length === 0 && (
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                          Cliente não encontrado.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </FormField>
+
+                <FormField
+                  label={`Serviços${editServicosSelecionados.length > 0 ? ` (${editServicosSelecionados.length})` : ''}`}
+                  required
+                  hint={
+                    editServicosSelecionados.length > 0 && editProfissionaisDisponiveis.length === 0 && !!editUnidadeIdAtiva
+                      ? 'Nenhum profissional disponível para os serviços selecionados.'
+                      : undefined
+                  }
+                >
+                  <div
+                    className="space-y-2"
+                    onFocusCapture={() => setEditServicoFieldActive(true)}
+                    onBlurCapture={(e) => {
+                      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                        setEditServicoFieldActive(false)
+                      }
+                    }}
+                  >
+                    <div className="relative">
+                      <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Digite para buscar..."
+                        value={editBuscaServico}
+                        onChange={(e) => setEditBuscaServico(e.target.value)}
+                        className={inputWithIconClass}
+                      />
+                      {editBuscaServico && (
+                        <button
+                          type="button"
+                          onClick={() => setEditBuscaServico('')}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    {editServicosSelecionadosDetalhes.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {editServicosSelecionadosDetalhes.map((servico) => (
+                          <button
+                            key={servico.id}
+                            type="button"
+                            onClick={() => {
+                              if (!servico.id) return
+                              handleEditServicoToggle(servico.id)
+                            }}
+                            className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-sm font-medium text-violet-700 transition hover:bg-violet-100"
+                          >
+                            <span>{servico.nome}</span>
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {editServicoFieldActive && !editBuscaServico.trim() && podeEditarServicos && (
+                      <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                        <Button
+                          type="button"
+                          variant="success"
+                          size="sm"
+                          onClick={() => setMostrarModalServico(true)}
+                          className="w-full rounded-lg py-2.5 font-semibold uppercase tracking-wide"
+                        >
+                          Adicionar serviço
+                        </Button>
+                      </div>
+                    )}
+
+                    {editBuscaServico.trim() && (
+                      <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+                        {editServicosFiltrados.length === 0 ? (
+                          <div className="p-2">
+                            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                              Serviço não encontrado.
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-1 p-2">
+                            {editServicosFiltrados.map((servico) => (
+                              <button
+                                key={servico.id}
+                                type="button"
+                                onClick={() => {
+                                  handleEditServicoToggle(servico.id)
+                                  setEditBuscaServico('')
+                                }}
+                                className={`flex w-full items-start justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                                  editServicosSelecionados.includes(servico.id)
+                                    ? 'bg-violet-50 ring-1 ring-violet-200'
+                                    : 'hover:bg-slate-50'
+                                }`}
+                              >
+                                <span className="flex-1">
+                                  <span className="block text-sm font-medium text-slate-900">{servico.nome}</span>
+                                  <span className="block text-xs text-slate-500">
+                                    {moneyFormatter.format(servico.valor)} • {servico.duracaoMinutos} min
+                                  </span>
+                                </span>
+                                <span className={`text-xs font-medium ${editServicosSelecionados.includes(servico.id) ? 'text-violet-700' : 'text-slate-400'}`}>
+                                  {editServicosSelecionados.includes(servico.id) ? 'Selecionado' : 'Selecionar'}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5">
+                      <div className="text-sm text-slate-600">
+                        Duração: <span className="font-semibold text-slate-900">{duracaoEstimadaEdicao > 0 ? `${duracaoEstimadaEdicao} min` : '0 min'}</span>
+                      </div>
+                      <div className="text-sm text-slate-600">
+                        Total: <span className="font-semibold text-slate-900">{moneyFormatter.format(valorEstimadoEdicao)}</span>
+                      </div>
+                    </div>
+
+                    {editServicosSelecionados.length === 0 && editServicosFiltrados.length > 0 && (
+                      <p className="text-sm text-rose-600">Selecione pelo menos um serviço.</p>
+                    )}
+                  </div>
+                </FormField>
+
+                <FormField label="Observações">
+                  <textarea
+                    value={editFormData.observacoes ?? ''}
+                    onChange={(e) => setEditFormData((prev) => ({ ...prev, observacoes: e.target.value }))}
+                    rows={3}
+                    className={`${inputBaseClass} min-h-[88px] resize-none`}
+                    placeholder="Observações adicionais sobre o agendamento"
+                  />
+                </FormField>
+              </div>
+
+              <div className="flex flex-col gap-2 border-t border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                <Button
+                  variant="secondary"
+                  onClick={() => setEditingAgendamento(null)}
+                  className="rounded-xl px-4 py-2"
+                >
+                  Fechar
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleSalvarEdicao}
+                  disabled={updateMutation.isPending}
+                  isLoading={updateMutation.isPending}
+                  className="rounded-xl bg-violet-600 px-5 py-2 hover:bg-violet-700"
+                >
+                  Salvar
+                </Button>
+              </div>
             </div>
           </div>
         </Modal>

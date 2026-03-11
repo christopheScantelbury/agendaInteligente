@@ -21,6 +21,8 @@ import br.com.agendainteligente.repository.AgendamentoServicoRepository;
 import br.com.agendainteligente.repository.AtendenteRepository;
 import br.com.agendainteligente.repository.ClienteRepository;
 import br.com.agendainteligente.repository.GerenteRepository;
+import br.com.agendainteligente.repository.NotaFiscalRepository;
+import br.com.agendainteligente.repository.PagamentoRepository;
 import br.com.agendainteligente.repository.ServicoRepository;
 import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.repository.UsuarioRepository;
@@ -55,6 +57,8 @@ public class AgendamentoService {
     private final AgendamentoMapper agendamentoMapper;
     private final AgendamentoServicoMapper agendamentoServicoMapper;
     private final NotaFiscalService notaFiscalService;
+    private final PagamentoRepository pagamentoRepository;
+    private final NotaFiscalRepository notaFiscalRepository;
 
     @Transactional(readOnly = true)
     public List<AgendamentoDTO> listarTodos() {
@@ -91,10 +95,13 @@ public class AgendamentoService {
         
         Usuario.PerfilUsuario perfil = usuario.getPerfil();
         
+        List<Agendamento> agendamentos;
+
         switch (perfil) {
             case ADMIN:
                 log.debug("ADMIN: listando todos os agendamentos");
-                return agendamentoRepository.findAll();
+                agendamentos = agendamentoRepository.findAll();
+                break;
                 
             case GERENTE:
                 log.debug("GERENTE: listando agendamentos apenas das unidades vinculadas ao gerente");
@@ -105,25 +112,36 @@ public class AgendamentoService {
                 Set<Long> unidadesGerenteIds = usuario.getUnidades().stream()
                         .map(Unidade::getId)
                         .collect(Collectors.toSet());
-                return agendamentoRepository.findAll().stream()
+                agendamentos = agendamentoRepository.findAll().stream()
                         .filter(a -> a.getUnidade() != null && unidadesGerenteIds.contains(a.getUnidade().getId()))
                         .collect(Collectors.toList());
+                break;
                 
             case PROFISSIONAL:
                 log.debug("PROFISSIONAL: listando apenas agendamentos do próprio atendente");
                 Atendente atendente = atendenteRepository.findByUsuarioId(usuario.getId())
                         .orElseThrow(() -> new BusinessException("Usuário não está vinculado a um atendente"));
-                return agendamentoRepository.findByAtendenteId(atendente.getId());
+                agendamentos = agendamentoRepository.findByAtendenteId(atendente.getId());
+                break;
                 
             case CLIENTE:
                 log.debug("CLIENTE: listando apenas agendamentos do próprio cliente");
-                return clienteRepository.findByEmail(email)
+                agendamentos = clienteRepository.findByEmail(email)
                         .map(c -> agendamentoRepository.findByClienteId(c.getId()))
                         .orElse(new ArrayList<>());
+                break;
             default:
                 log.debug("Perfil desconhecido: retornando lista vazia");
                 return new ArrayList<>();
         }
+
+        return filtrarAgendamentosAtivos(agendamentos);
+    }
+
+    private List<Agendamento> filtrarAgendamentosAtivos(List<Agendamento> agendamentos) {
+        return agendamentos.stream()
+                .filter(a -> a.getStatus() != StatusAgendamento.CANCELADO)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -623,6 +641,24 @@ public class AgendamentoService {
     }
 
     @Transactional
+    public void excluir(Long id) {
+        log.debug("Excluindo agendamento com id: {}", id);
+
+        Agendamento agendamento = agendamentoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Agendamento não encontrado"));
+
+        // Reaproveita a regra de visualização para garantir isolamento por perfil/unidade
+        validarPermissaoVisualizarAgendamento(agendamento);
+
+        agendamentoServicoRepository.deleteByAgendamentoId(id);
+        pagamentoRepository.deleteByAgendamentoId(id);
+        notaFiscalRepository.deleteByAgendamentoId(id);
+        agendamentoRepository.deleteById(id);
+
+        log.info("Agendamento excluído com sucesso. ID: {}", id);
+    }
+
+    @Transactional
     public AgendamentoDTO finalizar(Long id, FinalizarAgendamentoDTO finalizarDTO) {
         log.debug("Finalizando agendamento {} com valor: {}", id, finalizarDTO.getValorFinal());
         
@@ -657,4 +693,3 @@ public class AgendamentoService {
         return agendamentoMapper.toDTO(agendamento);
     }
 }
-

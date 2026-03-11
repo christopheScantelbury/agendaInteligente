@@ -68,6 +68,14 @@ public class AgendamentoController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'PROFISSIONAL', 'CLIENTE')")
+    @Operation(summary = "Excluir agendamento")
+    public ResponseEntity<Void> excluir(@PathVariable Long id) {
+        agendamentoService.excluir(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/{id}/finalizar")
     @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'PROFISSIONAL')")
     @Operation(summary = "Finalizar agendamento e emitir NFS-e")
@@ -76,4 +84,3 @@ public class AgendamentoController {
         return ResponseEntity.ok(agendamentoService.finalizar(id, finalizarDTO));
     }
 }
-

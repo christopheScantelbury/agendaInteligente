@@ -31,8 +31,8 @@ public class AtendenteDTO {
     // Para exibição
     private String nomeUsuario;
     private String nomeUnidade;
+    private String perfilUsuario;
     
     // IDs dos serviços que o atendente pode prestar
     private java.util.List<Long> servicosIds;
 }
-
