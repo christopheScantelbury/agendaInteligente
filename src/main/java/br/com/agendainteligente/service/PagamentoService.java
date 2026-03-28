@@ -17,7 +17,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +31,6 @@ public class PagamentoService {
     private final AgendamentoRepository agendamentoRepository;
     private final PagamentoMapper pagamentoMapper;
     private final PaymentGatewayIntegration paymentGatewayIntegration;
-    private final NotaFiscalService notaFiscalService;
 
     @Transactional(readOnly = true)
     public PagamentoDTO buscarPorAgendamentoId(Long agendamentoId) {
@@ -36,6 +38,117 @@ public class PagamentoService {
         Pagamento pagamento = pagamentoRepository.findByAgendamentoId(agendamentoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pagamento não encontrado para o agendamento: " + agendamentoId));
         return pagamentoMapper.toDTO(pagamento);
+    }
+
+    @Transactional
+    public PagamentoDTO registrarPagamento(Long agendamentoId,
+                                           TipoPagamento tipoPagamento,
+                                           BigDecimal valorPagamento,
+                                           LocalDate dataPagamento) {
+        log.debug("Registrando pagamento manual para agendamento {} (tipo: {}, valor: {})",
+                agendamentoId, tipoPagamento, valorPagamento);
+
+        Agendamento agendamento = agendamentoRepository.findById(agendamentoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Agendamento não encontrado"));
+
+        if (agendamento.getStatus() == StatusAgendamento.CANCELADO || agendamento.getStatus() == StatusAgendamento.NO_SHOW) {
+            throw new BusinessException("Não é possível registrar pagamento para agendamento cancelado ou não comparecimento");
+        }
+
+        if (valorPagamento == null || valorPagamento.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("Valor do pagamento deve ser maior que zero");
+        }
+
+        BigDecimal valorPagoAtual = agendamento.getValorFinal() != null ? agendamento.getValorFinal() : BigDecimal.ZERO;
+        BigDecimal novoTotalPago = valorPagoAtual.add(valorPagamento);
+        BigDecimal valorTotalAgendamento = agendamento.getValorTotal() != null ? agendamento.getValorTotal() : BigDecimal.ZERO;
+
+        if (novoTotalPago.compareTo(valorTotalAgendamento) > 0) {
+            BigDecimal valorRestante = valorTotalAgendamento.subtract(valorPagoAtual);
+            throw new BusinessException("Pagamento excede o valor restante do agendamento: " + valorRestante);
+        }
+
+        Optional<Pagamento> pagamentoExistente = pagamentoRepository.findByAgendamentoId(agendamentoId);
+        Pagamento pagamento = pagamentoExistente.orElseGet(() -> Pagamento.builder()
+                .agendamento(agendamento)
+                .build());
+
+        pagamento.setTipoPagamento(tipoPagamento);
+        pagamento.setValor(novoTotalPago);
+        pagamento.setStatus(StatusPagamento.APROVADO);
+        pagamento.setDataPagamento(dataPagamento.atStartOfDay());
+
+        pagamento = pagamentoRepository.save(pagamento);
+
+        agendamento.setValorFinal(novoTotalPago);
+        agendamentoRepository.save(agendamento);
+
+        log.info("Pagamento manual registrado. Agendamento: {}, Pago total: {}", agendamentoId, novoTotalPago);
+        return pagamentoMapper.toDTO(pagamento);
+    }
+
+    @Transactional
+    public void ajustarPagamento(Long agendamentoId,
+                                 TipoPagamento tipoPagamento,
+                                 BigDecimal valorAjuste,
+                                 LocalDate dataPagamento,
+                                 boolean removerValor) {
+        log.debug("Ajustando pagamento do agendamento {} (tipo: {}, valorAjuste: {}, remover: {})",
+                agendamentoId, tipoPagamento, valorAjuste, removerValor);
+
+        Agendamento agendamento = agendamentoRepository.findById(agendamentoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Agendamento não encontrado"));
+
+        if (agendamento.getStatus() != StatusAgendamento.CONFIRMADO) {
+            throw new BusinessException("Ajuste de pagamento permitido apenas para agendamentos confirmados");
+        }
+
+        if (valorAjuste == null || valorAjuste.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BusinessException("Valor do ajuste deve ser maior ou igual a zero");
+        }
+
+        BigDecimal valorPagoAtual = agendamento.getValorFinal() != null ? agendamento.getValorFinal() : BigDecimal.ZERO;
+        BigDecimal valorTotalAgendamento = agendamento.getValorTotal() != null ? agendamento.getValorTotal() : BigDecimal.ZERO;
+        BigDecimal novoTotalPago = removerValor
+                ? valorPagoAtual.subtract(valorAjuste)
+                : valorPagoAtual.add(valorAjuste);
+
+        if (novoTotalPago.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BusinessException("Não é possível remover mais do que o valor já pago");
+        }
+
+        if (novoTotalPago.compareTo(valorTotalAgendamento) > 0) {
+            BigDecimal valorRestante = valorTotalAgendamento.subtract(valorPagoAtual);
+            throw new BusinessException("Ajuste excede o valor restante do agendamento: " + valorRestante);
+        }
+
+        Optional<Pagamento> pagamentoExistente = pagamentoRepository.findByAgendamentoId(agendamentoId);
+        if (novoTotalPago.compareTo(BigDecimal.ZERO) == 0) {
+            pagamentoExistente.ifPresent(pagamento -> {
+                // Evita merge em entidade já removida ao salvar o agendamento na mesma transação
+                agendamento.setPagamento(null);
+                pagamentoRepository.delete(pagamento);
+            });
+            agendamento.setValorFinal(null);
+            agendamentoRepository.save(agendamento);
+            log.info("Pagamento removido do agendamento {} após ajuste para zero", agendamentoId);
+            return;
+        }
+
+        Pagamento pagamento = pagamentoExistente.orElseGet(() -> Pagamento.builder()
+                .agendamento(agendamento)
+                .build());
+
+        pagamento.setTipoPagamento(tipoPagamento);
+        pagamento.setValor(novoTotalPago);
+        pagamento.setStatus(StatusPagamento.APROVADO);
+        pagamento.setDataPagamento(dataPagamento.atStartOfDay());
+        pagamentoRepository.save(pagamento);
+
+        agendamento.setValorFinal(novoTotalPago);
+        agendamentoRepository.save(agendamento);
+
+        log.info("Pagamento ajustado. Agendamento: {}, Novo total pago: {}", agendamentoId, novoTotalPago);
     }
 
     @Transactional
@@ -49,23 +162,28 @@ public class PagamentoService {
                 && agendamento.getStatus() != StatusAgendamento.AGENDADO) {
             throw new BusinessException("Agendamento não está em status válido para pagamento");
         }
-        
-        // Verifica se já existe pagamento
-        if (pagamentoRepository.findByAgendamentoId(agendamentoId).isPresent()) {
-            throw new BusinessException("Já existe um pagamento para este agendamento");
+
+        BigDecimal valorPagoAtual = agendamento.getValorFinal() != null ? agendamento.getValorFinal() : BigDecimal.ZERO;
+        BigDecimal valorTotalAgendamento = agendamento.getValorTotal() != null ? agendamento.getValorTotal() : BigDecimal.ZERO;
+        BigDecimal valorRestante = valorTotalAgendamento.subtract(valorPagoAtual);
+
+        if (valorRestante.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("Agendamento já está totalmente pago");
         }
-        
-        Pagamento pagamento = Pagamento.builder()
+
+        Optional<Pagamento> pagamentoExistente = pagamentoRepository.findByAgendamentoId(agendamentoId);
+        Pagamento pagamento = pagamentoExistente.orElseGet(() -> Pagamento.builder()
                 .agendamento(agendamento)
-                .tipoPagamento(tipoPagamento)
-                .valor(agendamento.getValorTotal())
-                .status(StatusPagamento.PENDENTE)
-                .build();
+                .build());
+
+        pagamento.setTipoPagamento(tipoPagamento);
+        pagamento.setValor(valorPagoAtual.add(valorRestante));
+        pagamento.setStatus(StatusPagamento.PENDENTE);
         
         // Integração com gateway de pagamento
         try {
             var resultadoPagamento = paymentGatewayIntegration.criarPagamento(
-                    agendamento.getValorTotal(),
+                    valorRestante,
                     tipoPagamento,
                     agendamento.getId().toString()
             );
@@ -103,13 +221,10 @@ public class PagamentoService {
         
         // Atualiza status do agendamento
         Agendamento agendamento = pagamento.getAgendamento();
+        agendamento.setValorFinal(pagamento.getValor());
         agendamento.setStatus(StatusAgendamento.CONFIRMADO);
         agendamentoRepository.save(agendamento);
         
         log.info("Pagamento confirmado com sucesso. ID: {}", pagamento.getId());
-        
-        // Dispara emissão de nota fiscal de forma assíncrona
-        notaFiscalService.emitirNotaFiscal(agendamento.getId());
     }
 }
-

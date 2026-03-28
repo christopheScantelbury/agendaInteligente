@@ -86,12 +86,15 @@ interface EventCardProps {
 }
 
 function CalendarEventCard({ event }: EventCardProps) {
+  const observacao = event.resource?.observacoes?.trim()
+
   return (
     <div className="calendar-event-card">
       <span className="calendar-event-time">
         {format(event.start, 'HH:mm', { locale: ptBR })} - {format(event.end, 'HH:mm', { locale: ptBR })}
       </span>
       <span className="calendar-event-title">{event.title}</span>
+      {observacao && <span className="calendar-event-observation">{observacao}</span>}
     </div>
   )
 }
@@ -205,12 +208,21 @@ export default function CalendarView({
     if (event.status === 'FINALIZADO' || event.status === 'CONCLUIDO') {
       backgroundColor = '#10b981'
       borderColor = '#059669'
+    } else if (event.status === 'CONFIRMADO' || event.status === 'EM_ANDAMENTO') {
+      backgroundColor = '#3b82f6'
+      borderColor = '#2563eb'
+    } else if (event.status === 'PROCEDIMENTO_FIM') {
+      backgroundColor = '#2563eb'
+      borderColor = '#1d4ed8'
     } else if (event.status === 'CANCELADO') {
       backgroundColor = '#ef4444'
       borderColor = '#dc2626'
+    } else if (event.status === 'NO_SHOW') {
+      backgroundColor = '#f97316'
+      borderColor = '#ea580c'
     } else if (event.status === 'AGENDADO') {
-      backgroundColor = '#3b82f6'
-      borderColor = '#2563eb'
+      backgroundColor = '#111111'
+      borderColor = '#000000'
     }
 
     return {

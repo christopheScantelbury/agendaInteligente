@@ -15,12 +15,20 @@ const HOURS = Array.from({ length: 14 }, (_, i) => i + 7)
 
 const getStatusColor = (status?: string): string => {
   switch (status) {
+    case 'AGENDADO':
+      return 'bg-slate-900'
     case 'CONFIRMADO':
-      return 'bg-green-500'
+    case 'EM_ANDAMENTO':
+      return 'bg-blue-500'
+    case 'PROCEDIMENTO_FIM':
+      return 'bg-blue-600'
     case 'CANCELADO':
       return 'bg-red-500'
     case 'FINALIZADO':
-      return 'bg-blue-500'
+    case 'CONCLUIDO':
+      return 'bg-green-500'
+    case 'NO_SHOW':
+      return 'bg-orange-500'
     default:
       return 'bg-yellow-500'
   }
@@ -28,14 +36,44 @@ const getStatusColor = (status?: string): string => {
 
 const getStatusBorderColor = (status?: string): string => {
   switch (status) {
+    case 'AGENDADO':
+      return 'border-slate-900'
     case 'CONFIRMADO':
-      return 'border-green-600'
+    case 'EM_ANDAMENTO':
+      return 'border-blue-600'
+    case 'PROCEDIMENTO_FIM':
+      return 'border-blue-700'
     case 'CANCELADO':
       return 'border-red-600'
     case 'FINALIZADO':
-      return 'border-blue-600'
+    case 'CONCLUIDO':
+      return 'border-green-600'
+    case 'NO_SHOW':
+      return 'border-orange-600'
     default:
       return 'border-yellow-600'
+  }
+}
+
+const getStatusLabel = (status?: string): string => {
+  switch (status) {
+    case 'AGENDADO':
+      return 'Agendado'
+    case 'CONFIRMADO':
+      return 'Confirmado'
+    case 'EM_ANDAMENTO':
+      return 'Em procedimento'
+    case 'PROCEDIMENTO_FIM':
+      return 'Procedimento finalizado'
+    case 'FINALIZADO':
+    case 'CONCLUIDO':
+      return 'Finalizado'
+    case 'CANCELADO':
+      return 'Cancelado'
+    case 'NO_SHOW':
+      return 'Não compareceu'
+    default:
+      return 'Pendente'
   }
 }
 
@@ -155,9 +193,7 @@ export default function TimelineView({ agendamentos, selectedDate, onEventClick,
                                   </p>
                                 </div>
                                 <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold text-white ${getStatusColor(agendamento.status)}`}>
-                                  {agendamento.status === 'CONFIRMADO' ? 'Confirmado' :
-                                   agendamento.status === 'CANCELADO' ? 'Cancelado' :
-                                   agendamento.status === 'FINALIZADO' ? 'Finalizado' : 'Pendente'}
+                                  {getStatusLabel(agendamento.status)}
                                 </span>
                               </div>
 

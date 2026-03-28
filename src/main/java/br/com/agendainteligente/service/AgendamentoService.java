@@ -4,10 +4,13 @@ import br.com.agendainteligente.domain.entity.Agendamento;
 import br.com.agendainteligente.domain.entity.AgendamentoServico;
 import br.com.agendainteligente.domain.entity.Atendente;
 import br.com.agendainteligente.domain.entity.Cliente;
+import br.com.agendainteligente.domain.entity.Pagamento;
 import br.com.agendainteligente.domain.entity.Servico;
 import br.com.agendainteligente.domain.entity.Unidade;
 import br.com.agendainteligente.domain.entity.Usuario;
 import br.com.agendainteligente.domain.enums.StatusAgendamento;
+import br.com.agendainteligente.domain.enums.StatusPagamento;
+import br.com.agendainteligente.domain.enums.TipoPagamento;
 import br.com.agendainteligente.dto.AgendamentoDTO;
 import br.com.agendainteligente.dto.AgendamentoServicoDTO;
 import br.com.agendainteligente.dto.FinalizarAgendamentoDTO;
@@ -37,6 +40,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -550,9 +554,6 @@ public class AgendamentoService {
         }
 
         LocalDateTime dataHoraInicio = agendamentoDTO.getDataHoraInicio();
-        if (dataHoraInicio.isBefore(LocalDateTime.now())) {
-            throw new BusinessException("Data/hora de início deve ser atual ou futura");
-        }
         LocalDateTime dataHoraFim = dataHoraInicio.plusMinutes(duracaoTotal);
 
         if (agendamentoRepository.findConflitoHorarioExcluindoId(atendente.getId(), dataHoraInicio, dataHoraFim, id).isPresent()) {
@@ -610,11 +611,95 @@ public class AgendamentoService {
         
         // Validar permissão para atualizar agendamento
         validarPermissaoVisualizarAgendamento(agendamento);
+        validarTransicaoStatus(agendamento, novoStatus);
         
+        if (novoStatus == StatusAgendamento.EM_ANDAMENTO) {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated()) {
+                usuarioRepository.findByEmail(auth.getName())
+                        .flatMap(usuario -> atendenteRepository.findByUsuarioId(usuario.getId()))
+                        .ifPresent(agendamento::setAtendente);
+            }
+        }
+
         agendamento.setStatus(novoStatus);
         agendamento = agendamentoRepository.save(agendamento);
         log.info("Status do agendamento atualizado. ID: {}, Status: {}", id, novoStatus);
         return agendamentoMapper.toDTO(agendamento);
+    }
+
+    private void validarTransicaoStatus(Agendamento agendamento, StatusAgendamento novoStatus) {
+        if (novoStatus == null) {
+            throw new BusinessException("Status do agendamento é obrigatório");
+        }
+
+        StatusAgendamento statusAtual = agendamento.getStatus() != null
+                ? agendamento.getStatus()
+                : StatusAgendamento.AGENDADO;
+
+        if (statusAtual == novoStatus) {
+            return;
+        }
+
+        // Esses fluxos têm regras próprias e devem usar endpoints dedicados
+        if (novoStatus == StatusAgendamento.CANCELADO) {
+            throw new BusinessException("Use a ação de cancelar agendamento para definir status cancelado");
+        }
+        if (novoStatus == StatusAgendamento.CONCLUIDO) {
+            throw new BusinessException("Use a ação de finalizar atendimento para concluir o agendamento");
+        }
+
+        switch (statusAtual) {
+            case AGENDADO:
+                if (novoStatus == StatusAgendamento.CONFIRMADO) return;
+                break;
+            case CONFIRMADO:
+                if (novoStatus == StatusAgendamento.AGENDADO
+                        || novoStatus == StatusAgendamento.EM_ANDAMENTO
+                        || novoStatus == StatusAgendamento.NO_SHOW) {
+                    return;
+                }
+                break;
+            case EM_ANDAMENTO:
+                if (novoStatus == StatusAgendamento.PROCEDIMENTO_FIM) return;
+                break;
+            case PROCEDIMENTO_FIM:
+                throw new BusinessException("Use a ação de finalizar atendimento para concluir o agendamento");
+            case CANCELADO:
+            case CONCLUIDO:
+            case NO_SHOW:
+                throw new BusinessException("Não é possível alterar status de um agendamento encerrado");
+            default:
+                break;
+        }
+
+        throw new BusinessException(String.format(
+                "Transição de status inválida: %s -> %s",
+                statusAtual.name(), novoStatus.name()
+        ));
+    }
+
+    @Transactional
+    public AgendamentoDTO atualizarObservacao(Long id, String observacoes) {
+        log.debug("Atualizando observação do agendamento {}", id);
+
+        Agendamento agendamento = agendamentoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Agendamento não encontrado"));
+
+        validarPermissaoVisualizarAgendamento(agendamento);
+
+        agendamento.setObservacoes(observacoes);
+        agendamento = agendamentoRepository.save(agendamento);
+
+        AgendamentoDTO dto = agendamentoMapper.toDTO(agendamento);
+        if (agendamento.getServicos() != null && !agendamento.getServicos().isEmpty()) {
+            dto.setServicos(agendamento.getServicos().stream()
+                    .map(agendamentoServicoMapper::toDTO)
+                    .collect(Collectors.toList()));
+        }
+
+        log.info("Observação do agendamento atualizada. ID: {}", id);
+        return dto;
     }
 
     @Transactional
@@ -634,6 +719,10 @@ public class AgendamentoService {
         if (agendamento.getStatus() == StatusAgendamento.CONCLUIDO) {
             throw new BusinessException("Não é possível cancelar um agendamento concluído");
         }
+
+        if (agendamento.getStatus() == StatusAgendamento.NO_SHOW) {
+            throw new BusinessException("Não é possível cancelar um agendamento marcado como não comparecimento");
+        }
         
         agendamento.setStatus(StatusAgendamento.CANCELADO);
         agendamentoRepository.save(agendamento);
@@ -649,6 +738,18 @@ public class AgendamentoService {
 
         // Reaproveita a regra de visualização para garantir isolamento por perfil/unidade
         validarPermissaoVisualizarAgendamento(agendamento);
+
+        BigDecimal valorSinalAgendamento = agendamento.getValorFinal() != null
+                ? agendamento.getValorFinal()
+                : BigDecimal.ZERO;
+        BigDecimal valorSinalPagamento = pagamentoRepository.findByAgendamentoId(id)
+                .map(pagamento -> pagamento.getValor() != null ? pagamento.getValor() : BigDecimal.ZERO)
+                .orElse(BigDecimal.ZERO);
+        BigDecimal valorSinal = valorSinalAgendamento.max(valorSinalPagamento);
+
+        if (valorSinal.compareTo(BigDecimal.ZERO) > 0) {
+            throw new BusinessException("Não é possível excluir agendamento com sinal pago");
+        }
 
         agendamentoServicoRepository.deleteByAgendamentoId(id);
         pagamentoRepository.deleteByAgendamentoId(id);
@@ -675,17 +776,58 @@ public class AgendamentoService {
         if (agendamento.getStatus() == StatusAgendamento.CANCELADO) {
             throw new BusinessException("Não é possível finalizar um agendamento cancelado");
         }
-        
-        BigDecimal valorFinal = finalizarDTO.getValorFinal();
-        if (valorFinal.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException("Valor final deve ser maior que zero");
+
+        if (agendamento.getStatus() == StatusAgendamento.NO_SHOW) {
+            throw new BusinessException("Não é possível finalizar um agendamento marcado como não comparecimento");
         }
         
+        BigDecimal valorPagamentoFinal = finalizarDTO.getValorFinal() != null ? finalizarDTO.getValorFinal() : BigDecimal.ZERO;
+        if (valorPagamentoFinal.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BusinessException("Valor final não pode ser negativo");
+        }
+
+        BigDecimal valorPagoAtual = agendamento.getValorFinal() != null ? agendamento.getValorFinal() : BigDecimal.ZERO;
+        BigDecimal novoTotalPago = valorPagoAtual.add(valorPagamentoFinal);
+        BigDecimal valorTotalAgendamento = agendamento.getValorTotal() != null ? agendamento.getValorTotal() : BigDecimal.ZERO;
+
+        if (novoTotalPago.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("Informe um valor para pagamento ou registre um pagamento prévio");
+        }
+
+        if (novoTotalPago.compareTo(valorTotalAgendamento) > 0) {
+            BigDecimal valorRestante = valorTotalAgendamento.subtract(valorPagoAtual);
+            throw new BusinessException("Valor informado excede o restante do agendamento: " + valorRestante);
+        }
+
+        if (valorPagamentoFinal.compareTo(BigDecimal.ZERO) > 0) {
+            Optional<Pagamento> pagamentoExistente = pagamentoRepository.findByAgendamentoId(id);
+            Pagamento pagamento = pagamentoExistente.orElse(null);
+            if (pagamento == null) {
+                pagamento = Pagamento.builder()
+                        .agendamento(agendamento)
+                        .build();
+            }
+
+            TipoPagamento tipoPagamentoFinal = finalizarDTO.getTipoPagamento();
+            if (tipoPagamentoFinal == null) {
+                tipoPagamentoFinal = pagamento.getTipoPagamento();
+            }
+            if (tipoPagamentoFinal == null) {
+                tipoPagamentoFinal = TipoPagamento.DINHEIRO;
+            }
+
+            pagamento.setTipoPagamento(tipoPagamentoFinal);
+            pagamento.setValor(novoTotalPago);
+            pagamento.setStatus(StatusPagamento.APROVADO);
+            pagamento.setDataPagamento(LocalDateTime.now());
+            pagamentoRepository.save(pagamento);
+        }
+
         agendamento.setStatus(StatusAgendamento.CONCLUIDO);
-        agendamento.setValorFinal(valorFinal);
+        agendamento.setValorFinal(novoTotalPago);
         agendamento = agendamentoRepository.save(agendamento);
         
-        log.info("Agendamento finalizado com sucesso. ID: {}, Valor: {}", id, valorFinal);
+        log.info("Agendamento finalizado com sucesso. ID: {}, Pago total: {}", id, novoTotalPago);
         
         // Emite nota fiscal automaticamente
         notaFiscalService.emitirNotaFiscal(agendamento.getId());

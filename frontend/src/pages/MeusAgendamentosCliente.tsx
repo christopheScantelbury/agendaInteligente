@@ -76,15 +76,33 @@ export default function MeusAgendamentosCliente() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'AGENDADO':
-        return 'bg-blue-100 text-blue-800'
+        return 'bg-gray-900 text-white'
       case 'CONFIRMADO':
-        return 'bg-green-100 text-green-800'
+      case 'EM_ANDAMENTO':
+      case 'PROCEDIMENTO_FIM':
+        return 'bg-blue-100 text-blue-800'
       case 'CANCELADO':
         return 'bg-red-100 text-red-800'
+      case 'NO_SHOW':
+        return 'bg-orange-100 text-orange-800'
       case 'CONCLUIDO':
-        return 'bg-gray-100 text-gray-800'
+      case 'FINALIZADO':
+        return 'bg-green-100 text-green-800'
       default:
         return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'EM_ANDAMENTO':
+        return 'Em procedimento'
+      case 'PROCEDIMENTO_FIM':
+        return 'Procedimento finalizado'
+      case 'NO_SHOW':
+        return 'Não compareceu'
+      default:
+        return status
     }
   }
 
@@ -104,7 +122,7 @@ export default function MeusAgendamentosCliente() {
                 agendamento.status
               )}`}
             >
-              {agendamento.status}
+              {getStatusLabel(agendamento.status)}
             </span>
           </div>
           <div className="text-sm text-gray-600 space-y-1">

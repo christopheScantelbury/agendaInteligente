@@ -2,6 +2,7 @@ package br.com.agendainteligente.controller;
 
 import br.com.agendainteligente.domain.enums.StatusAgendamento;
 import br.com.agendainteligente.dto.AgendamentoDTO;
+import br.com.agendainteligente.dto.AtualizarObservacaoAgendamentoDTO;
 import br.com.agendainteligente.service.AgendamentoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -58,6 +59,14 @@ public class AgendamentoController {
     public ResponseEntity<AgendamentoDTO> atualizarStatus(@PathVariable Long id,
                                                            @RequestParam StatusAgendamento status) {
         return ResponseEntity.ok(agendamentoService.atualizarStatus(id, status));
+    }
+
+    @PatchMapping("/{id}/observacao")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'PROFISSIONAL', 'CLIENTE')")
+    @Operation(summary = "Atualizar observação do agendamento")
+    public ResponseEntity<AgendamentoDTO> atualizarObservacao(@PathVariable Long id,
+                                                              @RequestBody AtualizarObservacaoAgendamentoDTO request) {
+        return ResponseEntity.ok(agendamentoService.atualizarObservacao(id, request.getObservacoes()));
     }
 
     @PostMapping("/{id}/cancelar")

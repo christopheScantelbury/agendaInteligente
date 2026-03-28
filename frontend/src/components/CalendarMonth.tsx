@@ -15,12 +15,20 @@ const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
 const getStatusColor = (status?: string): string => {
   switch (status) {
+    case 'AGENDADO':
+      return '#111111'
     case 'CONFIRMADO':
-      return '#16a34a'
+    case 'EM_ANDAMENTO':
+      return '#2563eb'
+    case 'PROCEDIMENTO_FIM':
+      return '#1d4ed8'
     case 'CANCELADO':
       return '#dc2626'
     case 'FINALIZADO':
-      return '#2563eb'
+    case 'CONCLUIDO':
+      return '#16a34a'
+    case 'NO_SHOW':
+      return '#f97316'
     default:
       return '#f59e0b'
   }
@@ -190,16 +198,20 @@ export default function CalendarMonth({
             <span className="text-slate-600">Hoje</span>
           </div>
           <div className="flex items-center rounded-full bg-slate-50 px-3 py-1.5">
-            <div className="mr-2 h-2 w-2 rounded-full bg-green-500"></div>
+            <div className="mr-2 h-2 w-2 rounded-full bg-blue-500"></div>
             <span className="text-slate-600">Confirmado</span>
           </div>
           <div className="flex items-center rounded-full bg-slate-50 px-3 py-1.5">
-            <div className="mr-2 h-2 w-2 rounded-full bg-blue-500"></div>
+            <div className="mr-2 h-2 w-2 rounded-full bg-green-500"></div>
             <span className="text-slate-600">Finalizado</span>
           </div>
           <div className="flex items-center rounded-full bg-slate-50 px-3 py-1.5">
             <div className="mr-2 h-2 w-2 rounded-full bg-red-500"></div>
             <span className="text-slate-600">Cancelado</span>
+          </div>
+          <div className="flex items-center rounded-full bg-slate-50 px-3 py-1.5">
+            <div className="mr-2 h-2 w-2 rounded-full bg-orange-500"></div>
+            <span className="text-slate-600">Nao compareceu</span>
           </div>
         </div>
       </div>

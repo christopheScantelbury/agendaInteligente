@@ -1,10 +1,13 @@
-import { ReactNode, useEffect } from 'react'
+import { ReactNode, useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 
 interface ModalProps {
   isOpen: boolean
   onClose: () => void
   title: string
+  headerContent?: ReactNode
+  headerClassName?: string
+  panelClassName?: string
   children: ReactNode
   size?: 'sm' | 'md' | 'lg' | 'xl'
   showCloseButton?: boolean
@@ -17,36 +20,75 @@ const sizeClasses = {
   xl: 'max-w-4xl',
 }
 
+let modalIdCounter = 0
+let openModalsCount = 0
+const modalStack: number[] = []
+
 export default function Modal({
   isOpen,
   onClose,
   title,
+  headerContent,
+  headerClassName,
+  panelClassName,
   children,
   size = 'md',
   showCloseButton = true,
 }: ModalProps) {
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = 'unset'
-    }
+  const modalIdRef = useRef<number>(0)
+  if (modalIdRef.current === 0) {
+    modalIdRef.current = ++modalIdCounter
+  }
 
+  useEffect(() => {
+    if (!isOpen) return
+    openModalsCount += 1
+    document.body.style.overflow = 'hidden'
+    modalStack.push(modalIdRef.current)
     return () => {
-      document.body.style.overflow = 'unset'
+      openModalsCount = Math.max(0, openModalsCount - 1)
+      const idx = modalStack.lastIndexOf(modalIdRef.current)
+      if (idx >= 0) {
+        modalStack.splice(idx, 1)
+      }
+      if (openModalsCount === 0) {
+        document.body.style.overflow = 'unset'
+      }
     }
   }, [isOpen])
 
   useEffect(() => {
+    if (!isOpen) return
+
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose()
-      }
+      if (e.key !== 'Escape') return
+      const topModalId = modalStack[modalStack.length - 1]
+      if (topModalId !== modalIdRef.current) return
+      e.preventDefault()
+      e.stopPropagation()
+      onClose()
     }
 
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
+    document.addEventListener('keydown', handleEscape, true)
+    return () => {
+      document.removeEventListener('keydown', handleEscape, true)
+    }
   }, [isOpen, onClose])
+
+  const closeIfTopMost = () => {
+    const topModalId = modalStack[modalStack.length - 1]
+    if (topModalId === modalIdRef.current) {
+      onClose()
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (openModalsCount === 0) {
+        document.body.style.overflow = 'unset'
+      }
+    }
+  }, [])
 
   if (!isOpen) return null
 
@@ -56,7 +98,7 @@ export default function Modal({
       onClick={(e) => {
         // Bloqueia todos os cliques no backdrop
         if (e.target === e.currentTarget) {
-          onClose()
+          closeIfTopMost()
         }
       }}
       onMouseDown={(e) => {
@@ -71,17 +113,26 @@ export default function Modal({
       style={{ pointerEvents: 'auto' }}
     >
       <div
-        className={`bg-white rounded-lg shadow-xl w-full ${sizeClasses[size]} max-h-[90vh] overflow-hidden flex flex-col`}
+        className={`bg-white rounded-lg shadow-xl w-full ${sizeClasses[size]} max-h-[90vh] overflow-hidden flex flex-col ${panelClassName || ''}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 id="modal-title" className="text-2xl font-bold text-gray-900">
-            {title}
-          </h2>
+        <div className={`flex items-center justify-between border-b border-slate-200 px-4 py-3 ${headerClassName || ''}`}>
+          {headerContent ? (
+            <>
+              <h2 id="modal-title" className="sr-only">
+                {title}
+              </h2>
+              <div className="min-w-0 flex-1">{headerContent}</div>
+            </>
+          ) : (
+            <h2 id="modal-title" className="text-lg font-semibold text-slate-900">
+              {title}
+            </h2>
+          )}
           {showCloseButton && (
             <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              onClick={closeIfTopMost}
+              className="ml-3 text-gray-400 hover:text-gray-600 transition-colors"
               aria-label="Fechar modal"
             >
               <X className="h-6 w-6" />
@@ -93,4 +144,3 @@ export default function Modal({
     </div>
   )
 }
-

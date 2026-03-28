@@ -30,7 +30,7 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
            "a.dataHoraInicio BETWEEN :dataHora AND :dataHoraFim) OR " +
            "(:dataHoraFim BETWEEN a.dataHoraInicio AND a.dataHoraFim OR " +
            "a.dataHoraFim BETWEEN :dataHora AND :dataHoraFim)) AND " +
-           "a.status != 'CANCELADO' AND a.status != 'CONCLUIDO'")
+           "a.status != 'CANCELADO' AND a.status != 'CONCLUIDO' AND a.status != 'NO_SHOW'")
     Optional<Agendamento> findConflitoHorario(@Param("atendenteId") Long atendenteId,
                                                @Param("dataHora") LocalDateTime dataHora, 
                                                @Param("dataHoraFim") LocalDateTime dataHoraFim);
@@ -41,7 +41,7 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
            "a.dataHoraInicio BETWEEN :dataHora AND :dataHoraFim) OR " +
            "(:dataHoraFim BETWEEN a.dataHoraInicio AND a.dataHoraFim OR " +
            "a.dataHoraFim BETWEEN :dataHora AND :dataHoraFim)) AND " +
-           "a.status != 'CANCELADO' AND a.status != 'CONCLUIDO'")
+           "a.status != 'CANCELADO' AND a.status != 'CONCLUIDO' AND a.status != 'NO_SHOW'")
     Optional<Agendamento> findConflitoHorarioExcluindoId(@Param("atendenteId") Long atendenteId,
                                                           @Param("dataHora") LocalDateTime dataHora,
                                                           @Param("dataHoraFim") LocalDateTime dataHoraFim,
