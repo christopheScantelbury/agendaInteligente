@@ -23,8 +23,7 @@ public class ClienteDTO {
     @NotBlank(message = "Nome é obrigatório")
     private String nome;
     
-    @NotBlank(message = "CPF/CNPJ é obrigatório")
-    @Pattern(regexp = "\\d{11}|\\d{14}", message = "CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos")
+    @Pattern(regexp = "^$|\\d{11}|\\d{14}", message = "CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos")
     private String cpfCnpj;
     
     @Email(message = "Email inválido")
@@ -39,7 +38,6 @@ public class ClienteDTO {
     private String cidade;
     private String uf;
     
-    @NotNull(message = "Data de nascimento é obrigatória")
     private LocalDate dataNascimento;
     private String rg;
     
@@ -55,4 +53,3 @@ public class ClienteDTO {
     // Unidades completas (para saída - objetos UnidadeDTO)
     private List<UnidadeDTO> unidades;
 }
-

@@ -37,6 +37,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -608,12 +609,16 @@ public class AgendamentoService {
         
         Agendamento agendamento = agendamentoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Agendamento não encontrado"));
+        StatusAgendamento statusAtual = agendamento.getStatus() != null
+                ? agendamento.getStatus()
+                : StatusAgendamento.AGENDADO;
         
         // Validar permissão para atualizar agendamento
         validarPermissaoVisualizarAgendamento(agendamento);
         validarTransicaoStatus(agendamento, novoStatus);
         
         if (novoStatus == StatusAgendamento.EM_ANDAMENTO) {
+            validarClienteSemOutroAtendimentoEmAndamento(agendamento);
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             if (auth != null && auth.isAuthenticated()) {
                 usuarioRepository.findByEmail(auth.getName())
@@ -621,9 +626,18 @@ public class AgendamentoService {
                         .ifPresent(agendamento::setAtendente);
             }
         }
+        if (statusAtual == StatusAgendamento.CONFIRMADO && novoStatus == StatusAgendamento.AGENDADO) {
+            validarRetornoParaAgendadoSemSinalNoGrupo(agendamento);
+        }
 
         agendamento.setStatus(novoStatus);
         agendamento = agendamentoRepository.save(agendamento);
+        if (statusAtual == StatusAgendamento.AGENDADO && novoStatus == StatusAgendamento.CONFIRMADO) {
+            sincronizarConfirmacaoDoDia(agendamento);
+        }
+        if (statusAtual == StatusAgendamento.CONFIRMADO && novoStatus == StatusAgendamento.AGENDADO) {
+            sincronizarRetornoParaAgendadoDoDia(agendamento);
+        }
         log.info("Status do agendamento atualizado. ID: {}, Status: {}", id, novoStatus);
         return agendamentoMapper.toDTO(agendamento);
     }
@@ -677,6 +691,144 @@ public class AgendamentoService {
                 "Transição de status inválida: %s -> %s",
                 statusAtual.name(), novoStatus.name()
         ));
+    }
+
+    private void validarClienteSemOutroAtendimentoEmAndamento(Agendamento agendamento) {
+        if (agendamento.getId() == null
+                || agendamento.getCliente() == null
+                || agendamento.getCliente().getId() == null
+                || agendamento.getUnidade() == null
+                || agendamento.getUnidade().getId() == null
+                || agendamento.getDataHoraInicio() == null) {
+            return;
+        }
+
+        LocalDate dataAgendamento = agendamento.getDataHoraInicio().toLocalDate();
+        LocalDateTime inicioDia = dataAgendamento.atStartOfDay();
+        LocalDateTime fimDia = dataAgendamento.plusDays(1).atStartOfDay();
+
+        Optional<Agendamento> conflito = agendamentoRepository
+                .findFirstByClienteIdAndUnidadeIdAndStatusAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanAndIdNotOrderByDataHoraInicioAsc(
+                        agendamento.getCliente().getId(),
+                        agendamento.getUnidade().getId(),
+                        StatusAgendamento.EM_ANDAMENTO,
+                        inicioDia,
+                        fimDia,
+                        agendamento.getId()
+                );
+
+        if (conflito.isPresent()) {
+            Agendamento agendamentoConflitante = conflito.get();
+            String nomeProfissional = "outro profissional";
+            if (agendamentoConflitante.getAtendente() != null
+                    && agendamentoConflitante.getAtendente().getUsuario() != null
+                    && agendamentoConflitante.getAtendente().getUsuario().getNome() != null
+                    && !agendamentoConflitante.getAtendente().getUsuario().getNome().isBlank()) {
+                nomeProfissional = agendamentoConflitante.getAtendente().getUsuario().getNome();
+            }
+
+            throw new BusinessException("Cliente já está em atendimento por " + nomeProfissional);
+        }
+    }
+
+    private void sincronizarConfirmacaoDoDia(Agendamento agendamentoConfirmado) {
+        if (agendamentoConfirmado.getId() == null
+                || agendamentoConfirmado.getCliente() == null
+                || agendamentoConfirmado.getCliente().getId() == null
+                || agendamentoConfirmado.getUnidade() == null
+                || agendamentoConfirmado.getUnidade().getId() == null
+                || agendamentoConfirmado.getDataHoraInicio() == null) {
+            return;
+        }
+
+        LocalDate dataAgendamento = agendamentoConfirmado.getDataHoraInicio().toLocalDate();
+        LocalDateTime inicioDia = dataAgendamento.atStartOfDay();
+        LocalDateTime fimDia = dataAgendamento.plusDays(1).atStartOfDay();
+
+        List<Agendamento> agendamentosPendentes = agendamentoRepository
+                .findByClienteIdAndUnidadeIdAndStatusAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanAndIdNot(
+                        agendamentoConfirmado.getCliente().getId(),
+                        agendamentoConfirmado.getUnidade().getId(),
+                        StatusAgendamento.AGENDADO,
+                        inicioDia,
+                        fimDia,
+                        agendamentoConfirmado.getId()
+                );
+
+        if (agendamentosPendentes.isEmpty()) {
+            return;
+        }
+
+        agendamentosPendentes.forEach(item -> item.setStatus(StatusAgendamento.CONFIRMADO));
+        agendamentoRepository.saveAll(agendamentosPendentes);
+        log.info("Confirmação sincronizada para {} agendamento(s) do cliente {} no dia {}",
+                agendamentosPendentes.size(),
+                agendamentoConfirmado.getCliente().getId(),
+                dataAgendamento);
+    }
+
+    private void validarRetornoParaAgendadoSemSinalNoGrupo(Agendamento agendamento) {
+        if (agendamento.getCliente() == null
+                || agendamento.getCliente().getId() == null
+                || agendamento.getUnidade() == null
+                || agendamento.getUnidade().getId() == null
+                || agendamento.getDataHoraInicio() == null) {
+            return;
+        }
+
+        LocalDate dataAgendamento = agendamento.getDataHoraInicio().toLocalDate();
+        LocalDateTime inicioDia = dataAgendamento.atStartOfDay();
+        LocalDateTime fimDia = dataAgendamento.plusDays(1).atStartOfDay();
+
+        boolean existeSinalConfirmadoNoGrupo = agendamentoRepository
+                .existsByClienteIdAndUnidadeIdAndStatusAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanAndValorFinalGreaterThan(
+                        agendamento.getCliente().getId(),
+                        agendamento.getUnidade().getId(),
+                        StatusAgendamento.CONFIRMADO,
+                        inicioDia,
+                        fimDia,
+                        BigDecimal.ZERO
+                );
+
+        if (existeSinalConfirmadoNoGrupo) {
+            throw new BusinessException("Não é possível voltar para agendado: existe sinal registrado neste dia para a cliente");
+        }
+    }
+
+    private void sincronizarRetornoParaAgendadoDoDia(Agendamento agendamentoRetornado) {
+        if (agendamentoRetornado.getId() == null
+                || agendamentoRetornado.getCliente() == null
+                || agendamentoRetornado.getCliente().getId() == null
+                || agendamentoRetornado.getUnidade() == null
+                || agendamentoRetornado.getUnidade().getId() == null
+                || agendamentoRetornado.getDataHoraInicio() == null) {
+            return;
+        }
+
+        LocalDate dataAgendamento = agendamentoRetornado.getDataHoraInicio().toLocalDate();
+        LocalDateTime inicioDia = dataAgendamento.atStartOfDay();
+        LocalDateTime fimDia = dataAgendamento.plusDays(1).atStartOfDay();
+
+        List<Agendamento> agendamentosConfirmadosNoGrupo = agendamentoRepository
+                .findByClienteIdAndUnidadeIdAndStatusAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanAndIdNot(
+                        agendamentoRetornado.getCliente().getId(),
+                        agendamentoRetornado.getUnidade().getId(),
+                        StatusAgendamento.CONFIRMADO,
+                        inicioDia,
+                        fimDia,
+                        agendamentoRetornado.getId()
+                );
+
+        if (agendamentosConfirmadosNoGrupo.isEmpty()) {
+            return;
+        }
+
+        agendamentosConfirmadosNoGrupo.forEach(item -> item.setStatus(StatusAgendamento.AGENDADO));
+        agendamentoRepository.saveAll(agendamentosConfirmadosNoGrupo);
+        log.info("Retorno para agendado sincronizado para {} agendamento(s) do cliente {} no dia {}",
+                agendamentosConfirmadosNoGrupo.size(),
+                agendamentoRetornado.getCliente().getId(),
+                dataAgendamento);
     }
 
     @Transactional

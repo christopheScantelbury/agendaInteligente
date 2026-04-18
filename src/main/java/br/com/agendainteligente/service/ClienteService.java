@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -203,7 +204,8 @@ public class ClienteService {
         // Remover máscaras antes de validar e salvar
         normalizeClienteDTO(clienteDTO);
         
-        if (clienteRepository.existsByCpfCnpj(clienteDTO.getCpfCnpj())) {
+        if (hasText(clienteDTO.getCpfCnpj())
+                && clienteRepository.existsByCpfCnpj(clienteDTO.getCpfCnpj())) {
             throw new BusinessException("Já existe um cliente cadastrado com este CPF/CNPJ");
         }
         
@@ -278,7 +280,8 @@ public class ClienteService {
             throw new ResourceNotFoundException("Cliente não encontrado com id: " + id);
         }
         
-        if (!cliente.getCpfCnpj().equals(clienteDTO.getCpfCnpj()) 
+        if (!Objects.equals(cliente.getCpfCnpj(), clienteDTO.getCpfCnpj())
+                && hasText(clienteDTO.getCpfCnpj())
                 && clienteRepository.existsByCpfCnpj(clienteDTO.getCpfCnpj())) {
             throw new BusinessException("Já existe outro cliente cadastrado com este CPF/CNPJ");
         }
@@ -330,10 +333,12 @@ public class ClienteService {
      * Remove máscaras de campos como CPF/CNPJ, telefone, CEP e número.
      */
     private void normalizeClienteDTO(ClienteDTO clienteDTO) {
-        if (clienteDTO.getCpfCnpj() != null && !clienteDTO.getCpfCnpj().trim().isEmpty()) {
+        if (hasText(clienteDTO.getCpfCnpj())) {
             String cpfCnpjNormalizado = ONLY_DIGITS.matcher(clienteDTO.getCpfCnpj()).replaceAll("");
             // Limitar a 14 caracteres (tamanho máximo do campo no banco - aceita CPF 11 ou CNPJ 14)
             clienteDTO.setCpfCnpj(cpfCnpjNormalizado.length() > 14 ? cpfCnpjNormalizado.substring(0, 14) : cpfCnpjNormalizado);
+        } else {
+            clienteDTO.setCpfCnpj(null);
         }
         if (clienteDTO.getTelefone() != null && !clienteDTO.getTelefone().trim().isEmpty()) {
             String telefoneNormalizado = ONLY_DIGITS.matcher(clienteDTO.getTelefone()).replaceAll("");
@@ -350,6 +355,10 @@ public class ClienteService {
             // Limitar a 10 caracteres (tamanho máximo do campo no banco)
             clienteDTO.setNumero(numeroNormalizado.length() > 10 ? numeroNormalizado.substring(0, 10) : numeroNormalizado);
         }
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
     }
     
     /**
@@ -374,4 +383,3 @@ public class ClienteService {
         return dto;
     }
 }
-

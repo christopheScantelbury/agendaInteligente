@@ -8,6 +8,7 @@ interface ModalProps {
   headerContent?: ReactNode
   headerClassName?: string
   panelClassName?: string
+  bodyClassName?: string
   children: ReactNode
   size?: 'sm' | 'md' | 'lg' | 'xl'
   showCloseButton?: boolean
@@ -31,6 +32,7 @@ export default function Modal({
   headerContent,
   headerClassName,
   panelClassName,
+  bodyClassName,
   children,
   size = 'md',
   showCloseButton = true,
@@ -139,7 +141,7 @@ export default function Modal({
             </button>
           )}
         </div>
-        <div className="overflow-y-auto p-6 flex-1">{children}</div>
+        <div className={bodyClassName ?? 'overflow-y-auto p-6 flex-1'}>{children}</div>
       </div>
     </div>
   )

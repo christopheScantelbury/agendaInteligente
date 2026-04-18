@@ -224,7 +224,7 @@ export default function Layout({ children }: LayoutProps) {
                 <span className={`flex-shrink-0 ${active ? 'text-blue-600' : 'text-gray-500 group-hover:text-gray-700'}`}>
                   {item.icon}
                 </span>
-                <span className="ml-3 font-medium whitespace-nowrap">
+                <span className="ml-3 text-sm leading-5 font-medium whitespace-nowrap">
                   {item.label}
                 </span>
                 {isNotificacoes && contadorReclamacoes > 0 && (
@@ -303,4 +303,3 @@ export default function Layout({ children }: LayoutProps) {
     </div>
   )
 }
-

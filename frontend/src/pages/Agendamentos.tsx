@@ -14,10 +14,11 @@ import { podeEditar } from '../utils/permissions'
 import CalendarView from '../components/CalendarView'
 import TimelineView from '../components/TimelineView'
 import CalendarMonth from '../components/CalendarMonth'
+import TimeWheelInput from '../components/TimeWheelInput'
 import { SlotInfo, View } from 'react-big-calendar'
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, Building2, Search, X, CalendarDays, Calendar, Clock, List, Pencil, ChevronDown, ChevronUp, ChevronRight, UserRound, Trash2, BriefcaseBusiness, MessageCircle, Tag, HandCoins, Check, Info } from 'lucide-react'
+import { Plus, Building2, Search, X, CalendarDays, Clock, List, Pencil, ChevronDown, ChevronUp, ChevronRight, UserRound, Trash2, BriefcaseBusiness, MessageCircle, Tag, HandCoins, Check, Info } from 'lucide-react'
 import Modal from '../components/Modal'
 import FormField from '../components/FormField'
 import Button from '../components/Button'
@@ -55,6 +56,13 @@ interface AjustePagamentoModalState {
   dataPagamento: string
 }
 
+interface ServicoFinalizacaoLinha {
+  key: string
+  profissional: string
+  descricao: string
+  valor: number
+}
+
 const inputBaseClass =
   'block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100'
 
@@ -63,6 +71,9 @@ const inputWithIconClass =
 
 const lineInputClass =
   'block w-full border-0 border-b border-slate-300 bg-transparent px-0 pb-1.5 pt-1 text-sm text-slate-900 transition focus:border-violet-500 focus:outline-none focus:ring-0'
+
+const headerDateInputClass = `${lineInputClass} mt-0.5`
+const headerTimeInputClass = lineInputClass
 
 const moneyFormatter = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -119,6 +130,12 @@ const getAgendamentoStatusLabel = (
       return profissionalNome
         ? `Procedimento finalizado por ${profissionalNome}`
         : 'Procedimento finalizado por profissional não informado'
+    case 'EM_ATENDIMENTO_SINCRONIZADO':
+      return profissionalNome
+        ? `Em atendimento por ${profissionalNome}`
+        : 'Em atendimento'
+    case 'AGUARDANDO_PROXIMO_PROCEDIMENTO':
+      return 'Aguardando Iniciar procedimento'
     case 'CONCLUIDO':
     case 'FINALIZADO':
       return 'Finalizado'
@@ -136,6 +153,8 @@ const getAgendamentoStatusBadgeClass = (status?: string): string => {
     case 'AGENDADO':
       return 'bg-slate-900 text-white'
     case 'CONFIRMADO':
+    case 'EM_ATENDIMENTO_SINCRONIZADO':
+    case 'AGUARDANDO_PROXIMO_PROCEDIMENTO':
     case 'EM_ANDAMENTO':
     case 'PROCEDIMENTO_FIM':
       return 'bg-blue-100 text-blue-800'
@@ -173,7 +192,21 @@ const isAgendamentoEncerrado = (status?: string): boolean =>
   status === 'FINALIZADO' ||
   status === 'NO_SHOW'
 
-const getTimelineCompletedSteps = (status?: string): 1 | 2 | 3 | 4 => {
+const getTimelineCompletedSteps = (status?: string, usarEtapaProcedimento: boolean = true): 1 | 2 | 3 | 4 => {
+  if (!usarEtapaProcedimento) {
+    switch (status) {
+      case 'CONFIRMADO':
+      case 'EM_ANDAMENTO':
+      case 'PROCEDIMENTO_FIM':
+        return 2
+      case 'CONCLUIDO':
+      case 'FINALIZADO':
+        return 3
+      default:
+        return 1
+    }
+  }
+
   switch (status) {
     case 'CONFIRMADO':
       return 2
@@ -224,6 +257,7 @@ export default function Agendamentos() {
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [viewMode, setViewMode] = useState<'timeline' | 'calendar'>('calendar')
+  const [filtroProfissionalId, setFiltroProfissionalId] = useState<number | null>(null)
 
   // Form data para criar agendamento
   const [formData, setFormData] = useState<Partial<Agendamento>>({
@@ -241,6 +275,10 @@ export default function Agendamentos() {
   const [servicoFieldActive, setServicoFieldActive] = useState(false)
   const [mostrarModalCliente, setMostrarModalCliente] = useState(false)
   const [mostrarModalServico, setMostrarModalServico] = useState(false)
+  const [nomeInicialNovoCliente, setNomeInicialNovoCliente] = useState('')
+  const [nomeInicialNovoServico, setNomeInicialNovoServico] = useState('')
+  const [origemModalCliente, setOrigemModalCliente] = useState<'create' | 'edit'>('create')
+  const [origemModalServico, setOrigemModalServico] = useState<'create' | 'edit'>('create')
   const [agendamentoDetalhes, setAgendamentoDetalhes] = useState<Agendamento | null>(null)
   const [excluirAgendamentoModal, setExcluirAgendamentoModal] = useState<{
     agendamentoId: number
@@ -275,6 +313,19 @@ export default function Agendamentos() {
   const perfilNorm = perfil.toUpperCase()
   const isAdmin = perfilNorm === 'ADMIN' || perfilNorm === 'ADMINISTRADOR'
   const isCliente = perfilNorm === 'CLIENTE'
+  const exibirFiltroProfissional = perfilNorm === 'GERENTE'
+
+  const abrirModalCliente = (origem: 'create' | 'edit', nomeInicial = '') => {
+    setOrigemModalCliente(origem)
+    setNomeInicialNovoCliente(nomeInicial.trim())
+    setMostrarModalCliente(true)
+  }
+
+  const abrirModalServico = (origem: 'create' | 'edit', nomeInicial = '') => {
+    setOrigemModalServico(origem)
+    setNomeInicialNovoServico(nomeInicial.trim())
+    setMostrarModalServico(true)
+  }
 
   const { data: perfilPermissoes } = useQuery({
     queryKey: ['perfil', 'meu'],
@@ -316,6 +367,12 @@ export default function Agendamentos() {
   const { data: agendamentos = [], isLoading } = useQuery({
     queryKey: ['agendamentos'],
     queryFn: agendamentoService.listar,
+  })
+
+  const { data: profissionaisFiltroCalendario = [] } = useQuery({
+    queryKey: ['atendentes', 'ativos', 'filtro-calendario'],
+    queryFn: atendenteService.listar,
+    enabled: exibirFiltroProfissional,
   })
 
   const { data: clientes = [] } = useQuery({
@@ -405,8 +462,6 @@ export default function Agendamentos() {
       !isCliente,
   })
   const confirmadoComSinalLocal = statusDetalhesNorm === 'CONFIRMADO' && Number(agendamentoDetalhes?.valorFinal ?? 0) > 0
-  const confirmadoComSinalBackend = statusDetalhesNorm === 'CONFIRMADO' && Number(pagamentoConfirmacao?.valor ?? 0) > 0
-  const confirmadoComSinal = confirmadoComSinalLocal || confirmadoComSinalBackend
   const agendamentoNoShow = useMemo(() => {
     if (!noShowModal) return null
     if (agendamentoDetalhes?.id === noShowModal.agendamentoId) return agendamentoDetalhes
@@ -414,25 +469,300 @@ export default function Agendamentos() {
   }, [noShowModal, agendamentoDetalhes, agendamentos])
   const valorSinalNoShow = Number(agendamentoNoShow?.valorFinal ?? pagamentoConfirmacao?.valor ?? 0)
   const noShowComSinal = valorSinalNoShow > 0
+  const agendamentosFinalizacaoGrupo = useMemo(() => {
+    if (!finalizarModal?.agendamento) return []
+
+    const base = finalizarModal.agendamento
+    const clienteIdBase = base.clienteId ?? base.cliente?.id
+    const unidadeIdBase = base.unidadeId ?? base.unidade?.id
+    if (!clienteIdBase || !unidadeIdBase || !base.dataHoraInicio) {
+      return [base]
+    }
+
+    const dataBase = parseISO(base.dataHoraInicio)
+    if (Number.isNaN(dataBase.getTime())) {
+      return [base]
+    }
+    const diaBase = format(dataBase, 'yyyy-MM-dd')
+
+    const grupo = agendamentos.filter((item) => {
+      const statusItem = (item.status || '').toUpperCase()
+      if (statusItem === 'CANCELADO' || statusItem === 'NO_SHOW') return false
+
+      const clienteIdItem = item.clienteId ?? item.cliente?.id
+      const unidadeIdItem = item.unidadeId ?? item.unidade?.id
+      if (Number(clienteIdItem) !== Number(clienteIdBase)) return false
+      if (Number(unidadeIdItem) !== Number(unidadeIdBase)) return false
+      if (!item.dataHoraInicio) return false
+
+      const dataItem = parseISO(item.dataHoraInicio)
+      if (Number.isNaN(dataItem.getTime())) return false
+      return format(dataItem, 'yyyy-MM-dd') === diaBase
+    })
+
+    const porId = new Map<number, Agendamento>()
+    grupo.forEach((item) => {
+      if (item.id) porId.set(item.id, item)
+    })
+    if (base.id) porId.set(base.id, { ...base, ...porId.get(base.id) })
+
+    return Array.from(porId.values()).sort((a, b) => {
+      const dataA = a.dataHoraInicio ? parseISO(a.dataHoraInicio).getTime() : Number.MAX_SAFE_INTEGER
+      const dataB = b.dataHoraInicio ? parseISO(b.dataHoraInicio).getTime() : Number.MAX_SAFE_INTEGER
+      if (dataA !== dataB) return dataA - dataB
+      return (a.id ?? Number.MAX_SAFE_INTEGER) - (b.id ?? Number.MAX_SAFE_INTEGER)
+    })
+  }, [finalizarModal, agendamentos])
+  const servicosFinalizacaoLinhas = useMemo<ServicoFinalizacaoLinha[]>(() => {
+    return agendamentosFinalizacaoGrupo.flatMap((agendamento) => {
+      const profissional =
+        agendamento.atendente?.nomeUsuario ||
+        agendamento.atendente?.nome ||
+        'Profissional'
+
+      const servicos = agendamento.servicos || []
+      if (servicos.length === 0) {
+        return [{
+          key: `agendamento-${agendamento.id ?? 'sem-id'}-0`,
+          profissional,
+          descricao: 'Serviço não informado',
+          valor: Number(agendamento.valorTotal ?? 0),
+        }]
+      }
+
+      return servicos.map((servico, index) => {
+        const valorServico = Number(
+          servico.valorTotal ??
+          (servico.valor != null ? servico.valor * (servico.quantidade ?? 1) : 0)
+        )
+        return {
+          key: `agendamento-${agendamento.id ?? 'sem-id'}-${index}`,
+          profissional,
+          descricao: servico.descricao || 'Serviço',
+          valor: Number.isFinite(valorServico) ? valorServico : 0,
+        }
+      })
+    })
+  }, [agendamentosFinalizacaoGrupo])
+  const totalServicosFinalizacao = useMemo(
+    () => agendamentosFinalizacaoGrupo.reduce((total, item) => total + Number(item.valorTotal ?? 0), 0),
+    [agendamentosFinalizacaoGrupo]
+  )
+  const totalPagoFinalizacao = useMemo(
+    () => agendamentosFinalizacaoGrupo.reduce((total, item) => total + Number(item.valorFinal ?? 0), 0),
+    [agendamentosFinalizacaoGrupo]
+  )
+  const valorRestanteFinalizacao = useMemo(
+    () => Math.max(totalServicosFinalizacao - totalPagoFinalizacao, 0),
+    [totalServicosFinalizacao, totalPagoFinalizacao]
+  )
+  const quantidadeAgendamentosNoDia = useMemo(() => {
+    if (!agendamentoDetalhes?.dataHoraInicio || !agendamentoDetalhes?.id) return 0
+
+    const clienteIdAtual = agendamentoDetalhes.clienteId ?? agendamentoDetalhes.cliente?.id
+    const unidadeIdAtual = agendamentoDetalhes.unidadeId ?? agendamentoDetalhes.unidade?.id
+    if (!clienteIdAtual || !unidadeIdAtual) return 0
+
+    const dataAtual = parseISO(agendamentoDetalhes.dataHoraInicio)
+    if (Number.isNaN(dataAtual.getTime())) return 0
+    const diaAtual = format(dataAtual, 'yyyy-MM-dd')
+
+    return agendamentos.filter((item) => {
+      if (!item.id) return false
+      const statusItem = (item.status || '').toUpperCase()
+      if (statusItem === 'CANCELADO' || statusItem === 'NO_SHOW') return false
+
+      const clienteIdItem = item.clienteId ?? item.cliente?.id
+      const unidadeIdItem = item.unidadeId ?? item.unidade?.id
+      if (Number(clienteIdItem) !== Number(clienteIdAtual)) return false
+      if (Number(unidadeIdItem) !== Number(unidadeIdAtual)) return false
+      if (!item.dataHoraInicio) return false
+
+      const dataItem = parseISO(item.dataHoraInicio)
+      if (Number.isNaN(dataItem.getTime())) return false
+      return format(dataItem, 'yyyy-MM-dd') === diaAtual
+    }).length
+  }, [agendamentoDetalhes, agendamentos])
+  const usarEtapaProcedimento = quantidadeAgendamentosNoDia >= 2
+  const atendimentoConflitante = useMemo(() => {
+    if (!usarEtapaProcedimento) return null
+
+    if (
+      !agendamentoDetalhes?.id ||
+      (statusDetalhesNorm !== 'CONFIRMADO' && statusDetalhesNorm !== 'PROCEDIMENTO_FIM')
+    ) {
+      return null
+    }
+
+    const clienteIdAtual = agendamentoDetalhes.clienteId ?? agendamentoDetalhes.cliente?.id
+    const unidadeIdAtual = agendamentoDetalhes.unidadeId ?? agendamentoDetalhes.unidade?.id
+    if (!clienteIdAtual || !unidadeIdAtual || !agendamentoDetalhes.dataHoraInicio) return null
+
+    const dataAtual = parseISO(agendamentoDetalhes.dataHoraInicio)
+    if (Number.isNaN(dataAtual.getTime())) return null
+    const diaAtual = format(dataAtual, 'yyyy-MM-dd')
+
+    const emAndamentoNoGrupo = agendamentos.filter((item) => {
+        if (!item.id || item.id === agendamentoDetalhes.id) return false
+        if ((item.status || '').toUpperCase() !== 'EM_ANDAMENTO') return false
+
+        const clienteIdItem = item.clienteId ?? item.cliente?.id
+        const unidadeIdItem = item.unidadeId ?? item.unidade?.id
+        if (Number(clienteIdItem) !== Number(clienteIdAtual)) return false
+        if (Number(unidadeIdItem) !== Number(unidadeIdAtual)) return false
+        if (!item.dataHoraInicio) return false
+
+        const dataItem = parseISO(item.dataHoraInicio)
+        if (Number.isNaN(dataItem.getTime())) return false
+        return format(dataItem, 'yyyy-MM-dd') === diaAtual
+      })
+
+    emAndamentoNoGrupo.sort((a, b) => {
+      const dataA = a.dataHoraInicio ? parseISO(a.dataHoraInicio).getTime() : Number.MAX_SAFE_INTEGER
+      const dataB = b.dataHoraInicio ? parseISO(b.dataHoraInicio).getTime() : Number.MAX_SAFE_INTEGER
+      if (dataA !== dataB) return dataA - dataB
+      return (a.id ?? Number.MAX_SAFE_INTEGER) - (b.id ?? Number.MAX_SAFE_INTEGER)
+    })
+
+    return emAndamentoNoGrupo[0] || null
+  }, [usarEtapaProcedimento, agendamentoDetalhes, agendamentos, statusDetalhesNorm])
+  const bloqueadoPorOutroAtendimento = !!atendimentoConflitante
+  const nomeProfissionalConflitante =
+    atendimentoConflitante?.atendente?.nomeUsuario ||
+    atendimentoConflitante?.atendente?.nome ||
+    'outro profissional'
+  const grupoConfirmadoTemSinal = useMemo(() => {
+    if (!agendamentoDetalhes?.dataHoraInicio) return false
+
+    const clienteIdAtual = agendamentoDetalhes.clienteId ?? agendamentoDetalhes.cliente?.id
+    const unidadeIdAtual = agendamentoDetalhes.unidadeId ?? agendamentoDetalhes.unidade?.id
+    if (!clienteIdAtual || !unidadeIdAtual) return false
+
+    const dataAtual = parseISO(agendamentoDetalhes.dataHoraInicio)
+    if (Number.isNaN(dataAtual.getTime())) return false
+    const diaAtual = format(dataAtual, 'yyyy-MM-dd')
+
+    const sinalNoGrupo = agendamentos.some((item) => {
+      const statusItem = (item.status || '').toUpperCase()
+      if (statusItem !== 'CONFIRMADO') return false
+
+      const clienteIdItem = item.clienteId ?? item.cliente?.id
+      const unidadeIdItem = item.unidadeId ?? item.unidade?.id
+      if (Number(clienteIdItem) !== Number(clienteIdAtual)) return false
+      if (Number(unidadeIdItem) !== Number(unidadeIdAtual)) return false
+      if (!item.dataHoraInicio) return false
+
+      const dataItem = parseISO(item.dataHoraInicio)
+      if (Number.isNaN(dataItem.getTime())) return false
+      if (format(dataItem, 'yyyy-MM-dd') !== diaAtual) return false
+
+      return Number(item.valorFinal ?? 0) > 0
+    })
+
+    return sinalNoGrupo || Number(pagamentoConfirmacao?.valor ?? 0) > 0
+  }, [agendamentoDetalhes, agendamentos, pagamentoConfirmacao?.valor])
+  const existeProcedimentoPendenteNoGrupo = useMemo(() => {
+    if (!usarEtapaProcedimento) return false
+    if (!agendamentoDetalhes?.dataHoraInicio || !agendamentoDetalhes?.id) return false
+
+    const clienteIdAtual = agendamentoDetalhes.clienteId ?? agendamentoDetalhes.cliente?.id
+    const unidadeIdAtual = agendamentoDetalhes.unidadeId ?? agendamentoDetalhes.unidade?.id
+    if (!clienteIdAtual || !unidadeIdAtual) return false
+
+    const dataAtual = parseISO(agendamentoDetalhes.dataHoraInicio)
+    if (Number.isNaN(dataAtual.getTime())) return false
+    const diaAtual = format(dataAtual, 'yyyy-MM-dd')
+
+    return agendamentos.some((item) => {
+      if (!item.id || item.id === agendamentoDetalhes.id) return false
+
+      const clienteIdItem = item.clienteId ?? item.cliente?.id
+      const unidadeIdItem = item.unidadeId ?? item.unidade?.id
+      if (Number(clienteIdItem) !== Number(clienteIdAtual)) return false
+      if (Number(unidadeIdItem) !== Number(unidadeIdAtual)) return false
+      if (!item.dataHoraInicio) return false
+
+      const dataItem = parseISO(item.dataHoraInicio)
+      if (Number.isNaN(dataItem.getTime())) return false
+      if (format(dataItem, 'yyyy-MM-dd') !== diaAtual) return false
+
+      const statusItem = (item.status || '').toUpperCase()
+      return statusItem === 'AGENDADO' || statusItem === 'CONFIRMADO' || statusItem === 'EM_ANDAMENTO'
+    })
+  }, [usarEtapaProcedimento, agendamentoDetalhes, agendamentos])
+  const existeProcedimentoFinalizadoNoGrupo = useMemo(() => {
+    if (!usarEtapaProcedimento) return false
+    if (!agendamentoDetalhes?.dataHoraInicio || !agendamentoDetalhes?.id) return false
+
+    const clienteIdAtual = agendamentoDetalhes.clienteId ?? agendamentoDetalhes.cliente?.id
+    const unidadeIdAtual = agendamentoDetalhes.unidadeId ?? agendamentoDetalhes.unidade?.id
+    if (!clienteIdAtual || !unidadeIdAtual) return false
+
+    const dataAtual = parseISO(agendamentoDetalhes.dataHoraInicio)
+    if (Number.isNaN(dataAtual.getTime())) return false
+    const diaAtual = format(dataAtual, 'yyyy-MM-dd')
+
+    return agendamentos.some((item) => {
+      if (!item.id || item.id === agendamentoDetalhes.id) return false
+
+      const clienteIdItem = item.clienteId ?? item.cliente?.id
+      const unidadeIdItem = item.unidadeId ?? item.unidade?.id
+      if (Number(clienteIdItem) !== Number(clienteIdAtual)) return false
+      if (Number(unidadeIdItem) !== Number(unidadeIdAtual)) return false
+      if (!item.dataHoraInicio) return false
+
+      const dataItem = parseISO(item.dataHoraInicio)
+      if (Number.isNaN(dataItem.getTime())) return false
+      if (format(dataItem, 'yyyy-MM-dd') !== diaAtual) return false
+
+      const statusItem = (item.status || '').toUpperCase()
+      return statusItem === 'PROCEDIMENTO_FIM' || statusItem === 'CONCLUIDO' || statusItem === 'FINALIZADO'
+    })
+  }, [usarEtapaProcedimento, agendamentoDetalhes, agendamentos])
+  const statusExibicaoDetalhes = useMemo(() => {
+    if (!agendamentoDetalhes) return undefined
+    if (!usarEtapaProcedimento) return agendamentoDetalhes.status
+    if (statusDetalhesNorm === 'PROCEDIMENTO_FIM') {
+      if (bloqueadoPorOutroAtendimento) return 'EM_ATENDIMENTO_SINCRONIZADO'
+      return agendamentoDetalhes.status
+    }
+    if (statusDetalhesNorm !== 'CONFIRMADO') return agendamentoDetalhes.status
+    if (bloqueadoPorOutroAtendimento) return 'EM_ATENDIMENTO_SINCRONIZADO'
+    if (existeProcedimentoFinalizadoNoGrupo) return 'AGUARDANDO_PROXIMO_PROCEDIMENTO'
+    return agendamentoDetalhes.status
+  }, [usarEtapaProcedimento, agendamentoDetalhes, statusDetalhesNorm, bloqueadoPorOutroAtendimento, existeProcedimentoFinalizadoNoGrupo])
+  const podeExibirFinalizarAtendimento = usarEtapaProcedimento
+    ? statusDetalhesNorm === 'PROCEDIMENTO_FIM' && !existeProcedimentoPendenteNoGrupo
+    : statusDetalhesNorm === 'CONFIRMADO'
   const podeVoltarParaAgendado =
     statusDetalhesNorm === 'CONFIRMADO' &&
-    !confirmadoComSinal &&
+    !grupoConfirmadoTemSinal &&
     (!isLoadingPagamentoConfirmacao || !confirmadoComSinalLocal)
-  const timelineCompletedSteps = getTimelineCompletedSteps(agendamentoDetalhes?.status)
-  const timelineStep3Label =
-    statusDetalhesNorm === 'EM_ANDAMENTO'
-      ? 'Procedimento em Andamento'
-      : statusDetalhesNorm === 'PROCEDIMENTO_FIM'
-        ? 'Procedimento Finalizado'
-        : 'Procedimento'
+  const timelineCompletedSteps = getTimelineCompletedSteps(agendamentoDetalhes?.status, usarEtapaProcedimento)
+  const etapa3Concluida =
+    statusDetalhesNorm === 'PROCEDIMENTO_FIM' ||
+    statusDetalhesNorm === 'CONCLUIDO' ||
+    statusDetalhesNorm === 'FINALIZADO'
+  const etapa3Ativa = statusDetalhesNorm === 'EM_ANDAMENTO' || bloqueadoPorOutroAtendimento
+  const timelineStep3Label = 'Procedimento'
   const timelineProgressClass =
-    timelineCompletedSteps === 1
-      ? 'w-0'
-      : timelineCompletedSteps === 2
-        ? 'w-1/3'
-        : timelineCompletedSteps === 3
-          ? 'w-2/3'
-          : 'w-full'
+    usarEtapaProcedimento
+      ? (
+          timelineCompletedSteps === 1
+            ? 'w-0'
+            : timelineCompletedSteps === 2
+              ? 'w-1/3'
+              : timelineCompletedSteps === 3
+                ? 'w-2/3'
+                : 'w-full'
+        )
+      : (
+          timelineCompletedSteps === 1
+            ? 'w-0'
+            : timelineCompletedSteps === 2
+              ? 'w-1/2'
+              : 'w-full'
+        )
 
   const { data: meuPerfilCliente } = useQuery({
     queryKey: ['cliente-meu-perfil'],
@@ -549,6 +879,48 @@ export default function Agendamentos() {
     return todosAtendentes
   }, [todosAtendentes, perfilNorm, usuario?.usuarioId])
 
+  const profissionaisParaFiltro = useMemo(() => {
+    if (!exibirFiltroProfissional) return []
+    return profissionaisFiltroCalendario
+      .filter((atendente) => {
+        const perfilUsuario = (atendente.perfilUsuario ?? '').toUpperCase()
+        return (perfilUsuario === 'PROFISSIONAL' || perfilUsuario === 'ATENDENTE') && typeof atendente.id === 'number'
+      })
+      .sort((a, b) => (a.nomeUsuario ?? '').localeCompare(b.nomeUsuario ?? '', 'pt-BR'))
+  }, [profissionaisFiltroCalendario, exibirFiltroProfissional])
+
+  const valorFiltroProfissionalSelect = useMemo(() => {
+    if (typeof filtroProfissionalId === 'number') return String(filtroProfissionalId)
+    const primeiroProfissionalId = profissionaisParaFiltro[0]?.id
+    return typeof primeiroProfissionalId === 'number' ? String(primeiroProfissionalId) : ''
+  }, [filtroProfissionalId, profissionaisParaFiltro])
+
+  useEffect(() => {
+    if (profissionaisParaFiltro.length === 0) {
+      setFiltroProfissionalId(null)
+      return
+    }
+
+    const existe = profissionaisParaFiltro.some((profissional) => profissional.id === filtroProfissionalId)
+    if (!existe) {
+      const primeiroProfissionalId = profissionaisParaFiltro[0]?.id
+      if (typeof primeiroProfissionalId === 'number') {
+        setFiltroProfissionalId(primeiroProfissionalId)
+      }
+    }
+  }, [filtroProfissionalId, profissionaisParaFiltro])
+
+  const agendamentosFiltrados = useMemo(() => {
+    if (typeof filtroProfissionalId !== 'number') return agendamentos
+    return agendamentos.filter((agendamento) => {
+      const atendenteId =
+        agendamento.atendenteId ??
+        agendamento.atendente?.id ??
+        agendamento.atendente?.atendenteId
+      return Number(atendenteId) === filtroProfissionalId
+    })
+  }, [agendamentos, filtroProfissionalId])
+
   // Auto-selecionar unidade e atendente para PROFISSIONAL
   useEffect(() => {
     if ((perfil === 'PROFISSIONAL' || perfil === 'ATENDENTE') && usuario?.unidadeId && unidadesFiltradas.length > 0) {
@@ -597,6 +969,31 @@ export default function Agendamentos() {
       unidadeId: unidadeUnicaModal.id,
     }))
   }, [criarModal, unidadeUnicaModal])
+
+  useEffect(() => {
+    if (!criarModal || !exibirFiltroProfissional || typeof filtroProfissionalId !== 'number') return
+
+    const profissionalSelecionadoFiltro = profissionaisParaFiltro.find(
+      (profissional) => profissional.id === filtroProfissionalId
+    )
+
+    if (!profissionalSelecionadoFiltro) return
+
+    setFormData((prev) => {
+      const unidadeIdPadrao = prev.unidadeId ?? profissionalSelecionadoFiltro.unidadeId
+      const atendenteIdPadrao = prev.atendenteId ?? profissionalSelecionadoFiltro.id
+
+      if (prev.unidadeId === unidadeIdPadrao && prev.atendenteId === atendenteIdPadrao) {
+        return prev
+      }
+
+      return {
+        ...prev,
+        unidadeId: unidadeIdPadrao,
+        atendenteId: atendenteIdPadrao,
+      }
+    })
+  }, [criarModal, exibirFiltroProfissional, filtroProfissionalId, profissionaisParaFiltro])
 
   const { data: horariosDisponiveis = [] } = useQuery({
     queryKey: [
@@ -826,16 +1223,75 @@ export default function Agendamentos() {
   })
 
   const finalizarMutation = useMutation({
-    mutationFn: ({ id, valorFinal, formaPagamento }: { id: number; valorFinal: number; formaPagamento: FormaPagamentoSinal }) =>
-      agendamentoService.finalizar(id, { valorFinal, tipoPagamento: formaPagamento }),
-    onSuccess: (agendamentoAtualizado) => {
-      queryClient.invalidateQueries({ queryKey: ['agendamentos'] })
+    mutationFn: async ({
+      agendamentosParaFinalizar,
+      formaPagamento,
+    }: {
+      agendamentosParaFinalizar: Agendamento[]
+      formaPagamento: FormaPagamentoSinal
+    }) => {
+      const agendamentosAtualizados: Agendamento[] = []
+
+      for (const agendamento of agendamentosParaFinalizar) {
+        if (!agendamento.id) continue
+
+        const agendamentoAtual = await agendamentoService.buscarPorId(agendamento.id)
+        const statusAtual = (agendamentoAtual.status || '').toUpperCase()
+
+        if (statusAtual === 'CONCLUIDO' || statusAtual === 'FINALIZADO') {
+          agendamentosAtualizados.push(agendamentoAtual)
+          continue
+        }
+
+        const valorRestante = calcularValorRestante(agendamentoAtual)
+        const valorPagoAtual = Number(agendamentoAtual.valorFinal ?? 0)
+
+        if (valorRestante <= 0 && valorPagoAtual <= 0) {
+          continue
+        }
+
+        try {
+          const atualizado = await agendamentoService.finalizar(agendamento.id, {
+            valorFinal: valorRestante,
+            tipoPagamento: formaPagamento,
+          })
+          agendamentosAtualizados.push(atualizado)
+        } catch (error: unknown) {
+          const mensagemErro = getApiErrorMessage(error, '').toLowerCase()
+          if (mensagemErro.includes('já está concluído')) {
+            const recarregado = await agendamentoService.buscarPorId(agendamento.id)
+            agendamentosAtualizados.push(recarregado)
+            continue
+          }
+          throw error
+        }
+      }
+
+      return agendamentosAtualizados
+    },
+    onSuccess: async (agendamentosAtualizados) => {
+      await queryClient.invalidateQueries({ queryKey: ['agendamentos'] })
+      await queryClient.refetchQueries({ queryKey: ['agendamentos'], type: 'active' })
       setFinalizarModal(null)
+
+      const atualizadosPorId = new Map(
+        agendamentosAtualizados
+          .filter((agendamento) => typeof agendamento.id === 'number')
+          .map((agendamento) => [agendamento.id as number, agendamento])
+      )
+
       setAgendamentoDetalhes((prev) => {
-        if (!prev || !agendamentoAtualizado?.id || prev.id !== agendamentoAtualizado.id) return prev
-        return { ...prev, ...agendamentoAtualizado }
+        if (!prev?.id) return prev
+        const atualizado = atualizadosPorId.get(prev.id)
+        if (!atualizado) return prev
+        return { ...prev, ...atualizado }
       })
-      showNotification('success', 'Agendamento finalizado! A nota fiscal será emitida automaticamente.', 2000)
+
+      if (agendamentosAtualizados.length > 1) {
+        showNotification('success', 'Atendimentos finalizados com sucesso! As NFS-e serão emitidas automaticamente.', 2000)
+      } else {
+        showNotification('success', 'Agendamento finalizado! A nota fiscal será emitida automaticamente.', 2000)
+      }
     },
     onError: (error: unknown) => {
       showNotification('error', getApiErrorMessage(error, 'Erro ao finalizar agendamento'))
@@ -905,7 +1361,7 @@ export default function Agendamentos() {
         if (!prev || !agendamentoAtualizado?.id || prev.id !== agendamentoAtualizado.id) return prev
         return { ...prev, ...agendamentoAtualizado }
       })
-      showNotification('success', 'Agendamento confirmado com sucesso.', 2000)
+      showNotification('success', 'Status sincronizado para confirmado.', 2000)
     },
     onError: (error: unknown) => {
       showNotification('error', getApiErrorMessage(error, 'Erro ao confirmar agendamento'))
@@ -959,7 +1415,7 @@ export default function Agendamentos() {
         if (!prev || !agendamentoAtualizado?.id || prev.id !== agendamentoAtualizado.id) return prev
         return { ...prev, ...agendamentoAtualizado }
       })
-      showNotification('success', 'Status alterado para agendado.', 2000)
+      showNotification('success', 'Status sincronizado para agendado.', 2000)
     },
     onError: (error: unknown) => {
       showNotification('error', getApiErrorMessage(error, 'Erro ao voltar status para agendado'))
@@ -968,9 +1424,10 @@ export default function Agendamentos() {
 
   const iniciarProcedimentoMutation = useMutation({
     mutationFn: (id: number) => agendamentoService.atualizarStatus(id, 'EM_ANDAMENTO'),
-    onSuccess: (agendamentoAtualizado) => {
-      queryClient.invalidateQueries({ queryKey: ['agendamentos'] })
-      queryClient.invalidateQueries({ queryKey: ['horariosDisponiveis'] })
+    onSuccess: async (agendamentoAtualizado) => {
+      await queryClient.invalidateQueries({ queryKey: ['agendamentos'] })
+      await queryClient.refetchQueries({ queryKey: ['agendamentos'], type: 'active' })
+      await queryClient.invalidateQueries({ queryKey: ['horariosDisponiveis'] })
       setAgendamentoDetalhes((prev) => {
         if (!prev || !agendamentoAtualizado?.id || prev.id !== agendamentoAtualizado.id) return prev
         return { ...prev, ...agendamentoAtualizado }
@@ -984,9 +1441,10 @@ export default function Agendamentos() {
 
   const finalizarProcedimentoMutation = useMutation({
     mutationFn: (id: number) => agendamentoService.atualizarStatus(id, 'PROCEDIMENTO_FIM'),
-    onSuccess: (agendamentoAtualizado) => {
-      queryClient.invalidateQueries({ queryKey: ['agendamentos'] })
-      queryClient.invalidateQueries({ queryKey: ['horariosDisponiveis'] })
+    onSuccess: async (agendamentoAtualizado) => {
+      await queryClient.invalidateQueries({ queryKey: ['agendamentos'] })
+      await queryClient.refetchQueries({ queryKey: ['agendamentos'], type: 'active' })
+      await queryClient.invalidateQueries({ queryKey: ['horariosDisponiveis'] })
       setAgendamentoDetalhes((prev) => {
         if (!prev || !agendamentoAtualizado?.id || prev.id !== agendamentoAtualizado.id) return prev
         return { ...prev, ...agendamentoAtualizado }
@@ -1149,10 +1607,20 @@ export default function Agendamentos() {
 
   const confirmarFinalizar = () => {
     if (!finalizarModal) return
-    const valor = calcularValorRestante(finalizarModal.agendamento)
+
+    const agendamentosParaFinalizar = agendamentosFinalizacaoGrupo.filter((agendamento) => {
+      if (!agendamento.id) return false
+      const status = (agendamento.status || '').toUpperCase()
+      return status !== 'CANCELADO' && status !== 'NO_SHOW'
+    })
+
+    if (agendamentosParaFinalizar.length === 0) {
+      showNotification('error', 'Não há agendamentos pendentes para finalizar.')
+      return
+    }
+
     finalizarMutation.mutate({
-      id: finalizarModal.agendamento.id!,
-      valorFinal: valor,
+      agendamentosParaFinalizar,
       formaPagamento: finalizarModal.formaPagamento,
     })
   }
@@ -1453,7 +1921,6 @@ export default function Agendamentos() {
     setFormData((prev) => ({
       ...prev,
       dataHoraInicio: `${novaData}T${horaAtual}`,
-      atendenteId: undefined,
     }))
   }
 
@@ -1463,7 +1930,6 @@ export default function Agendamentos() {
     setFormData((prev) => ({
       ...prev,
       dataHoraInicio: `${dataAtual}T${novaHora}`,
-      atendenteId: undefined,
     }))
   }
 
@@ -1489,7 +1955,6 @@ export default function Agendamentos() {
     setEditFormData((prev) => ({
       ...prev,
       dataHoraInicio: `${novaData}T${horaAtual}`,
-      atendenteId: undefined,
     }))
   }
 
@@ -1499,8 +1964,18 @@ export default function Agendamentos() {
     setEditFormData((prev) => ({
       ...prev,
       dataHoraInicio: `${dataAtual}T${novaHora}`,
-      atendenteId: undefined,
     }))
+  }
+
+  const abrirPickerNativo = (input: HTMLInputElement) => {
+    const picker = input as HTMLInputElement & { showPicker?: () => void }
+    if (typeof picker.showPicker === 'function') {
+      try {
+        picker.showPicker()
+      } catch {
+        // Alguns navegadores podem bloquear a chamada; nesses casos mantém o comportamento nativo.
+      }
+    }
   }
 
   if (isLoading) {
@@ -1509,39 +1984,64 @@ export default function Agendamentos() {
 
   return (
     <div className="w-full min-w-0 max-w-full overflow-x-hidden px-2 sm:px-0">
-      <div className="space-y-6">
-        <div className="rounded-[28px] border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-3 shadow-sm sm:p-4 lg:p-5">
-          <div className="mb-4 flex flex-col gap-3 px-1 sm:px-2 lg:flex-row lg:items-center lg:justify-between">
-            <h2 className="text-lg font-semibold text-slate-900 sm:text-xl">
+      <div className="space-y-3">
+        <div className="rounded-[28px] border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-2 shadow-sm sm:p-2.5 lg:p-3">
+          <div className="mb-1.5 flex flex-col gap-1.5 px-1 sm:px-1.5 lg:flex-row lg:items-center lg:justify-between">
+            <h2 className="text-lg font-semibold text-slate-900">
               {viewMode === 'timeline' ? 'Visão diária em linha do tempo' : 'Visão de calendário'}
             </h2>
             <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+              {exibirFiltroProfissional && (
+                <div className="relative min-w-[190px] sm:min-w-[220px]">
+                  <select
+                    value={valorFiltroProfissionalSelect}
+                    onChange={(e) => {
+                      const idSelecionado = Number(e.target.value)
+                      if (!Number.isNaN(idSelecionado)) {
+                        setFiltroProfissionalId(idSelecionado)
+                      }
+                    }}
+                    className="h-9 w-full appearance-none rounded-xl border border-slate-200 bg-white py-1.5 pl-3 pr-9 text-sm text-slate-700 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
+                    disabled={profissionaisParaFiltro.length === 0}
+                  >
+                    {profissionaisParaFiltro.length === 0 && (
+                      <option value="">Sem profissionais</option>
+                    )}
+                    {profissionaisParaFiltro.map((profissional) => (
+                      <option key={profissional.id} value={profissional.id}>
+                        {profissional.nomeUsuario || `Profissional #${profissional.id}`}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                </div>
+              )}
               <div className="inline-flex rounded-2xl border border-slate-200/80 bg-white/85 p-1 shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)] backdrop-blur">
                 <button
                   onClick={() => setViewMode('timeline')}
                   type="button"
                   title="Linha do tempo"
                   aria-label="Linha do tempo"
-                  className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 ${
+                  className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 ${
                     viewMode === 'timeline'
                       ? 'bg-slate-900 text-white shadow-[0_10px_24px_-18px_rgba(15,23,42,0.9)]'
                       : 'text-slate-500 hover:bg-slate-100/90 hover:text-slate-900'
                   }`}
                 >
-                  <List className="h-7 w-7" strokeWidth={2.4} />
+                  <List className="h-5 w-5" strokeWidth={2.3} />
                 </button>
                 <button
                   onClick={() => setViewMode('calendar')}
                   type="button"
                   title="Calendário"
                   aria-label="Calendário"
-                  className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 ${
+                  className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 ${
                     viewMode === 'calendar'
                       ? 'bg-slate-900 text-white shadow-[0_10px_24px_-18px_rgba(15,23,42,0.9)]'
                       : 'text-slate-500 hover:bg-slate-100/90 hover:text-slate-900'
                   }`}
                 >
-                  <CalendarDays className="h-7 w-7" strokeWidth={2.4} />
+                  <CalendarDays className="h-5 w-5" strokeWidth={2.3} />
                 </button>
               </div>
               {podeEditarAgendamentos && (
@@ -1563,9 +2063,9 @@ export default function Agendamentos() {
                   variant="primary"
                   title="Novo agendamento"
                   aria-label="Novo agendamento"
-                  className="h-12 w-full rounded-2xl border border-blue-400/20 bg-gradient-to-r from-blue-600 to-cyan-500 px-0 text-sm font-semibold shadow-[0_14px_34px_-20px_rgba(37,99,235,0.9)] hover:from-blue-700 hover:to-cyan-600 sm:h-10 sm:w-10"
+                  className="h-11 w-full rounded-2xl border border-blue-400/20 bg-gradient-to-r from-blue-600 to-cyan-500 px-0 text-sm font-semibold shadow-[0_14px_34px_-20px_rgba(37,99,235,0.9)] hover:from-blue-700 hover:to-cyan-600 sm:h-9 sm:w-9"
                 >
-                  <Plus className="h-8 w-8" strokeWidth={2.6} />
+                  <Plus className="h-6 w-6" strokeWidth={2.5} />
                 </Button>
               )}
             </div>
@@ -1580,13 +2080,13 @@ export default function Agendamentos() {
                     setSelectedDate(date)
                     setCurrentDate(date)
                   }}
-                  agendamentos={agendamentos}
+                  agendamentos={agendamentosFiltrados}
                 />
               </div>
 
               <div className="min-w-0 overflow-hidden">
                 <TimelineView
-                  agendamentos={agendamentos}
+                  agendamentos={agendamentosFiltrados}
                   selectedDate={selectedDate}
                   onEventClick={handleSelectEvent}
                   onSlotClick={podeEditarAgendamentos ? (date) => {
@@ -1611,7 +2111,7 @@ export default function Agendamentos() {
             <div className="space-y-4">
               <div className="min-w-0 overflow-hidden">
                 <CalendarView
-                  agendamentos={agendamentos}
+                  agendamentos={agendamentosFiltrados}
                   onSelectSlot={handleSelectSlot}
                   onSelectEvent={handleSelectEvent}
                   view={view}
@@ -1669,27 +2169,21 @@ export default function Agendamentos() {
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label className="text-xs font-medium text-slate-600">Data</label>
-                    <div className="relative mt-1">
-                      <input
-                        type="date"
-                        value={format(dataHoraCriacao, 'yyyy-MM-dd')}
-                        onChange={(e) => handleDataCriacaoChange(e.target.value)}
-                        className={`${lineInputClass} pr-8`}
-                      />
-                      <Calendar className="pointer-events-none absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                    </div>
+                    <input
+                      type="date"
+                      value={format(dataHoraCriacao, 'yyyy-MM-dd')}
+                      onChange={(e) => handleDataCriacaoChange(e.target.value)}
+                      onClick={(e) => abrirPickerNativo(e.currentTarget)}
+                      className={headerDateInputClass}
+                    />
                   </div>
                   <div>
                     <label className="text-xs font-medium text-slate-600">Hora Início</label>
-                    <div className="relative mt-1">
-                      <input
-                        type="time"
-                        value={format(dataHoraCriacao, 'HH:mm')}
-                        onChange={(e) => handleHoraCriacaoChange(e.target.value)}
-                        className={`${lineInputClass} pr-8`}
-                      />
-                      <Clock className="pointer-events-none absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                    </div>
+                    <TimeWheelInput
+                      value={format(dataHoraCriacao, 'HH:mm')}
+                      onChange={handleHoraCriacaoChange}
+                      className={headerTimeInputClass}
+                    />
                   </div>
                 </div>
               </div>
@@ -1768,9 +2262,12 @@ export default function Agendamentos() {
                       className="space-y-2"
                       onFocusCapture={() => setClienteFieldActive(true)}
                       onBlurCapture={(e) => {
-                        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-                          setClienteFieldActive(false)
-                        }
+                        const currentTarget = e.currentTarget
+                        requestAnimationFrame(() => {
+                          if (!currentTarget.contains(document.activeElement)) {
+                            setClienteFieldActive(false)
+                          }
+                        })
                       }}
                     >
                       <div className="relative">
@@ -1808,7 +2305,10 @@ export default function Agendamentos() {
                             type="button"
                             variant="success"
                             size="sm"
-                            onClick={() => setMostrarModalCliente(true)}
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              abrirModalCliente('create')
+                            }}
                             className="w-full rounded-lg py-2.5 font-semibold uppercase tracking-wide"
                           >
                             Adicionar cliente
@@ -1851,8 +2351,20 @@ export default function Agendamentos() {
                       )}
 
                       {clienteFieldActive && clientesFiltrados.length === 0 && buscaCliente.trim() && (
-                        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                          Cliente não encontrado.
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                          <p className="px-0.5 text-sm text-amber-800">Cliente não encontrado.</p>
+                          <Button
+                            type="button"
+                            variant="success"
+                            size="sm"
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              abrirModalCliente('create', buscaCliente)
+                            }}
+                            className="mt-2 w-full rounded-lg py-2.5 font-semibold uppercase tracking-wide"
+                          >
+                            Adicionar cliente
+                          </Button>
                         </div>
                       )}
                     </div>
@@ -1872,9 +2384,12 @@ export default function Agendamentos() {
                     className="space-y-2"
                     onFocusCapture={() => setServicoFieldActive(true)}
                     onBlurCapture={(e) => {
-                      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-                        setServicoFieldActive(false)
-                      }
+                      const currentTarget = e.currentTarget
+                      requestAnimationFrame(() => {
+                        if (!currentTarget.contains(document.activeElement)) {
+                          setServicoFieldActive(false)
+                        }
+                      })
                     }}
                   >
                     <div className="relative">
@@ -1919,7 +2434,10 @@ export default function Agendamentos() {
                           type="button"
                           variant="success"
                           size="sm"
-                          onClick={() => setMostrarModalServico(true)}
+                          onMouseDown={(e) => {
+                            e.preventDefault()
+                            abrirModalServico('create')
+                          }}
                           className="w-full rounded-lg py-2.5 font-semibold uppercase tracking-wide"
                         >
                           Adicionar serviço
@@ -1931,8 +2449,22 @@ export default function Agendamentos() {
                       <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-sm">
                         {servicosFiltrados.length === 0 ? (
                           <div className="p-2">
-                            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                              Serviço não encontrado.
+                            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                              <p className="px-0.5 text-sm text-amber-800">Serviço não encontrado.</p>
+                              {podeEditarServicos && (
+                                <Button
+                                  type="button"
+                                  variant="success"
+                                  size="sm"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault()
+                                    abrirModalServico('create', buscaServico)
+                                  }}
+                                  className="mt-2 w-full rounded-lg py-2.5 font-semibold uppercase tracking-wide"
+                                >
+                                  Adicionar serviço
+                                </Button>
+                              )}
                             </div>
                           </div>
                         ) : (
@@ -2024,7 +2556,7 @@ export default function Agendamentos() {
                   onClick={handleCriarAgendamento}
                   disabled={createMutation.isPending || profissionaisDisponiveis.length === 0}
                   isLoading={createMutation.isPending}
-                  className="rounded-xl bg-violet-600 px-5 py-2 hover:bg-violet-700"
+                  className="rounded-xl bg-blue-600 px-5 py-2 hover:bg-blue-700"
                 >
                   Salvar
                 </Button>
@@ -2049,6 +2581,7 @@ export default function Agendamentos() {
           showCloseButton={false}
           panelClassName={getDetalhesModalPanelBorderClass(agendamentoDetalhes.status)}
           headerClassName="px-5 py-1.5 sm:px-6 sm:py-2"
+          bodyClassName="overflow-y-auto px-6 pt-6 pb-0"
           headerContent={
             <div className="flex w-full items-center justify-center gap-4">
               {podeEditarAgendamentos && (perfilNorm === 'ADMIN' || perfilNorm === 'GERENTE' || perfilNorm === 'PROFISSIONAL' || perfilNorm === 'ATENDENTE' || isCliente) && (
@@ -2115,7 +2648,7 @@ export default function Agendamentos() {
                 <div className="absolute left-6 right-6 top-3.5 h-0.5 rounded-full bg-slate-200" />
                 <div className={`absolute left-6 top-3.5 h-0.5 rounded-full bg-blue-600 transition-all ${timelineProgressClass}`} />
 
-                <div className="relative grid grid-cols-4">
+                <div className={`relative grid ${usarEtapaProcedimento ? 'grid-cols-4' : 'grid-cols-3'}`}>
                   <div className="flex flex-col items-center text-center">
                     <div className={`z-10 flex h-8 w-8 items-center justify-center rounded-full shadow-sm ${
                       timelineCompletedSteps >= 1
@@ -2150,37 +2683,43 @@ export default function Agendamentos() {
                     }`}>Confirmado</span>
                   </div>
 
-                  <div className="flex flex-col items-center text-center">
-                    <div className={`z-10 flex h-8 w-8 items-center justify-center rounded-full shadow-sm ${
-                      timelineCompletedSteps >= 3
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-slate-200 text-slate-500'
-                    }`}>
-                      {timelineCompletedSteps >= 3 ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <span className="text-sm font-semibold">3</span>
-                      )}
+                  {usarEtapaProcedimento && (
+                    <div className="flex flex-col items-center text-center">
+                      <div className={`z-10 flex h-8 w-8 items-center justify-center rounded-full shadow-sm ${
+                        etapa3Concluida
+                          ? 'bg-emerald-500 text-white'
+                          : etapa3Ativa
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-200 text-slate-500'
+                      }`}>
+                        {etapa3Concluida ? (
+                          <Check className="h-4 w-4" />
+                        ) : etapa3Ativa ? (
+                          <Clock className="h-4 w-4" />
+                        ) : (
+                          <span className="text-sm font-semibold">3</span>
+                        )}
+                      </div>
+                      <span className={`mt-0.5 text-sm font-medium ${
+                        etapa3Concluida || etapa3Ativa ? 'text-slate-700' : 'text-slate-500'
+                      }`}>{timelineStep3Label}</span>
                     </div>
-                    <span className={`mt-0.5 text-sm font-medium ${
-                      timelineCompletedSteps >= 3 ? 'text-slate-700' : 'text-slate-500'
-                    }`}>{timelineStep3Label}</span>
-                  </div>
+                  )}
 
                   <div className="flex flex-col items-center text-center">
                     <div className={`z-10 flex h-8 w-8 items-center justify-center rounded-full shadow-sm ${
-                      timelineCompletedSteps >= 4
+                      timelineCompletedSteps >= (usarEtapaProcedimento ? 4 : 3)
                         ? 'bg-emerald-500 text-white'
                         : 'bg-slate-200 text-slate-500'
                     }`}>
-                      {timelineCompletedSteps >= 4 ? (
+                      {timelineCompletedSteps >= (usarEtapaProcedimento ? 4 : 3) ? (
                         <Check className="h-4 w-4" />
                       ) : (
-                        <span className="text-sm font-semibold">4</span>
+                        <span className="text-sm font-semibold">{usarEtapaProcedimento ? '4' : '3'}</span>
                       )}
                     </div>
                     <span className={`mt-0.5 text-sm font-medium ${
-                      timelineCompletedSteps >= 4 ? 'text-slate-700' : 'text-slate-500'
+                      timelineCompletedSteps >= (usarEtapaProcedimento ? 4 : 3) ? 'text-slate-700' : 'text-slate-500'
                     }`}>Finalizado</span>
                   </div>
                 </div>
@@ -2288,10 +2827,12 @@ export default function Agendamentos() {
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-medium text-slate-800">Status</p>
-                            <span className={`mt-0.5 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${getAgendamentoStatusBadgeClass(agendamentoDetalhes.status)}`}>
+                            <span className={`mt-0.5 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${getAgendamentoStatusBadgeClass(statusExibicaoDetalhes)}`}>
                               {getAgendamentoStatusLabel(
-                                agendamentoDetalhes.status,
-                                agendamentoDetalhes.atendente?.nomeUsuario || agendamentoDetalhes.atendente?.nome,
+                                statusExibicaoDetalhes,
+                                statusExibicaoDetalhes === 'EM_ATENDIMENTO_SINCRONIZADO'
+                                  ? nomeProfissionalConflitante
+                                  : (agendamentoDetalhes.atendente?.nomeUsuario || agendamentoDetalhes.atendente?.nome),
                                 procedimentos.length > 0 ? procedimentos.join(', ') : undefined
                               )}
                             </span>
@@ -2341,37 +2882,81 @@ export default function Agendamentos() {
               </div>
 
               <div className="border-t border-slate-200 px-4 py-3 sm:px-5">
-                <div className="flex flex-nowrap items-center justify-center gap-2 overflow-x-auto">
-                  {podeEditarAgendamentos && (perfilNorm === 'ADMIN' || perfilNorm === 'GERENTE' || perfilNorm === 'PROFISSIONAL' || perfilNorm === 'ATENDENTE' || isCliente) && (
-                    <>
+                <div className="space-y-2">
+                  {podeEditarAgendamentos &&
+                    (perfilNorm === 'ADMIN' ||
+                      perfilNorm === 'GERENTE' ||
+                      perfilNorm === 'PROFISSIONAL' ||
+                      perfilNorm === 'ATENDENTE' ||
+                      isCliente) && (
+                      <>
+                        {!isCliente && usarEtapaProcedimento && statusDetalhesNorm === 'CONFIRMADO' && (
+                          <div className="flex justify-center">
+                            {bloqueadoPorOutroAtendimento ? (
+                              <Button
+                                variant="secondary"
+                                disabled
+                                className="h-10 w-full whitespace-nowrap rounded-xl border border-blue-200 bg-blue-50 px-5 text-sm text-blue-700 sm:w-[260px]"
+                              >
+                                Em atendimento
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="primary"
+                                onClick={() => {
+                                  if (!agendamentoDetalhes.id) return
+                                  iniciarProcedimentoMutation.mutate(agendamentoDetalhes.id)
+                                }}
+                                disabled={iniciarProcedimentoMutation.isPending}
+                                isLoading={iniciarProcedimentoMutation.isPending}
+                                className="h-10 w-full whitespace-nowrap rounded-xl px-5 text-sm sm:w-[260px]"
+                              >
+                                Iniciar procedimento
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                        {!isCliente && usarEtapaProcedimento && statusDetalhesNorm === 'CONFIRMADO' && bloqueadoPorOutroAtendimento && (
+                          <p className="-mt-0.5 text-center text-xs font-medium text-blue-700">
+                            Em atendimento por {nomeProfissionalConflitante}
+                          </p>
+                        )}
+                        {!isCliente && usarEtapaProcedimento && statusDetalhesNorm === 'CONFIRMADO' && (
+                          <div className="my-1 w-full border-t border-slate-200" />
+                        )}
+
+                        <div className="flex flex-nowrap items-center justify-center gap-2">
                       {!isAgendamentoEncerrado(agendamentoDetalhes.status) && (
                         <>
-                          {!isCliente && podeVoltarParaAgendado && (
-                            <Button
-                              variant="secondary"
-                              onClick={() => {
-                                if (!agendamentoDetalhes.id) return
-                                voltarParaAgendadoMutation.mutate(agendamentoDetalhes.id)
-                              }}
-                              disabled={voltarParaAgendadoMutation.isPending}
-                              isLoading={voltarParaAgendadoMutation.isPending}
-                              className="h-9 whitespace-nowrap rounded-xl px-3 text-sm"
-                            >
-                              Voltar
-                            </Button>
-                          )}
                           {!isCliente && statusDetalhesNorm === 'AGENDADO' && (
                             <Button
                               variant="primary"
                               onClick={() => {
                                 abrirModalConfirmacao(agendamentoDetalhes)
                               }}
-                              className="h-9 whitespace-nowrap rounded-xl px-3 text-sm"
+                              className="h-10 min-w-[96px] whitespace-nowrap rounded-xl bg-blue-600 px-3 text-sm font-medium text-white hover:bg-blue-700"
                             >
                               Confirmar
                             </Button>
                           )}
-                          {statusDetalhesNorm !== 'EM_ANDAMENTO' && statusDetalhesNorm !== 'PROCEDIMENTO_FIM' && (
+                          {!isCliente &&
+                            statusDetalhesNorm === 'CONFIRMADO' &&
+                            !bloqueadoPorOutroAtendimento &&
+                            !existeProcedimentoFinalizadoNoGrupo && (
+                            <Button
+                              variant="secondary"
+                              onClick={() => {
+                                if (!agendamentoDetalhes.id) return
+                                setNoShowModal({ agendamentoId: agendamentoDetalhes.id })
+                              }}
+                              disabled={noShowMutation.isPending}
+                              isLoading={noShowMutation.isPending}
+                              className="h-10 min-w-[122px] whitespace-nowrap rounded-xl bg-orange-500 px-3 text-sm font-medium text-white hover:bg-orange-600"
+                            >
+                              Não compareceu
+                            </Button>
+                          )}
+                          {statusDetalhesNorm !== 'EM_ANDAMENTO' && statusDetalhesNorm !== 'PROCEDIMENTO_FIM' && !bloqueadoPorOutroAtendimento && (
                             <Button
                               variant="danger"
                               onClick={() => {
@@ -2384,42 +2969,31 @@ export default function Agendamentos() {
                               }}
                               disabled={cancelarMutation.isPending || salvandoObservacaoCancelamento}
                               isLoading={cancelarMutation.isPending || salvandoObservacaoCancelamento}
-                              className="h-9 whitespace-nowrap rounded-xl px-3 text-sm"
+                              className="h-10 min-w-[96px] whitespace-nowrap rounded-xl bg-red-600 px-3 text-sm font-medium text-white hover:bg-red-700"
                             >
                               Cancelar
                             </Button>
                           )}
-                          {!isCliente && statusDetalhesNorm === 'CONFIRMADO' && (
+                          {!isCliente &&
+                            podeVoltarParaAgendado &&
+                            !bloqueadoPorOutroAtendimento &&
+                            !existeProcedimentoFinalizadoNoGrupo && (
                             <Button
                               variant="secondary"
                               onClick={() => {
                                 if (!agendamentoDetalhes.id) return
-                                setNoShowModal({ agendamentoId: agendamentoDetalhes.id })
+                                voltarParaAgendadoMutation.mutate(agendamentoDetalhes.id)
                               }}
-                              disabled={noShowMutation.isPending}
-                              isLoading={noShowMutation.isPending}
-                              className="h-9 whitespace-nowrap rounded-xl bg-orange-500 px-3 text-sm text-white hover:bg-orange-600"
+                              disabled={voltarParaAgendadoMutation.isPending}
+                              isLoading={voltarParaAgendadoMutation.isPending}
+                              className="h-10 min-w-[96px] whitespace-nowrap rounded-xl bg-slate-200 px-3 text-sm font-medium text-slate-700 hover:bg-slate-300"
                             >
-                              Não compareceu
+                              Voltar
                             </Button>
                           )}
                         </>
                       )}
-                      {!isCliente && statusDetalhesNorm === 'CONFIRMADO' && (
-                        <Button
-                          variant="primary"
-                          onClick={() => {
-                            if (!agendamentoDetalhes.id) return
-                            iniciarProcedimentoMutation.mutate(agendamentoDetalhes.id)
-                          }}
-                          disabled={iniciarProcedimentoMutation.isPending}
-                          isLoading={iniciarProcedimentoMutation.isPending}
-                          className="h-9 whitespace-nowrap rounded-xl px-3 text-sm"
-                        >
-                          Iniciar procedimento
-                        </Button>
-                      )}
-                      {!isCliente && statusDetalhesNorm === 'EM_ANDAMENTO' && (
+                      {!isCliente && usarEtapaProcedimento && statusDetalhesNorm === 'EM_ANDAMENTO' && (
                         <Button
                           variant="primary"
                           onClick={() => {
@@ -2428,12 +3002,12 @@ export default function Agendamentos() {
                           }}
                           disabled={finalizarProcedimentoMutation.isPending}
                           isLoading={finalizarProcedimentoMutation.isPending}
-                          className="h-9 whitespace-nowrap rounded-xl px-3 text-sm"
+                          className="h-10 min-w-[140px] whitespace-nowrap rounded-xl bg-blue-600 px-3 text-sm font-medium text-white hover:bg-blue-700"
                         >
                           Finalizar procedimento
                         </Button>
                       )}
-                      {!isCliente && statusDetalhesNorm === 'PROCEDIMENTO_FIM' && (
+                      {!isCliente && podeExibirFinalizarAtendimento && (
                         <Button
                           variant="success"
                           onClick={() => {
@@ -2442,13 +3016,19 @@ export default function Agendamentos() {
                               formaPagamento: normalizeFormaPagamento(pagamentoConfirmacao?.tipoPagamento),
                             })
                           }}
-                          className="h-9 whitespace-nowrap rounded-xl px-3 text-sm"
+                          className="h-10 min-w-[106px] whitespace-nowrap rounded-xl bg-green-600 px-3 text-sm font-medium text-white hover:bg-green-700"
                         >
-                          Finalizar atendimento
+                          Finalizar
                         </Button>
                       )}
-                    </>
-                  )}
+                      {!isCliente && usarEtapaProcedimento && statusDetalhesNorm === 'PROCEDIMENTO_FIM' && existeProcedimentoPendenteNoGrupo && (
+                        <p className="w-full text-center text-xs font-medium text-slate-500">
+                          Aguardando finalização dos outros procedimentos para liberar o atendimento.
+                        </p>
+                      )}
+                        </div>
+                      </>
+                    )}
                 </div>
               </div>
             </div>
@@ -2701,27 +3281,21 @@ export default function Agendamentos() {
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label className="text-xs font-medium text-slate-600">Data</label>
-                    <div className="relative mt-1">
-                      <input
-                        type="date"
-                        value={format(dataHoraEdicao, 'yyyy-MM-dd')}
-                        onChange={(e) => handleDataEdicaoChange(e.target.value)}
-                        className={`${lineInputClass} pr-8`}
-                      />
-                      <Calendar className="pointer-events-none absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                    </div>
+                    <input
+                      type="date"
+                      value={format(dataHoraEdicao, 'yyyy-MM-dd')}
+                      onChange={(e) => handleDataEdicaoChange(e.target.value)}
+                      onClick={(e) => abrirPickerNativo(e.currentTarget)}
+                      className={headerDateInputClass}
+                    />
                   </div>
                   <div>
                     <label className="text-xs font-medium text-slate-600">Hora Início</label>
-                    <div className="relative mt-1">
-                      <input
-                        type="time"
-                        value={format(dataHoraEdicao, 'HH:mm')}
-                        onChange={(e) => handleHoraEdicaoChange(e.target.value)}
-                        className={`${lineInputClass} pr-8`}
-                      />
-                      <Clock className="pointer-events-none absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                    </div>
+                    <TimeWheelInput
+                      value={format(dataHoraEdicao, 'HH:mm')}
+                      onChange={handleHoraEdicaoChange}
+                      className={headerTimeInputClass}
+                    />
                   </div>
                 </div>
               </div>
@@ -2818,9 +3392,12 @@ export default function Agendamentos() {
                       className="space-y-2"
                       onFocusCapture={() => setEditClienteFieldActive(true)}
                       onBlurCapture={(e) => {
-                        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-                          setEditClienteFieldActive(false)
-                        }
+                        const currentTarget = e.currentTarget
+                        requestAnimationFrame(() => {
+                          if (!currentTarget.contains(document.activeElement)) {
+                            setEditClienteFieldActive(false)
+                          }
+                        })
                       }}
                     >
                       <div className="relative">
@@ -2858,7 +3435,10 @@ export default function Agendamentos() {
                             type="button"
                             variant="success"
                             size="sm"
-                            onClick={() => setMostrarModalCliente(true)}
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              abrirModalCliente('edit')
+                            }}
                             className="w-full rounded-lg py-2.5 font-semibold uppercase tracking-wide"
                           >
                             Adicionar cliente
@@ -2901,8 +3481,20 @@ export default function Agendamentos() {
                       )}
 
                       {editClienteFieldActive && editBuscaCliente.trim() && editClientesFiltrados.length === 0 && (
-                        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                          Cliente não encontrado.
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                          <p className="px-0.5 text-sm text-amber-800">Cliente não encontrado.</p>
+                          <Button
+                            type="button"
+                            variant="success"
+                            size="sm"
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              abrirModalCliente('edit', editBuscaCliente)
+                            }}
+                            className="mt-2 w-full rounded-lg py-2.5 font-semibold uppercase tracking-wide"
+                          >
+                            Adicionar cliente
+                          </Button>
                         </div>
                       )}
                     </div>
@@ -2922,9 +3514,12 @@ export default function Agendamentos() {
                     className="space-y-2"
                     onFocusCapture={() => setEditServicoFieldActive(true)}
                     onBlurCapture={(e) => {
-                      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-                        setEditServicoFieldActive(false)
-                      }
+                      const currentTarget = e.currentTarget
+                      requestAnimationFrame(() => {
+                        if (!currentTarget.contains(document.activeElement)) {
+                          setEditServicoFieldActive(false)
+                        }
+                      })
                     }}
                   >
                     <div className="relative">
@@ -2972,7 +3567,10 @@ export default function Agendamentos() {
                           type="button"
                           variant="success"
                           size="sm"
-                          onClick={() => setMostrarModalServico(true)}
+                          onMouseDown={(e) => {
+                            e.preventDefault()
+                            abrirModalServico('edit')
+                          }}
                           className="w-full rounded-lg py-2.5 font-semibold uppercase tracking-wide"
                         >
                           Adicionar serviço
@@ -2984,8 +3582,22 @@ export default function Agendamentos() {
                       <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-sm">
                         {editServicosFiltrados.length === 0 ? (
                           <div className="p-2">
-                            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                              Serviço não encontrado.
+                            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                              <p className="px-0.5 text-sm text-amber-800">Serviço não encontrado.</p>
+                              {podeEditarServicos && (
+                                <Button
+                                  type="button"
+                                  variant="success"
+                                  size="sm"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault()
+                                    abrirModalServico('edit', editBuscaServico)
+                                  }}
+                                  className="mt-2 w-full rounded-lg py-2.5 font-semibold uppercase tracking-wide"
+                                >
+                                  Adicionar serviço
+                                </Button>
+                              )}
                             </div>
                           </div>
                         ) : (
@@ -3062,7 +3674,7 @@ export default function Agendamentos() {
                   onClick={handleSalvarEdicao}
                   disabled={updateMutation.isPending}
                   isLoading={updateMutation.isPending}
-                  className="rounded-xl bg-violet-600 px-5 py-2 hover:bg-violet-700"
+                  className="rounded-xl bg-blue-600 px-5 py-2 hover:bg-blue-700"
                 >
                   Salvar
                 </Button>
@@ -3333,20 +3945,40 @@ export default function Agendamentos() {
           isOpen={true}
           onClose={() => {
             setMostrarModalCliente(false)
-            setBuscaCliente('')
+            setNomeInicialNovoCliente('')
+            if (origemModalCliente === 'edit') {
+              setEditBuscaCliente('')
+            } else {
+              setBuscaCliente('')
+            }
           }}
           title="Novo Cliente"
           size="md"
         >
           <ClienteForm
+            initialNome={nomeInicialNovoCliente}
+            unidadeId={formData.unidadeId ?? unidadeUnicaModal?.id}
             onClose={() => {
               setMostrarModalCliente(false)
-              setBuscaCliente('')
+              setNomeInicialNovoCliente('')
+              if (origemModalCliente === 'edit') {
+                setEditBuscaCliente('')
+              } else {
+                setBuscaCliente('')
+              }
             }}
             onSuccess={(cliente) => {
-              setFormData({ ...formData, clienteId: cliente.id })
+              if (origemModalCliente === 'edit') {
+                setEditFormData((prev) => ({ ...prev, clienteId: cliente.id }))
+                setEditBuscaCliente(cliente.nome)
+                setEditClienteFieldActive(false)
+              } else {
+                setFormData((prev) => ({ ...prev, clienteId: cliente.id }))
+                setBuscaCliente(cliente.nome)
+                setClienteFieldActive(false)
+              }
+              setNomeInicialNovoCliente('')
               setMostrarModalCliente(false)
-              setBuscaCliente('')
             }}
           />
         </Modal>
@@ -3358,21 +3990,44 @@ export default function Agendamentos() {
           isOpen={true}
           onClose={() => {
             setMostrarModalServico(false)
-            setBuscaServico('')
+            setNomeInicialNovoServico('')
+            if (origemModalServico === 'edit') {
+              setEditBuscaServico('')
+            } else {
+              setBuscaServico('')
+            }
           }}
           title="Novo Serviço"
           size="md"
         >
           <ServicoForm
-            unidadeId={formData.unidadeId}
+            initialNome={nomeInicialNovoServico}
+            unidadeId={formData.unidadeId ?? unidadeUnicaModal?.id}
             onClose={() => {
               setMostrarModalServico(false)
-              setBuscaServico('')
+              setNomeInicialNovoServico('')
+              if (origemModalServico === 'edit') {
+                setEditBuscaServico('')
+              } else {
+                setBuscaServico('')
+              }
             }}
             onSuccess={(servico) => {
-              setServicosSelecionados([...servicosSelecionados, servico.id])
+              if (origemModalServico === 'edit') {
+                setEditServicosSelecionados((prev) =>
+                  prev.includes(servico.id) ? prev : [...prev, servico.id]
+                )
+                setEditBuscaServico('')
+                setEditServicoFieldActive(false)
+              } else {
+                setServicosSelecionados((prev) =>
+                  prev.includes(servico.id) ? prev : [...prev, servico.id]
+                )
+                setBuscaServico('')
+                setServicoFieldActive(false)
+              }
+              setNomeInicialNovoServico('')
               setMostrarModalServico(false)
-              setBuscaServico('')
             }}
           />
         </Modal>
@@ -3392,24 +4047,31 @@ export default function Agendamentos() {
                 <p className="text-sm text-slate-800">
                   Cliente: <span className="font-semibold text-slate-900">{finalizarModal.agendamento.cliente?.nome}</span>
                 </p>
-                <p className="mt-1 text-sm text-slate-800">
-                  Serviço:{' '}
-                  <span className="font-semibold text-slate-900">
-                    {finalizarModal.agendamento.servicos
-                      ?.map((s) => s.descricao || 'Serviço')
-                      .join(', ') || 'Serviço não informado'}
-                  </span>
-                </p>
-                <p className="mt-1 text-sm text-slate-800">
+                <div className="mt-2">
+                  <p className="text-sm text-slate-900">Serviços realizados:</p>
+                  <div className="mt-1.5 space-y-1">
+                    {servicosFinalizacaoLinhas.map((linha) => (
+                      <div key={linha.key} className="flex items-center justify-between gap-3 text-sm text-slate-800">
+                        <p className="min-w-0 truncate">
+                          • {linha.descricao}
+                        </p>
+                        <span className="shrink-0 font-medium text-slate-900">
+                          {moneyFormatter.format(linha.valor)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <p className="mt-2 text-sm text-slate-800">
                   Sinal pago:{' '}
                   <span className="font-semibold text-slate-900">
-                    {moneyFormatter.format(finalizarModal.agendamento.valorFinal || 0)}
+                    {moneyFormatter.format(totalPagoFinalizacao)}
                   </span>
                 </p>
                 <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-2">
                   <span className="text-sm text-slate-600">Valor restante a pagar</span>
                   <span className="flex items-center gap-1 text-sm font-semibold text-slate-900">
-                    {moneyFormatter.format(calcularValorRestante(finalizarModal.agendamento))}
+                    {moneyFormatter.format(valorRestanteFinalizacao)}
                     <ChevronRight className="h-4 w-4 text-slate-400" />
                   </span>
                 </div>
@@ -3465,15 +4127,39 @@ export default function Agendamentos() {
   )
 }
 
-function ClienteForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: (cliente: Cliente) => void }) {
+function ClienteForm({
+  onClose,
+  onSuccess,
+  unidadeId,
+  initialNome = '',
+}: {
+  onClose: () => void
+  onSuccess: (cliente: Cliente) => void
+  unidadeId?: number
+  initialNome?: string
+}) {
   const queryClient = useQueryClient()
   const { showNotification } = useNotification()
   const [formData, setFormData] = useState<Cliente>({
-    nome: '',
+    nome: initialNome,
     cpfCnpj: '',
     email: '',
     telefone: '',
+    dataNascimento: '',
+    unidadeId,
   })
+  const [telefoneSecundario, setTelefoneSecundario] = useState('')
+  const [telefoneInternacional, setTelefoneInternacional] = useState('')
+  const [mostrarMaisCampos, setMostrarMaisCampos] = useState(false)
+
+  useEffect(() => {
+    if (!unidadeId) return
+    setFormData((prev) => ({ ...prev, unidadeId }))
+  }, [unidadeId])
+
+  useEffect(() => {
+    setFormData((prev) => ({ ...prev, nome: initialNome }))
+  }, [initialNome])
 
   const saveMutation = useMutation({
     mutationFn: clienteService.criar,
@@ -3488,48 +4174,124 @@ function ClienteForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
     },
   })
 
+  const inputClassName =
+    'mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200'
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    saveMutation.mutate(formData)
+    if (!formData.unidadeId) {
+      showNotification('error', 'Selecione uma unidade no agendamento antes de cadastrar o cliente.')
+      return
+    }
+    const telefonePrincipal = (formData.telefone || '').trim()
+    const telefone2 = telefoneSecundario.trim()
+    const telefoneIntl = telefoneInternacional.trim()
+    const telefoneComposto = [telefonePrincipal, telefone2, telefoneIntl]
+      .filter(Boolean)
+      .join(' / ')
+
+    saveMutation.mutate({
+      ...formData,
+      telefone: telefoneComposto || formData.telefone,
+    })
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <FormField label="Nome" required>
-        <input
-          type="text"
-          required
-          value={formData.nome}
-          onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-        />
-      </FormField>
-      <FormField label="CPF/CNPJ" required>
-        <input
-          type="text"
-          required
-          value={formData.cpfCnpj}
-          onChange={(e) => setFormData({ ...formData, cpfCnpj: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-        />
-      </FormField>
-      <FormField label="Email">
-        <input
-          type="email"
-          value={formData.email || ''}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-        />
-      </FormField>
-      <FormField label="Telefone">
-        <input
-          type="text"
-          value={formData.telefone || ''}
-          onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-        />
-      </FormField>
-      <div className="flex justify-end space-x-2 pt-4 border-t">
+    <form onSubmit={handleSubmit} className="-m-6 flex max-h-[78vh] flex-col">
+      <div className="flex-1 space-y-5 overflow-y-auto px-8 py-6">
+        <FormField label="Nome" required>
+          <input
+            type="text"
+            required
+            value={formData.nome}
+            onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+            className={inputClassName}
+          />
+        </FormField>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <FormField label="Telefone 1">
+            <input
+              type="text"
+              value={formData.telefone || ''}
+              onChange={(e) =>
+                setFormData({ ...formData, telefone: maskPhone(e.target.value) })
+              }
+              className={inputClassName}
+            />
+          </FormField>
+          <FormField label="Telefone 2">
+            <input
+              type="text"
+              value={telefoneSecundario}
+              onChange={(e) => setTelefoneSecundario(maskPhone(e.target.value))}
+              className={inputClassName}
+            />
+          </FormField>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <FormField label="Data de nascimento">
+            <div className="relative">
+              <input
+                type="date"
+                value={formData.dataNascimento || ''}
+                onChange={(e) =>
+                  setFormData({ ...formData, dataNascimento: e.target.value })
+                }
+                className={`${inputClassName} pr-10`}
+              />
+              <CalendarDays className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
+            </div>
+          </FormField>
+
+          <FormField label="CPF CNPJ">
+            <input
+              type="text"
+              value={formData.cpfCnpj}
+              onChange={(e) =>
+                setFormData({ ...formData, cpfCnpj: e.target.value })
+              }
+              className={inputClassName}
+            />
+          </FormField>
+        </div>
+
+        <div>
+          <button
+            type="button"
+            onClick={() => setMostrarMaisCampos((prev) => !prev)}
+            className="text-sm font-medium text-blue-600 underline underline-offset-2 transition hover:text-blue-700"
+          >
+            {mostrarMaisCampos ? 'Menos campos' : 'Mais campos'}
+          </button>
+        </div>
+
+        {mostrarMaisCampos && (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <FormField label="Email">
+              <input
+                type="email"
+                value={formData.email || ''}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+                className={inputClassName}
+              />
+            </FormField>
+
+            <FormField label="Telefone Internacional">
+              <input
+                type="text"
+                value={telefoneInternacional}
+                onChange={(e) => setTelefoneInternacional(e.target.value)}
+                className={inputClassName}
+              />
+            </FormField>
+          </div>
+        )}
+      </div>
+      <div className="flex justify-end gap-3 border-t border-slate-200 px-8 py-5">
         <Button type="button" variant="secondary" onClick={onClose}>
           Cancelar
         </Button>
@@ -3544,11 +4306,13 @@ function ClienteForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
 function ServicoForm({ 
   onClose, 
   onSuccess,
-  unidadeId 
+  unidadeId,
+  initialNome = '',
 }: { 
   onClose: () => void
   onSuccess: (servico: Servico) => void
   unidadeId?: number
+  initialNome?: string
 }) {
   const queryClient = useQueryClient()
   const { showNotification } = useNotification()
@@ -3556,13 +4320,22 @@ function ServicoForm({
   
   const [formData, setFormData] = useState<Servico>({
     id: 0,
-    nome: '',
+    nome: initialNome,
     descricao: '',
     valor: 0,
     duracaoMinutos: 30,
     unidadeId: unidadeId || usuario?.unidadeId || 0,
     ativo: true,
   })
+
+  useEffect(() => {
+    if (!unidadeId) return
+    setFormData((prev) => ({ ...prev, unidadeId }))
+  }, [unidadeId])
+
+  useEffect(() => {
+    setFormData((prev) => ({ ...prev, nome: initialNome }))
+  }, [initialNome])
 
   const saveMutation = useMutation({
     mutationFn: servicoService.criar,
@@ -3579,59 +4352,60 @@ function ServicoForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // Validação: garantir que tem unidadeId
     if (!formData.unidadeId || formData.unidadeId === 0) {
-      showNotification('error', 'Por favor, selecione uma unidade primeiro')
+      showNotification('error', 'Selecione uma unidade no agendamento antes de cadastrar o serviço.')
       return
     }
-    
+
     saveMutation.mutate(formData)
   }
 
+  const inputClassName =
+    'mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200'
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <FormField label="Nome" required>
-        <input
-          type="text"
-          required
-          value={formData.nome}
-          onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-        />
-      </FormField>
-      <FormField label="Descrição">
-        <textarea
-          value={formData.descricao || ''}
-          onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-          rows={3}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-        />
-      </FormField>
-      <div className="grid grid-cols-2 gap-4">
-        <FormField label="Valor (R$)" required>
+    <form onSubmit={handleSubmit} className="-m-6 flex max-h-[78vh] flex-col">
+      <div className="flex-1 space-y-5 overflow-y-auto px-8 py-6">
+        <FormField label="Nome" required>
           <input
-            type="number"
-            step="0.01"
-            min="0"
+            type="text"
             required
-            value={formData.valor}
-            onChange={(e) => setFormData({ ...formData, valor: parseFloat(e.target.value) || 0 })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            value={formData.nome}
+            onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+            className={inputClassName}
           />
         </FormField>
-        <FormField label="Duração (minutos)" required>
-          <input
-            type="number"
-            min="1"
-            required
-            value={formData.duracaoMinutos}
-            onChange={(e) => setFormData({ ...formData, duracaoMinutos: parseInt(e.target.value) || 30 })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          />
-        </FormField>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <FormField label="Valor (R$)" required>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              required
+              value={formData.valor}
+              onChange={(e) => setFormData({ ...formData, valor: parseFloat(e.target.value) || 0 })}
+              className={inputClassName}
+            />
+          </FormField>
+
+          <FormField label="Duração (minutos)" required>
+            <input
+              type="number"
+              min="1"
+              required
+              value={formData.duracaoMinutos}
+              onChange={(e) => setFormData({ ...formData, duracaoMinutos: parseInt(e.target.value) || 30 })}
+              className={inputClassName}
+            />
+          </FormField>
+        </div>
+
       </div>
-      <div className="flex justify-end space-x-2 pt-4 border-t">
+
+      <div className="flex justify-end gap-3 border-t border-slate-200 px-8 py-5">
         <Button type="button" variant="secondary" onClick={onClose}>
           Cancelar
         </Button>

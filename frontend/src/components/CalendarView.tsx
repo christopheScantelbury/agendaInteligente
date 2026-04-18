@@ -323,7 +323,7 @@ export default function CalendarView({
           eventTimeRangeFormat: ({ start, end }) =>
             `${format(start, 'HH:mm', { locale: ptBR })} - ${format(end, 'HH:mm', { locale: ptBR })}`,
         }}
-        min={new Date(2024, 0, 1, 6, 0, 0)}
+        min={new Date(2024, 0, 1, 8, 0, 0)}
         max={new Date(2024, 0, 1, 22, 0, 0)}
         step={30}
         timeslots={1}

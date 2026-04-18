@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -50,4 +51,40 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     List<Agendamento> findByUnidadeId(Long unidadeId);
     
     List<Agendamento> findByAtendenteId(Long atendenteId);
+
+    Optional<Agendamento> findFirstByClienteIdAndUnidadeIdAndStatusAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanAndIdNotOrderByDataHoraInicioAsc(
+            Long clienteId,
+            Long unidadeId,
+            StatusAgendamento status,
+            LocalDateTime inicioDia,
+            LocalDateTime fimDia,
+            Long idNot
+    );
+
+    List<Agendamento> findByClienteIdAndUnidadeIdAndStatusAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanAndIdNot(
+            Long clienteId,
+            Long unidadeId,
+            StatusAgendamento status,
+            LocalDateTime inicioDia,
+            LocalDateTime fimDia,
+            Long idNot
+    );
+
+    boolean existsByClienteIdAndUnidadeIdAndStatusAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanAndValorFinalGreaterThan(
+            Long clienteId,
+            Long unidadeId,
+            StatusAgendamento status,
+            LocalDateTime inicioDia,
+            LocalDateTime fimDia,
+            BigDecimal valorMinimo
+    );
+
+    boolean existsByClienteIdAndUnidadeIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanAndIdNotAndStatusIn(
+            Long clienteId,
+            Long unidadeId,
+            LocalDateTime inicioDia,
+            LocalDateTime fimDia,
+            Long idNot,
+            List<StatusAgendamento> statuses
+    );
 }

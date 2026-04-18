@@ -1,5 +1,25 @@
 # Changelog (pendente de commit)
 
+## 2026-04-17
+
+### Frontend - Agendamentos (modais e Safari)
+- Ajuste de compatibilidade Safari para os botoes `Adicionar cliente` e `Adicionar servico` nos campos de busca:
+  - Fechamento de dropdown com `requestAnimationFrame` + `document.activeElement` (evita perder clique por blur antecipado).
+  - Abertura de modal via `onMouseDown` com `preventDefault` para manter interacao estavel no Safari.
+- Modal `Novo Servico` padronizado no mesmo layout do modal `Novo Cliente`:
+  - Estrutura com corpo rolavel e footer fixo.
+  - Espacamentos, inputs e botoes alinhados ao mesmo padrao visual.
+- Remocao do campo `Descricao` no modal de `Novo Servico` quando aberto a partir de Agendamentos.
+
+### Frontend - Agendamentos (cadastro rapido por busca)
+- Para cliente e servico, quando a busca nao encontra resultado digitado, agora exibe botao `Adicionar`.
+- Ao clicar em `Adicionar`, o texto digitado e pre-preenchido no campo `Nome` do modal correspondente.
+- Fluxo aplicado em ambos os contextos:
+  - Novo agendamento.
+  - Editar agendamento.
+- Ajuste de origem do modal (`create`/`edit`) para que o item criado retorne e selecione no formulario correto.
+- `ClienteForm` e `ServicoForm` passaram a aceitar `initialNome` para prefill de cadastro.
+
 ## 2026-03-28
 
 ### Frontend - Tela de agendamentos (layout e UX)
