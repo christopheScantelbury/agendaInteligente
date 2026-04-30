@@ -10,6 +10,7 @@ import {
   Menu,
   X,
   User,
+  Users,
   Bell,
   Building2,
   Shield,
@@ -127,6 +128,16 @@ export default function Layout({ children }: LayoutProps) {
       items.push({ path: '/servicos', label: 'Serviços', icon: <Stethoscope className="h-5 w-5" /> })
     }
     
+    // Clientes (mesma permissão de Usuários)
+    if (temPermissaoMenu('/usuarios')) {
+      items.push({
+        path: '/clientes',
+        label: 'Clientes',
+        icon: <Users className="h-5 w-5" />,
+        paths: ['/clientes'],
+      })
+    }
+
     // Usuários
     if (temPermissaoMenu('/usuarios')) {
       items.push({ path: '/usuarios', label: 'Usuários', icon: <Settings className="h-5 w-5" /> })

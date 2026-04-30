@@ -17,6 +17,7 @@ export interface Cliente {
   uf?: string
   dataNascimento?: string
   rg?: string
+  senha?: string
   ativo?: boolean
   unidadesIds?: number[]
   unidades?: Unidade[]

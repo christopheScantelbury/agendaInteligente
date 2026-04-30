@@ -1,5 +1,41 @@
 # Changelog (pendente de commit)
 
+## 2026-04-30
+
+### Frontend - Area de clientes (nova tela e fluxo dedicado)
+- Nova opcao de menu `Clientes` adicionada acima de `Usuarios`, seguindo o padrao de navegacao existente.
+- Nova tela de listagem de clientes em `frontend/src/pages/Clientes.tsx`, com:
+  - padrao visual alinhado com a tela de usuarios,
+  - filtros de busca mantidos,
+  - estado vazio com mensagem `Nenhum cliente cadastrado.`,
+  - botao `Novo cliente`,
+  - sem acoes por linha no escopo inicial.
+- Rotas da area de clientes adicionadas em `frontend/src/App.tsx`:
+  - `/clientes`
+  - `/clientes/novo`
+  - `/clientes/:id/editar`
+- Criada pagina dedicada `frontend/src/pages/ClienteFormPage.tsx` para `Novo Cliente` e `Editar Cliente`, substituindo fluxo com excesso de informacao em modal.
+- Ajustes de layout nas paginas de novo/edicao para melhor aproveitamento da largura da pagina.
+
+### Frontend - Regras de formulario de cliente
+- Removida a necessidade de credenciais de acesso na area administrativa de clientes:
+  - secao de credenciais removida da tela,
+  - senha/confirmacao de senha removidas do fluxo de cadastro/edicao,
+  - email mantido apenas como contato e sem obrigatoriedade.
+- Campo `CPF/CNPJ` alterado para opcional no formulario de cliente.
+- Regra de unidade unica aplicada:
+  - quando existir apenas uma unidade disponivel, ela e selecionada automaticamente,
+  - secao de selecao de unidades e ocultada nesse cenario.
+
+### Frontend - Acoes de cliente
+- Inclusao de acao para excluir cliente.
+- Inclusao de acao para editar cliente via pagina dedicada.
+
+### Backend - Correcao em edicao de cliente
+- Correcao no mapeamento de atualizacao em `src/main/java/br/com/agendainteligente/mapper/ClienteMapper.java`:
+  - `id` passou a ser ignorado em `toEntity(...)` e `updateEntityFromDTO(...)`.
+- Ajuste elimina erro `500` na edicao de cliente causado por alteracao indevida de identificador da entidade no Hibernate.
+
 ## 2026-04-17
 
 ### Frontend - Agendamentos (modais e Safari)

@@ -20,6 +20,8 @@ import Dashboard from './pages/Dashboard'
 import Unidades from './pages/Unidades'
 import Servicos from './pages/Servicos'
 import Usuarios from './pages/Usuarios'
+import Clientes from './pages/Clientes'
+import ClienteFormPage from './pages/ClienteFormPage'
 import Agendamentos from './pages/Agendamentos'
 import NovoAgendamento from './pages/NovoAgendamento'
 import Reclamacoes from './pages/Reclamacoes'
@@ -113,7 +115,9 @@ function App() {
                     <Layout>
                       <Routes>
                         <Route path="/" element={<DashboardOrAgendamentos />} />
-                        <Route path="/clientes" element={<Navigate to="/usuarios" replace />} />
+                        <Route path="/clientes" element={<RequirePermissao path="/usuarios"><Clientes /></RequirePermissao>} />
+                        <Route path="/clientes/novo" element={<RequirePermissao path="/usuarios"><ClienteFormPage /></RequirePermissao>} />
+                        <Route path="/clientes/:id/editar" element={<RequirePermissao path="/usuarios"><ClienteFormPage /></RequirePermissao>} />
                         <Route path="/unidades" element={<RequirePermissao path="/unidades"><Unidades /></RequirePermissao>} />
                         <Route path="/servicos" element={<RequirePermissao path="/servicos"><Servicos /></RequirePermissao>} />
                         <Route path="/usuarios" element={<RequirePermissao path="/usuarios"><Usuarios /></RequirePermissao>} />
@@ -140,4 +144,3 @@ function App() {
 }
 
 export default App
-
