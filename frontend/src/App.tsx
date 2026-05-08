@@ -38,7 +38,7 @@ import Landing from './pages/Landing'
 
 
 function NavigateToAfterLogin() {
-  return <Navigate to={authService.isPerfilCliente() ? '/agendamentos' : '/'} replace />
+  return <Navigate to={authService.isPerfilCliente() ? '/cliente/agendar' : '/agendamentos'} replace />
 }
 
 function DashboardOrAgendamentos() {

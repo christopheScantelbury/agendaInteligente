@@ -371,7 +371,7 @@ export default function Landing() {
                 ),
                 title: 'Multi-unidade',
                 desc: 'Gerencie múltiplos salões, clínicas ou academias em uma conta. Dashboard consolidado com faturamento real por unidade.',
-                badge: 'Business',
+                badge: 'Empresarial',
                 badgeColor: 'bg-orange-100 text-orange-600',
               },
               {
@@ -542,7 +542,7 @@ export default function Landing() {
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             <PricingCard
-              tier="Starter"
+              tier="Básico"
               price="79"
               period="por unidade / mês · até 3 profissionais"
               cta="Começar grátis"
@@ -563,7 +563,7 @@ export default function Landing() {
               ctaLink="/cadastro"
               featured
               features={[
-                'Tudo do Starter',
+                'Tudo do Básico',
                 'Profissionais ilimitados',
                 'Pagamento online',
                 'NF-e inclusa via NotaFácil',
@@ -573,7 +573,7 @@ export default function Landing() {
               noFeatures={['Multi-unidade']}
             />
             <PricingCard
-              tier="Business"
+              tier="Empresarial"
               price="249"
               period="por empresa / mês · unidades ilimitadas"
               cta="Falar com vendas"
@@ -581,10 +581,10 @@ export default function Landing() {
               features={[
                 'Tudo do Profissional',
                 'Unidades ilimitadas',
-                'Dashboard consolidado',
+                'Painel consolidado',
                 'API para integração',
                 'Onboarding dedicado',
-                'SLA de suporte 4h',
+                'Suporte SLA 4h',
               ]}
             />
           </div>
