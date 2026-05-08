@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
     Users,
@@ -8,13 +9,20 @@ import {
     CheckCircle2,
     XCircle,
     Bell,
-    AlertCircle
+    AlertCircle,
+    Sparkles,
+    UserX,
+    Copy,
+    ClipboardCheck,
 } from 'lucide-react'
 import { agendamentoService } from '../services/agendamentoService'
 import { clienteService } from '../services/clienteService'
 import { reclamacaoService } from '../services/reclamacaoService'
 import { authService } from '../services/authService'
+import { inteligenciaService } from '../services/inteligenciaService'
 import { Link } from 'react-router-dom'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
 export default function Dashboard() {
     const usuario = authService.getUsuario()
@@ -46,6 +54,27 @@ export default function Dashboard() {
         },
         enabled: podeVerReclamacoes,
         refetchInterval: 30000,
+    })
+
+    const { data: insightsSemanal = [] } = useQuery({
+        queryKey: ['insights-semanais', unidadeId],
+        queryFn: () => inteligenciaService.insightsSemanal(unidadeId ?? undefined),
+        enabled: !authService.isPerfilCliente(),
+        staleTime: 30 * 60 * 1000,
+    })
+
+    const { data: clientesRisco = [] } = useQuery({
+        queryKey: ['clientes-risco', unidadeId],
+        queryFn: () => inteligenciaService.clientesEmRisco(unidadeId ?? undefined),
+        enabled: !authService.isPerfilCliente(),
+        staleTime: 10 * 60 * 1000,
+    })
+
+    const { data: churnProfissional = [] } = useQuery({
+        queryKey: ['churn-profissional', unidadeId],
+        queryFn: () => inteligenciaService.churnPorProfissional(unidadeId ?? undefined),
+        enabled: !authService.isPerfilCliente(),
+        staleTime: 10 * 60 * 1000,
     })
 
     // Cálculos Básicos
@@ -192,7 +221,7 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {/* Recent Activity (Placeholder) */}
+                {/* Recent Activity */}
                 <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                     <h2 className="text-lg font-bold text-gray-900 mb-4">Atividade Recente</h2>
                     <div className="space-y-6">
@@ -215,6 +244,116 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
+
+            {/* IA Panels — apenas para não-clientes */}
+            {!authService.isPerfilCliente() && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                    {/* IA-2: Insights Semanais */}
+                    <div className="bg-gradient-to-br from-violet-50 to-white rounded-xl shadow-sm p-6 border border-violet-100">
+                        <h2 className="text-base font-bold text-gray-900 mb-3 flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-violet-500" /> Insight Semanal
+                        </h2>
+                        {insightsSemanal.length > 0 ? (
+                            <div className="space-y-3">
+                                {insightsSemanal.slice(0, 2).map(insight => (
+                                    <div key={insight.id} className="rounded-lg bg-white border border-violet-100 p-3">
+                                        <p className="text-xs text-violet-500 font-medium mb-1">
+                                            Semana de {format(new Date(insight.semana), "dd 'de' MMMM", { locale: ptBR })}
+                                        </p>
+                                        <p className="text-sm text-gray-700 leading-snug">{insight.texto}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-400">Os insights são gerados toda segunda-feira.</p>
+                        )}
+                    </div>
+
+                    {/* IA-3: Clientes em Risco */}
+                    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                        <h2 className="text-base font-bold text-gray-900 mb-3 flex items-center gap-2">
+                            <UserX className="h-4 w-4 text-amber-500" /> Clientes em Risco
+                            {clientesRisco.length > 0 && (
+                                <span className="ml-auto text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">
+                                    {clientesRisco.length}
+                                </span>
+                            )}
+                        </h2>
+                        {clientesRisco.length > 0 ? (
+                            <div className="space-y-2">
+                                {clientesRisco.slice(0, 4).map(c => (
+                                    <ClienteRiscoItem key={c.clienteId} cliente={c} />
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-400">Nenhum cliente ausente há mais de 30 dias. 🎉</p>
+                        )}
+                    </div>
+
+                    {/* IA-7: Churn por Profissional */}
+                    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                        <h2 className="text-base font-bold text-gray-900 mb-3 flex items-center gap-2">
+                            <AlertCircle className="h-4 w-4 text-rose-500" /> Alerta de Churn
+                            {churnProfissional.length > 0 && (
+                                <span className="ml-auto text-xs bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full font-semibold">
+                                    {churnProfissional.length}
+                                </span>
+                            )}
+                        </h2>
+                        {churnProfissional.length > 0 ? (
+                            <div className="space-y-2">
+                                {churnProfissional.slice(0, 4).map(p => (
+                                    <div key={p.atendenteId} className="flex items-center justify-between p-2 rounded-lg bg-rose-50">
+                                        <span className="text-sm font-medium text-gray-800 truncate max-w-[60%]">{p.atendenteNome}</span>
+                                        <span className="text-xs font-bold text-rose-600">{p.taxaChurn.toFixed(0)}% churn</span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-400">Nenhuma perda significativa de clientes por profissional.</p>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
+function ClienteRiscoItem({ cliente }: { cliente: { clienteId: number; clienteNome: string; diasAusente: number; mensagemSugerida: string } }) {
+    const [copiado, setCopiado] = useState(false)
+    const [expandido, setExpandido] = useState(false)
+
+    const copiar = () => {
+        navigator.clipboard.writeText(cliente.mensagemSugerida)
+        setCopiado(true)
+        setTimeout(() => setCopiado(false), 2000)
+    }
+
+    return (
+        <div className="rounded-lg border border-amber-100 bg-amber-50 p-2.5">
+            <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-800 truncate">{cliente.clienteNome}</span>
+                <span className="text-xs text-amber-600 font-medium shrink-0 ml-1">{cliente.diasAusente}d ausente</span>
+            </div>
+            {cliente.mensagemSugerida && (
+                <div className="mt-1.5 flex items-center gap-2">
+                    <button
+                        onClick={() => setExpandido(!expandido)}
+                        className="text-[10px] text-amber-700 hover:underline"
+                    >
+                        {expandido ? 'Ocultar' : 'Ver'} mensagem IA
+                    </button>
+                    {expandido && (
+                        <button onClick={copiar} className="text-amber-600 hover:text-amber-800">
+                            {copiado ? <ClipboardCheck className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                        </button>
+                    )}
+                </div>
+            )}
+            {expandido && cliente.mensagemSugerida && (
+                <p className="text-xs text-gray-600 mt-1 leading-snug">{cliente.mensagemSugerida}</p>
+            )}
         </div>
     )
 }

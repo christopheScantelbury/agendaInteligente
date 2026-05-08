@@ -1,5 +1,8 @@
 package br.com.agendainteligente.controller;
 
+import br.com.agendainteligente.domain.entity.InsightSemanal;
+import br.com.agendainteligente.repository.InsightSemanalRepository;
+import br.com.agendainteligente.service.InsightAgendadoService;
 import br.com.agendainteligente.service.InteligenciaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +16,8 @@ import java.util.List;
 public class InteligenciaController {
 
     private final InteligenciaService inteligenciaService;
+    private final InsightAgendadoService insightAgendadoService;
+    private final InsightSemanalRepository insightSemanalRepository;
 
     @GetMapping("/horarios-populares")
     public ResponseEntity<List<InteligenciaService.HorarioPopularDTO>> horariosPopulares(
@@ -30,5 +35,26 @@ public class InteligenciaController {
     public ResponseEntity<List<InteligenciaService.ServicoComplementarDTO>> servicosComplementares(
             @RequestParam Long servicoId) {
         return ResponseEntity.ok(inteligenciaService.servicosComplementares(servicoId));
+    }
+
+    @GetMapping("/insights-semanais")
+    public ResponseEntity<List<InsightSemanal>> insightsSemanal(
+            @RequestParam(required = false) Long unidadeId) {
+        List<InsightSemanal> insights = unidadeId != null
+                ? insightSemanalRepository.findTop4ByUnidadeIdOrderBySemanaDesc(unidadeId)
+                : insightSemanalRepository.findTop4ByUnidadeIdIsNullOrderBySemanaDesc();
+        return ResponseEntity.ok(insights);
+    }
+
+    @GetMapping("/clientes-risco")
+    public ResponseEntity<List<InsightAgendadoService.ClienteRiscoDTO>> clientesEmRisco(
+            @RequestParam(required = false) Long unidadeId) {
+        return ResponseEntity.ok(insightAgendadoService.clientesEmRisco(unidadeId));
+    }
+
+    @GetMapping("/churn-profissional")
+    public ResponseEntity<List<InsightAgendadoService.ProfissionalChurnDTO>> churnPorProfissional(
+            @RequestParam(required = false) Long unidadeId) {
+        return ResponseEntity.ok(insightAgendadoService.churnPorProfissional(unidadeId));
     }
 }
