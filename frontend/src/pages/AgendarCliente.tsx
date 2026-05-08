@@ -399,6 +399,27 @@ export default function AgendarCliente() {
           </div>
         </div>
       </div>
+
+      {/* Footer viral */}
+      <footer className="mt-6 pb-6 text-center">
+        <a
+          href="https://agendainteligentefrontend.agendainteligenteapp.cloud"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-violet-600 transition-colors"
+        >
+          <svg width="14" height="14" viewBox="0 0 32 32" fill="none" aria-hidden>
+            <rect width="32" height="32" rx="9" fill="#7C3AED" />
+            <rect x="6" y="6" width="20" height="20" rx="3" fill="white" />
+            <rect x="10" y="4" width="4" height="5" rx="1.5" fill="#DDD6FE" />
+            <rect x="18" y="4" width="4" height="5" rx="1.5" fill="#DDD6FE" />
+            <line x1="10" y1="16" x2="22" y2="16" stroke="#7C3AED" strokeWidth="1.5" strokeLinecap="round" />
+            <circle cx="22" cy="22" r="4" fill="#10B981" />
+            <path d="M20.5 22l1 1 2.5-2.5" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Agendado via <span className="font-semibold text-violet-500">AgendaInteligente</span> · Agende grátis para seu negócio
+        </a>
+      </footer>
     </div>
   )
 }

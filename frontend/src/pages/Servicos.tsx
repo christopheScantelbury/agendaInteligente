@@ -5,7 +5,7 @@ import { usuarioService } from '../services/usuarioService'
 import { authService } from '../services/authService'
 import { perfilService } from '../services/perfilService'
 import { podeEditar } from '../utils/permissions'
-import { Plus, Trash2, Edit } from 'lucide-react'
+import { Plus, Trash2, Edit, Sparkles } from 'lucide-react'
 import { useState, useMemo, useEffect } from 'react'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
@@ -13,6 +13,7 @@ import FormField from '../components/FormField'
 import FilterBar from '../components/FilterBar'
 import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { iaService } from '../services/iaService'
 
 export default function Servicos() {
   const { showNotification } = useNotification()
@@ -286,6 +287,7 @@ function ServicoForm({
     unidadeId: 0,
     ativo: true,
   })
+  const [loadingIa, setLoadingIa] = useState(false)
 
   // Atualizar formData quando servico ou unidadesDisponiveis mudarem
   useEffect(() => {
@@ -358,15 +360,59 @@ function ServicoForm({
     saveMutation.mutate(formData)
   }
 
+  const handleSugerirComIa = async () => {
+    if (!formData.nome.trim()) {
+      showNotification('error', 'Digite um nome base para o serviço primeiro')
+      return
+    }
+    setLoadingIa(true)
+    try {
+      const unidadeSelecionada = unidadesDisponiveis.find(u => u.id === formData.unidadeId)
+      const areaAtuacao = unidadeSelecionada?.descricao || 'serviços gerais'
+      const sugestao = await iaService.sugerirServico({
+        areaAtuacao,
+        nomeBase: formData.nome,
+        duracaoMinutos: formData.duracaoMinutos,
+        valor: formData.valor,
+      })
+      if (sugestao.nome) setFormData(prev => ({ ...prev, nome: sugestao.nome, descricao: sugestao.descricao }))
+    } finally {
+      setLoadingIa(false)
+    }
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <FormField label="Nome" required>
-        <input
-          type="text"
-          required
-          value={formData.nome}
-          onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+        <div className="flex gap-2 mt-1">
+          <input
+            type="text"
+            required
+            value={formData.nome}
+            onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+            placeholder="Ex: Corte feminino"
+          />
+          <button
+            type="button"
+            onClick={handleSugerirComIa}
+            disabled={loadingIa}
+            title="Gerar nome e descrição com IA"
+            className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-violet-700 bg-violet-50 hover:bg-violet-100 border border-violet-200 rounded-lg transition-colors disabled:opacity-60 whitespace-nowrap"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            {loadingIa ? 'Gerando...' : 'Sugerir com IA'}
+          </button>
+        </div>
+      </FormField>
+
+      <FormField label="Descrição">
+        <textarea
+          value={formData.descricao || ''}
+          onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 text-sm"
+          rows={2}
+          placeholder="Descrição gerada pela IA aparecerá aqui"
         />
       </FormField>
 

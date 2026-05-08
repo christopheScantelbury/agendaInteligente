@@ -42,6 +42,10 @@ server:
     include-message: always
     include-binding-errors: always
 
+# Groq AI (free tier — llama-3.3-70b-versatile)
+groq:
+  api-key: ${GROQ_API_KEY:}
+
 # Provider de NFS-e: notafacil (API REST Nota MEI Gateway) | manaus_soap (ABRASF direto)
 notafacil:
   api-url: ${NOTAFACIL_API_URL:https://api.notameigateway.com.br}

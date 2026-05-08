@@ -4,11 +4,13 @@ import { authService } from '../services/authService'
 import { unidadeService } from '../services/unidadeService'
 import { perfilService } from '../services/perfilService'
 import { podeEditar } from '../utils/permissions'
-import { Bell, Check, AlertCircle } from 'lucide-react'
+import { Bell, Check, AlertCircle, Sparkles, Copy, ClipboardCheck } from 'lucide-react'
 import Button from '../components/Button'
 import { useNotification } from '../contexts/NotificationContext'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { iaService } from '../services/iaService'
+import { useState } from 'react'
 
 export default function Notificacoes() {
   const { showNotification } = useNotification()
@@ -167,24 +169,69 @@ function ReclamacaoCard({
   isLida?: boolean
 }) {
   const unidade = unidades.find((u) => u.id === reclamacao.unidadeId)
+  const [respostaIa, setRespostaIa] = useState('')
+  const [loadingIa, setLoadingIa] = useState(false)
+  const [copiado, setCopiado] = useState(false)
+
+  const handleSugerirResposta = async () => {
+    if (!reclamacao.mensagem) return
+    setLoadingIa(true)
+    try {
+      const resposta = await iaService.sugerirRespostaReclamacao(reclamacao.mensagem)
+      setRespostaIa(resposta)
+    } finally {
+      setLoadingIa(false)
+    }
+  }
+
+  const handleCopiar = () => {
+    navigator.clipboard.writeText(respostaIa)
+    setCopiado(true)
+    setTimeout(() => setCopiado(false), 2000)
+  }
 
   return (
     <div
-      className={`bg-white rounded-lg shadow p-6 border-l-4 ${
-        isLida ? 'border-gray-300 opacity-75' : 'border-red-500'
+      className={`bg-white rounded-xl shadow-sm p-6 border-l-4 ${
+        isLida ? 'border-slate-200 opacity-75' : 'border-red-500'
       }`}
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           {unidade && (
-            <span className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded mb-2">
+            <span className="inline-block px-2 py-1 text-xs font-medium bg-violet-100 text-violet-700 rounded-full mb-2">
               {unidade.nome}
             </span>
           )}
           <p className="text-gray-900 whitespace-pre-wrap">{reclamacao.mensagem}</p>
         </div>
       </div>
-      <div className="flex items-center justify-between pt-4 border-t">
+
+      {/* Resposta sugerida pela IA */}
+      {respostaIa && (
+        <div className="mt-4 p-4 bg-violet-50 border border-violet-200 rounded-xl">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-violet-700 flex items-center gap-1">
+              <Sparkles className="h-3.5 w-3.5" /> Resposta sugerida pela IA
+            </span>
+            <button
+              onClick={handleCopiar}
+              className="text-xs text-violet-600 hover:text-violet-800 flex items-center gap-1 transition-colors"
+            >
+              {copiado ? <ClipboardCheck className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              {copiado ? 'Copiado!' : 'Copiar'}
+            </button>
+          </div>
+          <textarea
+            value={respostaIa}
+            onChange={(e) => setRespostaIa(e.target.value)}
+            className="w-full text-sm text-slate-700 bg-transparent border-none outline-none resize-none"
+            rows={4}
+          />
+        </div>
+      )}
+
+      <div className="flex items-center justify-between pt-4 border-t mt-4">
         <div className="text-sm text-gray-500">
           {reclamacao.dataCriacao && (
             <span>
@@ -195,20 +242,32 @@ function ReclamacaoCard({
             </span>
           )}
         </div>
-        {!isLida && onMarcarComoLida && (
-          <Button variant="secondary" size="sm" onClick={onMarcarComoLida} isLoading={isLoading}>
-            <Check className="h-4 w-4 mr-2" />
-            Marcar como lida
-          </Button>
-        )}
-        {isLida && reclamacao.dataLeitura && (
-          <span className="text-sm text-gray-500">
-            Lida em{' '}
-            {format(new Date(reclamacao.dataLeitura), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", {
-              locale: ptBR,
-            })}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {!isLida && (
+            <button
+              onClick={handleSugerirResposta}
+              disabled={loadingIa}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-violet-700 bg-violet-50 hover:bg-violet-100 border border-violet-200 rounded-lg transition-colors disabled:opacity-60"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              {loadingIa ? 'Gerando...' : 'Sugerir resposta com IA'}
+            </button>
+          )}
+          {!isLida && onMarcarComoLida && (
+            <Button variant="secondary" size="sm" onClick={onMarcarComoLida} isLoading={isLoading}>
+              <Check className="h-4 w-4 mr-2" />
+              Marcar como lida
+            </Button>
+          )}
+          {isLida && reclamacao.dataLeitura && (
+            <span className="text-sm text-gray-500">
+              Lida em{' '}
+              {format(new Date(reclamacao.dataLeitura), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", {
+                locale: ptBR,
+              })}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   )
