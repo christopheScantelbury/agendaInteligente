@@ -20,7 +20,6 @@ export interface Cliente {
   rg?: string
   senha?: string
   ativo?: boolean
-  unidadeId?: number
   unidadesIds?: number[]
   unidades?: Unidade[]
 }
