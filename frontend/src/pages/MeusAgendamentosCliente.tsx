@@ -75,7 +75,7 @@ export default function MeusAgendamentosCliente() {
         return 'bg-green-100 text-green-800'
       case 'CANCELADO':
         return 'bg-red-100 text-red-800'
-      case 'CONCLUIDO':
+      case 'FINALIZADO':
         return 'bg-gray-100 text-gray-800'
       default:
         return 'bg-gray-100 text-gray-800'
@@ -195,4 +195,3 @@ export default function MeusAgendamentosCliente() {
     </div>
   )
 }
-

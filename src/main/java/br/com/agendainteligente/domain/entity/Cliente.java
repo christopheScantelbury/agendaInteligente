@@ -36,6 +36,9 @@ public class Cliente {
     @Column(length = 200)
     private String endereco;
 
+    @Column(length = 500)
+    private String observacao;
+
     @Column(length = 10)
     private String numero;
 
@@ -54,7 +57,7 @@ public class Cliente {
     @Column(length = 2)
     private String uf;
 
-    @Column(name = "data_nascimento", nullable = false)
+    @Column(name = "data_nascimento")
     private java.time.LocalDate dataNascimento;
 
     @Column(length = 20)
@@ -102,4 +105,3 @@ public class Cliente {
         dataAtualizacao = LocalDateTime.now();
     }
 }
-

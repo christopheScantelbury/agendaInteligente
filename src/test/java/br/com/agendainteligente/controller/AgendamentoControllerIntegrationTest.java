@@ -218,7 +218,7 @@ class AgendamentoControllerIntegrationTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(finalizarDTO)))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.status").value("CONCLUIDO"))
+                                .andExpect(jsonPath("$.status").value("FINALIZADO"))
                                 .andExpect(jsonPath("$.valorFinal").value(120.00));
         }
 

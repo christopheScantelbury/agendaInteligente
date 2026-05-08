@@ -1,6 +1,7 @@
 package br.com.agendainteligente.controller;
 
 import br.com.agendainteligente.domain.entity.Usuario;
+import br.com.agendainteligente.dto.CadastroAdminDTO;
 import br.com.agendainteligente.dto.LoginDTO;
 import br.com.agendainteligente.dto.TokenDTO;
 import br.com.agendainteligente.repository.UsuarioRepository;
@@ -31,6 +32,13 @@ public class AuthController {
     @Operation(summary = "Realizar login")
     public ResponseEntity<TokenDTO> login(@Valid @RequestBody LoginDTO loginDTO) {
         return ResponseEntity.ok(authService.login(loginDTO));
+    }
+
+    @PostMapping("/cadastro")
+    @Operation(summary = "Cadastro administrativo inicial")
+    public ResponseEntity<Void> cadastro(@Valid @RequestBody CadastroAdminDTO cadastroDTO) {
+        authService.cadastrar(cadastroDTO);
+        return ResponseEntity.status(201).build();
     }
 
     @GetMapping("/hash/{senha}")
@@ -64,4 +72,3 @@ public class AuthController {
         return ResponseEntity.ok("Senha do admin atualizada com sucesso. Faca login com a senha informada.");
     }
 }
-

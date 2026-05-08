@@ -70,6 +70,9 @@ public class AtendenteService {
             case ADMIN:
                 log.debug("ADMIN: listando todos os atendentes");
                 return atendenteRepository.findAll();
+            case ADMINISTRADOR:
+                log.debug("ADMINISTRADOR: listando atendentes vinculados ao admin_unico_id={}", usuarioLogado.getId());
+                return atendenteRepository.findByUnidadeAdminUnicoId(usuarioLogado.getId());
 
             case GERENTE:
                 log.debug("GERENTE: listando atendentes das unidades da mesma empresa");
@@ -166,6 +169,10 @@ public class AtendenteService {
         switch (usuarioLogado.getPerfil()) {
             case ADMIN:
                 return unidadeRepository.findAll().stream().map(Unidade::getId).collect(Collectors.toSet());
+            case ADMINISTRADOR:
+                return unidadeRepository.findByAdminUnicoId(usuarioLogado.getId()).stream()
+                        .map(Unidade::getId)
+                        .collect(Collectors.toSet());
             case GERENTE:
                 if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
                     return Set.of();
@@ -253,6 +260,9 @@ public class AtendenteService {
     public AtendenteDTO buscarPorId(Long id) {
         Atendente atendente = atendenteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Atendente não encontrado"));
+        if (!podeAcessarAtendente(atendente)) {
+            throw new ResourceNotFoundException("Atendente não encontrado");
+        }
         return toDTO(atendente);
     }
 
@@ -269,6 +279,8 @@ public class AtendenteService {
     @Transactional
     public AtendenteDTO criar(AtendenteDTO atendenteDTO) {
         normalizeAtendenteDTO(atendenteDTO);
+        Usuario usuarioLogado = getUsuarioLogado();
+
         if (!obterUnidadesIdsPermitidas().contains(atendenteDTO.getUnidadeId())) {
             throw new ResourceNotFoundException("Unidade não encontrada");
         }
@@ -290,9 +302,13 @@ public class AtendenteService {
         if (atendenteDTO.getPercentualComissao() != null) {
             atendente.setPercentualComissao(atendenteDTO.getPercentualComissao());
         }
-        
-        // Associa serviços se fornecidos
-        if (atendenteDTO.getServicosIds() != null && !atendenteDTO.getServicosIds().isEmpty()) {
+
+        // No cadastro por ADMINISTRADOR, vincula automaticamente todos os serviços do próprio administrador.
+        if (usuarioLogado.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR) {
+            List<Servico> servicosDoAdministrador = servicoRepository.findByAdminUnicoId(usuarioLogado.getId());
+            atendente.setServicos(servicosDoAdministrador);
+        } else if (atendenteDTO.getServicosIds() != null && !atendenteDTO.getServicosIds().isEmpty()) {
+            // Para outros perfis, mantém comportamento manual já existente.
             List<Servico> servicos = servicoRepository.findAllById(atendenteDTO.getServicosIds());
             if (servicos.size() != atendenteDTO.getServicosIds().size()) {
                 throw new ResourceNotFoundException("Um ou mais serviços não foram encontrados");
@@ -308,6 +324,7 @@ public class AtendenteService {
     @Transactional
     public AtendenteDTO atualizar(Long id, AtendenteDTO atendenteDTO) {
         normalizeAtendenteDTO(atendenteDTO);
+        Usuario usuarioLogado = getUsuarioLogado();
         Atendente atendente = atendenteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Atendente não encontrado"));
         if (!podeAcessarAtendente(atendente)) {
@@ -341,8 +358,12 @@ public class AtendenteService {
             atendente.setAtivo(atendenteDTO.getAtivo());
         }
         
-        // Atualiza serviços se fornecidos
-        if (atendenteDTO.getServicosIds() != null) {
+        // Mantém a regra automática para ADMINISTRADOR também na edição.
+        if (usuarioLogado.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR) {
+            List<Servico> servicosDoAdministrador = servicoRepository.findByAdminUnicoId(usuarioLogado.getId());
+            atendente.setServicos(servicosDoAdministrador);
+        } else if (atendenteDTO.getServicosIds() != null) {
+            // Para outros perfis, mantém atualização manual quando enviado.
             List<Servico> servicos = servicoRepository.findAllById(atendenteDTO.getServicosIds());
             if (servicos.size() != atendenteDTO.getServicosIds().size()) {
                 throw new ResourceNotFoundException("Um ou mais serviços não foram encontrados");
@@ -362,13 +383,25 @@ public class AtendenteService {
         if (!podeAcessarAtendente(atendente)) {
             throw new ResourceNotFoundException("Atendente não encontrado");
         }
+        Long usuarioId = atendente.getUsuario() != null ? atendente.getUsuario().getId() : null;
+
         atendenteRepository.deleteById(id);
+
+        // Ao excluir um profissional/secretaria nesta tela, removemos também o usuário vinculado
+        // para liberar email para novo cadastro.
+        if (usuarioId != null) {
+            usuarioRepository.deleteById(usuarioId);
+            log.info("Atendente e usuário vinculados excluídos com sucesso. atendenteId={}, usuarioId={}", id, usuarioId);
+            return;
+        }
+
         log.info("Atendente excluído com sucesso. ID: {}", id);
     }
 
     private AtendenteDTO toDTO(Atendente atendente) {
         AtendenteDTO dto = atendenteMapper.toDTO(atendente);
         dto.setNomeUsuario(atendente.getUsuario().getNome());
+        dto.setEmailUsuario(atendente.getUsuario().getEmail());
         dto.setNomeUnidade(atendente.getUnidade().getNome());
         if (atendente.getServicos() != null) {
             dto.setServicosIds(atendente.getServicos().stream()
@@ -393,5 +426,13 @@ public class AtendenteService {
             atendenteDTO.setTelefone(telefoneNormalizado.length() > 20 ? telefoneNormalizado.substring(0, 20) : telefoneNormalizado);
         }
     }
-}
 
+    private Usuario getUsuarioLogado() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new BusinessException("Não autorizado");
+        }
+        return usuarioRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+    }
+}

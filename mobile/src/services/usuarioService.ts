@@ -7,6 +7,7 @@ export interface Usuario {
   email: string
   senha?: string
   perfil?: string
+  nomePerfil?: string
   perfilId?: number
   unidadeId?: number
   unidadesIds?: number[]

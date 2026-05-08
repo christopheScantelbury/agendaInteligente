@@ -23,7 +23,8 @@ export default function Notificacoes() {
   const podeEditarNotificacoes = podeEditar(perfil, '/notificacoes')
 
   // Determinar qual query usar baseado no perfil
-  const isAdmin = usuario?.perfil === 'ADMIN'
+  const perfilNorm = (usuario?.perfil ?? '').toUpperCase().replace('-', '_')
+  const isAdmin = perfilNorm === 'ADMIN' || perfilNorm === 'ADMINISTRADOR'
   const unidadeId = usuario?.unidadeId
 
   const { data: reclamacoes = [], isLoading } = useQuery<Reclamacao[]>({

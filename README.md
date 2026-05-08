@@ -2,6 +2,10 @@
 
 Sistema completo de agendamento inteligente com suporte a multiplos tipos de empresas (academias, consultorios, saloes, etc.), controle de acesso por perfis e interface publica para clientes.
 
+## 📘 Changelog
+
+O histórico de alterações do projeto está documentado em [`CHANGELOG.md`](./CHANGELOG.md).
+
 ## 🚀 Deploy com Docker
 
 ### Pré-requisitos

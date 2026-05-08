@@ -107,7 +107,7 @@ export default function Home() {
           </div>
           <div className="flex items-center">
             <div className="w-4 h-4 bg-green-500 rounded mr-2"></div>
-            <span className="text-sm text-gray-600">Concluído</span>
+            <span className="text-sm text-gray-600">Finalizado</span>
           </div>
           <div className="flex items-center">
             <div className="w-4 h-4 bg-red-500 rounded mr-2"></div>

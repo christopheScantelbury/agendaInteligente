@@ -243,7 +243,9 @@ function ServicoForm({
   const queryClient = useQueryClient()
   const { showNotification } = useNotification()
   const usuario = authService.getUsuario()
-  const perfilLogado = usuario?.perfil
+  const perfilNorm = (usuario?.perfil ?? '').toUpperCase().replace('-', '_')
+  const isAdmin = perfilNorm === 'ADMIN' || perfilNorm === 'ADMINISTRADOR'
+  const isAdministrador = perfilNorm === 'ADMINISTRADOR' || perfilNorm === 'ADMIN_UNICO'
 
   // Buscar todas as unidades
   const { data: todasUnidades = [] } = useQuery({
@@ -258,12 +260,12 @@ function ServicoForm({
       if (!usuario?.usuarioId) return Promise.resolve(null)
       return usuarioService.buscarPorId(usuario.usuarioId)
     },
-    enabled: !!usuario?.usuarioId && perfilLogado !== 'ADMIN',
+    enabled: !!usuario?.usuarioId && !isAdmin,
   })
 
   // Filtrar unidades baseado no perfil
   const unidadesDisponiveis = useMemo(() => {
-    if (perfilLogado === 'ADMIN') {
+    if (isAdmin) {
       return todasUnidades
     }
     // Para GERENTE e PROFISSIONAL, usar unidades do usuário completo
@@ -275,7 +277,10 @@ function ServicoForm({
       return todasUnidades.filter(u => u.id === usuario.unidadeId)
     }
     return []
-  }, [todasUnidades, perfilLogado, usuarioCompleto?.unidadesIds, usuario?.unidadeId])
+  }, [isAdmin, todasUnidades, usuarioCompleto?.unidadesIds, usuario?.unidadeId])
+  const unidadePadraoAdministradorId = isAdministrador
+    ? (usuario?.unidadeId || (unidadesDisponiveis.length > 0 ? unidadesDisponiveis[0].id : undefined))
+    : undefined
 
   const [formData, setFormData] = useState<Servico>({
     id: 0,
@@ -302,7 +307,9 @@ function ServicoForm({
       })
     } else {
       // Ao criar: usar unidade padrão se houver apenas uma disponível
-      const unidadePadrao = unidadesDisponiveis.length === 1 ? unidadesDisponiveis[0].id! : 0
+      const unidadePadrao = isAdministrador
+        ? (unidadePadraoAdministradorId || 0)
+        : (unidadesDisponiveis.length === 1 ? unidadesDisponiveis[0].id! : 0)
       setFormData({
         id: 0,
         nome: '',
@@ -313,7 +320,7 @@ function ServicoForm({
         ativo: true,
       })
     }
-  }, [servico, unidadesDisponiveis])
+  }, [servico, unidadesDisponiveis, isAdministrador, unidadePadraoAdministradorId])
 
   const saveMutation = useMutation({
     mutationFn: (data: Servico) =>
@@ -333,9 +340,14 @@ function ServicoForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
+    const unidadeIdFinal = isAdministrador
+      ? unidadePadraoAdministradorId
+      : formData.unidadeId && formData.unidadeId > 0
+        ? formData.unidadeId
+        : undefined
+
     // Validação adicional
-    if (!formData.unidadeId || formData.unidadeId === 0) {
+    if (!isAdministrador && (!unidadeIdFinal || unidadeIdFinal === 0)) {
       showNotification('error', 'Por favor, selecione uma unidade')
       return
     }
@@ -355,7 +367,18 @@ function ServicoForm({
       return
     }
 
-    saveMutation.mutate(formData)
+    const payload: any = { ...formData }
+    if (isAdministrador) {
+      if (unidadeIdFinal && unidadeIdFinal > 0) {
+        payload.unidadeId = unidadeIdFinal
+      } else {
+        delete payload.unidadeId
+      }
+    } else {
+      payload.unidadeId = unidadeIdFinal
+    }
+
+    saveMutation.mutate(payload as Servico)
   }
 
   return (
@@ -379,26 +402,28 @@ function ServicoForm({
         />
       </FormField>
 
-      <FormField label="Unidade" required>
-        <p className="text-xs text-gray-500 mb-2">O serviço ficará disponível apenas nesta unidade.</p>
-        <select
-          required
-          value={formData.unidadeId || ''}
-          onChange={(e) => setFormData({ ...formData, unidadeId: parseInt(e.target.value) })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          disabled={unidadesDisponiveis.length === 1}
-        >
-          <option value="">Selecione uma unidade</option>
-          {unidadesDisponiveis.map((unidade) => (
-            <option key={unidade.id} value={unidade.id}>
-              {unidade.nome}
-            </option>
-          ))}
-        </select>
-        {unidadesDisponiveis.length === 0 && (
-          <p className="mt-1 text-sm text-red-600">Você não tem acesso a nenhuma unidade</p>
-        )}
-      </FormField>
+      {!isAdministrador && (
+        <FormField label="Unidade" required>
+          <p className="text-xs text-gray-500 mb-2">O serviço ficará disponível apenas nesta unidade.</p>
+          <select
+            required
+            value={formData.unidadeId || ''}
+            onChange={(e) => setFormData({ ...formData, unidadeId: parseInt(e.target.value) })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            disabled={unidadesDisponiveis.length === 1}
+          >
+            <option value="">Selecione uma unidade</option>
+            {unidadesDisponiveis.map((unidade) => (
+              <option key={unidade.id} value={unidade.id}>
+                {unidade.nome}
+              </option>
+            ))}
+          </select>
+          {unidadesDisponiveis.length === 0 && (
+            <p className="mt-1 text-sm text-red-600">Você não tem acesso a nenhuma unidade</p>
+          )}
+        </FormField>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <FormField label="Valor (R$)" required>
@@ -450,4 +475,3 @@ function ServicoForm({
     </form>
   )
 }
-

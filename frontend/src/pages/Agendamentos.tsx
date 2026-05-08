@@ -44,7 +44,7 @@ export default function Agendamentos() {
   const [view, setView] = useState<View>('week')
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
-  const [viewMode, setViewMode] = useState<'timeline' | 'calendar'>('timeline')
+  const [viewMode, setViewMode] = useState<'timeline' | 'calendar'>('calendar')
 
   // Form data para criar agendamento
   const [formData, setFormData] = useState<Partial<Agendamento>>({
@@ -70,7 +70,8 @@ export default function Agendamentos() {
 
   const usuario = authService.getUsuario()
   const perfil = usuario?.perfil ?? ''
-  const perfilNorm = perfil.toUpperCase()
+  const perfilNorm = perfil.toUpperCase().replace('-', '_')
+  const isAdmin = perfilNorm === 'ADMIN' || perfilNorm === 'ADMINISTRADOR'
   const isCliente = perfilNorm === 'CLIENTE'
 
   const { data: perfilPermissoes } = useQuery({
@@ -154,7 +155,7 @@ export default function Agendamentos() {
       if (!usuario?.usuarioId) return Promise.resolve(null)
       return usuarioService.buscarPorId(usuario.usuarioId)
     },
-    enabled: !!usuario?.usuarioId && perfilNorm !== 'ADMIN',
+    enabled: !!usuario?.usuarioId && !isAdmin,
   })
 
   const clientesFiltrados = useMemo(() => {
@@ -175,7 +176,7 @@ export default function Agendamentos() {
   const unidadesFiltradas = useMemo(() => {
     // O backend já filtra por empresa/unidade, então podemos usar todas as unidades retornadas
     // Mas mantemos o filtro no frontend como segurança adicional
-    if (perfilNorm === 'ADMIN') {
+    if (isAdmin) {
       return todasUnidades
     }
     // Para GERENTE, usar todas as unidades retornadas pelo backend (já filtradas por empresa)
@@ -216,7 +217,7 @@ export default function Agendamentos() {
   })
 
   const atendentesFiltrados = useMemo(() => {
-    if (perfilNorm === 'ADMIN' || perfilNorm === 'GERENTE') {
+    if (isAdmin || perfilNorm === 'GERENTE') {
       return todosAtendentes
     }
     if ((perfilNorm === 'PROFISSIONAL' || perfilNorm === 'ATENDENTE') && usuario?.usuarioId) {
@@ -228,7 +229,7 @@ export default function Agendamentos() {
 
   // Auto-selecionar unidade e atendente para PROFISSIONAL
   useEffect(() => {
-    if ((perfil === 'PROFISSIONAL' || perfil === 'ATENDENTE') && usuario?.unidadeId && unidadesFiltradas.length > 0) {
+    if ((perfilNorm === 'PROFISSIONAL' || perfilNorm === 'ATENDENTE') && usuario?.unidadeId && unidadesFiltradas.length > 0) {
       setFormData(prev => ({
         ...prev,
         unidadeId: prev.unidadeId || usuario.unidadeId
@@ -237,7 +238,7 @@ export default function Agendamentos() {
   }, [perfilNorm, usuario?.unidadeId, unidadesFiltradas])
 
   useEffect(() => {
-    if ((perfil === 'PROFISSIONAL' || perfil === 'ATENDENTE') && atendentesFiltrados.length > 0) {
+    if ((perfilNorm === 'PROFISSIONAL' || perfilNorm === 'ATENDENTE') && atendentesFiltrados.length > 0) {
       const meuAtendente = atendentesFiltrados.find(a => a.usuarioId === usuario?.usuarioId)
       if (meuAtendente) {
         setFormData(prev => ({
@@ -623,148 +624,148 @@ export default function Agendamentos() {
 
   // Validar se a data selecionada não está no passado
   const minDateTime = format(new Date(), "yyyy-MM-dd'T'HH:mm")
-
   if (isLoading) {
     return <div className="text-center py-8">Carregando...</div>
   }
 
   return (
     <div className="w-full min-w-0 max-w-full overflow-x-hidden px-2 sm:px-0">
-      <div className="w-full min-w-0 max-w-full overflow-x-hidden px-2 sm:px-0">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 sm:mb-6">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Agendamentos</h1>
-          <div className="flex gap-2 w-full sm:w-auto">
-            {/* Toggle View Mode */}
-            <div className="flex bg-gray-100 rounded-lg p-1">
-              <button
-                onClick={() => setViewMode('timeline')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
-                  viewMode === 'timeline'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <List className="h-4 w-4" />
-                <span className="hidden sm:inline">Timeline</span>
-              </button>
-              <button
-                onClick={() => setViewMode('calendar')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
-                  viewMode === 'calendar'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <CalendarDays className="h-4 w-4" />
-                <span className="hidden sm:inline">Calendário</span>
-              </button>
-            </div>
-            {podeEditarAgendamentos && (
-              <Button
-                onClick={() => {
-                  const agora = new Date()
-                  const umaHoraDepois = new Date(agora.getTime() + 3600000)
-                  setCriarModal({ start: agora, end: umaHoraDepois })
-                  setFormData({
-                    clienteId: undefined,
-                    unidadeId: undefined,
-                    atendenteId: undefined,
-                    dataHoraInicio: format(agora, "yyyy-MM-dd'T'HH:mm"),
-                    observacoes: '',
-                    servicos: [],
-                  })
-                  setServicosSelecionados([])
-                }}
-                variant="primary"
-                className="flex items-center flex-1 sm:flex-initial"
-              >
-                <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                <span className="text-sm sm:text-base">Novo Agendamento</span>
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* View Mode: Timeline */}
-        {viewMode === 'timeline' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6 min-w-0">
-            {/* Calendário Mensal */}
-            <div className="lg:col-span-1 min-w-0">
-              <CalendarMonth
-                selectedDate={selectedDate}
-                onDateSelect={(date) => {
-                  setSelectedDate(date)
-                  setCurrentDate(date)
-                }}
-                agendamentos={agendamentos}
-              />
-            </div>
-
-            {/* Timeline */}
-            <div className="lg:col-span-2 min-w-0 overflow-hidden">
-              <TimelineView
-                agendamentos={agendamentos}
-                selectedDate={selectedDate}
-                onEventClick={handleSelectEvent}
-                onSlotClick={podeEditarAgendamentos ? (date) => {
-                  const umaHoraDepois = new Date(date.getTime() + 3600000)
-                  setCriarModal({ start: date, end: umaHoraDepois })
-                  setFormData({
-                    clienteId: undefined,
-                    unidadeId: undefined,
-                    atendenteId: undefined,
-                    dataHoraInicio: format(date, "yyyy-MM-dd'T'HH:mm"),
-                    observacoes: '',
-                    servicos: [],
-                  })
-                  setServicosSelecionados([])
-                } : undefined}
-              />
+      <div className="space-y-6">
+        <div className="rounded-[28px] border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-3 shadow-sm sm:p-4 lg:p-5">
+          <div className="mb-4 flex flex-col gap-3 px-1 sm:px-2 lg:flex-row lg:items-center lg:justify-between">
+            <h2 className="text-lg font-semibold text-slate-900 sm:text-xl">
+              {viewMode === 'timeline' ? 'Visão diária em linha do tempo' : 'Visão de calendário'}
+            </h2>
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+              <div className="inline-flex rounded-2xl border border-slate-200/80 bg-white/85 p-1 shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)] backdrop-blur">
+                <button
+                  onClick={() => setViewMode('timeline')}
+                  type="button"
+                  title=""
+                  aria-label="Linha do tempo"
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 ${
+                    viewMode === 'timeline'
+                      ? 'bg-slate-900 text-white shadow-[0_10px_24px_-18px_rgba(15,23,42,0.9)]'
+                      : 'text-slate-500 hover:bg-slate-100/90 hover:text-slate-900'
+                  }`}
+                >
+                  <List className="h-7 w-7" strokeWidth={2.4} />
+                </button>
+                <button
+                  onClick={() => setViewMode('calendar')}
+                  type="button"
+                  title="Calendário"
+                  aria-label="Calendário"
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 ${
+                    viewMode === 'calendar'
+                      ? 'bg-slate-900 text-white shadow-[0_10px_24px_-18px_rgba(15,23,42,0.9)]'
+                      : 'text-slate-500 hover:bg-slate-100/90 hover:text-slate-900'
+                  }`}
+                >
+                  <CalendarDays className="h-7 w-7" strokeWidth={2.4} />
+                </button>
+              </div>
+              {podeEditarAgendamentos && (
+                <Button
+                  onClick={() => {
+                    const agora = new Date()
+                    const umaHoraDepois = new Date(agora.getTime() + 3600000)
+                    setCriarModal({ start: agora, end: umaHoraDepois })
+                    setFormData({
+                      clienteId: undefined,
+                      unidadeId: undefined,
+                      atendenteId: undefined,
+                      dataHoraInicio: format(agora, "yyyy-MM-dd'T'HH:mm"),
+                      observacoes: '',
+                      servicos: [],
+                    })
+                    setServicosSelecionados([])
+                  }}
+                  variant="primary"
+                  title="Novo agendamento"
+                  aria-label="Novo agendamento"
+                  className="h-12 w-full rounded-2xl border border-blue-400/20 bg-gradient-to-r from-blue-600 to-cyan-500 px-0 text-sm font-semibold shadow-[0_14px_34px_-20px_rgba(37,99,235,0.9)] hover:from-blue-700 hover:to-cyan-600 sm:h-10 sm:w-10"
+                >
+                  <Plus className="h-8 w-8" strokeWidth={2.6} />
+                </Button>
+              )}
             </div>
           </div>
-        )}
 
-        {/* View Mode: Calendar (Original) */}
-        {viewMode === 'calendar' && (
-          <>
-            <div className="mb-4 sm:mb-6 min-w-0 overflow-hidden">
-              <CalendarView
-                agendamentos={agendamentos}
-                onSelectSlot={handleSelectSlot}
-                onSelectEvent={handleSelectEvent}
-                view={view}
-                onViewChange={setView}
-                date={currentDate}
-                onNavigate={(date) => {
-                  setCurrentDate(date)
-                  setSelectedDate(date)
-                }}
-                disabled={!!criarModal || !!finalizarModal}
-              />
+          {viewMode === 'timeline' && (
+            <div className="grid min-w-0 grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
+              <div className="min-w-0">
+                <CalendarMonth
+                  selectedDate={selectedDate}
+                  onDateSelect={(date) => {
+                    setSelectedDate(date)
+                    setCurrentDate(date)
+                  }}
+                  agendamentos={agendamentos}
+                />
+              </div>
+
+              <div className="min-w-0 overflow-hidden">
+                <TimelineView
+                  agendamentos={agendamentos}
+                  selectedDate={selectedDate}
+                  onEventClick={handleSelectEvent}
+                  onSlotClick={podeEditarAgendamentos ? (date) => {
+                    const umaHoraDepois = new Date(date.getTime() + 3600000)
+                    setCriarModal({ start: date, end: umaHoraDepois })
+                    setFormData({
+                      clienteId: undefined,
+                      unidadeId: undefined,
+                      atendenteId: undefined,
+                      dataHoraInicio: format(date, "yyyy-MM-dd'T'HH:mm"),
+                      observacoes: '',
+                      servicos: [],
+                    })
+                    setServicosSelecionados([])
+                  } : undefined}
+                />
+              </div>
             </div>
+          )}
 
-            {/* Legenda */}
-            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 mb-4 sm:mb-6 min-w-0">
-              <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 sm:mb-3">Legenda:</h3>
-              <div className="flex flex-wrap gap-x-4 gap-y-2 sm:gap-4">
-                <div className="flex items-center shrink-0">
-                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-blue-500 rounded mr-2 flex-shrink-0"></div>
-                  <span className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">Agendado</span>
-                </div>
-                <div className="flex items-center shrink-0">
-                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded mr-2 flex-shrink-0"></div>
-                  <span className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">Concluído</span>
-                </div>
-                <div className="flex items-center shrink-0">
-                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-red-500 rounded mr-2 flex-shrink-0"></div>
-                  <span className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">Cancelado</span>
+          {viewMode === 'calendar' && (
+            <div className="space-y-4">
+              <div className="min-w-0 overflow-hidden">
+                <CalendarView
+                  agendamentos={agendamentos}
+                  onSelectSlot={handleSelectSlot}
+                  onSelectEvent={handleSelectEvent}
+                  view={view}
+                  onViewChange={setView}
+                  date={currentDate}
+                  onNavigate={(date) => {
+                    setCurrentDate(date)
+                    setSelectedDate(date)
+                  }}
+                  disabled={!!criarModal || !!finalizarModal}
+                />
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm">
+                <h3 className="text-sm font-semibold text-slate-900">Legenda da agenda</h3>
+                <div className="mt-3 flex flex-wrap gap-3 sm:gap-4">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1.5 text-sm text-slate-700">
+                    <div className="h-2.5 w-2.5 rounded-full bg-blue-500" />
+                    Agendado
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-sm text-slate-700">
+                    <div className="h-2.5 w-2.5 rounded-full bg-green-500" />
+                    Finalizado
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1.5 text-sm text-slate-700">
+                    <div className="h-2.5 w-2.5 rounded-full bg-red-500" />
+                    Cancelado
+                  </div>
                 </div>
               </div>
             </div>
-          </>
-        )}
-      </div>
+          )}
+        </div>
 
       {/* Modal de Criar Agendamento */}
       {criarModal && (
@@ -788,12 +789,12 @@ export default function Agendamentos() {
         >
           <div className="space-y-6">
             {/* Informação do horário selecionado */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-blue-800">
+            <div className="rounded-3xl border border-sky-200 bg-gradient-to-r from-sky-50 to-cyan-50 p-4">
+              <div className="flex items-center gap-2 text-sky-900">
                 <Calendar className="h-5 w-5" />
-                <span className="font-semibold">Horário Selecionado:</span>
+                <span className="font-semibold">Horário selecionado</span>
               </div>
-              <p className="text-sm text-blue-700 mt-1">
+              <p className="mt-1 text-sm text-sky-800">
                 {format(criarModal.start, "dd/MM/yyyy 'às' HH:mm")} até{' '}
                 {format(criarModal.end, 'HH:mm')}
               </p>
@@ -1097,7 +1098,10 @@ export default function Agendamentos() {
                     agendamentoDetalhes.status === 'FINALIZADO' ? 'bg-blue-100 text-blue-800' :
                     'bg-yellow-100 text-yellow-800'
                   }`}>
-                    {agendamentoDetalhes.status || 'PENDENTE'}
+                    {agendamentoDetalhes.status === 'CONFIRMADO' ? 'Confirmado' :
+                     agendamentoDetalhes.status === 'CANCELADO' ? 'Cancelado' :
+                     agendamentoDetalhes.status === 'FINALIZADO' ? 'Finalizado' :
+                     agendamentoDetalhes.status || 'PENDENTE'}
                   </span>
                 </div>
               </div>
@@ -1128,9 +1132,9 @@ export default function Agendamentos() {
             )}
             <div className="flex justify-between items-center pt-4 border-t">
               <div className="flex gap-2">
-                {podeEditarAgendamentos && (perfilNorm === 'ADMIN' || perfilNorm === 'GERENTE' || perfilNorm === 'PROFISSIONAL' || perfilNorm === 'ATENDENTE' || isCliente) && (
+                {podeEditarAgendamentos && (isAdmin || perfilNorm === 'GERENTE' || perfilNorm === 'PROFISSIONAL' || perfilNorm === 'ATENDENTE' || isCliente) && (
                   <>
-                    {agendamentoDetalhes.status !== 'CANCELADO' && agendamentoDetalhes.status !== 'FINALIZADO' && agendamentoDetalhes.status !== 'CONCLUIDO' && (
+                    {agendamentoDetalhes.status !== 'CANCELADO' && agendamentoDetalhes.status !== 'FINALIZADO' && (
                       <>
                         <Button
                           variant="secondary"
@@ -1157,7 +1161,7 @@ export default function Agendamentos() {
                         </Button>
                       </>
                     )}
-                    {!isCliente && agendamentoDetalhes.status !== 'CONCLUIDO' && agendamentoDetalhes.status !== 'CANCELADO' && (
+                    {!isCliente && agendamentoDetalhes.status !== 'FINALIZADO' && agendamentoDetalhes.status !== 'CANCELADO' && (
                       <Button
                         variant="success"
                         onClick={() => {
@@ -1394,6 +1398,7 @@ export default function Agendamentos() {
           </div>
         </Modal>
       )}
+      </div>
     </div>
   )
 }

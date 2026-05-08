@@ -12,5 +12,5 @@ public interface AtendenteRepository extends JpaRepository<Atendente, Long> {
     List<Atendente> findByUnidadeIdAndAtivoTrue(Long unidadeId);
     List<Atendente> findByAtivoTrue();
     Optional<Atendente> findByUsuarioId(Long usuarioId);
+    List<Atendente> findByUnidadeAdminUnicoId(Long adminUnicoId);
 }
-

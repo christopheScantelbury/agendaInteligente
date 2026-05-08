@@ -43,6 +43,7 @@ public class UsuarioDTO {
     private Boolean ativo;
 
     // Para exibição
+    private String nomePerfil;
     private String nomeUnidade;
     private List<String> nomesUnidades; // Lista de nomes das unidades para exibição
 
@@ -61,6 +62,7 @@ public class UsuarioDTO {
     // Campos específicos de Atendente/Gerente
     private String cpf; // CPF para atendentes/gerentes
     private String telefone;
+    private String areaAtuacao;
     private BigDecimal percentualComissao;
 
     // Serviços do atendente

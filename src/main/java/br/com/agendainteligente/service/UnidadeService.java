@@ -73,6 +73,9 @@ public class UnidadeService {
             case ADMIN:
                 log.debug("ADMIN: listando todas as unidades");
                 return unidadeRepository.findAll();
+            case ADMINISTRADOR:
+                log.debug("ADMINISTRADOR: listando unidades vinculadas ao admin_unico_id={}", usuarioLogado.getId());
+                return unidadeRepository.findByAdminUnicoId(usuarioLogado.getId());
 
             case GERENTE:
                 log.debug("GERENTE: listando apenas unidades vinculadas ao gerente");
@@ -141,6 +144,8 @@ public class UnidadeService {
 
     @Transactional
     public UnidadeDTO criar(UnidadeDTO unidadeDTO) {
+        Usuario usuarioLogado = getUsuarioLogado();
+
         // Remover máscaras antes de validar e salvar
         normalizeUnidadeDTO(unidadeDTO);
 
@@ -151,9 +156,13 @@ public class UnidadeService {
         
         Empresa empresa = empresaRepository.findById(unidadeDTO.getEmpresaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa não encontrada"));
+        validarAcessoEmpresaDoAdminUnico(usuarioLogado, empresa);
         
         Unidade unidade = unidadeMapper.toEntity(unidadeDTO);
         unidade.setEmpresa(empresa);
+        if (usuarioLogado.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR) {
+            unidade.setAdminUnicoId(usuarioLogado.getId());
+        }
         unidade = unidadeRepository.save(unidade);
         log.info("Unidade criada. ID: {}, Nome: {}, Empresa: {}", unidade.getId(), unidade.getNome(), empresa.getNome());
         return unidadeMapper.toDTO(unidade);
@@ -161,8 +170,10 @@ public class UnidadeService {
 
     @Transactional
     public UnidadeDTO atualizar(Long id, UnidadeDTO unidadeDTO) {
+        Usuario usuarioLogado = getUsuarioLogado();
         Unidade unidade = unidadeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada"));
+        validarAcessoUnidadeDoAdminUnico(usuarioLogado, unidade);
 
         // Remover máscaras antes de validar e salvar
         normalizeUnidadeDTO(unidadeDTO);
@@ -171,13 +182,44 @@ public class UnidadeService {
         if (unidadeDTO.getEmpresaId() != null && !unidadeDTO.getEmpresaId().equals(unidade.getEmpresa().getId())) {
             Empresa empresa = empresaRepository.findById(unidadeDTO.getEmpresaId())
                     .orElseThrow(() -> new ResourceNotFoundException("Empresa não encontrada"));
+            validarAcessoEmpresaDoAdminUnico(usuarioLogado, empresa);
             unidade.setEmpresa(empresa);
         }
         
         unidadeMapper.updateEntityFromDTO(unidadeDTO, unidade);
+        if (usuarioLogado.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR) {
+            unidade.setAdminUnicoId(usuarioLogado.getId());
+        }
         unidade = unidadeRepository.save(unidade);
         log.info("Unidade atualizada. ID: {}", id);
         return unidadeMapper.toDTO(unidade);
+    }
+
+    private Usuario getUsuarioLogado() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new BusinessException("Não autorizado");
+        }
+        return usuarioRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+    }
+
+    private void validarAcessoEmpresaDoAdminUnico(Usuario usuarioLogado, Empresa empresa) {
+        if (usuarioLogado.getPerfil() != Usuario.PerfilUsuario.ADMINISTRADOR) {
+            return;
+        }
+        if (!usuarioLogado.getId().equals(empresa.getAdminUnicoId())) {
+            throw new ResourceNotFoundException("Empresa não encontrada");
+        }
+    }
+
+    private void validarAcessoUnidadeDoAdminUnico(Usuario usuarioLogado, Unidade unidade) {
+        if (usuarioLogado.getPerfil() != Usuario.PerfilUsuario.ADMINISTRADOR) {
+            return;
+        }
+        if (!usuarioLogado.getId().equals(unidade.getAdminUnicoId())) {
+            throw new ResourceNotFoundException("Unidade não encontrada");
+        }
     }
 
     /**

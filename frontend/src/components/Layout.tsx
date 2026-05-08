@@ -7,6 +7,7 @@ import {
   Settings,
   Briefcase,
   Stethoscope,
+  Users,
   Menu,
   X,
   User,
@@ -35,6 +36,7 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
   const queryClient = useQueryClient()
   const usuario = authService.getUsuario()
+  const perfilNorm = (usuario?.perfil ?? '').toUpperCase().replace('-', '_')
   const [sidebarOpen, setSidebarOpen] = useState(false) // Mobile toggle
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
@@ -57,13 +59,15 @@ export default function Layout({ children }: LayoutProps) {
   }
 
   // Verificar se é ADMIN ou GERENTE para mostrar notificações
-  const podeVerNotificacoes = usuario?.perfil === 'ADMIN' || usuario?.perfil === 'GERENTE'
+  const isAdminUnico = perfilNorm === 'ADMINISTRADOR'
+  const isAdmin = perfilNorm === 'ADMIN' || perfilNorm === 'ADMINISTRADOR'
+  const podeVerNotificacoes = isAdmin || usuario?.perfil === 'GERENTE'
 
   // Buscar contador de reclamações não lidas
   const { data: contadorReclamacoes = 0 } = useQuery({
     queryKey: ['reclamacoes', 'contador'],
     queryFn: () => {
-      if (usuario?.perfil === 'GERENTE' && usuario?.unidadeId) {
+      if (!isAdmin && usuario?.perfil === 'GERENTE' && usuario?.unidadeId) {
         return reclamacaoService.contarNaoLidasPorUnidade(usuario.unidadeId)
       }
       return reclamacaoService.contarNaoLidas()
@@ -110,14 +114,19 @@ export default function Layout({ children }: LayoutProps) {
       items.push({ path: '/', label: 'Início', icon: <HomeIcon className="h-5 w-5" /> })
     }
     
-    // Empresas - apenas para ADMIN e se tiver permissão
-    if (usuario?.perfil === 'ADMIN' && temPermissaoMenu('/empresas')) {
+    // Empresas - apenas para ADMIN (ADMINISTRADOR usa Configurações)
+    if (!isAdminUnico && isAdmin && temPermissaoMenu('/empresas')) {
       items.push({ path: '/empresas', label: 'Empresas', icon: <Building2 className="h-5 w-5" /> })
     }
     
-    // Unidades
-    if (temPermissaoMenu('/unidades')) {
+    // Unidades (ADMINISTRADOR usa Configurações)
+    if (!isAdminUnico && temPermissaoMenu('/unidades')) {
       items.push({ path: '/unidades', label: 'Unidades', icon: <Briefcase className="h-5 w-5" /> })
+    }
+
+    // Configurações (exclusivo ADMINISTRADOR)
+    if (isAdminUnico) {
+      items.push({ path: '/configuracoes', label: 'Configurações', icon: <Settings className="h-5 w-5" /> })
     }
     
     // Serviços
@@ -126,8 +135,18 @@ export default function Layout({ children }: LayoutProps) {
     }
     
     // Usuários
-    if (temPermissaoMenu('/usuarios')) {
+    if (!isAdminUnico && temPermissaoMenu('/usuarios')) {
       items.push({ path: '/usuarios', label: 'Usuários', icon: <Settings className="h-5 w-5" /> })
+    }
+
+    // Clientes (fallback para perfis antigos que só tinham permissão em /usuarios)
+    if (temPermissaoMenu('/clientes') || temPermissaoMenu('/usuarios')) {
+      items.push({ path: '/clientes', label: 'Clientes', icon: <Users className="h-5 w-5" /> })
+    }
+
+    // Profissionais (fallback de visibilidade para perfis antigos via /usuarios)
+    if (temPermissaoMenu('/profissionais') || temPermissaoMenu('/usuarios')) {
+      items.push({ path: '/profissionais', label: 'Profissionais', icon: <Stethoscope className="h-5 w-5" /> })
     }
     
     // Perfis - exibir para quem tiver permissão granular (ADMIN ou GERENTE com permissão)
@@ -155,7 +174,7 @@ export default function Layout({ children }: LayoutProps) {
     }
     
     return items
-  }, [usuario?.perfil, perfilUsuario])
+  }, [isAdmin, isAdminUnico, usuario?.perfil, perfilUsuario])
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -293,4 +312,3 @@ export default function Layout({ children }: LayoutProps) {
     </div>
   )
 }
-

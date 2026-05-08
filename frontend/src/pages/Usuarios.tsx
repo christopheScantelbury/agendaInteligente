@@ -45,7 +45,13 @@ export default function Usuarios() {
   const unidadeIdFromState = (location.state as { unidadeId?: number })?.unidadeId
   const usuarioLogado = authService.getUsuario()
   const perfilLogado = usuarioLogado?.perfil
-  const isAdmin = (perfilLogado ?? '').toUpperCase() === 'ADMIN'
+  const perfilNorm = (perfilLogado ?? '').toUpperCase().replace('-', '_')
+  const isAdmin = perfilNorm === 'ADMIN' || perfilNorm === 'ADMINISTRADOR'
+  const perfisDisponiveisParaAdministrador = useMemo(() => {
+    if (perfilNorm !== 'ADMINISTRADOR') return perfis
+    const permitidos = new Set(['ADMINISTRADOR', 'PROFISSIONAL', 'ATENDENTE'])
+    return perfis.filter((p) => permitidos.has((p.nome ?? '').toUpperCase()))
+  }, [perfilNorm, perfis])
 
   const { data: perfilUsuarioPermissoes } = useQuery({
     queryKey: ['perfil', 'meu'],
@@ -168,7 +174,7 @@ export default function Usuarios() {
   }
 
   // Verificar permissão de acesso
-  if (!isAdmin && perfilLogado !== 'GERENTE') {
+  if (!isAdmin && perfilNorm !== 'GERENTE') {
     return (
       <div className="text-center py-8">
         <p className="text-red-600 font-semibold">Acesso negado</p>
@@ -213,7 +219,7 @@ export default function Usuarios() {
             key: 'perfil',
             label: 'Perfil',
             type: 'select',
-            options: perfis
+            options: perfisDisponiveisParaAdministrador
               .filter((p) => p.id != null)
               .map((p) => ({ value: String(p.id!), label: p.nome })),
           },
@@ -315,7 +321,7 @@ export default function Usuarios() {
         <UsuarioForm
           usuario={editingUsuario}
           unidades={unidadesDisponiveis}
-          perfis={perfis}
+          perfis={perfisDisponiveisParaAdministrador}
           initialUnidadeId={unidadeIdFromState ?? undefined}
           onClose={() => {
             setShowModal(false)
@@ -398,7 +404,10 @@ export default function Usuarios() {
 /** Perfil é considerado atendente quando a flag atendente do perfil está ativa (vindo do banco). */
 function isPerfilAtendente(perfis: Perfil[], perfilId: number | undefined): boolean {
   if (!perfilId) return false
-  return perfis.find((p) => p.id === perfilId)?.atendente === true
+  const perfil = perfis.find((p) => p.id === perfilId)
+  if (!perfil) return false
+  const nomePerfil = (perfil.nome ?? '').toUpperCase()
+  return perfil.atendente === true || nomePerfil === 'PROFISSIONAL' || nomePerfil === 'ATENDENTE'
 }
 
 type FormDataUsuario = Usuario & {
@@ -555,7 +564,7 @@ function UsuarioForm({
 
     if (perfilAtendente) {
       if (!formData.atendenteCpf?.trim()) {
-        showNotification('error', 'CPF é obrigatório para perfil atendente')
+        showNotification('error', 'CPF é obrigatório para perfil atendente/profissional')
         return
       }
       if (!formData.unidadesIds?.length) {
@@ -847,4 +856,3 @@ function UsuarioForm({
     </form>
   )
 }
-

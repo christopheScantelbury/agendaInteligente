@@ -10,8 +10,34 @@ import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { podeEditar } from '../utils/permissions'
 import { MENUS_CONFIG } from '../constants/menusPermissoes'
+import { getApiErrorMessage } from '../utils/apiError'
 
 type TipoPermissao = 'EDITAR' | 'VISUALIZAR' | 'SEM_ACESSO'
+
+function normalizarGranulares(perfil?: Perfil | null): Record<string, TipoPermissao> {
+  if (!perfil) return {}
+  const granulares = perfil.permissoesGranulares || {}
+  if (Object.keys(granulares).length > 0) {
+    const normalizado: Record<string, TipoPermissao> = {}
+    Object.entries(granulares).forEach(([path, tipo]) => {
+      if (tipo === 'EDITAR' || tipo === 'VISUALIZAR') {
+        normalizado[path] = tipo
+      }
+    })
+    return normalizado
+  }
+
+  const fallbackMenus = perfil.permissoesMenu || []
+  return fallbackMenus.reduce<Record<string, TipoPermissao>>((acc, path) => {
+    acc[path] = 'VISUALIZAR'
+    return acc
+  }, {})
+}
+
+function contarMenusPermitidos(perfil: Perfil): number {
+  const granulares = normalizarGranulares(perfil)
+  return Object.keys(granulares).length
+}
 
 export default function Perfis() {
   const { showNotification } = useNotification()
@@ -41,8 +67,7 @@ export default function Perfis() {
       setConfirmDelete({ isOpen: false, id: null })
     },
     onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || 'Erro ao excluir perfil'
-      showNotification('error', errorMessage)
+      showNotification('error', getApiErrorMessage(error, 'Erro ao excluir perfil'))
     },
   })
 
@@ -95,7 +120,7 @@ export default function Perfis() {
                         <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">Sistema</span>
                       )}
                       {perfil.atendente && (
-                        <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-1 rounded">Atendente</span>
+                        <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-1 rounded">Profissional/Secretaria</span>
                       )}
                       {perfil.cliente && (
                         <span className="text-xs bg-sky-100 text-sky-800 px-2 py-1 rounded">Cliente</span>
@@ -107,9 +132,9 @@ export default function Perfis() {
                     {perfil.descricao && (
                       <p className="text-sm text-gray-500">{perfil.descricao}</p>
                     )}
-                    {perfil.permissoesMenu && perfil.permissoesMenu.length > 0 && (
+                    {contarMenusPermitidos(perfil) > 0 && (
                       <p className="text-xs text-gray-400 mt-1">
-                        {perfil.permissoesMenu.length} menu(s) permitido(s)
+                        {contarMenusPermitidos(perfil)} menu(s) permitido(s)
                       </p>
                     )}
                   </div>
@@ -205,7 +230,8 @@ function PerfilForm({
         atendente: perfil.atendente ?? false,
         cliente: perfil.cliente ?? false,
         gerente: perfil.gerente ?? false,
-        permissoesGranulares: perfil.permissoesGranulares || {},
+        permissoesGranulares: normalizarGranulares(perfil),
+        permissoesMenu: Object.keys(normalizarGranulares(perfil)),
       })
     } else {
       setFormData({
@@ -244,7 +270,14 @@ function PerfilForm({
   }
 
   const getPermissaoMenu = (menuPath: string): TipoPermissao => {
-    return (formData.permissoesGranulares?.[menuPath] as TipoPermissao) || 'SEM_ACESSO'
+    const tipo = formData.permissoesGranulares?.[menuPath]
+    if (tipo === 'EDITAR' || tipo === 'VISUALIZAR') {
+      return tipo
+    }
+    if ((formData.permissoesMenu || []).includes(menuPath)) {
+      return 'VISUALIZAR'
+    }
+    return 'SEM_ACESSO'
   }
 
   const saveMutation = useMutation({
@@ -259,8 +292,7 @@ function PerfilForm({
       onClose()
     },
     onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || 'Erro ao salvar perfil'
-      showNotification('error', errorMessage)
+      showNotification('error', getApiErrorMessage(error, 'Erro ao salvar perfil'))
     },
   })
 
@@ -312,7 +344,7 @@ function PerfilForm({
                 disabled={perfil?.sistema || false}
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
               />
-              <span className="text-sm text-gray-700">Atendente / Profissional</span>
+              <span className="text-sm text-gray-700">Secretaria / Profissional</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -339,88 +371,89 @@ function PerfilForm({
 
         <div className="pt-4 border-t">
           <FormField label="Permissões de Menu">
-            <div className="mt-2 space-y-3 max-h-96 overflow-y-auto">
-              {MENUS_CONFIG.map((menu) => {
-                const permissaoAtual = getPermissaoMenu(menu.path)
-                return (
-                  <div
-                    key={menu.path}
-                    className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <span className="text-sm font-medium text-gray-900">{menu.label}</span>
-                        <span className="ml-2 text-xs text-gray-400">{menu.path}</span>
-                      </div>
-                      {permissaoAtual !== 'SEM_ACESSO' && (
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          permissaoAtual === 'EDITAR' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {permissaoAtual === 'EDITAR' ? 'Editar' : 'Visualizar'}
+            <div className="mt-2 rounded-xl border border-gray-200 bg-gradient-to-b from-white to-gray-50 p-3 sm:p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-sm font-medium text-gray-700">Acesso por tela</p>
+                <span className="text-xs text-gray-500">{MENUS_CONFIG.length} itens</span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto pr-1">
+                {MENUS_CONFIG.map((menu) => {
+                  const permissaoAtual = getPermissaoMenu(menu.path)
+                  return (
+                    <div
+                      key={menu.path}
+                      className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm transition-colors hover:border-gray-300"
+                    >
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-gray-900">{menu.label}</p>
+                          <p className="truncate text-xs text-gray-400">{menu.path}</p>
+                        </div>
+                        <span
+                          className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${
+                            permissaoAtual === 'EDITAR'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : permissaoAtual === 'VISUALIZAR'
+                                ? 'bg-sky-100 text-sky-700'
+                                : 'bg-rose-100 text-rose-700'
+                          }`}
+                        >
+                          {permissaoAtual === 'EDITAR'
+                            ? 'Editar'
+                            : permissaoAtual === 'VISUALIZAR'
+                              ? 'Visualizar'
+                              : 'Sem acesso'}
                         </span>
-                      )}
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 rounded-lg bg-gray-100 p-1">
+                        <button
+                          type="button"
+                          onClick={() => setPermissaoMenu(menu.path, 'EDITAR')}
+                          className={`inline-flex items-center justify-center gap-1 rounded-md px-2 py-2 text-xs font-medium transition-colors ${
+                            permissaoAtual === 'EDITAR'
+                              ? 'bg-emerald-600 text-white shadow-sm'
+                              : 'text-gray-700 hover:bg-white'
+                          }`}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPermissaoMenu(menu.path, 'VISUALIZAR')}
+                          className={`inline-flex items-center justify-center gap-1 rounded-md px-2 py-2 text-xs font-medium transition-colors ${
+                            permissaoAtual === 'VISUALIZAR'
+                              ? 'bg-sky-600 text-white shadow-sm'
+                              : 'text-gray-700 hover:bg-white'
+                          }`}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          Ver
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPermissaoMenu(menu.path, 'SEM_ACESSO')}
+                          className={`inline-flex items-center justify-center gap-1 rounded-md px-2 py-2 text-xs font-medium transition-colors ${
+                            permissaoAtual === 'SEM_ACESSO'
+                              ? 'bg-rose-600 text-white shadow-sm'
+                              : 'text-gray-700 hover:bg-white'
+                          }`}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Bloquear
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setPermissaoMenu(menu.path, 'EDITAR')}
-                        className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                          permissaoAtual === 'EDITAR'
-                            ? 'bg-green-600 text-white hover:bg-green-700'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        <Pencil className="h-4 w-4" />
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPermissaoMenu(menu.path, 'VISUALIZAR')}
-                        className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                          permissaoAtual === 'VISUALIZAR'
-                            ? 'bg-blue-600 text-white hover:bg-blue-700'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        <Eye className="h-4 w-4" />
-                        Visualizar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPermissaoMenu(menu.path, 'SEM_ACESSO')}
-                        className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                          permissaoAtual === 'SEM_ACESSO'
-                            ? 'bg-red-600 text-white hover:bg-red-700'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        <X className="h-4 w-4" />
-                        Sem Acesso
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-            <div className="mt-4 p-3 bg-gray-50 rounded-md">
-              <p className="text-xs text-gray-600 mb-2">
-                <strong>Legenda:</strong>
-              </p>
-              <div className="space-y-1 text-xs text-gray-600">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-600 rounded"></div>
-                  <span><strong>Editar:</strong> Pode criar, editar e excluir registros</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-blue-600 rounded"></div>
-                  <span><strong>Visualizar:</strong> Pode apenas visualizar, sem edição</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-red-600 rounded"></div>
-                  <span><strong>Sem Acesso:</strong> Menu não aparece na navegação</span>
-                </div>
+                  )
+                })}
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-gray-600">
+                <div className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1.5">Editar: acesso total da tela</div>
+                <div className="rounded-md border border-sky-200 bg-sky-50 px-2 py-1.5">Visualizar: sem criar/alterar/excluir</div>
+                <div className="rounded-md border border-rose-200 bg-rose-50 px-2 py-1.5">Sem acesso: não aparece no menu</div>
               </div>
             </div>
           </FormField>
