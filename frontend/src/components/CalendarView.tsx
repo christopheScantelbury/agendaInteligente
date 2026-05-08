@@ -209,11 +209,11 @@ export default function CalendarView({
       backgroundColor = '#10b981'
       borderColor = '#059669'
     } else if (event.status === 'CONFIRMADO' || event.status === 'EM_ANDAMENTO') {
-      backgroundColor = '#3b82f6'
-      borderColor = '#2563eb'
+      backgroundColor = '#7c3aed'
+      borderColor = '#6d28d9'
     } else if (event.status === 'PROCEDIMENTO_FIM') {
-      backgroundColor = '#2563eb'
-      borderColor = '#1d4ed8'
+      backgroundColor = '#6d28d9'
+      borderColor = '#5b21b6'
     } else if (event.status === 'CANCELADO') {
       backgroundColor = '#ef4444'
       borderColor = '#dc2626'

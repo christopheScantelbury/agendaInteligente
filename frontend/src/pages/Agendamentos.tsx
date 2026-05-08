@@ -2002,7 +2002,7 @@ export default function Agendamentos() {
                         setFiltroProfissionalId(idSelecionado)
                       }
                     }}
-                    className="h-9 w-full appearance-none rounded-xl border border-slate-200 bg-white py-1.5 pl-3 pr-9 text-sm text-slate-700 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
+                    className="h-9 w-full appearance-none rounded-xl border border-slate-200 bg-white py-1.5 pl-3 pr-9 text-sm text-slate-700 shadow-sm transition focus:border-violet-500 focus:outline-none focus:ring-4 focus:ring-violet-100"
                     disabled={profissionaisParaFiltro.length === 0}
                   >
                     {profissionaisParaFiltro.length === 0 && (
@@ -2647,7 +2647,7 @@ export default function Agendamentos() {
             <div className="-mx-6 -mt-3 bg-white px-6 pt-0.5 pb-0.5">
               <div className="relative">
                 <div className="absolute left-6 right-6 top-3.5 h-0.5 rounded-full bg-slate-200" />
-                <div className={`absolute left-6 top-3.5 h-0.5 rounded-full bg-blue-600 transition-all ${timelineProgressClass}`} />
+                <div className={`absolute left-6 top-3.5 h-0.5 rounded-full bg-violet-600 transition-all ${timelineProgressClass}`} />
 
                 <div className={`relative grid ${usarEtapaProcedimento ? 'grid-cols-4' : 'grid-cols-3'}`}>
                   <div className="flex flex-col items-center text-center">

@@ -71,7 +71,7 @@
 
 .calendar-view-shell .rbc-day-bg.rbc-today,
 .calendar-view-shell .rbc-day-slot.rbc-today {
-  background: #eff6ff;
+  background: #f5f3ff;
 }
 
 .calendar-view-shell .rbc-off-range-bg {
@@ -80,7 +80,7 @@
 
 .calendar-view-shell .rbc-current-time-indicator {
   height: 2px;
-  background-color: #2563eb;
+  background-color: #7c3aed;
 }
 
 .calendar-view-shell .rbc-allday-cell {
@@ -161,7 +161,7 @@
 .calendar-view-shell .rbc-show-more {
   font-size: 12px;
   font-weight: 600;
-  color: #2563eb;
+  color: #7c3aed;
 }
 
 @media (max-width: 1024px) {
