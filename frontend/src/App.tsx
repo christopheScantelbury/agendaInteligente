@@ -22,6 +22,7 @@ import Unidades from './pages/Unidades'
 import Servicos from './pages/Servicos'
 import Usuarios from './pages/Usuarios'
 import Clientes from './pages/Clientes'
+import ClienteFormPage from './pages/ClienteFormPage'
 import Agendamentos from './pages/Agendamentos'
 import NovoAgendamento from './pages/NovoAgendamento'
 import Reclamacoes from './pages/Reclamacoes'
@@ -30,6 +31,8 @@ import Empresas from './pages/Empresas'
 import Perfis from './pages/Perfis'
 import Profissionais from './pages/Profissionais'
 import Configuracoes from './pages/Configuracoes'
+import ConvitesAcesso from './pages/ConvitesAcesso'
+import ConvitesCliente from './pages/ConvitesCliente'
 import RequirePermissao from './components/RequirePermissao'
 
 
@@ -132,6 +135,8 @@ function App() {
                       <Routes>
                         <Route path="/" element={<DashboardOrAgendamentos />} />
                         <Route path="/clientes" element={<RequirePermissao path="/clientes" fallbackPaths={['/usuarios']}><Clientes /></RequirePermissao>} />
+                        <Route path="/clientes/novo" element={<RequirePermissao path="/clientes" fallbackPaths={['/usuarios']}><ClienteFormPage /></RequirePermissao>} />
+                        <Route path="/clientes/:id/editar" element={<RequirePermissao path="/clientes" fallbackPaths={['/usuarios']}><ClienteFormPage /></RequirePermissao>} />
                         <Route path="/unidades" element={redirectAdminUnico(<RequirePermissao path="/unidades"><Unidades /></RequirePermissao>)} />
                         <Route path="/servicos" element={<RequirePermissao path="/servicos"><Servicos /></RequirePermissao>} />
                         <Route path="/usuarios" element={<RequirePermissao path="/usuarios"><Usuarios /></RequirePermissao>} />
@@ -146,6 +151,8 @@ function App() {
                         <Route path="/notificacoes" element={<RequirePermissao path="/notificacoes"><Notificacoes /></RequirePermissao>} />
                         <Route path="/empresas" element={redirectAdminUnico(<RequirePermissao path="/empresas"><Empresas /></RequirePermissao>)} />
                         <Route path="/perfis" element={<RequirePermissao path="/perfis"><Perfis /></RequirePermissao>} />
+                        <Route path="/convites-acesso" element={<RequirePermissao path="/convites-acesso"><ConvitesAcesso /></RequirePermissao>} />
+                        <Route path="/convites-cliente" element={<RequirePermissao path="/convites-cliente"><ConvitesCliente /></RequirePermissao>} />
                       </Routes>
                     </Layout>
                   </ProtectedRoute>

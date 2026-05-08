@@ -81,6 +81,7 @@ payment:
 # Chave para endpoint temporario de correcao de senha do admin (env: FIX_ADMIN_KEY). Deixe vazio ou remova apos usar.
 app:
   fix-admin-key: ${FIX_ADMIN_KEY:}
+  url-base: ${APP_URL_BASE:http://localhost:5173}
 
 # JWT
 jwt:

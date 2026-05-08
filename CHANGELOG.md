@@ -11,51 +11,78 @@ e este projeto adota versionamento semântico quando aplicável.
 
 #### Added
 - Adicionado o campo `nomePerfil` no `UsuarioDTO` para expor o nome real do perfil do usuário.
+- Novo endpoint `PATCH /api/agendamentos/{id}/observacao` para edição de observação.
+- Novo endpoint `DELETE /api/agendamentos/{id}` para exclusão de agendamento.
+- Novo endpoint `GET /api/publico/clientes/meus-cancelamentos` (histórico do cliente).
+- Novos endpoints de pagamento:
+  - `POST /api/pagamentos/agendamento/{agendamentoId}/registrar`
+  - `PATCH /api/pagamentos/agendamento/{agendamentoId}/ajustar`
+- Novos DTOs: `RegistrarPagamentoAgendamentoDTO`, `AjustarPagamentoAgendamentoDTO`, `AtualizarObservacaoAgendamentoDTO`.
+- Inclusão dos status `NO_SHOW`, `CONFIRMADO` e `PROCEDIMENTO_FIM` no enum de agendamento.
 
 #### Changed
-- Ajustada a listagem de usuários no backend para o perfil `ADMINISTRADOR`, incluindo o próprio administrador logado, administradores vinculados, profissionais, secretárias e registros legados compatíveis.
-- Ajustada a serialização de usuários no backend para retornar o nome real do perfil, preservando perfis customizados como `SECRETARIA`.
+- Listagem de usuários no perfil `ADMINISTRADOR` agora inclui o próprio admin logado, administradores vinculados, profissionais, secretárias e registros legados compatíveis.
+- Serialização de usuários retorna o nome real do perfil, preservando customizações como `SECRETARIA`.
+- `AgendamentoService.atualizarStatus` com regras de transição endurecidas (validação de transições, bloqueio de saltos e de finalização via endpoint genérico).
+- Ao iniciar atendimento (`EM_ANDAMENTO`), vincula automaticamente o atendente autenticado.
+- `NO_SHOW` ignorado nas consultas de conflito de horário ativo.
+- Bloqueio de exclusão de agendamento com pagamento já registrado.
+- `FinalizarAgendamentoDTO` aceita `tipoPagamento`; valor final aceita `>= 0,00` para compor com sinal existente.
+- `PagamentoService` consolidado: registrar manual, ajustar (inclusive zerar), evitar exceder o total e processar valor restante.
+- Confirmação de pagamento não dispara mais NFS-e — emissão apenas no fluxo de finalização.
+- `AtendenteMapper` passou a preencher `nomeUsuario`, `nomeUnidade` e `perfilUsuario`.
+- `AgendamentoRepository` recebeu `findByClienteIdAndStatusOrderByDataHoraInicioDesc(...)`.
+- `NotaFiscalRepository` e `PagamentoRepository` ganharam `deleteByAgendamentoId(...)`.
+- Removida a validação que proibia atualizar agendamento com data/hora no passado.
+
+#### Fixed
+- Mapeamento de cliente: `id` ignorado em `toEntity(...)` e `updateEntityFromDTO(...)`, eliminando `500` na edição.
+
+### Frontend Web
+
+#### Added
+- Nova área de **Clientes** com listagem, formulário em página dedicada (`ClienteFormPage`) e ações de editar/excluir.
+- Tela dedicada de **Profissionais** combinando administradores e profissionais/secretárias na mesma listagem.
+- Confirmação de agendamento com opções "sem sinal"/"com sinal", campos de valor, data e forma de pagamento.
+- Modal de histórico de pagamento e modal de finalização com resumo + emissão de NFS-e.
+- Modal de "não compareceu" decide emissão por existência de sinal; cancelar com observação e devolução de sinal opcional.
+- Novo serviço `frontend/src/services/pagamentoService.ts`.
+- Cadastro rápido de cliente/serviço a partir do campo de busca em Agendamentos (botão "Adicionar" pré-preenche o nome).
+
+#### Changed
+- Tela de agendamentos modernizada (calendário pt-BR como vista padrão, slots de 30 min, cabeçalhos `Dom 01/03`, toolbar `< Hoje >`, cards limpos).
+- Modais "Novo/Editar/Detalhes de Agendamento" reformulados para padrão compacto e consistente.
+- Modal "Novo Serviço" padronizado no mesmo layout do "Novo Cliente"; descrição removida quando aberto a partir de Agendamentos.
+- Campo Unidade ocultado quando o usuário tem apenas uma — selecionado automaticamente.
+- Cliente/Serviço com busca digitável, chips de selecionados e resumo de duração/total ao editar.
+- Fluxo de observação clicável (modal, salvar, refletir no card).
+- Status visuais: `AGENDADO` em preto; `NO_SHOW` em laranja; bordas do modal por etapa do fluxo.
+- Formas de pagamento padronizadas: PIX, DINHEIRO, CARTAO_CREDITO, CARTAO_DEBITO.
+- Removido `Usuários` do menu lateral para `ADMINISTRADOR`; redirecionamentos atualizados para `/profissionais`.
+- Compatibilidade Safari para "Adicionar cliente/serviço" (`requestAnimationFrame` + `onMouseDown` com `preventDefault`).
+- Área do cliente: separação entre agendamentos ativos e histórico de cancelamentos; novo método `meusCancelamentos()`.
+
+#### Fixed
+- Ausência do `ADMINISTRADOR` na tela de profissionais.
+- Inconsistência do status de conclusão (padronizado para `FINALIZADO`).
+- Erros de JSX/tipagem na tela de agendamentos durante build.
 
 ### Mobile
 
 #### Added
-- Adicionado o suporte no mobile para consumir `nomePerfil` na tipagem de usuário.
+- Suporte ao `nomePerfil` na tipagem de usuário.
 
 #### Changed
-- Atualizada a tela mobile de usuários para exibir e filtrar pelo nome real do perfil.
+- Tela de usuários exibe e filtra pelo nome real do perfil.
 
 #### Fixed
-- Corrigida a exibição incorreta de perfis customizados, como `SECRETARIA`, que apareciam como `PROFISSIONAL`.
+- Exibição incorreta de perfis customizados (`SECRETARIA` aparecia como `PROFISSIONAL`).
 
-### Frontend Web
-
-#### Changed
-- Atualizada a tela web de profissionais para combinar administradores e profissionais/secretárias na mesma listagem.
-- Atualizada a tela web de profissionais para identificar visualmente o `ADMINISTRADOR` e evitar ações indevidas de edição/exclusão nesse tipo de registro.
-- Ajustado o rodapé da tela web de profissionais para refletir o total real da listagem combinada.
-- Removida a opção `Usuários` do menu lateral para o perfil `ADMINISTRADOR`.
-- Ajustado o redirecionamento automático do frontend para evitar navegação para `/usuarios` quando o perfil logado for `ADMINISTRADOR`.
-- Ajustados os atalhos internos da tela de unidades para redirecionar o perfil `ADMINISTRADOR` para `/profissionais` em vez de `/usuarios`.
-- Ajustado o fluxo de abertura da tela de profissionais a partir de unidades para preservar o `unidadeId` recebido via navegação e manter o pré-preenchimento correto do formulário.
-- Atualizada a tela web de agendamentos para iniciar por padrão na visualização `Calendário`.
-- Modernizada a interface da tela web de agendamentos, com foco nas áreas de `Visão de calendário` e `Visão diária em linha do tempo`.
-- Removido o bloco textual superior da tela web de agendamentos para deixar o cabeçalho mais limpo.
-- Ajustados os controles principais da tela web de agendamentos (`Linha do tempo`, `Calendário` e `Novo agendamento`) para um formato mais compacto no topo da seção.
-- Atualizada a navegação do calendário para o formato visual `< Hoje >`.
-- Ajustada a visualização do calendário para português do Brasil (`pt-BR`), incluindo títulos e cabeçalhos de datas.
-- Padronizado o cabeçalho dos dias do calendário no formato abreviado, como `Dom 01/03`, `Seg 02/03`.
-- Configurado o calendário para exibir intervalos de horário de 30 em 30 minutos.
-- Refinado o estilo visual do calendário, incluindo toolbar, botões, bordas, sombras e legenda.
-
-#### Fixed
-- Corrigida a ausência do perfil `ADMINISTRADOR` na tela web de profissionais.
-- Corrigida a inconsistência do status de conclusão no frontend web de agendamentos, padronizando a exibição para `FINALIZADO`.
-- Corrigidos erros de estrutura JSX e ajustes de tipagem identificados durante a build do frontend na tela web de agendamentos.
+### Infra & DX
+- `docker-compose.yml` atualizado para frontend em modo dev (hot reload), volume de `node_modules` dedicado, vars `VITE_API_URL` e `VITE_PROXY_TARGET`, e `FIX_ADMIN_KEY`.
+- `frontend/vite.config.ts` carrega proxy dinâmico via `loadEnv`.
+- `GUIA_EASYPANEL_PASSO_A_PASSO.md` atualizado com `FIX_ADMIN_KEY`.
 
 ### Documentação
-
-#### Added
-- Criado o arquivo `CHANGELOG.md` no padrão Keep a Changelog.
-
-#### Changed
+- Criado o `CHANGELOG.md` no padrão Keep a Changelog.
 - Adicionada referência ao `CHANGELOG.md` no `README.md`.

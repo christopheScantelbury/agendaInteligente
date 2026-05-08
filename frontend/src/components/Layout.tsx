@@ -11,9 +11,12 @@ import {
   Menu,
   X,
   User,
+  Users,
   Bell,
   Building2,
   Shield,
+  Link2,
+  UserPlus,
 } from 'lucide-react'
 import { authService } from '../services/authService'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -134,6 +137,16 @@ export default function Layout({ children }: LayoutProps) {
       items.push({ path: '/servicos', label: 'Serviços', icon: <Stethoscope className="h-5 w-5" /> })
     }
     
+    // Clientes (mesma permissão de Usuários)
+    if (temPermissaoMenu('/usuarios')) {
+      items.push({
+        path: '/clientes',
+        label: 'Clientes',
+        icon: <Users className="h-5 w-5" />,
+        paths: ['/clientes'],
+      })
+    }
+
     // Usuários
     if (!isAdminUnico && temPermissaoMenu('/usuarios')) {
       items.push({ path: '/usuarios', label: 'Usuários', icon: <Settings className="h-5 w-5" /> })
@@ -152,6 +165,14 @@ export default function Layout({ children }: LayoutProps) {
     // Perfis - exibir para quem tiver permissão granular (ADMIN ou GERENTE com permissão)
     if (temPermissaoMenu('/perfis')) {
       items.push({ path: '/perfis', label: 'Perfis', icon: <Shield className="h-5 w-5" /> })
+    }
+    
+    if (temPermissaoMenu('/convites-acesso')) {
+      items.push({ path: '/convites-acesso', label: 'Links de venda de acesso', icon: <Link2 className="h-5 w-5" /> })
+    }
+    
+    if (temPermissaoMenu('/convites-cliente')) {
+      items.push({ path: '/convites-cliente', label: 'Links para clientes', icon: <UserPlus className="h-5 w-5" /> })
     }
     
     // Agendamentos (CLIENTE sempre vê; outros perfis conforme permissão granular)
@@ -233,7 +254,7 @@ export default function Layout({ children }: LayoutProps) {
                 <span className={`flex-shrink-0 ${active ? 'text-blue-600' : 'text-gray-500 group-hover:text-gray-700'}`}>
                   {item.icon}
                 </span>
-                <span className="ml-3 font-medium whitespace-nowrap">
+                <span className="ml-3 text-sm leading-5 font-medium whitespace-nowrap">
                   {item.label}
                 </span>
                 {isNotificacoes && contadorReclamacoes > 0 && (

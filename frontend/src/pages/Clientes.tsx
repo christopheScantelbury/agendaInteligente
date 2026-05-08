@@ -1,39 +1,34 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { clienteService, Cliente } from '../services/clienteService'
-import { unidadeService } from '../services/unidadeService'
-import { atendenteService } from '../services/atendenteService'
-import { servicoService, Servico } from '../services/servicoService'
-import { agendamentoService, Agendamento } from '../services/agendamentoService'
-import { Plus, Trash2, Edit, Briefcase, CalendarPlus } from 'lucide-react'
-import { useState, useMemo, useEffect } from 'react'
-import { useNotification } from '../contexts/NotificationContext'
-import ConfirmDialog from '../components/ConfirmDialog'
-import FilterBar from '../components/FilterBar'
-import Modal from '../components/Modal'
-import RecorrenciaConfig, { RecorrenciaConfig as RecorrenciaConfigType } from '../components/RecorrenciaConfig'
-import { maskCPF, maskCNPJ, maskPhone, maskEmail } from '../utils/masks'
-import { matchSearch } from '../utils/normalize'
+import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Plus, Trash2, Edit } from 'lucide-react'
+import { clienteService } from '../services/clienteService'
 import { authService } from '../services/authService'
 import { perfilService } from '../services/perfilService'
 import { podeEditar } from '../utils/permissions'
+import { matchSearch } from '../utils/normalize'
+import { useNotification } from '../contexts/NotificationContext'
+import ConfirmDialog from '../components/ConfirmDialog'
+import FilterBar from '../components/FilterBar'
+import Button from '../components/Button'
 
 export default function Clientes() {
   const { showNotification } = useNotification()
-  const [showModal, setShowModal] = useState(false)
-  const [editingCliente, setEditingCliente] = useState<Cliente | null>(null)
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null })
   const [searchTerm, setSearchTerm] = useState('')
   const [filters, setFilters] = useState<{ ativo?: string }>({})
-  const queryClient = useQueryClient()
-  
+
   const usuario = authService.getUsuario()
   const { data: perfilUsuario } = useQuery({
     queryKey: ['perfil', 'meu'],
     queryFn: () => perfilService.buscarMeuPerfil(),
     enabled: !!usuario,
   })
-  
-  const podeEditarClientes = podeEditar(perfilUsuario, '/clientes')
+
+  const podeEditarClientes = podeEditar(perfilUsuario, '/usuarios')
 
   const { data: clientes = [], isLoading } = useQuery({
     queryKey: ['clientes'],
@@ -47,13 +42,12 @@ export default function Clientes() {
       filtered = filtered.filter(
         (c) =>
           matchSearch(c.nome, searchTerm) ||
-          c.cpfCnpj.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, '')) ||
+          (c.cpfCnpj || '').replace(/\D/g, '').includes(searchTerm.replace(/\D/g, '')) ||
           matchSearch(c.email ?? '', searchTerm) ||
           (c.telefone && c.telefone.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, '')))
       )
     }
 
-    // Filtro de status
     if (filters.ativo !== undefined && filters.ativo !== '') {
       const isAtivo = filters.ativo === 'true'
       filtered = filtered.filter((c) => (c.ativo ?? true) === isAtivo)
@@ -66,6 +60,7 @@ export default function Clientes() {
     mutationFn: clienteService.excluir,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clientes'] })
+      queryClient.invalidateQueries({ queryKey: ['agendamentos'] })
       showNotification('success', 'Cliente excluído com sucesso!')
       setConfirmDelete({ isOpen: false, id: null })
     },
@@ -94,20 +89,13 @@ export default function Clientes() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Clientes</h1>
         {podeEditarClientes && (
-          <button
-            onClick={() => {
-              setEditingCliente(null)
-              setShowModal(true)
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center"
-          >
+          <Button onClick={() => navigate('/clientes/novo')}>
             <Plus className="h-5 w-5 mr-2" />
             Novo Cliente
-          </button>
+          </Button>
         )}
       </div>
 
-      {/* Barra de Filtros */}
       <FilterBar
         onSearchChange={setSearchTerm}
         onFilterChange={setFilters}
@@ -131,7 +119,7 @@ export default function Clientes() {
             <p className="text-gray-500">
               {searchTerm || Object.values(filters).some(v => v !== '' && v !== undefined)
                 ? 'Nenhum cliente encontrado com os filtros aplicados'
-                : 'Nenhum cliente cadastrado'}
+                : 'Nenhum cliente cadastrado.'}
             </p>
           </div>
         ) : (
@@ -141,25 +129,27 @@ export default function Clientes() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-900">{cliente.nome}</p>
-                  <p className="text-sm text-gray-500">CPF/CNPJ: {cliente.cpfCnpj}</p>
+                  <p className="text-sm text-gray-500">CPF/CNPJ: {cliente.cpfCnpj || 'Não informado'}</p>
                   {cliente.email && (
                     <p className="text-sm text-gray-500">Email: {cliente.email}</p>
+                  )}
+                  {cliente.telefone && (
+                    <p className="text-sm text-gray-500">Telefone: {cliente.telefone}</p>
                   )}
                 </div>
                 {podeEditarClientes && (
                   <div className="flex space-x-2">
                     <button
-                      onClick={() => {
-                        setEditingCliente(cliente)
-                        setShowModal(true)
-                      }}
+                      onClick={() => navigate(`/clientes/${cliente.id}/editar`)}
                       className="text-blue-600 hover:text-blue-800"
+                      aria-label="Editar cliente"
                     >
                       <Edit className="h-5 w-5" />
                     </button>
                     <button
                       onClick={() => handleDelete(cliente.id!)}
                       className="text-red-600 hover:text-red-800"
+                      aria-label="Excluir cliente"
                     >
                       <Trash2 className="h-5 w-5" />
                     </button>
@@ -177,24 +167,6 @@ export default function Clientes() {
         )}
       </div>
 
-      <Modal
-        isOpen={showModal}
-        onClose={() => {
-          setShowModal(false)
-          setEditingCliente(null)
-        }}
-        title={editingCliente ? 'Editar Cliente' : 'Novo Cliente'}
-        size="lg"
-      >
-        <ClienteModal
-          cliente={editingCliente}
-          onClose={() => {
-            setShowModal(false)
-            setEditingCliente(null)
-          }}
-        />
-      </Modal>
-
       <ConfirmDialog
         isOpen={confirmDelete.isOpen}
         title="Confirmar Exclusão"
@@ -206,491 +178,5 @@ export default function Clientes() {
         onCancel={() => setConfirmDelete({ isOpen: false, id: null })}
       />
     </div>
-  )
-}
-
-function ClienteModal({ cliente, onClose }: { cliente: Cliente | null; onClose: () => void }) {
-  const queryClient = useQueryClient()
-  const { showNotification } = useNotification()
-  const [documentoTipo, setDocumentoTipo] = useState<'CPF' | 'CNPJ'>('CPF')
-  const [formData, setFormData] = useState<
-    Cliente & { dataNascimento?: string; endereco?: string; observacao?: string }
-  >(
-    cliente || {
-      nome: '',
-      cpfCnpj: '',
-      email: '',
-      telefone: '',
-      dataNascimento: '',
-      endereco: '',
-      observacao: '',
-      unidadesIds: [],
-    }
-  )
-
-  // Opcional: criar agendamento ao cadastrar novo cliente
-  const [queroCriarAgendamento, setQueroCriarAgendamento] = useState(false)
-  const [agendamentoUnidadeId, setAgendamentoUnidadeId] = useState<number | ''>('')
-  const [agendamentoAtendenteId, setAgendamentoAtendenteId] = useState<number | ''>('')
-  const [agendamentoDataHoraInicio, setAgendamentoDataHoraInicio] = useState('')
-  const [agendamentoServicosIds, setAgendamentoServicosIds] = useState<number[]>([])
-  const [recorrenciaConfig, setRecorrenciaConfig] = useState<RecorrenciaConfigType>({
-    recorrente: false,
-    tipoRecorrencia: 'SEMANAL',
-    tipoTermino: 'OCORRENCIAS',
-    numeroOcorrencias: 4,
-    intervalo: 1,
-  })
-
-  const { data: unidades = [] } = useQuery({
-    queryKey: ['unidades'],
-    queryFn: unidadeService.listarTodos,
-  })
-  const unidadeUnicaDisponivel = unidades.length === 1
-
-  const { data: servicos = [] } = useQuery({
-    queryKey: ['servicos'],
-    queryFn: servicoService.listar,
-  })
-
-  const { data: atendentesAgendamento = [] } = useQuery({
-    queryKey: ['atendentes', agendamentoUnidadeId],
-    queryFn: () =>
-      agendamentoUnidadeId ? atendenteService.listarPorUnidade(agendamentoUnidadeId as number) : Promise.resolve([]),
-    enabled: !!agendamentoUnidadeId,
-  })
-
-  useEffect(() => {
-    if (cliente) {
-      const documentoNumeros = (cliente.cpfCnpj || '').replace(/\D/g, '')
-      setDocumentoTipo(documentoNumeros.length > 11 ? 'CNPJ' : 'CPF')
-      setFormData({
-        ...(cliente as any),
-        unidadesIds:
-          cliente.unidadesIds ||
-          cliente.unidades?.map((u) => u.id!).filter((id): id is number => id !== undefined) ||
-          [],
-        dataNascimento: (cliente as any).dataNascimento ?? '',
-        endereco: (cliente as any).endereco ?? '',
-        observacao: (cliente as any).observacao ?? '',
-      })
-    }
-  }, [cliente])
-
-  useEffect(() => {
-    if (!unidadeUnicaDisponivel || !unidades[0]?.id) {
-      return
-    }
-
-    const unidadeId = unidades[0].id
-    setFormData((prev) => ({
-      ...prev,
-      unidadeId,
-      unidadesIds: [unidadeId],
-    }))
-  }, [unidadeUnicaDisponivel, unidades])
-
-  const saveMutation = useMutation({
-    mutationFn: (data: Cliente) =>
-      cliente?.id
-        ? clienteService.atualizar(cliente.id, data)
-        : clienteService.criar(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clientes'] })
-      showNotification('success', cliente ? 'Cliente atualizado com sucesso!' : 'Cliente criado com sucesso!')
-      onClose()
-    },
-    onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || 'Erro ao salvar cliente'
-      showNotification('error', errorMessage)
-    },
-  })
-
-  const [salvandoComAgendamento, setSalvandoComAgendamento] = useState(false)
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    const unidadesIdsSelecionadas =
-      formData.unidadesIds && formData.unidadesIds.length > 0
-        ? formData.unidadesIds
-        : unidadeUnicaDisponivel && unidades[0]?.id
-          ? [unidades[0].id]
-          : []
-
-    const unidadePrincipalId =
-      formData.unidadeId ||
-      (unidadesIdsSelecionadas.length > 0 ? unidadesIdsSelecionadas[0] : undefined)
-
-    // Validação de unidade principal
-    if (!unidadePrincipalId) {
-      showNotification('error', 'Selecione uma unidade para o cliente')
-      return
-    }
-
-    const payload: Cliente = {
-      ...formData,
-      unidadeId: unidadePrincipalId,
-      unidadesIds: unidadesIdsSelecionadas,
-    }
-
-    if (!cliente && queroCriarAgendamento) {
-      if (!agendamentoUnidadeId || !agendamentoAtendenteId || !agendamentoDataHoraInicio) {
-        showNotification('error', 'Preencha unidade, atendente e data/hora do agendamento')
-        return
-      }
-      if (agendamentoServicosIds.length === 0) {
-        showNotification('error', 'Selecione pelo menos um serviço para o agendamento')
-        return
-      }
-      const { unidades: _unidades, ...dadosEnvio } = payload as any
-      setSalvandoComAgendamento(true)
-      try {
-        const clienteCriado = await clienteService.criar(dadosEnvio)
-        const servicosPayload = agendamentoServicosIds.map((servicoId) => {
-          const s = servicos.find((sv) => sv.id === servicoId)
-          return { servicoId, quantidade: 1, valor: s?.valor ?? 0, descricao: s?.nome }
-        })
-        const agendamentoPayload: Agendamento = {
-          clienteId: clienteCriado.id!,
-          unidadeId: agendamentoUnidadeId as number,
-          atendenteId: agendamentoAtendenteId as number,
-          dataHoraInicio: agendamentoDataHoraInicio,
-          servicos: servicosPayload,
-          recorrencia: recorrenciaConfig.recorrente ? recorrenciaConfig : undefined,
-        }
-        await agendamentoService.criar(agendamentoPayload)
-        queryClient.invalidateQueries({ queryKey: ['clientes'] })
-        queryClient.invalidateQueries({ queryKey: ['agendamentos'] })
-        showNotification('success', 'Cliente e agendamento criados com sucesso!')
-        onClose()
-      } catch (err: any) {
-        const msg = err.response?.data?.message || 'Erro ao salvar. Tente novamente.'
-        showNotification('error', msg)
-      } finally {
-        setSalvandoComAgendamento(false)
-      }
-      return
-    }
-
-    // Fluxo normal (sem agendamento ou edição)
-    const { unidades: _unidades, ...dadosEnvio } = payload as any
-    saveMutation.mutate(dadosEnvio)
-  }
-
-  return (
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Nome</label>
-            <input
-              type="text"
-              required
-              value={formData.nome}
-              onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">CPF/CNPJ</label>
-            <div className="mt-1 flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                <input
-                  type="radio"
-                  name="tipoDocumento"
-                  checked={documentoTipo === 'CPF'}
-                  onChange={() => {
-                    const somenteNumeros = (formData.cpfCnpj || '').replace(/\D/g, '').slice(0, 11)
-                    setDocumentoTipo('CPF')
-                    setFormData({ ...formData, cpfCnpj: maskCPF(somenteNumeros) })
-                  }}
-                  className="border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                CPF
-              </label>
-              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                <input
-                  type="radio"
-                  name="tipoDocumento"
-                  checked={documentoTipo === 'CNPJ'}
-                  onChange={() => {
-                    const somenteNumeros = (formData.cpfCnpj || '').replace(/\D/g, '').slice(0, 14)
-                    setDocumentoTipo('CNPJ')
-                    setFormData({ ...formData, cpfCnpj: maskCNPJ(somenteNumeros) })
-                  }}
-                  className="border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                CNPJ
-              </label>
-            </div>
-            <input
-              type="text"
-              required
-              value={formData.cpfCnpj}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, '')
-                const masked =
-                  documentoTipo === 'CPF'
-                    ? maskCPF(value.slice(0, 11))
-                    : maskCNPJ(value.slice(0, 14))
-                setFormData({ ...formData, cpfCnpj: masked })
-              }}
-              maxLength={documentoTipo === 'CPF' ? 14 : 18}
-              placeholder={documentoTipo === 'CPF' ? '000.000.000-00' : '00.000.000/0000-00'}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
-            <input
-              type="email"
-              value={formData.email || ''}
-              onChange={(e) => setFormData({ ...formData, email: maskEmail(e.target.value) })}
-              placeholder="exemplo@email.com"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Telefone</label>
-            <input
-              type="text"
-              value={formData.telefone || ''}
-              onChange={(e) => setFormData({ ...formData, telefone: maskPhone(e.target.value) })}
-              maxLength={15}
-              placeholder="(00) 00000-0000"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            />
-          </div>
-
-          <div className="pt-4 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Data de nascimento</label>
-              <input
-                type="date"
-                value={(formData as any).dataNascimento || ''}
-                onChange={(e) => setFormData({ ...(formData as any), dataNascimento: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Endereço</label>
-              <input
-                type="text"
-                value={(formData as any).endereco || ''}
-                onChange={(e) => setFormData({ ...(formData as any), endereco: e.target.value })}
-                placeholder="Rua, número, bairro, cidade..."
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700">Observação / Referência</label>
-              <textarea
-                rows={3}
-                value={(formData as any).observacao || ''}
-                onChange={(e) => setFormData({ ...(formData as any), observacao: e.target.value })}
-                placeholder="Referência do endereço, observações importantes..."
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* Seção de Unidades */}
-          {!unidadeUnicaDisponivel && (
-            <div className="pt-4 border-t border-gray-200">
-              <div className="flex items-center gap-2 mb-4">
-                <Briefcase className="h-5 w-5 text-blue-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Unidades</h3>
-              </div>
-              <p className="text-sm text-gray-600 mb-4">
-                Selecione uma ou mais unidades às quais o cliente terá acesso.
-              </p>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Unidades <span className="text-red-500">*</span>
-                </label>
-                <div className="mt-2 space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-md p-3">
-                  {unidades.length === 0 ? (
-                    <p className="text-sm text-gray-500">Nenhuma unidade disponível</p>
-                  ) : (
-                    unidades.map((unidade) => (
-                      <label
-                        key={unidade.id}
-                        className="flex items-center p-2 rounded hover:bg-gray-50 cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={formData.unidadesIds?.includes(unidade.id!) || false}
-                          onChange={(e) => {
-                            const currentIds = formData.unidadesIds || []
-                            if (e.target.checked) {
-                              setFormData({
-                                ...formData,
-                                unidadeId: unidade.id,
-                                unidadesIds: [...currentIds, unidade.id!],
-                              })
-                            } else {
-                              const novasUnidades = currentIds.filter((id) => id !== unidade.id)
-                              setFormData({
-                                ...formData,
-                                unidadeId: novasUnidades.length > 0 ? novasUnidades[0] : undefined,
-                                unidadesIds: novasUnidades,
-                              })
-                            }
-                          }}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="ml-3 text-sm text-gray-700">
-                          {unidade.nome}
-                          {unidade.cidade && (
-                            <span className="text-gray-500 ml-2">({unidade.cidade})</span>
-                          )}
-                        </span>
-                      </label>
-                    ))
-                  )}
-                </div>
-                {formData.unidadesIds && formData.unidadesIds.length > 0 && (
-                  <p className="mt-2 text-xs text-gray-500">
-                    {formData.unidadesIds.length} unidade(s) selecionada(s)
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Seção: Já criar agendamento (só ao criar novo cliente) */}
-          {!cliente && (
-            <div className="pt-4 border-t border-gray-200">
-              <label className="flex items-center gap-2 cursor-pointer p-3 rounded-lg border border-gray-200 hover:bg-gray-50">
-                <input
-                  type="checkbox"
-                  checked={queroCriarAgendamento}
-                  onChange={(e) => {
-                    setQueroCriarAgendamento(e.target.checked)
-                    if (!e.target.checked) {
-                      setAgendamentoUnidadeId('')
-                      setAgendamentoAtendenteId('')
-                      setAgendamentoDataHoraInicio('')
-                      setAgendamentoServicosIds([])
-                    }
-                  }}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
-                />
-                <span className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <CalendarPlus className="w-5 h-5 text-blue-600" />
-                  Já criar um agendamento para este cliente
-                </span>
-              </label>
-
-              {queroCriarAgendamento && (
-                <div className="mt-4 space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <p className="text-sm text-gray-600">
-                    Preencha os dados do primeiro agendamento. Pode ser único ou recorrente.
-                  </p>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Unidade do agendamento</label>
-                    <select
-                      value={agendamentoUnidadeId}
-                      onChange={(e) => {
-                        setAgendamentoUnidadeId(e.target.value ? Number(e.target.value) : '')
-                        setAgendamentoAtendenteId('')
-                      }}
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                    >
-                      <option value="">Selecione</option>
-                      {unidades.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.nome}
-                          {u.cidade ? ` (${u.cidade})` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Atendente</label>
-                    <select
-                      value={agendamentoAtendenteId}
-                      onChange={(e) => setAgendamentoAtendenteId(e.target.value ? Number(e.target.value) : '')}
-                      disabled={!agendamentoUnidadeId}
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm disabled:bg-gray-100"
-                    >
-                      <option value="">Selecione</option>
-                      {atendentesAgendamento.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.nomeUsuario}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Serviços</label>
-                    <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3 bg-white">
-                      {(servicos || []).filter((s) => s.ativo !== false).map((s: Servico) => (
-                        <label key={s.id} className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={agendamentoServicosIds.includes(s.id!)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setAgendamentoServicosIds((prev) => [...prev, s.id!])
-                              } else {
-                                setAgendamentoServicosIds((prev) => prev.filter((id) => id !== s.id))
-                              }
-                            }}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <span className="text-sm">
-                            {s.nome}
-                            {s.valor != null && <span className="text-gray-500 ml-1">R$ {Number(s.valor).toFixed(2)}</span>}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Data e hora</label>
-                    <input
-                      type="datetime-local"
-                      value={agendamentoDataHoraInicio}
-                      onChange={(e) => setAgendamentoDataHoraInicio(e.target.value)}
-                      min={new Date().toISOString().slice(0, 16)}
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                    />
-                  </div>
-
-                  <RecorrenciaConfig value={recorrenciaConfig} onChange={setRecorrenciaConfig} />
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:space-x-2 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saveMutation.isPending || salvandoComAgendamento}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={saveMutation.isPending || salvandoComAgendamento}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-            >
-              {saveMutation.isPending || salvandoComAgendamento
-                ? 'Salvando...'
-                : queroCriarAgendamento && !cliente
-                  ? 'Cadastrar e criar agendamento'
-                  : 'Salvar'}
-            </button>
-          </div>
-        </form>
   )
 }

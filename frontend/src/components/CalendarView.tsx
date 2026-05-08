@@ -13,9 +13,9 @@ moment.locale('pt-br')
 const localizer = momentLocalizer(moment)
 
 const capitalizar = (texto: string): string =>
-  texto.charAt(0).toUpperCase() + texto.slice(1)
+  texto ? texto.charAt(0).toUpperCase() + texto.slice(1) : texto
 
-const DIAS_SEMANA_ABREVIADOS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab']
+const DIAS_SEMANA_ABREVIADOS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
 const formatarDiaCabecalho = (date: Date): string =>
   `${DIAS_SEMANA_ABREVIADOS[getDay(date)]} ${format(date, 'dd/MM', { locale: ptBR })}`
@@ -81,6 +81,24 @@ function CalendarToolbar({
   )
 }
 
+interface EventCardProps {
+  event: CalendarEvent
+}
+
+function CalendarEventCard({ event }: EventCardProps) {
+  const observacao = event.resource?.observacoes?.trim()
+
+  return (
+    <div className="calendar-event-card">
+      <span className="calendar-event-time">
+        {format(event.start, 'HH:mm', { locale: ptBR })} - {format(event.end, 'HH:mm', { locale: ptBR })}
+      </span>
+      <span className="calendar-event-title">{event.title}</span>
+      {observacao && <span className="calendar-event-observation">{observacao}</span>}
+    </div>
+  )
+}
+
 interface CalendarEvent {
   id?: number
   title: string
@@ -119,13 +137,11 @@ export default function CalendarView({
   const [currentDate, setCurrentDate] = useState<Date>(date)
   const [isMobile, setIsMobile] = useState(false)
 
-  // Detectar se está em mobile e ajustar visualização
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 768
       setIsMobile(mobile)
-      
-      // No mobile, forçar visualização de dia se estiver em semana
+
       if (mobile && currentView === 'week') {
         setCurrentView('day')
         if (onViewChange) {
@@ -144,7 +160,7 @@ export default function CalendarView({
       const inicio = new Date(agendamento.dataHoraInicio)
       const fim = agendamento.dataHoraFim
         ? new Date(agendamento.dataHoraFim)
-        : new Date(inicio.getTime() + 60 * 60 * 1000) // 1 hora padrão
+        : new Date(inicio.getTime() + 60 * 60 * 1000)
 
       const servicosNomes = agendamento.servicos
         ?.map((s) => s.descricao || 'Serviço')
@@ -164,18 +180,12 @@ export default function CalendarView({
   const isSlotDisabled = (date: Date) => {
     if (!horarioAbertura || !horarioFechamento) return false
 
-    // Converter horário atual do slot para minutos do dia
     const currentMinutes = date.getHours() * 60 + date.getMinutes()
-
-    // Parse horário de abertura
     const [openHour, openMinute] = horarioAbertura.split(':').map(Number)
-    const openMinutes = openHour * 60 + openMinute
-
-    // Parse horário de fechamento
     const [closeHour, closeMinute] = horarioFechamento.split(':').map(Number)
+    const openMinutes = openHour * 60 + openMinute
     const closeMinutes = closeHour * 60 + closeMinute
 
-    // Check if slot is in the past
     const now = new Date()
     if (date < now) return true
 
@@ -183,14 +193,9 @@ export default function CalendarView({
   }
 
   const slotPropGetter = (date: Date) => {
-    const isDisabled = isSlotDisabled(date)
-
-    if (isDisabled) {
+    if (isSlotDisabled(date)) {
       return {
-        className: 'bg-red-50 cursor-not-allowed',
-        style: {
-          backgroundColor: '#fef2f2', // red-50
-        }
+        className: 'calendar-slot-disabled cursor-not-allowed',
       }
     }
     return {}
@@ -200,39 +205,43 @@ export default function CalendarView({
     let backgroundColor = '#3174ad'
     let borderColor = '#3174ad'
 
-    if (event.status === 'FINALIZADO') {
+    if (event.status === 'FINALIZADO' || event.status === 'CONCLUIDO') {
       backgroundColor = '#10b981'
       borderColor = '#059669'
+    } else if (event.status === 'CONFIRMADO' || event.status === 'EM_ANDAMENTO') {
+      backgroundColor = '#3b82f6'
+      borderColor = '#2563eb'
+    } else if (event.status === 'PROCEDIMENTO_FIM') {
+      backgroundColor = '#2563eb'
+      borderColor = '#1d4ed8'
     } else if (event.status === 'CANCELADO') {
       backgroundColor = '#ef4444'
       borderColor = '#dc2626'
+    } else if (event.status === 'NO_SHOW') {
+      backgroundColor = '#f97316'
+      borderColor = '#ea580c'
     } else if (event.status === 'AGENDADO') {
-      backgroundColor = '#3b82f6'
-      borderColor = '#2563eb'
+      backgroundColor = '#111111'
+      borderColor = '#000000'
     }
 
     return {
       style: {
         backgroundColor,
         borderColor,
-        borderWidth: '2px',
-        borderRadius: '4px',
+        borderWidth: '1px',
+        borderRadius: '10px',
         color: 'white',
-        padding: '2px 4px',
+        padding: '0',
         fontSize: '0.875rem',
+        boxShadow: '0 6px 14px -12px rgba(15, 23, 42, 0.55)',
       },
     }
   }
 
   const handleSelectSlot = (slotInfo: SlotInfo) => {
     if (disabled) return
-
-    // Verificar se o slot selecionado está dentro do horário de funcionamento
-    // Checa tanto o início quanto o (fim - 1 minuto) para garantir que intervalos longos não furem
-    if (isSlotDisabled(slotInfo.start) || isSlotDisabled(new Date(slotInfo.end.getTime() - 1))) {
-      return // Ignora o clique se estiver fora do horário
-    }
-
+    if (isSlotDisabled(slotInfo.start) || isSlotDisabled(new Date(slotInfo.end.getTime() - 1))) return
     if (onSelectSlot) {
       onSelectSlot(slotInfo)
     }
@@ -245,10 +254,10 @@ export default function CalendarView({
     }
   }
 
-  const handleViewChange = (view: View) => {
-    setCurrentView(view)
+  const handleViewChange = (nextView: View) => {
+    setCurrentView(nextView)
     if (onViewChange) {
-      onViewChange(view)
+      onViewChange(nextView)
     }
   }
 
@@ -259,16 +268,17 @@ export default function CalendarView({
     }
   }
 
-  // No mobile, usar visualização de dia por padrão
   const effectiveView = isMobile && currentView === 'week' ? 'day' : currentView
 
   return (
-    <div className={`${isMobile ? 'h-[500px]' : 'h-[600px] lg:h-[700px]'} w-full bg-white rounded-lg shadow-sm ${isMobile ? 'p-2' : 'p-4'} relative ${disabled ? 'pointer-events-none opacity-50' : ''}`}>
+    <div
+      className={`calendar-view-shell ${isMobile ? 'h-[500px]' : 'h-[600px] lg:h-[700px]'} relative w-full rounded-[24px] border border-slate-200 bg-white ${isMobile ? 'p-2' : 'p-4'} shadow-[0_18px_50px_-34px_rgba(15,23,42,0.45)] ${disabled ? 'pointer-events-none opacity-50' : ''}`}
+    >
       {disabled && (
-        <div className="absolute inset-0 bg-gray-900 bg-opacity-30 z-10 rounded-lg flex items-center justify-center backdrop-blur-sm">
-          <div className="bg-white rounded-lg shadow-xl p-6 border-2 border-blue-300">
-            <p className="text-gray-700 font-semibold text-lg">Modal aberto</p>
-            <p className="text-gray-500 text-sm mt-1">O calendário está desabilitado enquanto o modal estiver aberto</p>
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-gray-900 bg-opacity-30 backdrop-blur-sm">
+          <div className="rounded-lg border-2 border-blue-300 bg-white p-6 shadow-xl">
+            <p className="text-lg font-semibold text-gray-700">Modal aberto</p>
+            <p className="mt-1 text-sm text-gray-500">O calendário está desabilitado enquanto o modal estiver aberto</p>
           </div>
         </div>
       )}
@@ -276,6 +286,7 @@ export default function CalendarView({
         localizer={localizer}
         components={{
           toolbar: CalendarToolbar,
+          event: CalendarEventCard,
         }}
         events={events}
         startAccessor="start"
@@ -303,25 +314,19 @@ export default function CalendarView({
           noEventsInRange: 'Não há agendamentos neste período.',
         }}
         formats={{
-          dayHeaderFormat: (date) => {
-            return isMobile ? format(date, 'dd/MM', { locale: ptBR }) : formatarDiaCabecalho(date)
-          },
-          dayFormat: (date) => {
-            return formatarDiaCabecalho(date)
-          },
-          weekdayFormat: (date) => {
-            return isMobile ? format(date, 'dd', { locale: ptBR }) : formatarDiaCabecalho(date)
-          },
+          dayHeaderFormat: (date) => (isMobile ? format(date, 'dd/MM', { locale: ptBR }) : formatarDiaCabecalho(date)),
+          dayFormat: (date) => formatarDiaCabecalho(date),
+          weekdayFormat: (date) => (isMobile ? format(date, 'dd', { locale: ptBR }) : formatarDiaCabecalho(date)),
           dayRangeHeaderFormat: ({ start, end }) =>
             `${capitalizar(format(start, 'MMMM', { locale: ptBR }))} ${format(start, 'dd')} - ${format(end, 'dd')}`,
-          timeGutterFormat: isMobile ? 'HH:mm' : 'HH:mm',
+          timeGutterFormat: 'HH:mm',
           eventTimeRangeFormat: ({ start, end }) =>
             `${format(start, 'HH:mm', { locale: ptBR })} - ${format(end, 'HH:mm', { locale: ptBR })}`,
         }}
-        min={new Date(2024, 0, 1, 6, 0, 0)} // 6:00 AM
-        max={new Date(2024, 0, 1, 22, 0, 0)} // 10:00 PM
-        step={30} // Intervalo de 30 minutos
-        timeslots={1} // Exibir grade e marcação a cada 30 minutos
+        min={new Date(2024, 0, 1, 8, 0, 0)}
+        max={new Date(2024, 0, 1, 22, 0, 0)}
+        step={30}
+        timeslots={1}
         defaultView={isMobile ? 'day' : 'week'}
         culture="pt-BR"
       />

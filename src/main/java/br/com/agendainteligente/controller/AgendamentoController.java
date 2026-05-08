@@ -2,6 +2,7 @@ package br.com.agendainteligente.controller;
 
 import br.com.agendainteligente.domain.enums.StatusAgendamento;
 import br.com.agendainteligente.dto.AgendamentoDTO;
+import br.com.agendainteligente.dto.AtualizarObservacaoAgendamentoDTO;
 import br.com.agendainteligente.service.AgendamentoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -60,11 +61,27 @@ public class AgendamentoController {
         return ResponseEntity.ok(agendamentoService.atualizarStatus(id, status));
     }
 
+    @PatchMapping("/{id}/observacao")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'PROFISSIONAL', 'CLIENTE')")
+    @Operation(summary = "Atualizar observação do agendamento")
+    public ResponseEntity<AgendamentoDTO> atualizarObservacao(@PathVariable Long id,
+                                                              @RequestBody AtualizarObservacaoAgendamentoDTO request) {
+        return ResponseEntity.ok(agendamentoService.atualizarObservacao(id, request.getObservacoes()));
+    }
+
     @PostMapping("/{id}/cancelar")
     @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'PROFISSIONAL', 'CLIENTE')")
     @Operation(summary = "Cancelar agendamento")
     public ResponseEntity<Void> cancelar(@PathVariable Long id) {
         agendamentoService.cancelar(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'PROFISSIONAL', 'CLIENTE')")
+    @Operation(summary = "Excluir agendamento")
+    public ResponseEntity<Void> excluir(@PathVariable Long id) {
+        agendamentoService.excluir(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -76,4 +93,3 @@ public class AgendamentoController {
         return ResponseEntity.ok(agendamentoService.finalizar(id, finalizarDTO));
     }
 }
-

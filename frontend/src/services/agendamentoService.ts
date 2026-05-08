@@ -42,6 +42,7 @@ export interface Agendamento {
 
 export interface FinalizarAgendamento {
   valorFinal: number
+  tipoPagamento?: 'PIX' | 'DINHEIRO' | 'CARTAO_CREDITO' | 'CARTAO_DEBITO' | 'BOLETO'
 }
 
 export const agendamentoService = {
@@ -69,9 +70,30 @@ export const agendamentoService = {
     await api.post(`/agendamentos/${id}/cancelar`)
   },
 
-  finalizar: async (id: number, valorFinal: number): Promise<Agendamento> => {
-    const response = await api.post<Agendamento>(`/agendamentos/${id}/finalizar`, { valorFinal })
+  atualizarStatus: async (id: number, status: string): Promise<Agendamento> => {
+    const response = await api.patch<Agendamento>(`/agendamentos/${id}/status`, null, {
+      params: { status },
+    })
     return response.data
   },
-}
 
+  atualizarObservacao: async (id: number, observacoes: string): Promise<Agendamento> => {
+    const response = await api.patch<Agendamento>(`/agendamentos/${id}/observacao`, {
+      observacoes,
+    })
+    return response.data
+  },
+
+  excluir: async (id: number): Promise<void> => {
+    await api.delete(`/agendamentos/${id}`)
+  },
+
+  finalizar: async (id: number, payload: FinalizarAgendamento): Promise<Agendamento> => {
+    const response = await api.post<Agendamento>(`/agendamentos/${id}/finalizar`, payload)
+    return response.data
+  },
+
+  emitirNotaFiscal: async (agendamentoId: number): Promise<void> => {
+    await api.post(`/notas-fiscais/agendamento/${agendamentoId}/emitir`)
+  },
+}

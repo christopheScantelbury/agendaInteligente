@@ -7,6 +7,7 @@ export interface Cliente {
   cpfCnpj: string
   email?: string
   telefone?: string
+  unidadeId?: number
   endereco?: string
   observacao?: string
   numero?: string
@@ -17,6 +18,7 @@ export interface Cliente {
   uf?: string
   dataNascimento?: string
   rg?: string
+  senha?: string
   ativo?: boolean
   unidadeId?: number
   unidadesIds?: number[]

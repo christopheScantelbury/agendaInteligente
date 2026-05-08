@@ -1,6 +1,7 @@
 package br.com.agendainteligente.service;
 
 import br.com.agendainteligente.domain.entity.Cliente;
+import br.com.agendainteligente.domain.entity.Empresa;
 import br.com.agendainteligente.domain.entity.Unidade;
 import br.com.agendainteligente.domain.entity.Usuario;
 import br.com.agendainteligente.dto.ClienteDTO;
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -93,17 +95,6 @@ public class ClienteService {
             case ADMIN:
                 log.debug("ADMIN: listando todos os clientes");
                 return clienteRepository.findAll();
-            case ADMINISTRADOR:
-                log.debug("ADMINISTRADOR: listando clientes das suas unidades");
-                Set<Long> unidadesAdministradorIds = unidadeRepository.findByAdminUnicoId(usuarioLogado.getId()).stream()
-                        .map(Unidade::getId)
-                        .collect(Collectors.toSet());
-                if (unidadesAdministradorIds.isEmpty()) {
-                    return List.of();
-                }
-                return clienteRepository.findAll().stream()
-                        .filter(c -> c.getUnidade() != null && unidadesAdministradorIds.contains(c.getUnidade().getId()))
-                        .collect(Collectors.toList());
 
             case GERENTE:
                 log.debug("GERENTE: listando clientes apenas das unidades vinculadas ao gerente");
@@ -168,10 +159,6 @@ public class ClienteService {
         switch (usuarioLogado.getPerfil()) {
             case ADMIN:
                 return unidadeRepository.findAll().stream().map(Unidade::getId).collect(Collectors.toSet());
-            case ADMINISTRADOR:
-                return unidadeRepository.findByAdminUnicoId(usuarioLogado.getId()).stream()
-                        .map(Unidade::getId)
-                        .collect(Collectors.toSet());
             case GERENTE:
                 if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
                     return Set.of();
@@ -217,7 +204,8 @@ public class ClienteService {
         // Remover máscaras antes de validar e salvar
         normalizeClienteDTO(clienteDTO);
         
-        if (clienteRepository.existsByCpfCnpj(clienteDTO.getCpfCnpj())) {
+        if (hasText(clienteDTO.getCpfCnpj())
+                && clienteRepository.existsByCpfCnpj(clienteDTO.getCpfCnpj())) {
             throw new BusinessException("Já existe um cliente cadastrado com este CPF/CNPJ");
         }
         
@@ -228,12 +216,19 @@ public class ClienteService {
             }
         }
         
-        Usuario usuarioLogado = getUsuarioLogadoObrigatorio();
         Cliente cliente = clienteMapper.toEntity(clienteDTO);
-
-        // Buscar e associar unidade principal (com fallback para unidade única permitida)
-        Unidade unidadePrincipal = resolverUnidadePrincipal(clienteDTO, usuarioLogado, null);
-        cliente.setUnidade(unidadePrincipal);
+        
+        // Buscar e associar unidade principal
+        if (clienteDTO.getUnidadeId() != null) {
+            Unidade unidade = unidadeRepository.findById(clienteDTO.getUnidadeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada com id: " + clienteDTO.getUnidadeId()));
+            if (!unidade.getAtivo()) {
+                throw new BusinessException("Unidade não está ativa");
+            }
+            cliente.setUnidade(unidade);
+        } else {
+            throw new BusinessException("Unidade é obrigatória para criar um cliente");
+        }
         
         // Associar unidades adicionais ao cliente (além da principal)
         if (clienteDTO.getUnidadesIds() != null && !clienteDTO.getUnidadesIds().isEmpty()) {
@@ -241,7 +236,6 @@ public class ClienteService {
             if (unidades.size() != clienteDTO.getUnidadesIds().size()) {
                 throw new BusinessException("Uma ou mais unidades informadas não foram encontradas");
             }
-            validarAcessoUnidades(usuarioLogado, unidades);
             cliente.setUnidades(unidades);
         }
         
@@ -256,7 +250,6 @@ public class ClienteService {
                     .email(cliente.getEmail())
                     .senha(passwordEncoder.encode(clienteDTO.getSenha()))
                     .perfilSistema(Usuario.PerfilUsuario.CLIENTE)
-                    .adminUnicoId(getAdminUnicoIdDoUsuarioLogado())
                     .ativo(cliente.getAtivo())
                     .build();
                 
@@ -287,15 +280,14 @@ public class ClienteService {
             throw new ResourceNotFoundException("Cliente não encontrado com id: " + id);
         }
         
-        if (!cliente.getCpfCnpj().equals(clienteDTO.getCpfCnpj()) 
+        if (!Objects.equals(cliente.getCpfCnpj(), clienteDTO.getCpfCnpj())
+                && hasText(clienteDTO.getCpfCnpj())
                 && clienteRepository.existsByCpfCnpj(clienteDTO.getCpfCnpj())) {
             throw new BusinessException("Já existe outro cliente cadastrado com este CPF/CNPJ");
         }
         
         clienteMapper.updateEntityFromDTO(clienteDTO, cliente);
         
-        Usuario usuarioLogado = getUsuarioLogadoObrigatorio();
-
         // Atualizar unidade principal
         if (clienteDTO.getUnidadeId() != null) {
             Unidade unidade = unidadeRepository.findById(clienteDTO.getUnidadeId())
@@ -303,11 +295,7 @@ public class ClienteService {
             if (!unidade.getAtivo()) {
                 throw new BusinessException("Unidade não está ativa");
             }
-            validarAcessoUnidades(usuarioLogado, List.of(unidade));
             cliente.setUnidade(unidade);
-        } else if (cliente.getUnidade() == null) {
-            Unidade unidadePrincipal = resolverUnidadePrincipal(clienteDTO, usuarioLogado, null);
-            cliente.setUnidade(unidadePrincipal);
         }
         
         // Atualizar unidades adicionais do cliente
@@ -319,7 +307,6 @@ public class ClienteService {
                 if (unidades.size() != clienteDTO.getUnidadesIds().size()) {
                     throw new BusinessException("Uma ou mais unidades informadas não foram encontradas");
                 }
-                validarAcessoUnidades(usuarioLogado, unidades);
                 cliente.setUnidades(unidades);
             }
         }
@@ -346,10 +333,12 @@ public class ClienteService {
      * Remove máscaras de campos como CPF/CNPJ, telefone, CEP e número.
      */
     private void normalizeClienteDTO(ClienteDTO clienteDTO) {
-        if (clienteDTO.getCpfCnpj() != null && !clienteDTO.getCpfCnpj().trim().isEmpty()) {
+        if (hasText(clienteDTO.getCpfCnpj())) {
             String cpfCnpjNormalizado = ONLY_DIGITS.matcher(clienteDTO.getCpfCnpj()).replaceAll("");
             // Limitar a 14 caracteres (tamanho máximo do campo no banco - aceita CPF 11 ou CNPJ 14)
             clienteDTO.setCpfCnpj(cpfCnpjNormalizado.length() > 14 ? cpfCnpjNormalizado.substring(0, 14) : cpfCnpjNormalizado);
+        } else {
+            clienteDTO.setCpfCnpj(null);
         }
         if (clienteDTO.getTelefone() != null && !clienteDTO.getTelefone().trim().isEmpty()) {
             String telefoneNormalizado = ONLY_DIGITS.matcher(clienteDTO.getTelefone()).replaceAll("");
@@ -366,6 +355,10 @@ public class ClienteService {
             // Limitar a 10 caracteres (tamanho máximo do campo no banco)
             clienteDTO.setNumero(numeroNormalizado.length() > 10 ? numeroNormalizado.substring(0, 10) : numeroNormalizado);
         }
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
     }
     
     /**
@@ -388,69 +381,5 @@ public class ClienteService {
         }
         
         return dto;
-    }
-
-    private Long getAdminUnicoIdDoUsuarioLogado() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) {
-            return null;
-        }
-        return usuarioRepository.findByEmail(auth.getName())
-                .filter(u -> u.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR)
-                .map(Usuario::getId)
-                .orElse(null);
-    }
-
-    private Usuario getUsuarioLogadoObrigatorio() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) {
-            throw new BusinessException("Não autorizado");
-        }
-        return usuarioRepository.findByEmail(auth.getName())
-                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
-    }
-
-    private Unidade resolverUnidadePrincipal(ClienteDTO clienteDTO, Usuario usuarioLogado, Unidade unidadeAtual) {
-        Long unidadeId = clienteDTO.getUnidadeId();
-        if (unidadeId == null && clienteDTO.getUnidadesIds() != null && !clienteDTO.getUnidadesIds().isEmpty()) {
-            unidadeId = clienteDTO.getUnidadesIds().get(0);
-        }
-        if (unidadeId == null && unidadeAtual != null) {
-            unidadeId = unidadeAtual.getId();
-        }
-        if (unidadeId == null) {
-            Set<Long> permitidas = obterUnidadesIdsPermitidas();
-            if (permitidas.size() == 1) {
-                unidadeId = permitidas.iterator().next();
-            }
-        }
-        if (unidadeId == null) {
-            throw new BusinessException("Não foi possível identificar a unidade. Selecione uma unidade para o cliente");
-        }
-
-        final Long unidadeIdFinal = unidadeId;
-        Unidade unidade = unidadeRepository.findById(unidadeIdFinal)
-                .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada com id: " + unidadeIdFinal));
-        if (!unidade.getAtivo()) {
-            throw new BusinessException("Unidade não está ativa");
-        }
-        validarAcessoUnidades(usuarioLogado, List.of(unidade));
-        return unidade;
-    }
-
-    private void validarAcessoUnidades(Usuario usuarioLogado, List<Unidade> unidades) {
-        if (usuarioLogado == null || unidades == null || unidades.isEmpty()) {
-            return;
-        }
-        if (usuarioLogado.getPerfil() == Usuario.PerfilUsuario.ADMIN) {
-            return;
-        }
-        Set<Long> unidadesPermitidas = obterUnidadesIdsPermitidas();
-        boolean possuiUnidadeNaoPermitida = unidades.stream()
-                .map(Unidade::getId)
-                .anyMatch(id -> id == null || !unidadesPermitidas.contains(id));
-        if (possuiUnidadeNaoPermitida) {
-            throw new BusinessException("Uma ou mais unidades informadas não pertencem ao seu acesso");
-        }
     }
 }

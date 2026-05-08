@@ -17,6 +17,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -56,7 +57,9 @@ public class EmpresaService {
             return List.of();
         }
         if (Usuario.PerfilUsuario.ADMIN.equals(usuario.getPerfil())) {
-            return empresas;
+            return empresas.stream()
+                    .filter(e -> e.getDataExpiracaoAcesso() == null || !e.getDataExpiracaoAcesso().isBefore(LocalDate.now()))
+                    .collect(Collectors.toList());
         }
         if (Usuario.PerfilUsuario.ADMINISTRADOR.equals(usuario.getPerfil())) {
             return empresas.stream()
@@ -78,6 +81,7 @@ public class EmpresaService {
                 .collect(Collectors.toSet());
         return empresas.stream()
                 .filter(e -> empresaIds.contains(e.getId()))
+                .filter(e -> e.getDataExpiracaoAcesso() == null || !e.getDataExpiracaoAcesso().isBefore(LocalDate.now()))
                 .collect(Collectors.toList());
     }
 

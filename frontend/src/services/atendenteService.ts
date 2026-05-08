@@ -11,6 +11,7 @@ export interface Atendente {
   nomeUsuario?: string
   emailUsuario?: string
   nomeUnidade?: string
+  perfilUsuario?: string
   servicosIds?: number[]
 }
 

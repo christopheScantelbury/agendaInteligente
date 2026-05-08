@@ -12,18 +12,26 @@ O histórico de alterações do projeto está documentado em [`CHANGELOG.md`](./
 
 - Docker 20.10+ instalado
 - Docker Compose 2.0+ instalado
+- **Docker Desktop em execução** (no Windows: abra o Docker Desktop antes de rodar os comandos)
 - Portas disponíveis: 8080 (backend), 5173 (frontend), 5432 (PostgreSQL), 6380 (Redis)
 
 ### Deploy Rápido
 
 ```bash
-# 1. Subir toda a infraestrutura
-docker-compose up -d
+# 1. Subir toda a infraestrutura (build das imagens + start dos containers)
+docker compose up -d --build
 
 # 2. Verificar logs (aguardar inicialização completa)
-docker-compose logs -f backend
+docker compose logs -f backend
 
 # Aguardar mensagem: "Started AgendaInteligenteApplication"
+```
+
+Ou com a sintaxe antiga do Compose:
+
+```bash
+docker-compose up -d --build
+docker-compose logs -f backend
 ```
 
 ### Serviços Disponíveis
@@ -41,28 +49,28 @@ Após o deploy, os seguintes serviços estarão disponíveis:
 
 ```bash
 # Ver status dos serviços
-docker-compose ps
+docker compose ps
 
 # Ver logs de todos os serviços
-docker-compose logs -f
+docker compose logs -f
 
 # Ver logs de um serviço específico
-docker-compose logs -f backend
-docker-compose logs -f frontend
-docker-compose logs -f postgres
+docker compose logs -f backend
+docker compose logs -f frontend
+docker compose logs -f postgres
 
 # Parar todos os serviços
-docker-compose down
+docker compose down
 
 # Parar e remover volumes (limpar dados)
-docker-compose down -v
+docker compose down -v
 
 # Reiniciar um serviço específico
-docker-compose restart backend
-docker-compose restart frontend
+docker compose restart backend
+docker compose restart frontend
 
-# Reconstruir imagens (após mudanças no código)
-docker-compose up -d --build
+# Reconstruir imagens e subir (após mudanças no código)
+docker compose up -d --build
 ```
 
 ### Troubleshooting
@@ -70,22 +78,30 @@ docker-compose up -d --build
 **Backend não inicia:**
 ```bash
 # Verificar logs
-docker-compose logs backend
+docker compose logs backend
 
 # Verificar se PostgreSQL está pronto
-docker-compose ps postgres
+docker compose ps postgres
 
 # Reiniciar serviços
-docker-compose restart postgres
-docker-compose restart backend
+docker compose restart postgres
+docker compose restart backend
 ```
+
+**Erro "cannot find the file specified" / pipe dockerDesktopLinuxEngine (Windows):**
+- Inicie o **Docker Desktop** e aguarde o ícone indicar que está rodando; depois execute `docker compose up -d --build` novamente.
+
+**Flyway: "Migrations have failed validation" / checksum mismatch / "applied migration not resolved locally":**
+- O banco já foi criado com uma versão anterior das migrations (ex.: V12 alterada, V29/V36/V37 removidas). Duas opções:
+  1. **Recomeçar do zero** (apaga todos os dados): `docker compose down -v` e depois `docker compose up -d --build`.
+  2. **Reparar o histórico** (mantém dados): conectar no PostgreSQL e executar `DELETE FROM flyway_schema_history WHERE version IN ('29','36','37');` e, se o erro for só de checksum da V12, usar o Flyway CLI com `flyway repair` ou ajustar manualmente a tabela `flyway_schema_history`.
 
 **Erro de conexão com banco:**
 ```bash
 # Aguardar PostgreSQL inicializar completamente
-docker-compose restart postgres
+docker compose restart postgres
 # Aguardar 10 segundos
-docker-compose restart backend
+docker compose restart backend
 ```
 
 **Login do admin falha (Bad credentials) em produção:**
@@ -95,8 +111,8 @@ docker-compose restart backend
 **Limpar tudo e recomeçar:**
 ```bash
 # ⚠️ ATENÇÃO: Isso apaga todos os dados!
-docker-compose down -v
-docker-compose up -d
+docker compose down -v
+docker compose up -d --build
 ```
 
 ## 🔐 Dados de Primeiro Acesso

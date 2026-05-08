@@ -11,12 +11,11 @@ public interface AtendenteMapper {
     
     @Mapping(target = "unidadeId", source = "unidade.id")
     @Mapping(target = "usuarioId", source = "usuario.id")
-    @Mapping(target = "nomeUsuario", ignore = true)
-    @Mapping(target = "nomeUnidade", ignore = true)
+    @Mapping(target = "nomeUsuario", source = "usuario.nome")
+    @Mapping(target = "nomeUnidade", source = "unidade.nome")
     AtendenteDTO toDTO(Atendente atendente);
     
     @Mapping(target = "unidade", ignore = true)
     @Mapping(target = "usuario", ignore = true)
     Atendente toEntity(AtendenteDTO atendenteDTO);
 }
-

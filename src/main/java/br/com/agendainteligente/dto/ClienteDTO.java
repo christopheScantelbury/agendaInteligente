@@ -22,11 +22,7 @@ public class ClienteDTO {
     @NotBlank(message = "Nome é obrigatório")
     private String nome;
     
-    @NotBlank(message = "CPF/CNPJ é obrigatório")
-    @Pattern(
-        regexp = "(\\d{11}|\\d{14}|\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}|\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2})",
-        message = "CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos"
-    )
+    @Pattern(regexp = "^$|\\d{11}|\\d{14}", message = "CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos")
     private String cpfCnpj;
     
     @Email(message = "Email inválido")
