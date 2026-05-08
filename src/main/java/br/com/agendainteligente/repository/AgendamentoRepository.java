@@ -125,6 +125,16 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             @Param("unidadeId") Long unidadeId,
             @Param("inicio") LocalDateTime inicio);
 
+    // ── Lembretes ──────────────────────────────────────────────────────────────
+
+    @Query("SELECT a FROM Agendamento a WHERE " +
+           "a.lembrete24hEnviado = false AND " +
+           "a.status NOT IN ('CANCELADO', 'NO_SHOW', 'CONCLUIDO') AND " +
+           "a.dataHoraInicio BETWEEN :inicio AND :fim")
+    List<Agendamento> findAgendamentosParaLembrete24h(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fim") LocalDateTime fim);
+
     // ── Relatórios ─────────────────────────────────────────────────────────────
 
     @Query(value = """

@@ -64,6 +64,7 @@ public class AgendamentoService {
     private final NotaFiscalService notaFiscalService;
     private final PagamentoRepository pagamentoRepository;
     private final NotaFiscalRepository notaFiscalRepository;
+    private final LembreteAgendadoService lembreteAgendadoService;
 
     @Transactional(readOnly = true)
     public List<AgendamentoDTO> listarTodos() {
@@ -471,9 +472,11 @@ public class AgendamentoService {
         agendamentoServicoRepository.saveAll(agendamentoServicos);
         agendamento.setServicos(agendamentoServicos);
         
-        log.info("Agendamento criado com sucesso. ID: {}, Serviços: {}, Valor Total: {}", 
+        log.info("Agendamento criado com sucesso. ID: {}, Serviços: {}, Valor Total: {}",
                 agendamento.getId(), agendamentoServicos.size(), valorTotal);
-        
+
+        lembreteAgendadoService.enviarConfirmacao(agendamento);
+
         return agendamentoMapper.toDTO(agendamento);
     }
 

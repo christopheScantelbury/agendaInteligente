@@ -81,6 +81,14 @@ public class Agendamento {
     @Column(name = "serie_recorrencia_id")
     private String serieRecorrenciaId; // ID único para identificar todos os agendamentos da mesma série
 
+    @Column(name = "lembrete_confirmacao_enviado")
+    @Builder.Default
+    private Boolean lembreteConfirmacaoEnviado = false;
+
+    @Column(name = "lembrete_24h_enviado")
+    @Builder.Default
+    private Boolean lembrete24hEnviado = false;
+
     @PrePersist
     protected void onCreate() {
         dataCriacao = LocalDateTime.now();
