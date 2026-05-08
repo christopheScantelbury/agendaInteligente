@@ -33,6 +33,7 @@ import Profissionais from './pages/Profissionais'
 import Configuracoes from './pages/Configuracoes'
 import ConvitesAcesso from './pages/ConvitesAcesso'
 import ConvitesCliente from './pages/ConvitesCliente'
+import Relatorios from './pages/Relatorios'
 import RequirePermissao from './components/RequirePermissao'
 import Landing from './pages/Landing'
 
@@ -166,6 +167,7 @@ function App() {
                         <Route path="/perfis" element={<RequirePermissao path="/perfis"><Perfis /></RequirePermissao>} />
                         <Route path="/convites-acesso" element={<RequirePermissao path="/convites-acesso"><ConvitesAcesso /></RequirePermissao>} />
                         <Route path="/convites-cliente" element={<RequirePermissao path="/convites-cliente"><ConvitesCliente /></RequirePermissao>} />
+                        <Route path="/relatorios" element={<Relatorios />} />
                       </Routes>
                     </Layout>
                   </ProtectedRoute>

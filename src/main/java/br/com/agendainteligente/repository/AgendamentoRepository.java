@@ -124,4 +124,68 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     List<Agendamento> findByUnidadeIdAndPeriodo(
             @Param("unidadeId") Long unidadeId,
             @Param("inicio") LocalDateTime inicio);
+
+    // ── Relatórios ─────────────────────────────────────────────────────────────
+
+    @Query(value = """
+            SELECT
+              TO_CHAR(a.data_hora_inicio, 'YYYY-MM') AS mes,
+              COUNT(*)                                AS total_agendamentos,
+              SUM(a.valor_final)                      AS faturamento
+            FROM agendamentos a
+            WHERE a.status IN ('CONCLUIDO','FINALIZADO')
+              AND a.data_hora_inicio BETWEEN :inicio AND :fim
+              AND (:unidadeId IS NULL OR a.unidade_id = :unidadeId)
+            GROUP BY 1
+            ORDER BY 1
+            """, nativeQuery = true)
+    List<Object[]> findFaturamentoMensal(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fim") LocalDateTime fim,
+            @Param("unidadeId") Long unidadeId);
+
+    @Query(value = """
+            SELECT
+              s.nome                     AS servico_nome,
+              COUNT(ags.id)              AS total_realizados,
+              SUM(ags.valor)             AS receita_total
+            FROM agendamento_servicos ags
+            JOIN servicos s ON s.id = ags.servico_id
+            JOIN agendamentos a ON a.id = ags.agendamento_id
+            WHERE a.status IN ('CONCLUIDO','FINALIZADO')
+              AND a.data_hora_inicio BETWEEN :inicio AND :fim
+              AND (:unidadeId IS NULL OR a.unidade_id = :unidadeId)
+            GROUP BY s.nome
+            ORDER BY total_realizados DESC
+            LIMIT 10
+            """, nativeQuery = true)
+    List<Object[]> findTopServicos(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fim") LocalDateTime fim,
+            @Param("unidadeId") Long unidadeId);
+
+    @Query(value = """
+            SELECT
+              TO_CHAR(a.data_hora_inicio, 'YYYY-MM') AS mes,
+              COUNT(DISTINCT a.cliente_id)            AS clientes_unicos,
+              COUNT(DISTINCT CASE WHEN cnt.total > 1 THEN a.cliente_id END) AS clientes_retorno
+            FROM agendamentos a
+            JOIN (
+              SELECT cliente_id, COUNT(*) AS total
+              FROM agendamentos
+              WHERE status IN ('CONCLUIDO','FINALIZADO')
+                AND data_hora_inicio BETWEEN :inicio AND :fim
+                AND (:unidadeId IS NULL OR unidade_id = :unidadeId)
+              GROUP BY cliente_id
+            ) cnt ON cnt.cliente_id = a.cliente_id
+            WHERE a.status IN ('CONCLUIDO','FINALIZADO')
+              AND a.data_hora_inicio BETWEEN :inicio AND :fim
+              AND (:unidadeId IS NULL OR a.unidade_id = :unidadeId)
+            GROUP BY 1
+            ORDER BY 1
+            """, nativeQuery = true)
+    List<Object[]> findTaxaRetorno(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fim") LocalDateTime fim,
+            @Param("unidadeId") Long unidadeId);
 }

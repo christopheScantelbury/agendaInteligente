@@ -16,6 +16,7 @@ import {
   Shield,
   Link2,
   UserPlus,
+  BarChart2,
 } from 'lucide-react'
 import { authService } from '../services/authService'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -187,7 +188,16 @@ export default function Layout({ children }: LayoutProps) {
         icon: <Bell className="h-5 w-5" />,
       })
     }
-    
+
+    // Relatórios — para admin, gerente e profissional
+    if (!authService.isPerfilCliente()) {
+      items.push({
+        path: '/relatorios',
+        label: 'Relatórios',
+        icon: <BarChart2 className="h-5 w-5" />,
+      })
+    }
+
     return items
   }, [isAdmin, isAdminUnico, usuario?.perfil, perfilUsuario])
 
