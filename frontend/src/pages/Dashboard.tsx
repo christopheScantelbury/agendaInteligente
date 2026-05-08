@@ -78,20 +78,34 @@ export default function Dashboard() {
     })
 
     // Cálculos Básicos
+    const hoje = new Date().toISOString().split('T')[0]
     const totalAgendamentos = agendamentos.length
-    const agendamentosHoje = agendamentos.filter(a => {
-        const hoje = new Date().toISOString().split('T')[0]
-        return a.dataHoraInicio.startsWith(hoje)
-    }).length
 
-    const agendamentosFinalizados = agendamentos.filter(a => a.status === 'FINALIZADO').length
+    const agendamentosHojeList = agendamentos
+        .filter(a => a.dataHoraInicio?.startsWith(hoje))
+        .sort((a, b) => new Date(a.dataHoraInicio).getTime() - new Date(b.dataHoraInicio).getTime())
+
+    const agendamentosHoje = agendamentosHojeList.length
+    const agendamentosFinalizados = agendamentos.filter(a => a.status === 'FINALIZADO' || a.status === 'CONCLUIDO').length
     const agendamentosCancelados = agendamentos.filter(a => a.status === 'CANCELADO').length
+    const agendamentosHojeConcluidos = agendamentosHojeList.filter(a => a.status === 'FINALIZADO' || a.status === 'CONCLUIDO').length
 
     const faturamentoTotal = agendamentos
-        .filter(a => a.status === 'FINALIZADO')
-        .reduce((acc, curr) => acc + (curr.valorTotal || 0), 0)
+        .filter(a => a.status === 'FINALIZADO' || a.status === 'CONCLUIDO')
+        .reduce((acc, curr) => acc + (curr.valorFinal || curr.valorTotal || 0), 0)
+
+    const faturamentoHoje = agendamentosHojeList
+        .filter(a => a.status === 'FINALIZADO' || a.status === 'CONCLUIDO')
+        .reduce((acc, curr) => acc + (curr.valorFinal || curr.valorTotal || 0), 0)
 
     const ticketMedio = agendamentosFinalizados > 0 ? faturamentoTotal / agendamentosFinalizados : 0
+
+    const proximoAgendamento = agendamentosHojeList.find(a =>
+        (a.status === 'AGENDADO' || a.status === 'CONFIRMADO') &&
+        new Date(a.dataHoraInicio) > new Date()
+    )
+
+    const moneyFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 
     if (isLoadingAgendamentos || isLoadingClientes) {
         return (
@@ -105,34 +119,34 @@ export default function Dashboard() {
         {
             title: 'Agendamentos Hoje',
             value: agendamentosHoje,
+            sub: `${agendamentosHojeConcluidos} concluído${agendamentosHojeConcluidos !== 1 ? 's' : ''}`,
             icon: Calendar,
-            color: 'bg-blue-500',
-            bgColor: 'bg-blue-50',
-            textColor: 'text-blue-600'
+            bgColor: 'bg-violet-50',
+            textColor: 'text-violet-600'
         },
         {
             title: 'Total de Clientes',
             value: clientes.length,
+            sub: 'cadastrados',
             icon: Users,
-            color: 'bg-purple-500',
-            bgColor: 'bg-purple-50',
-            textColor: 'text-purple-600'
+            bgColor: 'bg-blue-50',
+            textColor: 'text-blue-600'
         },
         {
-            title: 'Faturamento',
-            value: `R$ ${faturamentoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+            title: 'Faturamento Geral',
+            value: moneyFmt.format(faturamentoTotal),
+            sub: `Hoje: ${moneyFmt.format(faturamentoHoje)}`,
             icon: DollarSign,
-            color: 'bg-green-500',
             bgColor: 'bg-green-50',
             textColor: 'text-green-600'
         },
         {
             title: 'Ticket Médio',
-            value: `R$ ${ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+            value: moneyFmt.format(ticketMedio),
+            sub: `${agendamentosFinalizados} concluídos`,
             icon: TrendingUp,
-            color: 'bg-indigo-500',
-            bgColor: 'bg-indigo-50',
-            textColor: 'text-indigo-600'
+            bgColor: 'bg-amber-50',
+            textColor: 'text-amber-600'
         }
     ]
 
@@ -151,12 +165,10 @@ export default function Dashboard() {
                             <div className={`${card.bgColor} p-3 rounded-lg`}>
                                 <card.icon className={`h-6 w-6 ${card.textColor}`} />
                             </div>
-                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${card.bgColor} ${card.textColor}`}>
-                                +12%
-                            </span>
                         </div>
                         <h3 className="text-gray-500 text-sm font-medium">{card.title}</h3>
                         <p className="text-2xl font-bold text-gray-900 mt-1">{card.value}</p>
+                        {card.sub && <p className="text-xs text-gray-400 mt-0.5">{card.sub}</p>}
                     </div>
                 ))}
                 
@@ -244,6 +256,81 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
+
+            {/* Agenda de Hoje */}
+            {!authService.isPerfilCliente() && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <Calendar className="h-5 w-5 text-violet-500" />
+                            Agenda de Hoje
+                            <span className="ml-2 text-sm font-normal text-gray-500">
+                                {format(new Date(), "dd 'de' MMMM", { locale: ptBR })}
+                            </span>
+                        </h2>
+                        <div className="flex gap-4 text-sm">
+                            <span className="text-gray-500">{agendamentosHoje} agendamento{agendamentosHoje !== 1 ? 's' : ''}</span>
+                            {agendamentosHojeConcluidos > 0 && (
+                                <span className="text-violet-600 font-semibold">{moneyFmt.format(faturamentoHoje)}</span>
+                            )}
+                        </div>
+                    </div>
+
+                    {proximoAgendamento && (
+                        <div className="mb-4 p-3 rounded-xl bg-violet-50 border border-violet-100 flex items-center gap-3">
+                            <Clock className="h-5 w-5 text-violet-500 shrink-0" />
+                            <div>
+                                <p className="text-xs font-semibold text-violet-600">Próximo</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                    {format(new Date(proximoAgendamento.dataHoraInicio), 'HH:mm')} · {proximoAgendamento.cliente?.nome} — {proximoAgendamento.servicos?.[0]?.descricao || 'Serviço'}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {agendamentosHojeList.length === 0 ? (
+                        <p className="text-sm text-gray-400 text-center py-6">Nenhum agendamento para hoje.</p>
+                    ) : (
+                        <div className="relative">
+                            <div className="absolute left-[23px] top-0 bottom-0 w-px bg-gray-200" />
+                            <div className="space-y-3">
+                                {agendamentosHojeList.map(a => {
+                                    const statusColors: Record<string, string> = {
+                                        AGENDADO: 'bg-slate-800',
+                                        CONFIRMADO: 'bg-blue-500',
+                                        EM_ANDAMENTO: 'bg-violet-500',
+                                        PROCEDIMENTO_FIM: 'bg-violet-700',
+                                        CONCLUIDO: 'bg-green-500',
+                                        FINALIZADO: 'bg-green-500',
+                                        CANCELADO: 'bg-red-400',
+                                        NO_SHOW: 'bg-orange-400',
+                                    }
+                                    const dot = statusColors[a.status] ?? 'bg-gray-400'
+                                    return (
+                                        <div key={a.id} className="flex items-start gap-4 pl-1">
+                                            <div className={`mt-1.5 h-3 w-3 rounded-full shrink-0 ${dot} ring-2 ring-white z-10`} />
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-baseline justify-between gap-2">
+                                                    <p className="text-sm font-semibold text-gray-800 truncate">
+                                                        {format(new Date(a.dataHoraInicio), 'HH:mm')} · {a.cliente?.nome || '—'}
+                                                    </p>
+                                                    <span className="text-xs text-gray-400 shrink-0">
+                                                        {a.atendente?.nomeUsuario || a.atendente?.nome || ''}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-gray-500 truncate">
+                                                    {a.servicos?.[0]?.descricao || a.servicos?.[0]?.servico?.nome || 'Serviço'}
+                                                    {a.valorTotal ? ` · ${moneyFmt.format(a.valorTotal)}` : ''}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* IA Panels — apenas para não-clientes */}
             {!authService.isPerfilCliente() && (
