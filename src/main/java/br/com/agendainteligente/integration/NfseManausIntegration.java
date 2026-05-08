@@ -33,7 +33,7 @@ import java.util.List;
  */
 @Component
 @Slf4j
-public class NfseManausIntegration {
+public class NfseManausIntegration implements NfseIntegration {
 
     private final NfseXmlBuilder xmlBuilder;
     private final NfseXmlParser xmlParser;
