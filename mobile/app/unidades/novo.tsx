@@ -86,7 +86,7 @@ export default function NovaUnidadeScreen() {
           <View style={styles.pickerContainer}>
             <Picker
               selectedValue={formData.empresaId || ''}
-              onValueChange={(value) => setFormData({ ...formData, empresaId: value || undefined })}
+              onValueChange={(value) => setFormData({ ...formData, empresaId: value ? Number(value) : undefined })}
               style={styles.picker}
             >
               <Picker.Item label="Selecione uma empresa" value="" />

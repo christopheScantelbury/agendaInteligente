@@ -16,6 +16,7 @@ export interface Unidade {
   horarioAbertura?: string
   horarioFechamento?: string
   empresaId?: number
+  logo?: string
 }
 
 export const unidadeService = {

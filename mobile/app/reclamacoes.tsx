@@ -56,7 +56,7 @@ export default function ReclamacoesScreen() {
           <View style={styles.pickerContainer}>
             <Picker
               selectedValue={formData.unidadeId || ''}
-              onValueChange={(value) => setFormData({ ...formData, unidadeId: value || undefined })}
+              onValueChange={(value) => setFormData({ ...formData, unidadeId: value ? Number(value) : undefined })}
               style={styles.picker}
             >
               <Picker.Item label="Selecione uma unidade (opcional)" value="" />

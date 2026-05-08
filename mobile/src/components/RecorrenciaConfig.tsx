@@ -32,7 +32,6 @@ const DIAS_SEMANA = [
 
 export default function RecorrenciaConfig({ value, onChange }: RecorrenciaConfigProps) {
   const [config, setConfig] = useState<RecorrenciaConfig>({
-    recorrente: false,
     tipoRecorrencia: 'SEMANAL',
     diasDaSemana: [],
     tipoTermino: 'OCORRENCIAS',
