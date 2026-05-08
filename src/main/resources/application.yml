@@ -84,8 +84,10 @@ app:
   url-base: ${APP_URL_BASE:http://localhost:5173}
 
 # JWT
+# IMPORTANTE: JWT_SECRET deve vir do ambiente em prod (gerar com: openssl rand -base64 64).
+# O profile 'prod' (application-prod.yml) NAO permite default — falha rapido se nao definido.
 jwt:
-  secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890}
+  secret: ${JWT_SECRET:devOnlyChangeMe-9c0f8b8e-2ad3-46ba-9b8b-8e5e0c38f1a0-DO-NOT-USE-IN-PROD}
   expiration: 86400000
 
 # Actuator

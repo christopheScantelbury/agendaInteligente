@@ -1,0 +1,72 @@
+# Profile: prod
+# Carregado quando SPRING_PROFILES_ACTIVE=prod.
+# Todas as configuracoes sensiveis vem de variaveis de ambiente — sem defaults inseguros.
+# Spring Boot lanca erro de inicializacao se uma variavel obrigatoria sem default estiver ausente.
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
+
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+# JWT — sem fallback. Geracao recomendada: openssl rand -base64 64
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+# Endpoint temporario de correcao de admin — DEVE ficar vazio em producao normal.
+# So setar FIX_ADMIN_KEY se realmente for usar o endpoint, e remover apos uso.
+app:
+  fix-admin-key: ${FIX_ADMIN_KEY:}
+
+# CORS — origens explicitas em producao
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+
+# Actuator: expor apenas health para nao vazar info em prod
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+# Swagger desabilitado em prod
+springdoc:
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+
+# Logging em prod: nivel padrao INFO, sem SQL
+logging:
+  level:
+    root: INFO
+    br.com.agendainteligente: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    org.springframework.cache: WARN
+    org.springframework.web.reactive.function.client: INFO
+
+# NFS-e producao (se em uso)
+nfse:
+  manaus:
+    ambiente: ${NFSE_MANAUS_AMBIENTE:homologacao}
+    certificado:
+      caminho: ${NFSE_CERTIFICADO_PATH:}
+      senha: ${NFSE_CERTIFICADO_SENHA:}
+      usar-assinatura: ${NFSE_USAR_ASSINATURA:false}

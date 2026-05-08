@@ -74,7 +74,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: postgres
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
-      JWT_SECRET: ${JWT_SECRET:-mySecretKey123456789012345678901234567890}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET nao definido — defina no .env ou export antes do compose up}
     ports:
       - "8080:8080"
     depends_on:
