@@ -18,7 +18,8 @@ import TimeWheelInput from '../components/TimeWheelInput'
 import { SlotInfo, View } from 'react-big-calendar'
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, Building2, Search, X, CalendarDays, Clock, List, Pencil, ChevronDown, ChevronUp, ChevronRight, UserRound, Trash2, BriefcaseBusiness, MessageCircle, Tag, HandCoins, Check, Info } from 'lucide-react'
+import { Plus, Building2, Search, X, CalendarDays, Clock, List, Pencil, ChevronDown, ChevronUp, ChevronRight, UserRound, Trash2, BriefcaseBusiness, MessageCircle, Tag, HandCoins, Check, Info, AlertTriangle } from 'lucide-react'
+import { inteligenciaService, NoShowRisco } from '../services/inteligenciaService'
 import NotaFiscalPanel from '../components/NotaFiscalPanel'
 import Modal from '../components/Modal'
 import FormField from '../components/FormField'
@@ -769,6 +770,28 @@ export default function Agendamentos() {
     queryKey: ['cliente-meu-perfil'],
     queryFn: clienteService.buscarMeuPerfil,
     enabled: isCliente,
+  })
+
+  const { data: riscoNoShowList = [] } = useQuery<NoShowRisco[]>({
+    queryKey: ['risco-no-show', usuario?.unidadeId],
+    queryFn: () => inteligenciaService.riscoNoShow(usuario?.unidadeId ?? undefined),
+    enabled: !isCliente,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const riscoNoShowMap = useMemo(() => {
+    const map = new Map<number, NoShowRisco>()
+    riscoNoShowList.forEach(r => map.set(r.agendamentoId, r))
+    return map
+  }, [riscoNoShowList])
+
+  const primeiroServicoSelecionado = servicosSelecionados[0] ?? null
+
+  const { data: servicosComplementares = [] } = useQuery({
+    queryKey: ['servicos-complementares', primeiroServicoSelecionado],
+    queryFn: () => inteligenciaService.servicosComplementares(primeiroServicoSelecionado!),
+    enabled: primeiroServicoSelecionado !== null && !isCliente,
+    staleTime: 10 * 60 * 1000,
   })
 
   const clientesParaSelecao = useMemo(() => {
@@ -2512,6 +2535,28 @@ export default function Agendamentos() {
                     {servicosSelecionados.length === 0 && servicosFiltrados.length > 0 && (
                       <p className="text-sm text-rose-600">Selecione pelo menos um serviço.</p>
                     )}
+
+                    {servicosComplementares.length > 0 && (
+                      <div className="rounded-xl border border-violet-100 bg-violet-50 p-3">
+                        <p className="text-xs font-semibold text-violet-700 mb-2">✨ Clientes também costumam adicionar:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {servicosComplementares.slice(0, 3).map((sc) => {
+                            const jaSelected = servicosSelecionados.includes(sc.servicoId)
+                            return (
+                              <button
+                                key={sc.servicoId}
+                                type="button"
+                                disabled={jaSelected}
+                                onClick={() => !jaSelected && handleServicoToggle(sc.servicoId)}
+                                className={`text-xs px-2.5 py-1 rounded-full border transition ${jaSelected ? 'bg-violet-200 border-violet-300 text-violet-700 cursor-default' : 'bg-white border-violet-200 text-violet-700 hover:bg-violet-100'}`}
+                              >
+                                {jaSelected ? '✓ ' : '+ '}{sc.servicoNome}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </FormField>
 
@@ -2828,15 +2873,27 @@ export default function Agendamentos() {
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-medium text-slate-800">Status</p>
-                            <span className={`mt-0.5 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${getAgendamentoStatusBadgeClass(statusExibicaoDetalhes)}`}>
-                              {getAgendamentoStatusLabel(
-                                statusExibicaoDetalhes,
-                                statusExibicaoDetalhes === 'EM_ATENDIMENTO_SINCRONIZADO'
-                                  ? nomeProfissionalConflitante
-                                  : (agendamentoDetalhes.atendente?.nomeUsuario || agendamentoDetalhes.atendente?.nome),
-                                procedimentos.length > 0 ? procedimentos.join(', ') : undefined
-                              )}
-                            </span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`mt-0.5 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${getAgendamentoStatusBadgeClass(statusExibicaoDetalhes)}`}>
+                                {getAgendamentoStatusLabel(
+                                  statusExibicaoDetalhes,
+                                  statusExibicaoDetalhes === 'EM_ATENDIMENTO_SINCRONIZADO'
+                                    ? nomeProfissionalConflitante
+                                    : (agendamentoDetalhes.atendente?.nomeUsuario || agendamentoDetalhes.atendente?.nome),
+                                  procedimentos.length > 0 ? procedimentos.join(', ') : undefined
+                                )}
+                              </span>
+                              {agendamentoDetalhes.id && riscoNoShowMap.has(agendamentoDetalhes.id) && (() => {
+                                const risco = riscoNoShowMap.get(agendamentoDetalhes.id!)!
+                                const isAlto = risco.nivelRisco === 'ALTO'
+                                return (
+                                  <span className={`mt-0.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${isAlto ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`} title={`Risco de no-show: ${risco.scoreRisco}%`}>
+                                    <AlertTriangle className="h-3 w-3" />
+                                    Risco {risco.nivelRisco === 'ALTO' ? 'alto' : 'médio'} de falta
+                                  </span>
+                                )
+                              })()}
+                            </div>
                           </div>
                         </div>
                       </div>
