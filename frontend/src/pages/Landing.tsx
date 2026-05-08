@@ -602,22 +602,31 @@ export default function Landing() {
         </div>
         <div className="flex flex-wrap justify-center gap-4">
           {[
-            { name: 'NotaFácil', desc: 'Emissão de NFS-e Nacional', color: '#00E8FF', bg: '#0A0F1E' },
-            { name: 'EventGear', desc: 'Gestão de eventos e contratos', color: '#F59E0B', bg: '#FFFBEB' },
-            { name: 'AgendaInteligente', desc: 'Você está aqui', color: '#7C3AED', bg: '#F5F3FF', current: true },
-          ].map((p) => (
-            <div
-              key={p.name}
-              className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl border shadow-sm ${p.current ? 'border-violet-300 ring-2 ring-violet-100' : 'border-slate-200 bg-white'}`}
-              style={p.current ? { background: p.bg, borderColor: p.color + '40' } : {}}
-            >
-              <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: p.color }} />
-              <div>
-                <div className="text-sm font-bold" style={{ color: p.current ? p.color : '#1E293B' }}>{p.name}</div>
-                <div className="text-xs text-slate-400">{p.desc}</div>
+            { name: 'NotaFácil', desc: 'Emissão de NFS-e Nacional', color: '#00E8FF', bg: '#0A0F1E', href: 'https://www.emitirnotafacil.com.br/' },
+            { name: 'EventGear', desc: 'Gestão de eventos e contratos', color: '#F59E0B', bg: '#FFFBEB', href: 'https://eventgear-web.h1dq2d.easypanel.host/' },
+            { name: 'AgendaInteligente', desc: 'Você está aqui', color: '#7C3AED', bg: '#F5F3FF', current: true, href: null },
+          ].map((p) => {
+            const inner = (
+              <>
+                <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: p.color }} />
+                <div>
+                  <div className="text-sm font-bold" style={{ color: p.current ? p.color : '#1E293B' }}>{p.name}</div>
+                  <div className="text-xs text-slate-400">{p.desc}</div>
+                </div>
+              </>
+            )
+            const cls = `flex items-center gap-3 px-5 py-3.5 rounded-2xl border shadow-sm transition-all ${p.current ? 'border-violet-300 ring-2 ring-violet-100' : 'border-slate-200 bg-white hover:shadow-md hover:-translate-y-0.5'}`
+            const style = p.current ? { background: p.bg, borderColor: p.color + '40' } : {}
+            return p.href ? (
+              <a key={p.name} href={p.href} target="_blank" rel="noopener noreferrer" className={cls} style={style}>
+                {inner}
+              </a>
+            ) : (
+              <div key={p.name} className={cls} style={style}>
+                {inner}
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </section>
 
@@ -659,7 +668,7 @@ export default function Landing() {
             <span className="text-sm font-bold text-slate-300">
               Agenda<span className="text-violet-400">Inteligente</span>
             </span>
-            <span className="text-slate-600 text-xs ml-2">by ScantelburyDevs</span>
+            <a href="https://scantelburydevs.com.br" target="_blank" rel="noopener noreferrer" className="text-slate-600 hover:text-violet-400 text-xs ml-2 transition-colors">by ScantelburyDevs</a>
           </div>
           <div className="flex items-center gap-6">
             {['Termos', 'Privacidade', 'Suporte'].map((l) => (
