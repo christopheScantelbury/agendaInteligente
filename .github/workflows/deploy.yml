@@ -38,6 +38,13 @@ jobs:
           check-name: 'Frontend (Vite + TypeScript)'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 15
+      - uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.sha }}
+          check-name: 'Mobile (Expo, type-check)'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 15
+          allowed-conclusions: success,skipped,neutral
 
   deploy-backend:
     name: Deploy backend (Easypanel)
