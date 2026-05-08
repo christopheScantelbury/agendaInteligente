@@ -122,7 +122,7 @@ docker compose up -d --build
 **Interface Administrativa**: http://localhost:5173/login
 
 - **Email**: `admin@agendainteligente.com`
-- **Senha**: `123456` (conforme DADOS_ACESSO.md; migration V37 garante este hash em produção)
+- **Senha**: `123456` (conforme `docs/SEED_USUARIOS.md`; migration V37 garante este hash em produção)
 
 **Perfil**: ADMIN (acesso total a todas as empresas e funcionalidades)
 
@@ -381,7 +381,7 @@ As migrations do Flyway são executadas automaticamente na inicialização:
 ### 1. Primeiro Acesso (Admin)
 
 1. Acesse: http://localhost:5173/login
-2. Use as credenciais: `admin@agendainteligente.com` / `admin123`
+2. Use as credenciais: `admin@agendainteligente.com` / `123456`
 3. Explore o sistema administrativo
 
 ### 2. Gerenciar Unidade
@@ -427,5 +427,7 @@ Este projeto é privado e de uso interno.
 
 ---
 
-**Versão**: 1.0  
-**Última atualização**: 2024
+**Versão**: 1.1
+**Última atualização**: 2026-05-08
+
+> Histórico de mudanças: ver [CHANGELOG.md](CHANGELOG.md).
