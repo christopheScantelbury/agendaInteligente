@@ -426,37 +426,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── VIRAL LOOP ── */}
-      <section className="bg-gradient-to-r from-violet-600 to-violet-700 py-16">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <div className="text-violet-200 text-xs font-mono font-bold tracking-widest uppercase mb-4">Growth viral</div>
-          <h2 className="text-3xl font-black text-white mb-4 tracking-tight">
-            200.000 exposições orgânicas por mês — sem custo
-          </h2>
-          <p className="text-violet-100 text-lg mb-8 max-w-2xl mx-auto">
-            O link público de agendamento exibe{' '}
-            <span className="bg-white/20 rounded px-1.5 py-0.5 font-mono text-sm">"Agendado via AgendaInteligente"</span>.
-            Com 2.000 clientes atendendo 100 pessoas/mês = <strong>200k exposições</strong> à marca por mês, sem anúncio.
-          </p>
-          <div className="inline-flex items-center gap-3 bg-white/10 border border-white/20 rounded-2xl px-6 py-4">
-            <div className="text-center">
-              <div className="text-2xl font-black text-white">2.000</div>
-              <div className="text-xs text-violet-200">clientes</div>
-            </div>
-            <span className="text-violet-300 text-xl">×</span>
-            <div className="text-center">
-              <div className="text-2xl font-black text-white">100</div>
-              <div className="text-xs text-violet-200">atendimentos/mês</div>
-            </div>
-            <span className="text-violet-300 text-xl">=</span>
-            <div className="text-center">
-              <div className="text-2xl font-black text-emerald-300">200k</div>
-              <div className="text-xs text-violet-200">impressões/mês</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ── COMPETITOR TABLE ── */}
       <section className="max-w-6xl mx-auto px-6 py-20">
         <div className="text-center mb-12">
