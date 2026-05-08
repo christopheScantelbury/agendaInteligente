@@ -2,12 +2,11 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, PieChart, Pie, Cell, Legend,
+  LineChart, Line,
 } from 'recharts'
 import { relatorioService } from '../services/relatorioService'
 import { unidadeService } from '../services/unidadeService'
 import { authService } from '../services/authService'
-import { perfilService } from '../services/perfilService'
 import { BarChart2, TrendingUp, Users, Award } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -27,12 +26,6 @@ const formatMes = (mes: string) => {
 export default function Relatorios() {
   const usuario = authService.getUsuario()
   const [meses, setMeses] = useState(6)
-
-  const { data: perfil } = useQuery({
-    queryKey: ['perfil', 'meu'],
-    queryFn: () => perfilService.buscarMeuPerfil(),
-    enabled: !!usuario,
-  })
 
   const perfilNorm = (usuario?.perfil ?? '').toUpperCase().replace('-', '_')
   const isAdmin = perfilNorm === 'ADMIN' || perfilNorm === 'ADMINISTRADOR'
@@ -163,7 +156,7 @@ export default function Relatorios() {
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
               <YAxis tickFormatter={v => moneyFmt.format(v)} tick={{ fontSize: 11 }} width={80} />
-              <Tooltip formatter={(value: number) => moneyFmt.format(value)} labelStyle={{ fontWeight: 600 }} />
+              <Tooltip formatter={(value: unknown) => moneyFmt.format(Number(value))} labelStyle={{ fontWeight: 600 }} />
               <Bar dataKey="faturamento" fill="#7c3aed" radius={[6, 6, 0, 0]} name="Faturamento" />
             </BarChart>
           </ResponsiveContainer>
@@ -225,7 +218,7 @@ export default function Relatorios() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
                 <YAxis tickFormatter={v => `${v}%`} domain={[0, 100]} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v: number) => `${v}%`} labelStyle={{ fontWeight: 600 }} />
+                <Tooltip formatter={(v: unknown) => `${Number(v)}%`} labelStyle={{ fontWeight: 600 }} />
                 <Line type="monotone" dataKey="taxa" stroke="#7c3aed" strokeWidth={2.5} dot={{ r: 4, fill: '#7c3aed' }} name="Taxa de retorno" />
               </LineChart>
             </ResponsiveContainer>

@@ -157,9 +157,9 @@ public class InsightAgendadoService {
 
         return porAtendente.entrySet().stream().map(e -> {
             List<Agendamento> ags = e.getValue();
-            String nome = ags.get(0).getAtendente().getNomeUsuario() != null
-                    ? ags.get(0).getAtendente().getNomeUsuario()
-                    : ags.get(0).getAtendente().getNome();
+            String nome = ags.get(0).getAtendente().getUsuario() != null
+                    ? ags.get(0).getAtendente().getUsuario().getNome()
+                    : "Profissional " + e.getKey();
 
             // Clientes únicos nos últimos 90 dias
             Set<Long> clientes90 = ags.stream().map(a -> a.getCliente().getId()).collect(Collectors.toSet());

@@ -305,7 +305,7 @@ export default function Dashboard() {
                                         CANCELADO: 'bg-red-400',
                                         NO_SHOW: 'bg-orange-400',
                                     }
-                                    const dot = statusColors[a.status] ?? 'bg-gray-400'
+                                    const dot = (statusColors as Record<string, string>)[a.status] ?? 'bg-gray-400'
                                     return (
                                         <div key={a.id} className="flex items-start gap-4 pl-1">
                                             <div className={`mt-1.5 h-3 w-3 rounded-full shrink-0 ${dot} ring-2 ring-white z-10`} />
@@ -319,7 +319,7 @@ export default function Dashboard() {
                                                     </span>
                                                 </div>
                                                 <p className="text-xs text-gray-500 truncate">
-                                                    {a.servicos?.[0]?.descricao || a.servicos?.[0]?.servico?.nome || 'Serviço'}
+                                                    {a.servicos?.[0]?.descricao || 'Serviço'}
                                                     {a.valorTotal ? ` · ${moneyFmt.format(a.valorTotal)}` : ''}
                                                 </p>
                                             </div>
