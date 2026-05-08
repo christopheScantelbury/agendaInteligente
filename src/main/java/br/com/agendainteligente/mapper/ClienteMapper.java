@@ -13,10 +13,11 @@ public interface ClienteMapper {
     @Mapping(target = "unidadeId", source = "unidade.id")
     ClienteDTO toDTO(Cliente cliente);
     
+    @Mapping(target = "id", ignore = true)
     @Mapping(target = "unidade", ignore = true) // Será setado manualmente no service
     Cliente toEntity(ClienteDTO clienteDTO);
     
+    @Mapping(target = "id", ignore = true)
     @Mapping(target = "unidade", ignore = true) // Será setado manualmente no service
     void updateEntityFromDTO(ClienteDTO clienteDTO, @MappingTarget Cliente cliente);
 }
-

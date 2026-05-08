@@ -7,7 +7,9 @@ export interface Cliente {
   cpfCnpj: string
   email?: string
   telefone?: string
+  unidadeId?: number
   endereco?: string
+  observacao?: string
   numero?: string
   complemento?: string
   bairro?: string
@@ -16,6 +18,7 @@ export interface Cliente {
   uf?: string
   dataNascimento?: string
   rg?: string
+  senha?: string
   ativo?: boolean
   unidadesIds?: number[]
   unidades?: Unidade[]
@@ -55,4 +58,3 @@ export const clienteService = {
     await api.delete(`/clientes/${id}`)
   },
 }
-

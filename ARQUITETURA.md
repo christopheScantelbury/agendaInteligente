@@ -63,7 +63,7 @@ Clínica (1)
 
 2. **Finalizar Agendamento**
    - Atendente informa valor final
-   - Status muda para CONCLUIDO
+   - Status muda para FINALIZADO
    - Dispara emissão assíncrona de NFS-e
 
 3. **Emissão NFS-e**
@@ -109,4 +109,3 @@ A NFS-e inclui:
 - Logs estruturados
 - Métricas de cache
 - Thread pool monitoring
-

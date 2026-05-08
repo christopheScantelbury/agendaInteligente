@@ -30,7 +30,7 @@ export default function Agendamentos() {
 
   const { data: agendamentos = [], isLoading } = useQuery({
     queryKey: ['agendamentos'],
-    queryFn: agendamentoService.listar,
+    queryFn: () => agendamentoService.listar(),
     retry: false,
     enabled: isAuthenticated,
   })

@@ -17,15 +17,16 @@ public interface UsuarioMapper {
     UsuarioDTO toDTO(Usuario usuario);
     
     @Mapping(target = "senha", ignore = true) // Senha será tratada no service
+    @Mapping(target = "id", ignore = true)
     @Mapping(target = "perfil", ignore = true) // Será setado manualmente no service
     @Mapping(target = "dataCriacao", ignore = true)
     @Mapping(target = "dataAtualizacao", ignore = true)
     Usuario toEntity(UsuarioDTO usuarioDTO);
     
     @Mapping(target = "senha", ignore = true)
+    @Mapping(target = "id", ignore = true)
     @Mapping(target = "perfil", ignore = true) // Será setado manualmente no service
     @Mapping(target = "dataCriacao", ignore = true)
     @Mapping(target = "dataAtualizacao", ignore = true)
     void updateEntityFromDTO(UsuarioDTO usuarioDTO, @MappingTarget Usuario usuario);
 }
-

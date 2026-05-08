@@ -370,15 +370,6 @@ function ServicoForm({
         />
       </FormField>
 
-      <FormField label="Descrição">
-        <textarea
-          value={formData.descricao || ''}
-          onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-          rows={3}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-        />
-      </FormField>
-
       <FormField label="Unidade" required>
         <p className="text-xs text-gray-500 mb-2">O serviço ficará disponível apenas nesta unidade.</p>
         <select

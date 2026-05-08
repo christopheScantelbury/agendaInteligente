@@ -3,6 +3,9 @@
 
 # Log files
 *.log
+log.txt
+logs.txt
+logs/
 
 # Package Files
 *.jar
@@ -38,11 +41,16 @@ buildNumber.properties
 
 # Spring Boot
 application-local.yml
-application-prod.yml
 
 # Environment variables
 .env
 .env.local
+.env.production
+.env.*.local
+
+# Acessos locais (NUNCA COMMITAR)
+ACESSOS.local.md
+ACESSOS.md
 
 # Node modules (frontend)
 node_modules/
@@ -54,3 +62,8 @@ frontend/node_modules/
 frontend/dist/
 frontend/.vite/
 
+# Mobile
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/web-build/

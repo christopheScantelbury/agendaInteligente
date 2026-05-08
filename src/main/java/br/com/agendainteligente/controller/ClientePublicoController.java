@@ -2,6 +2,7 @@ package br.com.agendainteligente.controller;
 
 import br.com.agendainteligente.domain.entity.Agendamento;
 import br.com.agendainteligente.domain.entity.Cliente;
+import br.com.agendainteligente.domain.enums.StatusAgendamento;
 import br.com.agendainteligente.dto.AgendamentoDTO;
 import br.com.agendainteligente.dto.ClienteDTO;
 import br.com.agendainteligente.dto.ClienteLoginDTO;
@@ -110,17 +111,31 @@ public class ClientePublicoController {
     @GetMapping("/meus-agendamentos")
     @Operation(summary = "Listar agendamentos do cliente autenticado")
     public ResponseEntity<List<AgendamentoDTO>> meusAgendamentos() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String clienteEmailOuCpf = auth.getName();
+        Cliente cliente = obterClienteAutenticado();
         
-        // Buscar cliente autenticado
-        Cliente cliente = clienteRepository.findByEmail(clienteEmailOuCpf)
-                .orElseGet(() -> clienteRepository.findByCpfCnpj(clienteEmailOuCpf)
-                        .orElseThrow(() -> new BusinessException("Cliente não encontrado")));
-        
-        // Buscar agendamentos do cliente
-        List<Agendamento> agendamentos = agendamentoRepository.findByClienteId(cliente.getId());
+        // Buscar apenas agendamentos ativos (cancelados ficam no histórico separado)
+        List<Agendamento> agendamentos = agendamentoRepository.findByClienteId(cliente.getId()).stream()
+                .filter(a -> a.getStatus() != StatusAgendamento.CANCELADO)
+                .collect(Collectors.toList());
+
         List<AgendamentoDTO> agendamentosDTO = agendamentos.stream()
+                .map(a -> agendamentoService.buscarPorId(a.getId()))
+                .collect(Collectors.toList());
+        
+        return ResponseEntity.ok(agendamentosDTO);
+    }
+
+    @GetMapping("/meus-cancelamentos")
+    @Operation(summary = "Listar histórico de cancelamentos do cliente autenticado")
+    public ResponseEntity<List<AgendamentoDTO>> meusCancelamentos() {
+        Cliente cliente = obterClienteAutenticado();
+
+        List<Agendamento> cancelamentos = agendamentoRepository.findByClienteIdAndStatusOrderByDataHoraInicioDesc(
+                cliente.getId(),
+                StatusAgendamento.CANCELADO
+        );
+
+        List<AgendamentoDTO> agendamentosDTO = cancelamentos.stream()
                 .map(a -> agendamentoService.buscarPorId(a.getId()))
                 .collect(Collectors.toList());
         
@@ -130,13 +145,7 @@ public class ClientePublicoController {
     @PostMapping("/agendamentos/{id}/cancelar")
     @Operation(summary = "Cancelar agendamento próprio")
     public ResponseEntity<Void> cancelarAgendamento(@PathVariable Long id) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String clienteEmailOuCpf = auth.getName();
-        
-        // Buscar cliente autenticado
-        Cliente cliente = clienteRepository.findByEmail(clienteEmailOuCpf)
-                .orElseGet(() -> clienteRepository.findByCpfCnpj(clienteEmailOuCpf)
-                        .orElseThrow(() -> new BusinessException("Cliente não encontrado")));
+        Cliente cliente = obterClienteAutenticado();
         
         // Validar que o agendamento pertence ao cliente autenticado
         Agendamento agendamento = agendamentoRepository.findById(id)
@@ -149,5 +158,13 @@ public class ClientePublicoController {
         agendamentoService.cancelar(id);
         return ResponseEntity.noContent().build();
     }
-}
 
+    private Cliente obterClienteAutenticado() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String clienteEmailOuCpf = auth.getName();
+
+        return clienteRepository.findByEmail(clienteEmailOuCpf)
+                .orElseGet(() -> clienteRepository.findByCpfCnpj(clienteEmailOuCpf)
+                        .orElseThrow(() -> new BusinessException("Cliente não encontrado")));
+    }
+}

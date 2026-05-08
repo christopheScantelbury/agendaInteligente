@@ -64,6 +64,12 @@ public class Empresa {
     @Builder.Default
     private Boolean ativo = true;
 
+    @Column(name = "admin_unico_id")
+    private Long adminUnicoId;
+
+    @Column(name = "data_expiracao_acesso")
+    private java.time.LocalDate dataExpiracaoAcesso;
+
     @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Unidade> unidades;
 

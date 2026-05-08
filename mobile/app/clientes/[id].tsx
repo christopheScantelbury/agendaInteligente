@@ -195,27 +195,30 @@ export default function EditarCliente() {
 
           <Button
             onPress={handleSubmit}
-            title={updateMutation.isPending ? 'Salvando...' : 'Salvar'}
             isLoading={updateMutation.isPending}
             disabled={updateMutation.isPending}
             style={styles.submitButton}
-          />
+          >
+            {updateMutation.isPending ? 'Salvando...' : 'Salvar'}
+          </Button>
 
           <Button
             onPress={handleDelete}
-            title={deleteMutation.isPending ? 'Excluindo...' : 'Excluir Cliente'}
             variant="danger"
             isLoading={deleteMutation.isPending}
             disabled={deleteMutation.isPending}
             style={styles.deleteButton}
-          />
+          >
+            {deleteMutation.isPending ? 'Excluindo...' : 'Excluir Cliente'}
+          </Button>
 
           <Button
             onPress={() => router.back()}
-            title="Cancelar"
             variant="secondary"
             style={styles.cancelButton}
-          />
+          >
+            Cancelar
+          </Button>
         </View>
       </ScrollView>
     </View>

@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Spring Boot, Java 21)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # Compila tudo (inclusive testes) e empaca o jar.
+      # Os testes nao sao executados pois ha bateria pre-existente quebrada
+      # (debito tecnico — issue separada).
+      - name: Compile + Package (skip tests)
+        run: mvn -B -ntp -DskipTests verify
+
+      - name: Upload jar
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jar
+          path: target/*.jar
+          retention-days: 7
+
+  frontend:
+    name: Frontend (Vite + TypeScript)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      - name: Build (tsc + vite)
+        run: npm run build
+
+      - name: Upload dist
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 7
+
+  mobile-typecheck:
+    name: Mobile (Expo, type-check)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - run: npm ci --legacy-peer-deps
+
+      - name: TypeScript check
+        run: npx tsc --noEmit

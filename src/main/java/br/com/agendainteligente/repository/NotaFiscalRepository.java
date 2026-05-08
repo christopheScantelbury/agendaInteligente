@@ -10,5 +10,5 @@ import java.util.Optional;
 public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, Long> {
     Optional<NotaFiscal> findByAgendamentoId(Long agendamentoId);
     Optional<NotaFiscal> findByNumeroNfse(String numeroNfse);
+    void deleteByAgendamentoId(Long agendamentoId);
 }
-

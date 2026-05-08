@@ -370,6 +370,9 @@ public class AtendenteService {
         AtendenteDTO dto = atendenteMapper.toDTO(atendente);
         dto.setNomeUsuario(atendente.getUsuario().getNome());
         dto.setNomeUnidade(atendente.getUnidade().getNome());
+        if (atendente.getUsuario() != null && atendente.getUsuario().getPerfil() != null) {
+            dto.setPerfilUsuario(atendente.getUsuario().getPerfil().name());
+        }
         if (atendente.getServicos() != null) {
             dto.setServicosIds(atendente.getServicos().stream()
                     .map(Servico::getId)
@@ -394,4 +397,3 @@ public class AtendenteService {
         }
     }
 }
-

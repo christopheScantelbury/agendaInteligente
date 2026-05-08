@@ -77,6 +77,15 @@ public class Usuario implements UserDetails {
     @Column(length = 20)
     private String telefone;
 
+    @Column(name = "area_atuacao", length = 120)
+    private String areaAtuacao;
+
+    @Column(name = "quantidade_unidades")
+    private Integer quantidadeUnidades;
+
+    @Column(name = "admin_unico_id")
+    private Long adminUnicoId;
+
     @Column(name = "percentual_comissao", precision = 5, scale = 2)
     @Builder.Default
     private java.math.BigDecimal percentualComissao = java.math.BigDecimal.ZERO;
@@ -153,6 +162,12 @@ public class Usuario implements UserDetails {
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         PerfilUsuario perfilAtual = getPerfil();
+        if (perfilAtual == PerfilUsuario.ADMINISTRADOR) {
+            return List.of(
+                    new SimpleGrantedAuthority("ROLE_ADMINISTRADOR"),
+                    new SimpleGrantedAuthority("ROLE_ADMIN")
+            );
+        }
         return List.of(new SimpleGrantedAuthority("ROLE_" + perfilAtual.name()));
     }
 
@@ -188,9 +203,9 @@ public class Usuario implements UserDetails {
 
     public enum PerfilUsuario {
         ADMIN,           // Acesso total a todas as empresas
+        ADMINISTRADOR,     // Admin com cadastro inicial de 1 unidade
         GERENTE,         // Gerencia uma clínica específica
         PROFISSIONAL,    // Profissional/Atendente - gerencia seus horários
         CLIENTE          // Cliente - apenas agendamentos próprios
     }
 }
-

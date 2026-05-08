@@ -8,6 +8,8 @@ export interface Usuario {
   nome: string
   email: string
   senha?: string
+  telefone?: string
+  areaAtuacao?: string
   perfil?: PerfilNome // nome do perfil (vem do banco via API)
   perfilId?: number // ID do perfil cadastrado em Perfis e Permissões
   unidadeId?: number // DEPRECATED - usar unidadesIds
@@ -47,4 +49,3 @@ export const usuarioService = {
     await api.put(`/usuarios/${id}/senha`, { novaSenha })
   },
 }
-

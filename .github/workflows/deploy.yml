@@ -1,0 +1,79 @@
+name: Deploy (Easypanel)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'O que redeployar'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - both
+          - backend
+          - frontend
+
+# Aguarda o CI passar antes de disparar deploy
+concurrency:
+  group: deploy-easypanel
+  cancel-in-progress: false
+
+jobs:
+  wait-for-ci:
+    name: Aguardar CI passar
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.sha }}
+          check-name: 'Backend (Spring Boot, Java 21)'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 15
+      - uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.sha }}
+          check-name: 'Frontend (Vite + TypeScript)'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 15
+      - uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.sha }}
+          check-name: 'Mobile (Expo, type-check)'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 15
+          allowed-conclusions: success,skipped,neutral
+
+  deploy-backend:
+    name: Deploy backend (Easypanel)
+    needs: [wait-for-ci]
+    if: |
+      always() &&
+      (needs.wait-for-ci.result == 'success' || github.event_name == 'workflow_dispatch') &&
+      (github.event_name == 'push' || github.event.inputs.target == 'both' || github.event.inputs.target == 'backend')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Easypanel deploy (backend)
+        run: |
+          curl --fail --silent --show-error \
+            -X POST "${{ secrets.EASYPANEL_DEPLOY_BACKEND_URL }}" \
+            -H "Content-Type: application/json"
+          echo "Backend deploy disparado."
+
+  deploy-frontend:
+    name: Deploy frontend (Easypanel)
+    needs: [wait-for-ci]
+    if: |
+      always() &&
+      (needs.wait-for-ci.result == 'success' || github.event_name == 'workflow_dispatch') &&
+      (github.event_name == 'push' || github.event.inputs.target == 'both' || github.event.inputs.target == 'frontend')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Easypanel deploy (frontend)
+        run: |
+          curl --fail --silent --show-error \
+            -X POST "${{ secrets.EASYPANEL_DEPLOY_FRONTEND_URL }}" \
+            -H "Content-Type: application/json"
+          echo "Frontend deploy disparado."

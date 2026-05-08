@@ -470,6 +470,9 @@ function UnidadeForm({
 }
 
 function AtendentesSection({ unidadeId }: { unidadeId: number }) {
+  const usuario = authService.getUsuario()
+  const perfilNorm = (usuario?.perfil ?? '').toUpperCase().replace('-', '_')
+  const rotaCadastroProfissional = perfilNorm === 'ADMINISTRADOR' ? '/profissionais' : '/usuarios'
   const { data: atendentes = [], isLoading } = useQuery({
     queryKey: ['atendentes', 'unidade', unidadeId],
     queryFn: () => atendenteService.listarPorUnidade(unidadeId),
@@ -483,7 +486,7 @@ function AtendentesSection({ unidadeId }: { unidadeId: number }) {
           Funcionários (Atendentes)
         </h3>
         <Link
-          to="/usuarios"
+          to={rotaCadastroProfissional}
           state={{ unidadeId }}
           className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
         >
@@ -496,7 +499,7 @@ function AtendentesSection({ unidadeId }: { unidadeId: number }) {
       ) : atendentes.length === 0 ? (
         <div className="bg-gray-50 rounded-lg p-4 text-center">
           <p className="text-sm text-gray-500 mb-2">Nenhum atendente vinculado a esta unidade.</p>
-          <Link to="/usuarios" state={{ unidadeId }}>
+          <Link to={rotaCadastroProfissional} state={{ unidadeId }}>
             <Button variant="secondary" size="sm">
               Adicionar usuário
             </Button>
@@ -520,4 +523,3 @@ function AtendentesSection({ unidadeId }: { unidadeId: number }) {
     </div>
   )
 }
-

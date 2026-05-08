@@ -35,6 +35,8 @@ export default function UsuariosScreen() {
     enabled: isAuthenticated,
   })
 
+  const getNomePerfil = (usuario: Usuario): string => usuario.nomePerfil || usuario.perfil || ''
+
   // Filtrar usuários
   const usuariosFiltrados = useMemo(() => {
     let filtered = [...usuarios]
@@ -58,7 +60,7 @@ export default function UsuariosScreen() {
 
     // Filtro de perfil (nome do perfil vindo do banco)
     if (filters.perfil && filters.perfil !== '') {
-      filtered = filtered.filter((u) => u.perfil === filters.perfil)
+      filtered = filtered.filter((u) => getNomePerfil(u) === filters.perfil)
     }
 
     return filtered
@@ -85,26 +87,32 @@ export default function UsuariosScreen() {
   const getPerfilColor = (perfil: string): string => {
     const p = (perfil || '').toUpperCase()
     if (p === 'ADMIN') return '#DC2626'
+    if (p === 'ADMINISTRADOR') return '#7C3AED'
     if (p === 'GERENTE') return '#2563EB'
+    if (p.includes('SECRETARIA')) return '#EA580C'
     if (p.includes('PROFISSIONAL') || p.includes('ATENDENTE')) return '#059669'
     return '#6B7280'
   }
 
-  const renderUsuarioItem = ({ item }: { item: Usuario }) => (
-    <View style={styles.usuarioCard}>
-      <Text style={styles.usuarioName}>{item.nome}</Text>
-      <Text style={styles.usuarioDetail}>Email: {item.email}</Text>
-      {item.nomeUnidade && <Text style={styles.usuarioDetail}>Unidade: {item.nomeUnidade}</Text>}
-      <View style={styles.statusContainer}>
-        <View style={[styles.perfilBadge, { backgroundColor: getPerfilColor(item.perfil) }]}>
-          <Text style={styles.perfilText}>{item.perfil}</Text>
+  const renderUsuarioItem = ({ item }: { item: Usuario }) => {
+    const nomePerfil = getNomePerfil(item)
+
+    return (
+      <View style={styles.usuarioCard}>
+        <Text style={styles.usuarioName}>{item.nome}</Text>
+        <Text style={styles.usuarioDetail}>Email: {item.email}</Text>
+        {item.nomeUnidade && <Text style={styles.usuarioDetail}>Unidade: {item.nomeUnidade}</Text>}
+        <View style={styles.statusContainer}>
+          <View style={[styles.perfilBadge, { backgroundColor: getPerfilColor(nomePerfil) }]}>
+            <Text style={styles.perfilText}>{nomePerfil}</Text>
+          </View>
+          <Text style={[styles.statusBadge, item.ativo ? styles.statusActive : styles.statusInactive]}>
+            {item.ativo ? 'Ativo' : 'Inativo'}
+          </Text>
         </View>
-        <Text style={[styles.statusBadge, item.ativo ? styles.statusActive : styles.statusInactive]}>
-          {item.ativo ? 'Ativo' : 'Inativo'}
-        </Text>
       </View>
-    </View>
-  )
+    )
+  }
 
   const perfilOptions = useMemo(
     () => perfis.map((p) => ({ value: p.nome, label: p.descricao || p.nome })),

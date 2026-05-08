@@ -17,6 +17,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -56,7 +57,14 @@ public class EmpresaService {
             return List.of();
         }
         if (Usuario.PerfilUsuario.ADMIN.equals(usuario.getPerfil())) {
-            return empresas;
+            return empresas.stream()
+                    .filter(e -> e.getDataExpiracaoAcesso() == null || !e.getDataExpiracaoAcesso().isBefore(LocalDate.now()))
+                    .collect(Collectors.toList());
+        }
+        if (Usuario.PerfilUsuario.ADMINISTRADOR.equals(usuario.getPerfil())) {
+            return empresas.stream()
+                    .filter(e -> usuario.getId().equals(e.getAdminUnicoId()))
+                    .collect(Collectors.toList());
         }
         if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
             return List.of();
@@ -73,6 +81,7 @@ public class EmpresaService {
                 .collect(Collectors.toSet());
         return empresas.stream()
                 .filter(e -> empresaIds.contains(e.getId()))
+                .filter(e -> e.getDataExpiracaoAcesso() == null || !e.getDataExpiracaoAcesso().isBefore(LocalDate.now()))
                 .collect(Collectors.toList());
     }
 
@@ -89,6 +98,8 @@ public class EmpresaService {
 
     @Transactional
     public EmpresaDTO criar(EmpresaDTO empresaDTO) {
+        Usuario usuarioLogado = getUsuarioLogado();
+
         // Remover máscara do CNPJ antes de salvar
         if (empresaDTO.getCnpj() != null && !empresaDTO.getCnpj().trim().isEmpty()) {
             String cnpjSemMascara = empresaDTO.getCnpj().replaceAll("\\D", "");
@@ -124,6 +135,9 @@ public class EmpresaService {
         }
 
         Empresa empresa = empresaMapper.toEntity(empresaDTO);
+        if (usuarioLogado.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR) {
+            empresa.setAdminUnicoId(usuarioLogado.getId());
+        }
         empresa = empresaRepository.save(empresa);
         log.info("Empresa criada. ID: {}, Nome: {}", empresa.getId(), empresa.getNome());
         return empresaMapper.toDTO(empresa);
@@ -131,8 +145,10 @@ public class EmpresaService {
 
     @Transactional
     public EmpresaDTO atualizar(Long id, EmpresaDTO empresaDTO) {
+        Usuario usuarioLogado = getUsuarioLogado();
         Empresa empresa = empresaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa não encontrada"));
+        validarAcessoAdminUnico(usuarioLogado, empresa);
 
         // Remover máscara do CNPJ antes de salvar
         if (empresaDTO.getCnpj() != null && !empresaDTO.getCnpj().trim().isEmpty()) {
@@ -172,15 +188,23 @@ public class EmpresaService {
         }
 
         empresaMapper.updateEntityFromDTO(empresaDTO, empresa);
+        if (usuarioLogado.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR) {
+            empresa.setAdminUnicoId(usuarioLogado.getId());
+        }
         empresa = empresaRepository.save(empresa);
+        if (usuarioLogado.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR) {
+            vincularUnidadesDoAdministradorNaEmpresa(usuarioLogado, empresa);
+        }
         log.info("Empresa atualizada. ID: {}", id);
         return empresaMapper.toDTO(empresa);
     }
 
     @Transactional
     public void excluir(Long id) {
+        Usuario usuarioLogado = getUsuarioLogado();
         Empresa empresa = empresaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa não encontrada"));
+        validarAcessoAdminUnico(usuarioLogado, empresa);
 
         // Verificar se tem unidades vinculadas
         if (empresa.getUnidades() != null && !empresa.getUnidades().isEmpty()) {
@@ -189,6 +213,42 @@ public class EmpresaService {
 
         empresaRepository.delete(empresa);
         log.info("Empresa excluída. ID: {}", id);
+    }
+
+    private Usuario getUsuarioLogado() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new BusinessException("Não autorizado");
+        }
+        return usuarioRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+    }
+
+    private void validarAcessoAdminUnico(Usuario usuarioLogado, Empresa empresa) {
+        if (usuarioLogado.getPerfil() != Usuario.PerfilUsuario.ADMINISTRADOR) {
+            return;
+        }
+        if (!usuarioLogado.getId().equals(empresa.getAdminUnicoId())) {
+            throw new ResourceNotFoundException("Empresa não encontrada");
+        }
+    }
+
+    /**
+     * ADMINISTRADOR possui escopo de uma única empresa.
+     * Ao salvar a empresa, garante que unidades do administrador apontem para ela.
+     */
+    private void vincularUnidadesDoAdministradorNaEmpresa(Usuario administrador, Empresa empresa) {
+        List<Unidade> unidadesDoAdministrador = unidadeRepository.findByAdminUnicoId(administrador.getId());
+        if (unidadesDoAdministrador.isEmpty()) {
+            return;
+        }
+        boolean precisaAtualizar = unidadesDoAdministrador.stream()
+                .anyMatch(u -> u.getEmpresa() == null || !empresa.getId().equals(u.getEmpresa().getId()));
+        if (!precisaAtualizar) {
+            return;
+        }
+        unidadesDoAdministrador.forEach(u -> u.setEmpresa(empresa));
+        unidadeRepository.saveAll(unidadesDoAdministrador);
     }
 
     /**

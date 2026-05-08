@@ -96,9 +96,13 @@ export const clientePublicoService = {
     return response.data
   },
 
+  meusCancelamentos: async (): Promise<any[]> => {
+    const response = await api.get<any[]>('/publico/clientes/meus-cancelamentos')
+    return response.data
+  },
+
   cancelarAgendamento: async (id: number): Promise<void> => {
     await api.post(`/publico/clientes/agendamentos/${id}/cancelar`)
   },
 }
-
 

@@ -140,18 +140,20 @@ export default function NovoCliente() {
 
           <Button
             onPress={handleSubmit}
-            title={createMutation.isPending ? 'Salvando...' : 'Salvar'}
             isLoading={createMutation.isPending}
             disabled={createMutation.isPending}
             style={styles.submitButton}
-          />
+          >
+            {createMutation.isPending ? 'Salvando...' : 'Salvar'}
+          </Button>
 
           <Button
             onPress={() => router.back()}
-            title="Cancelar"
             variant="secondary"
             style={styles.cancelButton}
-          />
+          >
+            Cancelar
+          </Button>
         </View>
       </ScrollView>
     </View>
