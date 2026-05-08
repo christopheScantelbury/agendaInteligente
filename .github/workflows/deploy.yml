@@ -59,7 +59,8 @@ jobs:
         run: |
           curl --fail --silent --show-error \
             -X POST "${{ secrets.EASYPANEL_DEPLOY_BACKEND_URL }}" \
-            -H "Content-Type: application/json"
+            -H "Content-Type: application/json" \
+            -d '{}'
           echo "Backend deploy disparado."
 
   deploy-frontend:
@@ -75,5 +76,6 @@ jobs:
         run: |
           curl --fail --silent --show-error \
             -X POST "${{ secrets.EASYPANEL_DEPLOY_FRONTEND_URL }}" \
-            -H "Content-Type: application/json"
+            -H "Content-Type: application/json" \
+            -d '{}'
           echo "Frontend deploy disparado."
