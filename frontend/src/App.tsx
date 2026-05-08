@@ -34,6 +34,7 @@ import Configuracoes from './pages/Configuracoes'
 import ConvitesAcesso from './pages/ConvitesAcesso'
 import ConvitesCliente from './pages/ConvitesCliente'
 import RequirePermissao from './components/RequirePermissao'
+import Landing from './pages/Landing'
 
 
 function NavigateToAfterLogin() {
@@ -117,6 +118,18 @@ function App() {
                 element={clientePublicoService.isAuthenticated() ? <MeusAgendamentosCliente /> : <Navigate to="/cliente/login" />}
               />
               <Route path="/reclamacoes" element={<Reclamacoes />} />
+
+              {/* Landing page — unauthenticated root */}
+              <Route
+                path="/"
+                element={
+                  clientePublicoService.isAuthenticated()
+                    ? <Navigate to="/cliente/agendar" replace />
+                    : authService.isAuthenticated()
+                      ? <Navigate to="/agendamentos" replace />
+                      : <Landing />
+                }
+              />
 
               {/* Rotas administrativas */}
               <Route
