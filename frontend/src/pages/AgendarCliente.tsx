@@ -5,6 +5,7 @@ import { unidadeService, Unidade } from '../services/unidadeService'
 import { servicoService, Servico } from '../services/servicoService'
 import { useNotification } from '../contexts/NotificationContext'
 import DateSlotPicker from '../components/DateSlotPicker'
+import { inteligenciaService, HorarioPopular } from '../services/inteligenciaService'
 import {
   Building2,
   MapPin,
@@ -40,6 +41,7 @@ export default function AgendarCliente() {
   const [loading, setLoading] = useState(false)
   const [loadingSlots, setLoadingSlots] = useState(false)
   const [availableSlots, setAvailableSlots] = useState<any[]>([])
+  const [horariosPopulares, setHorariosPopulares] = useState<HorarioPopular[]>([])
 
   useEffect(() => {
     if (!clientePublicoService.isAuthenticated()) {
@@ -52,6 +54,11 @@ export default function AgendarCliente() {
   useEffect(() => {
     if (currentStep === 'data' && selectedUnidade && selectedServico) {
       buscarHorarios(selectedDate)
+      if (!horariosPopulares.length) {
+        inteligenciaService.horariosPopulares(selectedUnidade.id)
+          .then(setHorariosPopulares)
+          .catch(() => {}) // graceful fail — feature optional
+      }
     }
   }, [currentStep, selectedDate, selectedUnidade, selectedServico])
 
@@ -309,6 +316,7 @@ export default function AgendarCliente() {
                   slots={availableSlots}
                   loading={loadingSlots}
                   selectedSlot={selectedSlot}
+                  horariosPopulares={horariosPopulares}
                   onSlotSelect={(slot) => {
                     setSelectedSlot(slot)
                     setCurrentStep('confirmacao')

@@ -87,4 +87,41 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             Long idNot,
             List<StatusAgendamento> statuses
     );
+
+    @Query(value = """
+            SELECT
+              EXTRACT(HOUR FROM data_hora_inicio)::int AS hora,
+              EXTRACT(DOW FROM data_hora_inicio)::int AS dia_semana,
+              COUNT(*) AS total,
+              COUNT(*) FILTER (WHERE status = 'NO_SHOW') AS no_shows
+            FROM agendamentos
+            WHERE unidade_id = :unidadeId
+              AND data_hora_inicio >= :inicio
+            GROUP BY 1, 2
+            ORDER BY total DESC
+            """, nativeQuery = true)
+    List<Object[]> findHorariosPopularesPorUnidade(
+            @Param("unidadeId") Long unidadeId,
+            @Param("inicio") LocalDateTime inicio);
+
+    @Query(value = """
+            SELECT
+              EXTRACT(HOUR FROM data_hora_inicio)::int AS hora,
+              EXTRACT(DOW FROM data_hora_inicio)::int AS dia_semana,
+              COUNT(*) AS total,
+              COUNT(*) FILTER (WHERE status = 'NO_SHOW') AS no_shows
+            FROM agendamentos
+            WHERE data_hora_inicio >= :inicio
+            GROUP BY 1, 2
+            ORDER BY total DESC
+            """, nativeQuery = true)
+    List<Object[]> findHorariosPopularesGlobal(@Param("inicio") LocalDateTime inicio);
+
+    @Query("SELECT a FROM Agendamento a WHERE a.cliente.id = :clienteId ORDER BY a.dataHoraInicio DESC")
+    List<Agendamento> findByClienteIdOrderByDataDesc(@Param("clienteId") Long clienteId);
+
+    @Query("SELECT a FROM Agendamento a WHERE a.unidade.id = :unidadeId AND a.dataHoraInicio >= :inicio ORDER BY a.dataHoraInicio DESC")
+    List<Agendamento> findByUnidadeIdAndPeriodo(
+            @Param("unidadeId") Long unidadeId,
+            @Param("inicio") LocalDateTime inicio);
 }

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { format, addDays, startOfDay, isSameDay, isBefore, addWeeks, subWeeks } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock } from 'lucide-react'
+import type { HorarioPopular } from '../services/inteligenciaService'
 
 interface DateSlotPickerProps {
     selectedDate: Date
@@ -15,6 +16,7 @@ interface DateSlotPickerProps {
     onSlotSelect: (slot: any) => void
     selectedSlot: any | null
     loading?: boolean
+    horariosPopulares?: HorarioPopular[]
 }
 
 export default function DateSlotPicker({
@@ -23,7 +25,8 @@ export default function DateSlotPicker({
     slots,
     onSlotSelect,
     selectedSlot,
-    loading = false
+    loading = false,
+    horariosPopulares = [],
 }: DateSlotPickerProps) {
     const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfDay(new Date()))
 
@@ -64,6 +67,14 @@ export default function DateSlotPicker({
 
     const formatTime = (isoString: string) => {
         return format(new Date(isoString), 'HH:mm')
+    }
+
+    const isSlotPopular = (isoString: string): boolean => {
+        if (!horariosPopulares.length) return false
+        const d = new Date(isoString)
+        const hora = d.getHours()
+        const diaSemana = d.getDay() // 0=Dom … 6=Sáb (same as PostgreSQL DOW)
+        return horariosPopulares.some(h => h.popular && h.hora === hora && h.diaSemana === diaSemana)
     }
 
     return (
@@ -158,7 +169,9 @@ export default function DateSlotPicker({
                                     <span>{period.icon}</span> {period.label}
                                 </h4>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                                    {period.items.map((slot, idx) => (
+                                    {period.items.map((slot, idx) => {
+                                        const popular = isSlotPopular(slot.dataHoraInicio)
+                                        return (
                                         <button
                                             key={`${slot.dataHoraInicio}-${idx}`}
                                             onClick={() => onSlotSelect(slot)}
@@ -167,10 +180,15 @@ export default function DateSlotPicker({
                         flex flex-col items-center gap-1
                         ${selectedSlot?.dataHoraInicio === slot.dataHoraInicio
                                                     ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-indigo-600'
-                                                    : 'border-gray-200 bg-white text-gray-700 hover:border-indigo-300 hover:shadow-sm'
+                                                    : popular
+                                                        ? 'border-orange-300 bg-orange-50 text-gray-700 hover:border-orange-400 hover:shadow-sm'
+                                                        : 'border-gray-200 bg-white text-gray-700 hover:border-indigo-300 hover:shadow-sm'
                                                 }
                       `}
                                         >
+                                            {popular && (
+                                                <span className="absolute -top-2 -right-1 text-sm leading-none" title="Horário popular">🔥</span>
+                                            )}
                                             <span className="text-base font-bold">
                                                 {formatTime(slot.dataHoraInicio)}
                                             </span>
@@ -180,7 +198,8 @@ export default function DateSlotPicker({
                                                 </span>
                                             )}
                                         </button>
-                                    ))}
+                                        )
+                                    })}
                                 </div>
                             </div>
                         ))}
