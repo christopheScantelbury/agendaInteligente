@@ -111,6 +111,16 @@ app:
 resend:
   api-key: ${RESEND_API_KEY:}
 
+# Chatbot WhatsApp (Evolution API + Gemini Flash)
+chatbot:
+  habilitado: ${CHATBOT_HABILITADO:false}
+  evolution:
+    api-url: ${EVOLUTION_API_URL:}
+    api-key: ${EVOLUTION_API_KEY:}
+    instance: ${EVOLUTION_INSTANCE:agendainteligente}
+  gemini:
+    api-key: ${GEMINI_API_KEY:}
+
 # JWT
 # IMPORTANTE: JWT_SECRET deve vir do ambiente em prod (gerar com: openssl rand -base64 64).
 # O profile 'prod' (application-prod.yml) NAO permite default — falha rapido se nao definido.
