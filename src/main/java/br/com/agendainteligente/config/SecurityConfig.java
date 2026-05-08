@@ -35,7 +35,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/publico/**").permitAll() // Endpoints públicos para clientes
-                        .requestMatchers("/api/nfse/test/**").permitAll() // Endpoint de teste NFS-e
+                        .requestMatchers("/api/nfse/test/**").permitAll()
+                        .requestMatchers("/api/webhooks/**").permitAll() // Callbacks externos (NotaFácil, etc.)
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .anyRequest().authenticated()

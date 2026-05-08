@@ -192,7 +192,7 @@ export default function Configuracoes() {
                 required
                 value={conta.nome || ''}
                 onChange={(e) => setConta((prev) => ({ ...prev, nome: e.target.value }))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </FormField>
             <FormField label="Email" required>
@@ -201,7 +201,7 @@ export default function Configuracoes() {
                 required
                 value={conta.email || ''}
                 onChange={(e) => setConta((prev) => ({ ...prev, email: maskEmail(e.target.value) }))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </FormField>
             <FormField label="Área de atuação">
@@ -209,7 +209,7 @@ export default function Configuracoes() {
                 type="text"
                 value={conta.areaAtuacao || ''}
                 onChange={(e) => setConta((prev) => ({ ...prev, areaAtuacao: e.target.value }))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </FormField>
             <FormField label="Telefone">
@@ -218,7 +218,7 @@ export default function Configuracoes() {
                 value={conta.telefone || ''}
                 onChange={(e) => setConta((prev) => ({ ...prev, telefone: maskPhone(e.target.value) }))}
                 maxLength={15}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </FormField>
           </div>
@@ -236,7 +236,7 @@ export default function Configuracoes() {
                 required
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </FormField>
             <FormField label="Confirmar nova senha" required>
@@ -245,7 +245,7 @@ export default function Configuracoes() {
                 required
                 value={confirmarSenha}
                 onChange={(e) => setConfirmarSenha(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </FormField>
           </div>
@@ -264,7 +264,7 @@ export default function Configuracoes() {
               required
               value={empresaForm.nome || ''}
               onChange={(e) => setEmpresaForm((prev) => ({ ...prev, nome: e.target.value }))}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
 
@@ -273,7 +273,7 @@ export default function Configuracoes() {
               type="text"
               value={empresaForm.razaoSocial || ''}
               onChange={(e) => setEmpresaForm((prev) => ({ ...prev, razaoSocial: e.target.value }))}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
 
@@ -284,7 +284,7 @@ export default function Configuracoes() {
                 value={empresaForm.cnpj || ''}
                 onChange={(e) => setEmpresaForm((prev) => ({ ...prev, cnpj: maskCNPJ(e.target.value) }))}
                 maxLength={18}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </FormField>
             <FormField label="Telefone">
@@ -293,7 +293,7 @@ export default function Configuracoes() {
                 value={empresaForm.telefone || ''}
                 onChange={(e) => setEmpresaForm((prev) => ({ ...prev, telefone: maskPhone(e.target.value) }))}
                 maxLength={15}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </FormField>
           </div>
@@ -303,7 +303,7 @@ export default function Configuracoes() {
               type="email"
               value={empresaForm.email || ''}
               onChange={(e) => setEmpresaForm((prev) => ({ ...prev, email: maskEmail(e.target.value) }))}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
 
@@ -313,7 +313,7 @@ export default function Configuracoes() {
                 type="text"
                 value={empresaForm.endereco || ''}
                 onChange={(e) => setEmpresaForm((prev) => ({ ...prev, endereco: e.target.value }))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </FormField>
             <FormField label="Número">
@@ -321,7 +321,7 @@ export default function Configuracoes() {
                 type="text"
                 value={empresaForm.numero || ''}
                 onChange={(e) => setEmpresaForm((prev) => ({ ...prev, numero: e.target.value }))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </FormField>
             <FormField label="Bairro">
@@ -329,7 +329,7 @@ export default function Configuracoes() {
                 type="text"
                 value={empresaForm.bairro || ''}
                 onChange={(e) => setEmpresaForm((prev) => ({ ...prev, bairro: e.target.value }))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </FormField>
             <FormField label="CEP">
@@ -338,7 +338,7 @@ export default function Configuracoes() {
                 value={empresaForm.cep || ''}
                 onChange={(e) => setEmpresaForm((prev) => ({ ...prev, cep: maskCEP(e.target.value) }))}
                 maxLength={9}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </FormField>
             <FormField label="Cidade">
@@ -346,7 +346,7 @@ export default function Configuracoes() {
                 type="text"
                 value={empresaForm.cidade || ''}
                 onChange={(e) => setEmpresaForm((prev) => ({ ...prev, cidade: e.target.value }))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </FormField>
             <FormField label="UF">
@@ -355,7 +355,7 @@ export default function Configuracoes() {
                 value={empresaForm.uf || ''}
                 onChange={(e) => setEmpresaForm((prev) => ({ ...prev, uf: e.target.value.toUpperCase().slice(0, 2) }))}
                 maxLength={2}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </FormField>
           </div>

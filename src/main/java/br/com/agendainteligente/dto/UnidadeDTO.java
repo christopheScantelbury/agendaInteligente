@@ -36,6 +36,11 @@ public class UnidadeDTO {
 
     private java.time.LocalTime horarioAbertura;
     private java.time.LocalTime horarioFechamento;
-    
+
     private Long empresaId;
+
+    // ── Integração NotaFácil ─────────────────────────────────────────────────
+    private String municipioIbge;
+    private String notafacilApiKey;
+    private Boolean notafacilAtivo;
 }

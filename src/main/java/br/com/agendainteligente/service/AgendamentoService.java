@@ -980,9 +980,15 @@ public class AgendamentoService {
         agendamento = agendamentoRepository.save(agendamento);
         
         log.info("Agendamento finalizado com sucesso. ID: {}, Pago total: {}", id, novoTotalPago);
-        
-        // Emite nota fiscal automaticamente
-        notaFiscalService.emitirNotaFiscal(agendamento.getId());
+
+        // Emite nota fiscal automaticamente apenas se a unidade tem NotaFácil ativo
+        boolean notafacilAtivo = Boolean.TRUE.equals(agendamento.getUnidade().getNotafacilAtivo());
+        if (notafacilAtivo) {
+            log.info("Disparando emissão de NFS-e via NotaFácil para agendamento {}", id);
+            notaFiscalService.emitirNotaFiscal(agendamento.getId());
+        } else {
+            log.debug("NotaFácil não ativo para a unidade — NFS-e não emitida automaticamente (agendamento {})", id);
+        }
         
         return agendamentoMapper.toDTO(agendamento);
     }
