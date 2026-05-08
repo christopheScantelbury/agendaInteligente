@@ -136,8 +136,8 @@ export default function Layout({ children }: LayoutProps) {
       items.push({ path: '/servicos', label: 'Serviços', icon: <Stethoscope className="h-5 w-5" /> })
     }
     
-    // Clientes (mesma permissão de Usuários)
-    if (temPermissaoMenu('/usuarios')) {
+    // Clientes
+    if (temPermissaoMenu('/clientes') || temPermissaoMenu('/usuarios')) {
       items.push({
         path: '/clientes',
         label: 'Clientes',
@@ -151,12 +151,7 @@ export default function Layout({ children }: LayoutProps) {
       items.push({ path: '/usuarios', label: 'Usuários', icon: <Settings className="h-5 w-5" /> })
     }
 
-    // Clientes (fallback para perfis antigos que só tinham permissão em /usuarios)
-    if (temPermissaoMenu('/clientes') || temPermissaoMenu('/usuarios')) {
-      items.push({ path: '/clientes', label: 'Clientes', icon: <Users className="h-5 w-5" /> })
-    }
-
-    // Profissionais (fallback de visibilidade para perfis antigos via /usuarios)
+    // Profissionais
     if (temPermissaoMenu('/profissionais') || temPermissaoMenu('/usuarios')) {
       items.push({ path: '/profissionais', label: 'Profissionais', icon: <Stethoscope className="h-5 w-5" /> })
     }
@@ -219,10 +214,19 @@ export default function Layout({ children }: LayoutProps) {
       >
         {/* Logo Header */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100">
-          <Link to={authService.isPerfilCliente() ? '/agendamentos' : '/'} className="flex items-center space-x-2 overflow-hidden">
-            <Calendar className="h-8 w-8 text-blue-600 flex-shrink-0" />
-            <span className="font-bold text-xl text-gray-900">
-              Agenda
+          <Link to={authService.isPerfilCliente() ? '/agendamentos' : '/'} className="flex items-center gap-2.5 overflow-hidden">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden className="flex-shrink-0">
+              <rect width="32" height="32" rx="9" fill="#7C3AED" />
+              <rect x="6" y="6" width="20" height="20" rx="3" fill="white" />
+              <rect x="10" y="4" width="4" height="5" rx="1.5" fill="#DDD6FE" />
+              <rect x="18" y="4" width="4" height="5" rx="1.5" fill="#DDD6FE" />
+              <line x1="10" y1="16" x2="22" y2="16" stroke="#7C3AED" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1="10" y1="19.5" x2="18" y2="19.5" stroke="#C4B5FD" strokeWidth="1.2" strokeLinecap="round" />
+              <circle cx="22" cy="22" r="4" fill="#10B981" />
+              <path d="M20.5 22l1 1 2.5-2.5" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="font-black text-base text-slate-900 tracking-tight whitespace-nowrap">
+              Agenda<span className="text-violet-600">Inteligente</span>
             </span>
           </Link>
           <button
@@ -246,11 +250,11 @@ export default function Layout({ children }: LayoutProps) {
                 className={`
                   flex items-center px-3 py-2.5 rounded-lg transition-colors group relative
                   ${active
-                    ? 'bg-blue-50 text-blue-700'
+                    ? 'bg-violet-50 text-violet-700'
                     : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}
                 `}
               >
-                <span className={`flex-shrink-0 ${active ? 'text-blue-600' : 'text-gray-500 group-hover:text-gray-700'}`}>
+                <span className={`flex-shrink-0 ${active ? 'text-violet-600' : 'text-gray-500 group-hover:text-gray-700'}`}>
                   {item.icon}
                 </span>
                 <span className="ml-3 text-sm leading-5 font-medium whitespace-nowrap">
@@ -269,7 +273,7 @@ export default function Layout({ children }: LayoutProps) {
         {/* User Profile */}
         <div className="border-t border-gray-100 p-3">
           <div className="flex items-center justify-start px-2 py-2">
-            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 text-blue-700 font-semibold">
+            <div className="h-8 w-8 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0 text-violet-700 font-semibold">
               {usuario?.nome?.charAt(0) || <User className="h-5 w-5" />}
             </div>
             <div className="ml-3 overflow-hidden">
