@@ -19,6 +19,7 @@ import { SlotInfo, View } from 'react-big-calendar'
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Plus, Building2, Search, X, CalendarDays, Clock, List, Pencil, ChevronDown, ChevronUp, ChevronRight, UserRound, Trash2, BriefcaseBusiness, MessageCircle, Tag, HandCoins, Check, Info } from 'lucide-react'
+import NotaFiscalPanel from '../components/NotaFiscalPanel'
 import Modal from '../components/Modal'
 import FormField from '../components/FormField'
 import Button from '../components/Button'
@@ -2879,6 +2880,14 @@ export default function Agendamentos() {
                     </>
                   )
                 })()}
+
+                {/* NFS-e via NotaFácil */}
+                {agendamentoDetalhes.id && (
+                  <NotaFiscalPanel
+                    agendamentoId={agendamentoDetalhes.id}
+                    agendamentoStatus={agendamentoDetalhes.status}
+                  />
+                )}
               </div>
 
               <div className="border-t border-slate-200 px-4 py-3 sm:px-5">

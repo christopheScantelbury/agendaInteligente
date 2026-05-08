@@ -16,6 +16,12 @@ export interface Unidade {
   horarioAbertura?: string
   horarioFechamento?: string
   empresaId?: number
+  cnpj?: string
+  inscricaoMunicipal?: string
+  municipioIbge?: string
+  notafacilApiKey?: string
+  notafacilAtivo?: boolean
+  logo?: string
 }
 
 export const unidadeService = {

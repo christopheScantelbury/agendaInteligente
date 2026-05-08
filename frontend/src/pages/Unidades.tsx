@@ -449,6 +449,61 @@ function UnidadeForm({
           </FormField>
         </div>
 
+        {/* Seção NotaFácil */}
+        <div className="border-t pt-4 mt-2">
+          <p className="text-xs font-bold uppercase tracking-widest text-violet-600 mb-3">NotaFácil — Emissão de NFS-e</p>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="CNPJ da Unidade">
+              <input
+                type="text"
+                maxLength={14}
+                value={formData.cnpj || ''}
+                onChange={(e) => setFormData({ ...formData, cnpj: e.target.value.replace(/\D/g, '') })}
+                placeholder="00000000000000"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 font-mono text-sm"
+              />
+            </FormField>
+            <FormField label="Inscrição Municipal">
+              <input
+                type="text"
+                value={formData.inscricaoMunicipal || ''}
+                onChange={(e) => setFormData({ ...formData, inscricaoMunicipal: e.target.value })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 font-mono text-sm"
+              />
+            </FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-4 mt-3">
+            <FormField label="Código IBGE do Município">
+              <input
+                type="text"
+                maxLength={7}
+                value={formData.municipioIbge || ''}
+                onChange={(e) => setFormData({ ...formData, municipioIbge: e.target.value.replace(/\D/g, '') })}
+                placeholder="ex: 3550308"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 font-mono text-sm"
+              />
+            </FormField>
+            <FormField label="API Key (sk_live_...)">
+              <input
+                type="password"
+                value={formData.notafacilApiKey || ''}
+                onChange={(e) => setFormData({ ...formData, notafacilApiKey: e.target.value })}
+                placeholder="sk_live_..."
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 font-mono text-sm"
+              />
+            </FormField>
+          </div>
+          <label className="mt-3 flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={formData.notafacilAtivo ?? false}
+              onChange={(e) => setFormData({ ...formData, notafacilAtivo: e.target.checked })}
+              className="h-4 w-4 rounded border-gray-300 accent-violet-600"
+            />
+            <span className="text-sm text-slate-700">Emitir NFS-e automaticamente ao concluir agendamento</span>
+          </label>
+        </div>
+
         <div className="flex justify-end space-x-2 pt-4 border-t">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar

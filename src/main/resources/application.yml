@@ -42,8 +42,14 @@ server:
     include-message: always
     include-binding-errors: always
 
+# Provider de NFS-e: notafacil (API REST Nota MEI Gateway) | manaus_soap (ABRASF direto)
+notafacil:
+  api-url: ${NOTAFACIL_API_URL:https://api.notameigateway.com.br}
+  webhook-base-url: ${NOTAFACIL_WEBHOOK_BASE_URL:https://agendainteligentebackend.agendainteligenteapp.cloud}
+
 # Configurações da API NFS-e Manaus (Padrão ABRASF)
 nfse:
+  provider: ${NFSE_PROVIDER:notafacil}
   manaus:
     # Ambiente: homologacao | producao
     ambiente: homologacao

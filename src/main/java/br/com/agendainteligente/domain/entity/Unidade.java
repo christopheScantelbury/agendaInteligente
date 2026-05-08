@@ -70,6 +70,17 @@ public class Unidade {
     @Column(name = "admin_unico_id")
     private Long adminUnicoId;
 
+    // ── Integração NotaFácil (Nota MEI Gateway) ─────────────────────────────
+    @Column(name = "notafacil_api_key", length = 255)
+    private String notafacilApiKey;
+
+    @Column(name = "municipio_ibge", length = 7)
+    private String municipioIbge;
+
+    @Column(name = "notafacil_ativo", nullable = false)
+    @Builder.Default
+    private Boolean notafacilAtivo = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "empresa_id", nullable = false)
     private Empresa empresa;
