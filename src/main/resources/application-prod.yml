@@ -4,6 +4,8 @@
 # Spring Boot lanca erro de inicializacao se uma variavel obrigatoria sem default estiver ausente.
 
 spring:
+  main:
+    lazy-initialization: true
   datasource:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
