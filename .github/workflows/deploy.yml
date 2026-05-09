@@ -46,21 +46,71 @@ jobs:
           wait-interval: 15
           allowed-conclusions: success,skipped,neutral
 
-  deploy-backend:
-    name: Deploy backend (Easypanel)
-    needs: [wait-for-ci]
+  docker-backend:
+    name: Build + push imagem backend (GHCR)
+    needs: wait-for-ci
     if: |
       always() &&
       (needs.wait-for-ci.result == 'success' || github.event_name == 'workflow_dispatch') &&
       (github.event_name == 'push' || github.event.inputs.target == 'both' || github.event.inputs.target == 'backend')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ghcr.io/${{ github.repository_owner }}/agendainteligente-backend:latest
     steps:
-      - name: Trigger Easypanel deploy (backend)
+      - uses: actions/checkout@v4
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build JAR (GitHub Actions tem acesso confiavel ao Maven Central)
+        run: mvn -B -ntp -DskipTests verify
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build e push imagem runtime
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.backend-runtime
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/agendainteligente-backend:latest
+
+  deploy-backend:
+    name: Deploy backend (Easypanel)
+    needs: [wait-for-ci, docker-backend]
+    if: |
+      always() &&
+      needs.docker-backend.result == 'success' &&
+      (github.event_name == 'push' || github.event.inputs.target == 'both' || github.event.inputs.target == 'backend')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Atualizar source da service para imagem GHCR
         run: |
           curl --fail --silent --show-error \
-            -X POST "${{ secrets.EASYPANEL_DEPLOY_BACKEND_URL }}" \
+            -X POST "http://31.97.162.185:3000/api/trpc/services.app.updateSourceImage" \
             -H "Content-Type: application/json" \
-            -d '{}'
+            -H "Authorization: Bearer ${{ secrets.EASYPANEL_API_TOKEN }}" \
+            -d "{\"json\":{\"projectName\":\"agenda-inteligente\",\"serviceName\":\"agenda_backend\",\"image\":\"ghcr.io/${{ github.repository_owner }}/agendainteligente-backend:latest\"}}"
+
+      - name: Disparar deploy
+        run: |
+          curl --fail --silent --show-error \
+            -X POST "http://31.97.162.185:3000/api/trpc/services.app.deployService" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.EASYPANEL_API_TOKEN }}" \
+            -d '{"json":{"projectName":"agenda-inteligente","serviceName":"agenda_backend"}}'
           echo "Backend deploy disparado."
 
   deploy-frontend:
