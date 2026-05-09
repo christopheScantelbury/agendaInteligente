@@ -20,10 +20,11 @@ interface RequirePermissaoProps {
  */
 export default function RequirePermissao({ path, fallbackPaths = [], children }: RequirePermissaoProps) {
   const usuario = authService.getUsuario()
-  const { data: perfil, isLoading } = useQuery({
+  const { data: perfil, isLoading, isError } = useQuery({
     queryKey: ['perfil', 'meu'],
     queryFn: () => perfilService.buscarMeuPerfil(),
     enabled: !!usuario,
+    retry: 1,
   })
 
   if (!usuario) {
@@ -33,6 +34,10 @@ export default function RequirePermissao({ path, fallbackPaths = [], children }:
   if (authService.isPerfilCliente()) {
     if (path === '/agendamentos') return <>{children}</>
     return <Navigate to="/agendamentos" replace />
+  }
+
+  if (isError) {
+    return <Navigate to="/login" replace />
   }
 
   if (isLoading || !perfil) {

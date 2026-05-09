@@ -34,7 +34,13 @@ export default function Login() {
       const data = await authService.login({ email, senha })
       navigate((data.perfil ?? '').toUpperCase() === 'CLIENTE' ? '/cliente/agendar' : '/agendamentos')
     } catch (error: any) {
-      setErro(error.response?.data?.message || 'Erro ao fazer login')
+      if (!error.response) {
+        setErro('Serviço temporariamente indisponível. Tente novamente em instantes.')
+      } else if (error.response.status === 401) {
+        setErro('E-mail ou senha incorretos.')
+      } else {
+        setErro(error.response?.data?.message || 'Erro ao fazer login. Tente novamente.')
+      }
     } finally {
       setLoading(false)
     }
