@@ -11,11 +11,21 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
 
+  datasource:
+    hikari:
+      minimum-idle: 2
+      maximum-pool-size: 8
+      idle-timeout: 600000
+      connection-timeout: 30000
+      validation-timeout: 5000
+
   data:
     redis:
       host: ${SPRING_DATA_REDIS_HOST}
       port: ${SPRING_DATA_REDIS_PORT:6379}
       password: ${SPRING_DATA_REDIS_PASSWORD:}
+      connect-timeout: 3000
+      timeout: 3000
 
   jpa:
     show-sql: false
