@@ -22,15 +22,15 @@ services:
     command:
       - "postgres"
       - "-c"
-      - "shared_buffers=256MB"
+      - "shared_buffers=128MB"
       - "-c"
-      - "effective_cache_size=1GB"
+      - "effective_cache_size=512MB"
       - "-c"
-      - "maintenance_work_mem=128MB"
+      - "maintenance_work_mem=64MB"
       - "-c"
       - "checkpoint_completion_target=0.9"
       - "-c"
-      - "wal_buffers=16MB"
+      - "wal_buffers=8MB"
       - "-c"
       - "default_statistics_target=100"
       - "-c"
@@ -40,9 +40,9 @@ services:
       - "-c"
       - "work_mem=4MB"
       - "-c"
-      - "min_wal_size=1GB"
+      - "min_wal_size=80MB"
       - "-c"
-      - "max_wal_size=4GB"
+      - "max_wal_size=1GB"
 
   # Redis - Cache e filas
   redis:
@@ -54,7 +54,7 @@ services:
       - redis_data:/data
     networks:
       - agenda-network
-    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly no --maxmemory 256mb --maxmemory-policy allkeys-lru
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s

@@ -1,16 +1,19 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Calendar, momentLocalizer, View, SlotInfo } from 'react-big-calendar'
-import moment from 'moment'
-import 'moment/locale/pt-br'
+import { Calendar, dateFnsLocalizer, View, SlotInfo } from 'react-big-calendar'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import './CalendarView.css'
 import { Agendamento } from '../services/agendamentoService'
-import { format, startOfWeek, endOfWeek, startOfMonth, getDay } from 'date-fns'
+import { format, parse, startOfWeek, endOfWeek, startOfMonth, getDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
-moment.locale('pt-br')
-const localizer = momentLocalizer(moment)
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek: (date: Date) => startOfWeek(date, { locale: ptBR }),
+  getDay,
+  locales: { 'pt-BR': ptBR },
+})
 
 const capitalizar = (texto: string): string =>
   texto ? texto.charAt(0).toUpperCase() + texto.slice(1) : texto

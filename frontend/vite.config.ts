@@ -15,11 +15,16 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: undefined,
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-query': ['@tanstack/react-query'],
+          'vendor-charts': ['recharts'],
+          'vendor-calendar': ['react-big-calendar'],
+          'vendor-form': ['react-hook-form', '@hookform/resolvers', 'zod'],
+          'vendor-ui': ['lucide-react'],
+        },
       },
     },
   },
-  // Garantir que o service worker seja servido corretamente
   publicDir: 'public',
 })
-

@@ -33,7 +33,7 @@ jobs:
         with:
           name: backend-jar
           path: target/*.jar
-          retention-days: 7
+          retention-days: 1
 
   frontend:
     name: Frontend (Vite + TypeScript)
@@ -62,11 +62,16 @@ jobs:
         with:
           name: frontend-dist
           path: frontend/dist
-          retention-days: 7
+          retention-days: 1
 
   mobile-typecheck:
     name: Mobile (Expo, type-check)
     runs-on: ubuntu-latest
+    # Executa apenas quando arquivos do mobile são alterados
+    if: |
+      contains(github.event.head_commit.modified, 'mobile/') ||
+      contains(github.event.head_commit.added, 'mobile/') ||
+      github.event_name == 'pull_request'
     defaults:
       run:
         working-directory: mobile

@@ -2,10 +2,11 @@ package br.com.agendainteligente.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.client.RestClient;
 
 import java.util.List;
 import java.util.Map;
@@ -20,7 +21,7 @@ public class IaService {
     private static final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
     private static final String MODEL = "llama-3.3-70b-versatile";
 
-    private final WebClient webClient = WebClient.builder().build();
+    private final RestClient restClient = RestClient.builder().build();
 
     public String sugerirRespostaReclamacao(String mensagem) {
         String prompt = """
@@ -97,22 +98,19 @@ public class IaService {
                 "max_tokens", 512
             );
 
-            var resposta = webClient.post()
+            var resposta = restClient.post()
                 .uri(GROQ_URL)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + groqApiKey)
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
+                .body(body)
                 .retrieve()
-                .bodyToMono(Map.class)
-                .block();
+                .body(new ParameterizedTypeReference<Map<String, Object>>() {});
 
             if (resposta == null) return "";
 
-            @SuppressWarnings("unchecked")
             var choices = (List<Map<String, Object>>) resposta.get("choices");
             if (choices == null || choices.isEmpty()) return "";
 
-            @SuppressWarnings("unchecked")
             var message = (Map<String, String>) choices.get(0).get("message");
             return message != null ? message.getOrDefault("content", "").strip() : "";
 

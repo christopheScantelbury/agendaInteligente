@@ -146,14 +146,13 @@ springdoc:
     path: /swagger-ui.html
     enabled: true
 
-# Logging
+# Logging — apenas INFO em todos os perfis de base.
+# Níveis DEBUG/TRACE estão em application-dev.yml (nunca ativo em docker ou prod).
 logging:
   level:
     root: INFO
-    br.com.agendainteligente: DEBUG
-    br.com.agendainteligente.integration: DEBUG # Logs detalhados da integração NFS-e
+    br.com.agendainteligente: INFO
     org.springframework.web: INFO
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-    org.springframework.cache: DEBUG
-    org.springframework.web.reactive.function.client: DEBUG # Logs do WebClient
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    org.springframework.cache: WARN

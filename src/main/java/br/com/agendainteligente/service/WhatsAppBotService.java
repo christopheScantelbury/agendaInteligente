@@ -3,10 +3,10 @@ package br.com.agendainteligente.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.client.RestClient;
 
 import java.util.List;
 import java.util.Map;
@@ -44,7 +44,7 @@ public class WhatsAppBotService {
     private static final String GEMINI_URL =
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 
-    private final WebClient webClient = WebClient.builder().build();
+    private final RestClient restClient = RestClient.builder().build();
 
     private static final String SYSTEM_PROMPT = """
             Você é o assistente virtual da agenda. Ajude clientes a:
@@ -86,24 +86,19 @@ public class WhatsAppBotService {
         );
 
         try {
-            @SuppressWarnings("unchecked")
-            var resp = (Map<String, Object>) webClient.post()
+            var resp = restClient.post()
                     .uri(GEMINI_URL + "?key=" + geminiApiKey)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .bodyValue(body)
+                    .body(body)
                     .retrieve()
-                    .bodyToMono(Map.class)
-                    .block();
+                    .body(new ParameterizedTypeReference<Map<String, Object>>() {});
 
             if (resp == null) return null;
 
-            @SuppressWarnings("unchecked")
             var candidates = (List<Map<String, Object>>) resp.get("candidates");
             if (candidates == null || candidates.isEmpty()) return null;
 
-            @SuppressWarnings("unchecked")
             var content = (Map<String, Object>) candidates.get(0).get("content");
-            @SuppressWarnings("unchecked")
             var parts = (List<Map<String, Object>>) content.get("parts");
             if (parts == null || parts.isEmpty()) return null;
 
@@ -123,14 +118,13 @@ public class WhatsAppBotService {
         );
 
         try {
-            webClient.post()
+            restClient.post()
                     .uri(evolutionApiUrl + "/message/sendText/" + evolutionInstance)
                     .header("apikey", evolutionApiKey)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .bodyValue(body)
+                    .body(body)
                     .retrieve()
-                    .bodyToMono(String.class)
-                    .block();
+                    .toBodilessEntity();
         } catch (Exception e) {
             log.error("Erro ao enviar mensagem WhatsApp para {}: {}", telefone, e.getMessage());
         }

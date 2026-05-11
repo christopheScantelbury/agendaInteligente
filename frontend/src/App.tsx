@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+// devtools só é carregado no build de desenvolvimento (tree-shaking remove em prod)
+const isDev = import.meta.env.DEV
 import { authService } from './services/authService'
 import { clientePublicoService } from './services/clientePublicoService'
 import { perfilService } from './services/perfilService'
@@ -175,7 +177,7 @@ function App() {
               />
             </Routes>
           </Router>
-          <ReactQueryDevtools initialIsOpen={false} />
+          {isDev && <ReactQueryDevtools initialIsOpen={false} />}
         </NotificationProvider>
       </QueryClientProvider>
     </ErrorBoundary>
