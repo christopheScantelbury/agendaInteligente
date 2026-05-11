@@ -16,6 +16,7 @@ import { authService } from '../services/authService'
 import { perfilService } from '../services/perfilService'
 import { podeEditar } from '../utils/permissions'
 import { getApiErrorMessage } from '../utils/apiError'
+import { useCategoria } from '../hooks/useCategoria'
 
 type ProfissionalListItem = Atendente & {
   itemKey: string
@@ -24,6 +25,7 @@ type ProfissionalListItem = Atendente & {
 
 export default function Atendentes() {
   const { showNotification } = useNotification()
+  const { dict } = useCategoria()
   const [showModal, setShowModal] = useState(false)
   const [editingAtendente, setEditingAtendente] = useState<Atendente | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null })
@@ -154,7 +156,7 @@ export default function Atendentes() {
   return (
     <div className="w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Profissionais</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{dict.rotuloAtendentePlural}</h1>
         {podeEditarProfissionais && (
           <Button
             onClick={() => {
@@ -164,7 +166,7 @@ export default function Atendentes() {
             }}
           >
             <Plus className="h-5 w-5 mr-2" />
-            Novo Profissional
+            Novo {dict.rotuloAtendente}
           </Button>
         )}
       </div>

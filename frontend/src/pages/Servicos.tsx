@@ -14,9 +14,11 @@ import FilterBar from '../components/FilterBar'
 import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { iaService } from '../services/iaService'
+import { useCategoria } from '../hooks/useCategoria'
 
 export default function Servicos() {
   const { showNotification } = useNotification()
+  const { dict } = useCategoria()
   const [showModal, setShowModal] = useState(false)
   const [editingServico, setEditingServico] = useState<Servico | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null })
@@ -100,7 +102,7 @@ export default function Servicos() {
   return (
     <div className="w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Serviços</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{dict.rotuloServicoPlural}</h1>
         {podeEditarServicos && (
           <Button
             onClick={() => {
@@ -109,7 +111,7 @@ export default function Servicos() {
             }}
           >
             <Plus className="h-5 w-5 mr-2" />
-            Novo Serviço
+            Novo {dict.rotuloServico}
           </Button>
         )}
       </div>

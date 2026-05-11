@@ -11,9 +11,11 @@ import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import FilterBar from '../components/FilterBar'
 import Button from '../components/Button'
+import { useCategoria } from '../hooks/useCategoria'
 
 export default function Clientes() {
   const { showNotification } = useNotification()
+  const { dict } = useCategoria()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
@@ -87,11 +89,11 @@ export default function Clientes() {
   return (
     <div className="w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Clientes</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{dict.rotuloClientePlural}</h1>
         {podeEditarClientes && (
           <Button onClick={() => navigate('/clientes/novo')}>
             <Plus className="h-5 w-5 mr-2" />
-            Novo Cliente
+            Novo {dict.rotuloCliente}
           </Button>
         )}
       </div>
