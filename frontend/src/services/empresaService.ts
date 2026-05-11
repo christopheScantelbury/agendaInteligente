@@ -1,5 +1,17 @@
 import api from './api'
 
+export type CategoriaEmpresa =
+  | 'ACADEMIA'
+  | 'CONSULTORIO_MEDICO'
+  | 'CONSULTORIO_DENTARIO'
+  | 'SALAO_BELEZA'
+  | 'ESTETICA'
+  | 'FISIOTERAPIA'
+  | 'PSICOLOGIA'
+  | 'NUTRICIONISTA'
+  | 'VETERINARIA'
+  | 'OUTROS'
+
 export interface Empresa {
   id?: number
   nome: string
@@ -16,6 +28,7 @@ export interface Empresa {
   ativo?: boolean
   logo?: string
   corApp?: string
+  categoria?: CategoriaEmpresa
 }
 
 export const empresaService = {
