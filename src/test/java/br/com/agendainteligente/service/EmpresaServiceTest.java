@@ -3,6 +3,7 @@ package br.com.agendainteligente.service;
 import br.com.agendainteligente.domain.entity.Empresa;
 import br.com.agendainteligente.domain.entity.Usuario;
 import br.com.agendainteligente.domain.entity.Usuario.PerfilUsuario;
+import br.com.agendainteligente.domain.enums.CategoriaEmpresa;
 import br.com.agendainteligente.dto.EmpresaDTO;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
@@ -141,6 +142,36 @@ class EmpresaServiceTest {
         assertEquals(1L, result.getId());
         assertEquals("Empresa Teste", result.getNome());
         verify(empresaRepository, times(1)).findById(1L);
+    }
+
+    @Test
+    void testCriar_ComCategoria_PreservaCategoriaInformada() {
+        EmpresaDTO dto = EmpresaDTO.builder()
+                .nome("Clínica X")
+                .categoria(CategoriaEmpresa.CONSULTORIO_MEDICO)
+                .build();
+        Empresa entityComCategoria = Empresa.builder()
+                .id(5L)
+                .nome("Clínica X")
+                .categoria(CategoriaEmpresa.CONSULTORIO_MEDICO)
+                .build();
+
+        when(empresaMapper.toEntity(dto)).thenReturn(entityComCategoria);
+        when(empresaRepository.save(any(Empresa.class))).thenAnswer(i -> i.getArgument(0));
+        when(empresaMapper.toDTO(any(Empresa.class))).thenReturn(dto);
+
+        EmpresaDTO result = empresaService.criar(dto);
+
+        assertEquals(CategoriaEmpresa.CONSULTORIO_MEDICO, result.getCategoria());
+        verify(empresaRepository).save(argThat(e ->
+                e.getCategoria() == CategoriaEmpresa.CONSULTORIO_MEDICO));
+    }
+
+    @Test
+    void testEmpresa_categoriaDefaultEhOUTROS() {
+        // Builder.Default deve aplicar OUTROS quando categoria não é informada
+        Empresa nova = Empresa.builder().nome("Sem categoria").build();
+        assertEquals(CategoriaEmpresa.OUTROS, nova.getCategoria());
     }
 
     @Test

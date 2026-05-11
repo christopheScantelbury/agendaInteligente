@@ -1,5 +1,6 @@
 package br.com.agendainteligente.dto;
 
+import br.com.agendainteligente.domain.enums.CategoriaEmpresa;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,4 +34,6 @@ public class EmpresaDTO {
     
     private String logo;
     private String corApp;
+
+    private CategoriaEmpresa categoria;
 }
