@@ -266,6 +266,57 @@ Os dados são persistidos em volumes Docker:
 - **5432**: PostgreSQL
 - **6380**: Redis (mapeado da porta interna 6379)
 
+## 💾 Backup e Restore do Postgres
+
+Há um serviço opcional `backup` no `docker-compose.yml` (ativado por profile) que executa `pg_dump` diariamente e mantém os últimos N dumps.
+
+### Subir o backup automático
+
+```bash
+# Sobe o container de backup junto com o stack (não é ativado por padrão)
+docker compose --profile backup up -d backup
+
+# Configurações disponíveis (via .env ou ambiente):
+#   BACKUP_RETENTION       — quantos dumps manter (default 14)
+#   BACKUP_CRON_HOUR       — hora UTC do backup diário (default 3 → 00h Manaus)
+#   BACKUP_CRON_MIN        — minuto (default 0)
+#   BACKUP_RUN_ON_START    — true = roda 1 backup logo ao subir (default false)
+```
+
+Os dumps ficam em `./backups/agenda_inteligente_YYYY-MM-DD_HH-MM-SS.dump` (formato custom do `pg_dump`).
+
+### Backup manual
+
+```bash
+# Dentro do stack (usa as envs do compose):
+docker compose --profile backup run --rm backup /scripts/backup.sh
+
+# Ou apontando para outro Postgres:
+PG_HOST=meu-host PG_USER=postgres PGPASSWORD=senha \
+  BACKUP_DIR=./backups ./scripts/backup.sh
+```
+
+### Restore
+
+> ⚠️ **DESTRUTIVO:** o restore dropa e recria o schema `public`. Confirme o banco-alvo antes de rodar em produção.
+
+```bash
+# Com o stack rodando:
+docker compose exec postgres /scripts/restore.sh /backups/agenda_inteligente_2026-05-11_03-00-00.dump
+
+# Standalone (precisa de psql + pg_restore no host):
+PG_HOST=localhost PG_USER=postgres PGPASSWORD=postgres \
+  ./scripts/restore.sh ./backups/agenda_inteligente_2026-05-11_03-00-00.dump
+```
+
+### Em produção (EasyPanel)
+
+Duas opções:
+1. **App separado de backup** apontando para o serviço Postgres do EasyPanel — copie `scripts/backup.sh` + `scripts/backup-entrypoint.sh` para a imagem e use as mesmas envs.
+2. **Cron do host** chamando `pg_dump` diretamente para um volume externo.
+
+Em ambos os casos: garanta `BACKUP_DIR` num volume persistente e copie os dumps para storage externo (S3, etc.) com periodicidade — backup local protege contra erros de operação, não contra perda do volume.
+
 ## 📚 Documentação da API
 
 Após iniciar o backend, acesse:
