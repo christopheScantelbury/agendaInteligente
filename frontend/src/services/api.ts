@@ -1,8 +1,11 @@
 import axios, { AxiosError } from 'axios'
 import { getApiErrorMessage } from '../utils/apiError'
 
+// Strip BOM (﻿) that can appear when env var is set via some CLI tools on Windows
+const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/^﻿/, '')
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api',
+  baseURL: apiBaseUrl,
   headers: {
     'Content-Type': 'application/json',
   },

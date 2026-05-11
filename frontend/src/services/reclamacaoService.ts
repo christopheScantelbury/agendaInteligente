@@ -12,7 +12,7 @@ export interface Reclamacao {
 
 // Instância do axios para endpoints públicos (sem autenticação)
 const publicApi = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api',
+  baseURL: (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/^﻿/, ''),
   headers: {
     'Content-Type': 'application/json',
   },
