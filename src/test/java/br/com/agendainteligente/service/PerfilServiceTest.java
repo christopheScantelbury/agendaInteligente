@@ -6,12 +6,17 @@ import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
 import br.com.agendainteligente.mapper.PerfilMapper;
 import br.com.agendainteligente.repository.PerfilRepository;
+import br.com.agendainteligente.repository.UsuarioRepository;
+import br.com.agendainteligente.test.TestSecurityContext;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.util.Arrays;
 import java.util.List;
@@ -22,6 +27,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class PerfilServiceTest {
 
     @Mock
@@ -29,6 +35,9 @@ class PerfilServiceTest {
 
     @Mock
     private PerfilMapper perfilMapper;
+
+    @Mock
+    private UsuarioRepository usuarioRepository;
 
     @InjectMocks
     private PerfilService perfilService;
@@ -38,6 +47,9 @@ class PerfilServiceTest {
 
     @BeforeEach
     void setUp() {
+        // Autenticar como ADMIN — bypass da validarPermissaoEditarPerfis
+        TestSecurityContext.authenticateAs("admin@test.com", "ROLE_ADMIN");
+
         perfil = Perfil.builder()
                 .id(1L)
                 .nome("VENDEDOR")
@@ -55,6 +67,11 @@ class PerfilServiceTest {
                 .ativo(true)
                 .permissoesMenu(Arrays.asList("/", "/clientes", "/vendas"))
                 .build();
+    }
+
+    @AfterEach
+    void tearDown() {
+        TestSecurityContext.clear();
     }
 
     @Test
@@ -229,7 +246,7 @@ class PerfilServiceTest {
 
     @Test
     void testAtualizar_PerfilDoSistema() {
-        // Arrange
+        // Perfil do sistema permite apenas atualizar permissões — nome/descricao são ignorados.
         Perfil perfilSistema = Perfil.builder()
                 .id(1L)
                 .nome("ADMIN")
@@ -239,14 +256,20 @@ class PerfilServiceTest {
         PerfilDTO dtoAtualizacao = PerfilDTO.builder()
                 .nome("ADMIN")
                 .descricao("Tentativa de editar")
+                .permissoesMenu(Arrays.asList("/dashboard"))
                 .build();
 
         when(perfilRepository.findById(1L)).thenReturn(Optional.of(perfilSistema));
+        when(perfilRepository.save(any(Perfil.class))).thenReturn(perfilSistema);
+        when(perfilMapper.toDTO(perfilSistema)).thenReturn(perfilDTO);
 
-        // Act & Assert
-        assertThrows(BusinessException.class, () -> perfilService.atualizar(1L, dtoAtualizacao));
+        // Act — não deve lançar; deve atualizar apenas as permissões e devolver DTO
+        PerfilDTO result = perfilService.atualizar(1L, dtoAtualizacao);
+
+        // Assert
+        assertNotNull(result);
         verify(perfilRepository, times(1)).findById(1L);
-        verify(perfilRepository, never()).save(any(Perfil.class));
+        verify(perfilRepository, times(1)).save(any(Perfil.class));
     }
 
     @Test
@@ -299,13 +322,15 @@ class PerfilServiceTest {
 
     @Test
     void testExcluir_ComUsuariosVinculados() {
-        // Arrange
-        // Simular perfil com usuários
+        // Arrange — perfil com lista de usuários não-vazia deve recusar exclusão
+        perfil.setUsuarios(Arrays.asList(
+                br.com.agendainteligente.domain.entity.Usuario.builder().id(1L).build()
+        ));
         when(perfilRepository.findById(1L)).thenReturn(Optional.of(perfil));
-        when(perfil.getUsuarios()).thenReturn(Arrays.asList()); // Lista vazia para passar
 
         // Act & Assert
-        // Como não há usuários, deve excluir normalmente
-        assertDoesNotThrow(() -> perfilService.excluir(1L));
+        assertThrows(BusinessException.class, () -> perfilService.excluir(1L));
+        verify(perfilRepository, times(1)).findById(1L);
+        verify(perfilRepository, never()).delete(any(Perfil.class));
     }
 }

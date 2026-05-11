@@ -2,15 +2,20 @@ package br.com.agendainteligente.service;
 
 import br.com.agendainteligente.domain.entity.Cliente;
 import br.com.agendainteligente.domain.entity.Unidade;
+import br.com.agendainteligente.domain.entity.Usuario;
+import br.com.agendainteligente.domain.entity.Usuario.PerfilUsuario;
 import br.com.agendainteligente.dto.ClienteDTO;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
 import br.com.agendainteligente.mapper.ClienteMapper;
 import br.com.agendainteligente.mapper.ClienteMapperImpl;
 import br.com.agendainteligente.mapper.UnidadeMapper;
+import br.com.agendainteligente.repository.AtendenteRepository;
 import br.com.agendainteligente.repository.ClienteRepository;
 import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.repository.UsuarioRepository;
+import br.com.agendainteligente.test.TestSecurityContext;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,6 +23,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Arrays;
@@ -29,6 +36,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class ClienteServiceTest {
 
     @Mock
@@ -39,6 +47,9 @@ class ClienteServiceTest {
 
     @Mock
     private UsuarioRepository usuarioRepository;
+
+    @Mock
+    private AtendenteRepository atendenteRepository;
 
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -59,11 +70,24 @@ class ClienteServiceTest {
 
     @BeforeEach
     void setUp() {
+        // Autenticar como ADMIN — ADMIN vê todas as unidades e clientes
+        TestSecurityContext.authenticateAs("admin@test.com", "ROLE_ADMIN");
+        Usuario admin = Usuario.builder()
+                .id(99L)
+                .email("admin@test.com")
+                .nome("Admin")
+                .perfilSistema(PerfilUsuario.ADMIN)
+                .ativo(true)
+                .build();
+        when(usuarioRepository.findByEmail("admin@test.com")).thenReturn(Optional.of(admin));
+
         unidade = Unidade.builder()
                 .id(1L)
                 .nome("Unidade Teste")
                 .ativo(true)
                 .build();
+        // ADMIN.podeAcessarCliente → unidadeRepository.findAll() retorna todas
+        when(unidadeRepository.findAll()).thenReturn(Arrays.asList(unidade));
 
         cliente = Cliente.builder()
                 .id(1L)
@@ -82,6 +106,11 @@ class ClienteServiceTest {
                 .telefone("11999999999")
                 .unidadeId(1L)
                 .build();
+    }
+
+    @AfterEach
+    void tearDown() {
+        TestSecurityContext.clear();
     }
 
     @Test
@@ -191,22 +220,22 @@ class ClienteServiceTest {
 
     @Test
     void deveExcluirClienteComSucesso() {
-        // Arrange
-        when(clienteRepository.existsById(1L)).thenReturn(true);
+        // Arrange — service usa findById + podeAcessarCliente, depois deleteById
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
         doNothing().when(clienteRepository).deleteById(1L);
 
         // Act
         clienteService.excluir(1L);
 
         // Assert
-        verify(clienteRepository).existsById(1L);
+        verify(clienteRepository).findById(1L);
         verify(clienteRepository).deleteById(1L);
     }
 
     @Test
     void deveLancarExcecaoAoExcluirClienteInexistente() {
         // Arrange
-        when(clienteRepository.existsById(1L)).thenReturn(false);
+        when(clienteRepository.findById(1L)).thenReturn(Optional.empty());
 
         // Act & Assert
         ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
@@ -214,7 +243,7 @@ class ClienteServiceTest {
         });
 
         assertEquals("Cliente não encontrado com id: 1", exception.getMessage());
-        verify(clienteRepository).existsById(1L);
+        verify(clienteRepository).findById(1L);
         verify(clienteRepository, never()).deleteById(any());
     }
 }

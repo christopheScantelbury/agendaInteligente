@@ -24,11 +24,8 @@ jobs:
           java-version: '21'
           cache: maven
 
-      # Compila tudo (inclusive testes) e empaca o jar.
-      # Os testes nao sao executados pois ha bateria pre-existente quebrada
-      # (debito tecnico — issue separada).
-      - name: Compile + Package (skip tests)
-        run: mvn -B -ntp -DskipTests verify
+      - name: Test + Package
+        run: mvn -B -ntp verify
 
       - name: Upload jar
         if: github.event_name == 'push'
