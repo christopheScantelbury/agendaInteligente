@@ -1,5 +1,6 @@
 package br.com.agendainteligente.domain.entity;
 
+import br.com.agendainteligente.domain.enums.CategoriaEmpresa;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -63,6 +64,11 @@ public class Empresa {
     @Column(nullable = false)
     @Builder.Default
     private Boolean ativo = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "categoria", nullable = false, length = 40)
+    @Builder.Default
+    private CategoriaEmpresa categoria = CategoriaEmpresa.OUTROS;
 
     @Column(name = "admin_unico_id")
     private Long adminUnicoId;
