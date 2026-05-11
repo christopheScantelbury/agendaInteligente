@@ -175,6 +175,15 @@
             <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- WireMock para stub de gateways HTTP externos nos testes.
+             Produção continua chamando os endpoints reais — esta dep é só test scope. -->
+        <dependency>
+            <groupId>org.wiremock</groupId>
+            <artifactId>wiremock-standalone</artifactId>
+            <version>3.9.1</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
     
     <build>
