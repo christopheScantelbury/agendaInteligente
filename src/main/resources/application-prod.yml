@@ -7,9 +7,11 @@ spring:
   main:
     lazy-initialization: true
   datasource:
-    url: ${SPRING_DATASOURCE_URL}
-    username: ${SPRING_DATASOURCE_USERNAME}
-    password: ${SPRING_DATASOURCE_PASSWORD}
+    # Railway injeta PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD automaticamente
+    # via o add-on PostgreSQL. SPRING_DATASOURCE_* tem prioridade se definido manualmente.
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5432}/${PGDATABASE:agenda_inteligente}}
+    username: ${SPRING_DATASOURCE_USERNAME:${PGUSER:postgres}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${PGPASSWORD:postgres}}
     hikari:
       minimum-idle: 2
       maximum-pool-size: 8
@@ -19,7 +21,10 @@ spring:
 
   data:
     redis:
-      host: ${SPRING_DATA_REDIS_HOST}
+      # Railway injeta REDIS_URL (redis://default:senha@host:porta) via add-on Redis.
+      # Quando não-vazio, o Spring Boot usa a URL e ignora host/port/password abaixo.
+      url: ${REDIS_URL:}
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
       port: ${SPRING_DATA_REDIS_PORT:6379}
       password: ${SPRING_DATA_REDIS_PASSWORD:}
       connect-timeout: 3000
@@ -30,6 +35,10 @@ spring:
     properties:
       hibernate:
         format_sql: false
+
+# Railway injeta PORT automaticamente; 8080 é o fallback para outros ambientes.
+server:
+  port: ${PORT:8080}
 
 # JWT — sem fallback. Geracao recomendada: openssl rand -base64 64
 jwt:
