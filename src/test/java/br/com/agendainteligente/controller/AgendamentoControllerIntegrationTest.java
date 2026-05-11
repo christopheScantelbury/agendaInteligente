@@ -53,6 +53,9 @@ class AgendamentoControllerIntegrationTest {
         private UnidadeRepository unidadeRepository;
 
         @Autowired
+        private EmpresaRepository empresaRepository;
+
+        @Autowired
         private AtendenteRepository atendenteRepository;
 
         @Autowired
@@ -75,12 +78,13 @@ class AgendamentoControllerIntegrationTest {
 
         @BeforeEach
         void setUp() {
-                // Limpar dados
+                // Limpar dados (ordem importa por FKs)
                 agendamentoRepository.deleteAll();
                 atendenteRepository.deleteAll();
                 servicoRepository.deleteAll();
                 clienteRepository.deleteAll();
                 unidadeRepository.deleteAll();
+                empresaRepository.deleteAll();
 
                 usuarioRepository.deleteAll();
 
@@ -100,11 +104,18 @@ class AgendamentoControllerIntegrationTest {
                                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_ADMIN")));
                 token = jwtTokenProvider.generateToken(authentication);
 
-                // Criar dados de teste
+                // Criar dados de teste — Empresa é obrigatória para Unidade (V19)
+                Empresa empresa = Empresa.builder()
+                                .nome("Empresa Test")
+                                .ativo(true)
+                                .build();
+                empresa = empresaRepository.save(empresa);
+
                 unidade = Unidade.builder()
                                 .nome("Unidade Test")
                                 .endereco("Rua Test")
                                 .ativo(true)
+                                .empresa(empresa)
                                 .build();
                 unidade = unidadeRepository.save(unidade);
 
@@ -114,6 +125,7 @@ class AgendamentoControllerIntegrationTest {
                                 .valor(BigDecimal.valueOf(100.00))
                                 .duracaoMinutos(60)
                                 .ativo(true)
+                                .unidade(unidade)
                                 .build();
                 servico = servicoRepository.save(servico);
 
@@ -142,6 +154,7 @@ class AgendamentoControllerIntegrationTest {
                                 .email("cliente@test.com")
                                 .telefone("11999999999")
                                 .dataNascimento(java.time.LocalDate.of(1990, 1, 1))
+                                .unidade(unidade)
                                 .build();
                 cliente = clienteRepository.save(cliente);
         }
@@ -209,8 +222,9 @@ class AgendamentoControllerIntegrationTest {
                                 .build();
                 agendamento = agendamentoRepository.save(agendamento);
 
+                // valor pago não pode exceder o valorTotal do agendamento
                 FinalizarAgendamentoDTO finalizarDTO = FinalizarAgendamentoDTO.builder()
-                                .valorFinal(BigDecimal.valueOf(120.00))
+                                .valorFinal(BigDecimal.valueOf(100.00))
                                 .build();
 
                 mockMvc.perform(post("/api/agendamentos/" + agendamento.getId() + "/finalizar")
@@ -218,8 +232,8 @@ class AgendamentoControllerIntegrationTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(finalizarDTO)))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.status").value("FINALIZADO"))
-                                .andExpect(jsonPath("$.valorFinal").value(120.00));
+                                .andExpect(jsonPath("$.status").value("CONCLUIDO"))
+                                .andExpect(jsonPath("$.valorFinal").value(100.00));
         }
 
         @Test

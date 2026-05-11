@@ -1,17 +1,25 @@
 package br.com.agendainteligente.service;
 
 import br.com.agendainteligente.domain.entity.Empresa;
+import br.com.agendainteligente.domain.entity.Usuario;
+import br.com.agendainteligente.domain.entity.Usuario.PerfilUsuario;
 import br.com.agendainteligente.dto.EmpresaDTO;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
 import br.com.agendainteligente.mapper.EmpresaMapper;
 import br.com.agendainteligente.repository.EmpresaRepository;
+import br.com.agendainteligente.repository.UnidadeRepository;
+import br.com.agendainteligente.repository.UsuarioRepository;
+import br.com.agendainteligente.test.TestSecurityContext;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.util.Arrays;
 import java.util.List;
@@ -22,6 +30,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class EmpresaServiceTest {
 
     @Mock
@@ -33,14 +42,32 @@ class EmpresaServiceTest {
     @Mock
     private ImageCompressionService imageCompressionService;
 
+    @Mock
+    private UsuarioRepository usuarioRepository;
+
+    @Mock
+    private UnidadeRepository unidadeRepository;
+
     @InjectMocks
     private EmpresaService empresaService;
 
     private Empresa empresa;
     private EmpresaDTO empresaDTO;
+    private Usuario admin;
 
     @BeforeEach
     void setUp() {
+        // Autenticar como ADMIN com usuário existente
+        TestSecurityContext.authenticateAs("admin@test.com", "ROLE_ADMIN");
+        admin = Usuario.builder()
+                .id(99L)
+                .email("admin@test.com")
+                .nome("Admin")
+                .perfilSistema(PerfilUsuario.ADMIN)
+                .ativo(true)
+                .build();
+        when(usuarioRepository.findByEmail("admin@test.com")).thenReturn(Optional.of(admin));
+
         empresa = Empresa.builder()
                 .id(1L)
                 .nome("Empresa Teste")
@@ -60,6 +87,11 @@ class EmpresaServiceTest {
                 .telefone("(92) 3234-5678")
                 .ativo(true)
                 .build();
+    }
+
+    @AfterEach
+    void tearDown() {
+        TestSecurityContext.clear();
     }
 
     @Test
@@ -251,17 +283,16 @@ class EmpresaServiceTest {
 
     @Test
     void testExcluir_ComUnidadesVinculadas() {
-        // Arrange
-        // Simular empresa com unidades
+        // Arrange — empresa com unidades vinculadas deve recusar exclusão
+        empresa.setUnidades(Arrays.asList(
+                br.com.agendainteligente.domain.entity.Unidade.builder().id(1L).build()
+        ));
         when(empresaRepository.findById(1L)).thenReturn(Optional.of(empresa));
-        // Mock para retornar lista não vazia
-        when(empresa.getUnidades()).thenReturn(Arrays.asList());
 
         // Act & Assert
-        // Como não há unidades, deve excluir normalmente
-        // Se houver unidades, deve lançar BusinessException
-        // Para testar com unidades, precisaríamos mockar melhor
-        assertDoesNotThrow(() -> empresaService.excluir(1L));
+        assertThrows(BusinessException.class, () -> empresaService.excluir(1L));
+        verify(empresaRepository, times(1)).findById(1L);
+        verify(empresaRepository, never()).delete(any(Empresa.class));
     }
 
     @Test
