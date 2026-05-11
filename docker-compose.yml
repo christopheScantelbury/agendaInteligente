@@ -129,6 +129,34 @@ services:
   #   stdin_open: true
   #   tty: true
 
+  # Backup automático do Postgres (opt-in via profile)
+  # Ative com: docker compose --profile backup up -d backup
+  backup:
+    image: postgres:16-alpine
+    container_name: agenda-backup
+    profiles: ["backup"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PG_HOST: postgres
+      PG_PORT: 5432
+      PG_DB: agenda_inteligente
+      PG_USER: postgres
+      PGPASSWORD: postgres
+      BACKUP_DIR: /backups
+      RETENTION: ${BACKUP_RETENTION:-14}
+      BACKUP_CRON_HOUR: ${BACKUP_CRON_HOUR:-3}   # UTC
+      BACKUP_CRON_MIN: ${BACKUP_CRON_MIN:-0}
+      RUN_ON_START: ${BACKUP_RUN_ON_START:-false}
+    volumes:
+      - ./backups:/backups
+      - ./scripts:/scripts:ro
+    entrypoint: ["/bin/sh", "/scripts/backup-entrypoint.sh"]
+    networks:
+      - agenda-network
+    restart: unless-stopped
+
 networks:
   agenda-network:
     driver: bridge
