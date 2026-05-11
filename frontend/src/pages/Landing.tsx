@@ -218,7 +218,7 @@ export default function Landing() {
             </h1>
 
             <p className="text-lg text-slate-500 leading-relaxed mb-8 max-w-md">
-              Agenda online, gestão de equipe, pagamento e emissão automática de nota fiscal —
+              Agenda online, gestão de equipe, lembretes automáticos e emissão de nota fiscal —
               tudo em um lugar. Sem contabilista, sem planilha, sem dor de cabeça.
             </p>
 
@@ -303,8 +303,8 @@ export default function Landing() {
             },
             {
               icon: '🤖',
-              title: '"Inteligente" como diferencial percebido',
-              desc: 'Lembretes automáticos, horários sugeridos, análise de ausências — todos posicionados como "inteligência" sem precisar de ML complexo. O nome já vende antes do produto.',
+              title: 'IA aplicada ao dia a dia',
+              desc: 'Previsão de no-show, insights semanais gerados via IA (Groq), sugestão de respostas a reclamações e análise de clientes em risco de churn — inteligência prática, sem complexidade.',
               color: 'violet',
             },
             {
@@ -329,7 +329,7 @@ export default function Landing() {
           <div className="text-center mb-14">
             <div className="text-xs font-bold text-violet-600 font-mono tracking-widest uppercase mb-3">Funcionalidades</div>
             <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-4">Tudo que você precisa em um lugar</h2>
-            <p className="text-slate-500 max-w-xl mx-auto">Sem planilha, sem WhatsApp, sem sistema separado de nota fiscal. Uma plataforma que conecta agenda, pagamento e obrigações fiscais.</p>
+            <p className="text-slate-500 max-w-xl mx-auto">Sem planilha, sem ligação para confirmar, sem sistema separado de nota fiscal. Uma plataforma que conecta agenda, lembretes e obrigações fiscais.</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
@@ -382,8 +382,8 @@ export default function Landing() {
                     <circle cx="7" cy="16" r="1" fill="#7C3AED" />
                   </svg>
                 ),
-                title: 'Pagamento online',
-                desc: 'Receba antes do atendimento. Reduza faltas e cancele agendamentos com taxa de no-show zero.',
+                title: 'Controle financeiro',
+                desc: 'Registre pagamentos, acompanhe recebimentos e gere relatórios de faturamento por profissional. Sem planilha, sem papel.',
                 badge: 'Profissional',
                 badgeColor: 'bg-violet-100 text-violet-700',
               },
@@ -395,7 +395,7 @@ export default function Landing() {
                   </svg>
                 ),
                 title: 'Lembretes automáticos',
-                desc: 'WhatsApp e email automáticos: confirmação, lembrete 24h antes, aviso de falta. Chega de cliente que esquece.',
+                desc: 'Email de confirmação e lembrete automático 24h antes do atendimento. Menos faltas, menos ligações desnecessárias.',
                 badge: 'Todos os planos',
                 badgeColor: 'bg-emerald-100 text-emerald-700',
               },
@@ -448,8 +448,8 @@ export default function Landing() {
                 {
                   name: '★ AgendaInteligente',
                   our: true,
-                  cols: ['✓ Completo', '✓ Sim', '✓ Nativa', '✓ Sim', '✓ Sim', 'R$79–249'],
-                  colTypes: ['has', 'has', 'has', 'has', 'has', 'has'],
+                  cols: ['✓ Completo', '✓ Sim', '✓ Nativa', '⚠ Manual', '✓ Email', 'R$79–249'],
+                  colTypes: ['has', 'has', 'has', 'partial', 'has', 'has'],
                 },
                 {
                   name: 'Trinks',
@@ -522,7 +522,7 @@ export default function Landing() {
                 'Lembrete automático',
                 '1 unidade · até 3 profissionais',
               ]}
-              noFeatures={['NF-e (add-on R$19/mês)', 'Multi-unidade', 'Pagamento online']}
+              noFeatures={['NF-e (add-on R$19/mês)', 'Multi-unidade', 'Relatórios avançados']}
             />
             <PricingCard
               tier="Profissional"
@@ -534,10 +534,10 @@ export default function Landing() {
               features={[
                 'Tudo do Básico',
                 'Profissionais ilimitados',
-                'Pagamento online',
+                'Controle financeiro completo',
                 'NF-e inclusa via NotaFácil',
                 'Relatórios avançados',
-                'Prontuário de cliente',
+                'Histórico do cliente',
               ]}
               noFeatures={['Multi-unidade']}
             />
