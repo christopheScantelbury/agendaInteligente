@@ -13,11 +13,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.util.retry.Retry;
+import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.util.List;
 
 /**
@@ -38,7 +36,7 @@ public class NfseManausIntegration implements NfseIntegration {
     private final NfseXmlBuilder xmlBuilder;
     private final NfseXmlParser xmlParser;
     private final XmlSigner xmlSigner;
-    private final WebClient webClient;
+    private final RestClient restClient;
 
     @Value("${nfse.manaus.ambiente:homologacao}")
     private String ambiente;
@@ -62,7 +60,7 @@ public class NfseManausIntegration implements NfseIntegration {
         this.xmlBuilder = xmlBuilder;
         this.xmlParser = xmlParser;
         this.xmlSigner = xmlSigner;
-        this.webClient = WebClient.builder()
+        this.restClient = RestClient.builder()
                 .defaultHeader("Content-Type", MediaType.TEXT_XML_VALUE + "; charset=UTF-8")
                 .defaultHeader("SOAPAction", "")
                 .build();
@@ -140,14 +138,11 @@ public class NfseManausIntegration implements NfseIntegration {
         }
 
         try {
-            String resposta = webClient.post()
+            String resposta = restClient.post()
                     .uri(urlRecepcaoLoteRps)
-                    .bodyValue(mensagemSoap)
+                    .body(mensagemSoap)
                     .retrieve()
-                    .bodyToMono(String.class)
-                    .timeout(Duration.ofMillis(timeout))
-                    .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
-                    .block();
+                    .body(String.class);
 
             log.info("=== RESPOSTA RECEBIDA ===");
             log.info("Tamanho da resposta: {} bytes", resposta != null ? resposta.length() : 0);
@@ -204,20 +199,11 @@ public class NfseManausIntegration implements NfseIntegration {
 
             String mensagemSoap = montarSoapConsulta(xmlConsulta, "ConsultarSituacaoLoteRps");
 
-            String resposta = webClient.post()
+            String resposta = restClient.post()
                     .uri(urlConsultaSituacaoLote)
-                    .bodyValue(mensagemSoap)
+                    .body(mensagemSoap)
                     .retrieve()
-                    .bodyToMono(String.class)
-                    .timeout(Duration.ofMillis(timeout))
-                    .block();
-
-            // Aguarda um pouco antes de consultar a NFSe
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+                    .body(String.class);
 
             return resposta;
 
@@ -266,13 +252,11 @@ public class NfseManausIntegration implements NfseIntegration {
 
             String mensagemSoap = montarSoapConsulta(xmlConsulta, "ConsultarLoteRps");
 
-            String resposta = webClient.post()
+            String resposta = restClient.post()
                     .uri(urlConsultaLoteRps)
-                    .bodyValue(mensagemSoap)
+                    .body(mensagemSoap)
                     .retrieve()
-                    .bodyToMono(String.class)
-                    .timeout(Duration.ofMillis(timeout))
-                    .block();
+                    .body(String.class);
 
             // Extrai dados da NFSe
             NfseXmlParser.DadosNfse dadosNfse = xmlParser.extrairDadosNfse(resposta);

@@ -3,13 +3,16 @@ package br.com.agendainteligente.integration.notafacil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 import java.math.BigDecimal;
-import java.time.Duration;
+import java.net.http.HttpClient;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Cliente HTTP para a API REST do Nota MEI Gateway (ScantelburyDevs).
@@ -19,10 +22,18 @@ import java.time.Duration;
 @Slf4j
 public class NotaFacilClient {
 
-    private final WebClient webClient;
+    private final RestClient restClient;
 
     public NotaFacilClient(@Value("${notafacil.api-url:https://api.notameigateway.com.br}") String apiUrl) {
-        this.webClient = WebClient.builder()
+        // JdkClientHttpRequestFactory usa o HttpClient do JDK 11+ que lida corretamente
+        // com respostas HTTP/1.1 5xx (incluindo chunked encoding) — mais robusto que HttpURLConnection.
+        // Forçamos HTTP_1_1 para evitar tentativa de upgrade h2c, incompatível com o servidor
+        // real da NotaFácil e com WireMock (Jetty HTTP/1.1 only) nos testes.
+        HttpClient jdkHttpClient = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .build();
+        this.restClient = RestClient.builder()
+                .requestFactory(new JdkClientHttpRequestFactory(jdkHttpClient))
                 .baseUrl(apiUrl)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
@@ -32,24 +43,30 @@ public class NotaFacilClient {
     /**
      * Emite uma NFS-e via Nota MEI Gateway.
      *
-     * @param apiKey      sk_live_... da unidade emissora
-     * @param request     dados da nota fiscal
+     * @param apiKey  sk_live_... da unidade emissora
+     * @param request dados da nota fiscal
      * @return resposta com nota_id e status PROCESSANDO
      */
     public EmissaoResponse emitirNfse(String apiKey, EmissaoRequest request) {
         log.info("Enviando NFS-e para NotaFácil — tomador: {}", request.getTomador().getDocumento());
         try {
-            return webClient.post()
+            return restClient.post()
                     .uri("/v1/nfse")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
-                    .bodyValue(request)
+                    .body(request)
                     .retrieve()
-                    .bodyToMono(EmissaoResponse.class)
-                    .timeout(Duration.ofSeconds(30))
-                    .block();
-        } catch (WebClientResponseException e) {
-            log.error("Erro HTTP {} ao emitir NFS-e: {}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new NotaFacilException("Erro na API NotaFácil: " + e.getStatusCode() + " — " + e.getResponseBodyAsString(), e);
+                    .onStatus(HttpStatusCode::isError, (req, resp) -> {
+                        int code = resp.getStatusCode().value();
+                        String body = readBodySafely(resp);
+                        throw new NotaFacilException("Erro na API NotaFácil: " + code + " — " + body);
+                    })
+                    .body(EmissaoResponse.class);
+        } catch (NotaFacilException e) {
+            log.error("Erro HTTP ao emitir NFS-e: {}", e.getMessage());
+            throw e;
+        } catch (RestClientException e) {
+            log.error("Erro de rede ao emitir NFS-e: {}", e.getMessage());
+            throw new NotaFacilException("Erro de comunicação com API NotaFácil: " + e.getMessage(), e);
         }
     }
 
@@ -58,16 +75,33 @@ public class NotaFacilClient {
      */
     public ConsultaResponse consultarNfse(String apiKey, String notaId) {
         try {
-            return webClient.get()
+            return restClient.get()
                     .uri("/v1/nfse/{id}", notaId)
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
                     .retrieve()
-                    .bodyToMono(ConsultaResponse.class)
-                    .timeout(Duration.ofSeconds(15))
-                    .block();
-        } catch (WebClientResponseException e) {
-            log.error("Erro HTTP {} ao consultar NFS-e {}: {}", e.getStatusCode(), notaId, e.getResponseBodyAsString());
-            throw new NotaFacilException("Erro ao consultar nota " + notaId + ": " + e.getStatusCode(), e);
+                    .onStatus(HttpStatusCode::isError, (req, resp) -> {
+                        int code = resp.getStatusCode().value();
+                        String body = readBodySafely(resp);
+                        throw new NotaFacilException(
+                                "Erro ao consultar nota " + notaId + ": " + code + " — " + body);
+                    })
+                    .body(ConsultaResponse.class);
+        } catch (NotaFacilException e) {
+            log.error("Erro HTTP ao consultar NFS-e {}: {}", notaId, e.getMessage());
+            throw e;
+        } catch (RestClientException e) {
+            log.error("Erro de rede ao consultar NFS-e {}: {}", notaId, e.getMessage());
+            throw new NotaFacilException(
+                    "Erro de comunicação ao consultar nota " + notaId + ": " + e.getMessage(), e);
+        }
+    }
+
+    /** Lê o body da resposta de erro sem lançar exceção (Content-Type pode estar ausente). */
+    private static String readBodySafely(org.springframework.http.client.ClientHttpResponse resp) {
+        try (var is = resp.getBody()) {
+            return new String(is.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (Exception ignored) {
+            return "";
         }
     }
 

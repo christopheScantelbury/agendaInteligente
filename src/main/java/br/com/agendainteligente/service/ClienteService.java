@@ -17,6 +17,7 @@ import br.com.agendainteligente.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -44,6 +45,9 @@ public class ClienteService {
     
     private static final Pattern ONLY_DIGITS = Pattern.compile("\\D");
 
+    @Cacheable(value = "clientes",
+               key = "T(org.springframework.security.core.context.SecurityContextHolder)" +
+                     ".getContext().getAuthentication().getName()")
     @Transactional(readOnly = true)
     public List<ClienteDTO> listarTodos() {
         log.debug("Listando clientes com filtro de permissão");
@@ -105,9 +109,7 @@ public class ClienteService {
                 Set<Long> unidadesGerenteIds = usuarioLogado.getUnidades().stream()
                         .map(Unidade::getId)
                         .collect(Collectors.toSet());
-                return clienteRepository.findAll().stream()
-                        .filter(c -> c.getUnidade() != null && unidadesGerenteIds.contains(c.getUnidade().getId()))
-                        .collect(Collectors.toList());
+                return clienteRepository.findByUnidadeIdIn(unidadesGerenteIds);
 
             case PROFISSIONAL:
                 log.debug("PROFISSIONAL: listando apenas clientes da mesma unidade");
@@ -120,7 +122,7 @@ public class ClienteService {
                     // Fallback: obter unidade do atendente vinculado ao usuário
                     unidadesProfissionalIds = atendenteRepository.findByUsuarioId(usuarioLogado.getId())
                             .map(a -> a.getUnidade() != null ? a.getUnidade().getId() : null)
-                            .filter(java.util.Objects::nonNull)
+                            .filter(Objects::nonNull)
                             .stream()
                             .collect(Collectors.toList());
                     if (unidadesProfissionalIds.isEmpty()) {
@@ -128,9 +130,7 @@ public class ClienteService {
                         return List.of();
                     }
                 }
-                return clienteRepository.findAll().stream()
-                        .filter(c -> c.getUnidade() != null && unidadesProfissionalIds.contains(c.getUnidade().getId()))
-                        .collect(Collectors.toList());
+                return clienteRepository.findByUnidadeIdIn(unidadesProfissionalIds);
 
             case CLIENTE:
             default:
@@ -158,7 +158,7 @@ public class ClienteService {
         }
         switch (usuarioLogado.getPerfil()) {
             case ADMIN:
-                return unidadeRepository.findAll().stream().map(Unidade::getId).collect(Collectors.toSet());
+                return new java.util.HashSet<>(unidadeRepository.findAllIds());
             case GERENTE:
                 if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
                     return Set.of();

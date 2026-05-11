@@ -74,10 +74,6 @@ public class AgendamentoService {
         
         return agendamentos.stream()
                 .map(agendamento -> {
-                    // Força carregamento dos serviços
-                    if (agendamento.getServicos() != null) {
-                        agendamento.getServicos().size();
-                    }
                     AgendamentoDTO dto = agendamentoMapper.toDTO(agendamento);
                     if (agendamento.getServicos() != null && !agendamento.getServicos().isEmpty()) {
                         dto.setServicos(agendamento.getServicos().stream()
@@ -106,9 +102,9 @@ public class AgendamentoService {
         switch (perfil) {
             case ADMIN:
                 log.debug("ADMIN: listando todos os agendamentos");
-                agendamentos = agendamentoRepository.findAll();
+                agendamentos = agendamentoRepository.findAllWithServicos();
                 break;
-                
+
             case GERENTE:
                 log.debug("GERENTE: listando agendamentos apenas das unidades vinculadas ao gerente");
                 if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
@@ -118,22 +114,20 @@ public class AgendamentoService {
                 Set<Long> unidadesGerenteIds = usuario.getUnidades().stream()
                         .map(Unidade::getId)
                         .collect(Collectors.toSet());
-                agendamentos = agendamentoRepository.findAll().stream()
-                        .filter(a -> a.getUnidade() != null && unidadesGerenteIds.contains(a.getUnidade().getId()))
-                        .collect(Collectors.toList());
+                agendamentos = agendamentoRepository.findByUnidadeIdInWithServicos(unidadesGerenteIds);
                 break;
-                
+
             case PROFISSIONAL:
                 log.debug("PROFISSIONAL: listando apenas agendamentos do próprio atendente");
                 Atendente atendente = atendenteRepository.findByUsuarioId(usuario.getId())
                         .orElseThrow(() -> new BusinessException("Usuário não está vinculado a um atendente"));
-                agendamentos = agendamentoRepository.findByAtendenteId(atendente.getId());
+                agendamentos = agendamentoRepository.findByAtendenteIdWithServicos(atendente.getId());
                 break;
-                
+
             case CLIENTE:
                 log.debug("CLIENTE: listando apenas agendamentos do próprio cliente");
                 agendamentos = clienteRepository.findByEmail(email)
-                        .map(c -> agendamentoRepository.findByClienteId(c.getId()))
+                        .map(c -> agendamentoRepository.findByClienteIdWithServicos(c.getId()))
                         .orElse(new ArrayList<>());
                 break;
             default:
@@ -242,7 +236,7 @@ public class AgendamentoService {
         }
         switch (usuario.getPerfil()) {
             case ADMIN:
-                return unidadeRepository.findAll().stream().map(Unidade::getId).collect(Collectors.toSet());
+                return new java.util.HashSet<>(unidadeRepository.findAllIds());
             case GERENTE:
                 if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
                     return Set.of();

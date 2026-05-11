@@ -1,7 +1,6 @@
 package br.com.agendainteligente.service;
 
 import br.com.agendainteligente.domain.entity.Atendente;
-import br.com.agendainteligente.domain.entity.Empresa;
 import br.com.agendainteligente.domain.entity.Servico;
 import br.com.agendainteligente.domain.entity.Unidade;
 import br.com.agendainteligente.domain.entity.Usuario;
@@ -77,50 +76,27 @@ public class AtendenteService {
                     log.warn("Gerente {} não tem unidades vinculadas", email);
                     return List.of();
                 }
-                
-                // Obter IDs das empresas das unidades do gerente
-                Set<Long> empresaIds = usuarioLogado.getUnidades().stream()
-                        .map(u -> {
-                            // Forçar carregamento da empresa
-                            if (u.getEmpresa() == null) {
-                                Unidade unidadeCompleta = unidadeRepository.findById(u.getId())
-                                        .orElse(null);
-                                if (unidadeCompleta != null && unidadeCompleta.getEmpresa() != null) {
-                                    return unidadeCompleta.getEmpresa().getId();
-                                }
-                                return null;
-                            }
-                            return u.getEmpresa().getId();
-                        })
-                        .filter(id -> id != null)
-                        .collect(Collectors.toSet());
-                
+
+                // Resolve empresa IDs via query — evita lazy-load individual por unidade
+                List<Long> gerenteUnidadeIds = usuarioLogado.getUnidades().stream()
+                        .map(Unidade::getId)
+                        .collect(Collectors.toList());
+                Set<Long> empresaIds = new java.util.HashSet<>(unidadeRepository.findEmpresaIdsByIds(gerenteUnidadeIds));
+
                 if (empresaIds.isEmpty()) {
                     log.warn("Gerente {} não tem empresas vinculadas", email);
                     return List.of();
                 }
-                
+
                 log.debug("Gerente {} tem acesso às empresas: {}", email, empresaIds);
-                
-                // Obter IDs de todas as unidades das mesmas empresas
-                List<Unidade> todasUnidades = unidadeRepository.findAll();
-                List<Long> unidadesIds = todasUnidades.stream()
-                        .filter(u -> {
-                            if (u.getEmpresa() == null) {
-                                return false;
-                            }
-                            return empresaIds.contains(u.getEmpresa().getId());
-                        })
+
+                // Busca direta: todas as unidades dessas empresas → atendentes dessas unidades
+                List<Long> unidadesIds = unidadeRepository.findByEmpresaIdIn(empresaIds).stream()
                         .map(Unidade::getId)
                         .collect(Collectors.toList());
-                
-                // Retornar atendentes das unidades da mesma empresa
-                List<Atendente> todosAtendentes = atendenteRepository.findAll();
-                List<Atendente> atendentesFiltrados = todosAtendentes.stream()
-                        .filter(a -> unidadesIds.contains(a.getUnidade().getId()))
-                        .collect(Collectors.toList());
-                
-                log.debug("Gerente {} pode ver {} atendentes de {} total", email, atendentesFiltrados.size(), todosAtendentes.size());
+
+                List<Atendente> atendentesFiltrados = atendenteRepository.findByUnidadeIdIn(unidadesIds);
+                log.debug("Gerente {} pode ver {} atendente(s)", email, atendentesFiltrados.size());
                 return atendentesFiltrados;
 
             case PROFISSIONAL:
@@ -129,16 +105,11 @@ public class AtendenteService {
                     log.warn("Profissional {} não tem unidades vinculadas", email);
                     return List.of();
                 }
-                
-                // Obter IDs das unidades do profissional
+
                 List<Long> unidadesProfissionalIds = usuarioLogado.getUnidades().stream()
                         .map(Unidade::getId)
                         .collect(Collectors.toList());
-                
-                // Retornar atendentes das mesmas unidades
-                return atendenteRepository.findAll().stream()
-                        .filter(a -> unidadesProfissionalIds.contains(a.getUnidade().getId()))
-                        .collect(Collectors.toList());
+                return atendenteRepository.findByUnidadeIdIn(unidadesProfissionalIds);
 
             case CLIENTE:
             default:
@@ -165,26 +136,18 @@ public class AtendenteService {
         }
         switch (usuarioLogado.getPerfil()) {
             case ADMIN:
-                return unidadeRepository.findAll().stream().map(Unidade::getId).collect(Collectors.toSet());
+                return new java.util.HashSet<>(unidadeRepository.findAllIds());
             case GERENTE:
                 if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
                     return Set.of();
                 }
-                Set<Long> empresaIds = usuarioLogado.getUnidades().stream()
-                        .map(u -> {
-                            if (u.getEmpresa() == null) {
-                                Unidade uc = unidadeRepository.findById(u.getId()).orElse(null);
-                                return uc != null && uc.getEmpresa() != null ? uc.getEmpresa().getId() : null;
-                            }
-                            return u.getEmpresa().getId();
-                        })
-                        .filter(id -> id != null)
-                        .collect(Collectors.toSet());
+                List<Long> gerenteUnidadeIds = usuarioLogado.getUnidades().stream()
+                        .map(Unidade::getId).collect(Collectors.toList());
+                Set<Long> empresaIds = new java.util.HashSet<>(unidadeRepository.findEmpresaIdsByIds(gerenteUnidadeIds));
                 if (empresaIds.isEmpty()) {
                     return Set.of();
                 }
-                return unidadeRepository.findAll().stream()
-                        .filter(u -> u.getEmpresa() != null && empresaIds.contains(u.getEmpresa().getId()))
+                return unidadeRepository.findByEmpresaIdIn(empresaIds).stream()
                         .map(Unidade::getId)
                         .collect(Collectors.toSet());
             case PROFISSIONAL:

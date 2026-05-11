@@ -86,8 +86,8 @@ class ClienteServiceTest {
                 .nome("Unidade Teste")
                 .ativo(true)
                 .build();
-        // ADMIN.podeAcessarCliente → unidadeRepository.findAll() retorna todas
-        when(unidadeRepository.findAll()).thenReturn(Arrays.asList(unidade));
+        // ADMIN.podeAcessarCliente → unidadeRepository.findAllIds() retorna IDs de todas as unidades
+        when(unidadeRepository.findAllIds()).thenReturn(Arrays.asList(1L));
 
         cliente = Cliente.builder()
                 .id(1L)

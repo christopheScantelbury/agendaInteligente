@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -49,8 +50,26 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
                                                           @Param("excluirId") Long excluirId);
     
     List<Agendamento> findByUnidadeId(Long unidadeId);
-    
+
+    /** Busca agendamentos de um conjunto de unidades — evita findAll() + filtro em memória. */
+    @Query("SELECT a FROM Agendamento a WHERE a.unidade.id IN :unidadeIds")
+    List<Agendamento> findByUnidadeIdIn(@Param("unidadeIds") Collection<Long> unidadeIds);
+
     List<Agendamento> findByAtendenteId(Long atendenteId);
+
+    // ── JOIN FETCH para eliminação do N+1 em agendamento.getServicos() ──────────
+
+    @Query("SELECT DISTINCT a FROM Agendamento a LEFT JOIN FETCH a.servicos")
+    List<Agendamento> findAllWithServicos();
+
+    @Query("SELECT DISTINCT a FROM Agendamento a LEFT JOIN FETCH a.servicos WHERE a.unidade.id IN :unidadeIds")
+    List<Agendamento> findByUnidadeIdInWithServicos(@Param("unidadeIds") Collection<Long> unidadeIds);
+
+    @Query("SELECT DISTINCT a FROM Agendamento a LEFT JOIN FETCH a.servicos WHERE a.atendente.id = :atendenteId")
+    List<Agendamento> findByAtendenteIdWithServicos(@Param("atendenteId") Long atendenteId);
+
+    @Query("SELECT DISTINCT a FROM Agendamento a LEFT JOIN FETCH a.servicos WHERE a.cliente.id = :clienteId")
+    List<Agendamento> findByClienteIdWithServicos(@Param("clienteId") Long clienteId);
 
     Optional<Agendamento> findFirstByClienteIdAndUnidadeIdAndStatusAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanAndIdNotOrderByDataHoraInicioAsc(
             Long clienteId,

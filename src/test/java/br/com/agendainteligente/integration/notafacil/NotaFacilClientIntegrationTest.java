@@ -103,6 +103,7 @@ class NotaFacilClientIntegrationTest {
         stubFor(post(urlEqualTo("/v1/nfse"))
                 .willReturn(aResponse()
                         .withStatus(503)
+                        .withHeader("Content-Type", "text/plain")
                         .withBody("Service Unavailable")));
 
         NotaFacilException ex = assertThrows(NotaFacilException.class,
