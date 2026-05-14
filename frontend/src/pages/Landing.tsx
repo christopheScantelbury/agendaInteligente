@@ -172,7 +172,7 @@ export default function Landing() {
             </span>
           </div>
           <div className="hidden md:flex items-center gap-1">
-            {['Funcionalidades', 'Preços', 'Integrações'].map((item) => (
+            {['Funcionalidades', 'Preços'].map((item) => (
               <a
                 key={item}
                 href={`#${item.toLowerCase()}`}
@@ -310,7 +310,7 @@ export default function Landing() {
             {
               icon: '🔗',
               title: 'Nenhum concorrente tem NF-e nativa',
-              desc: 'Trinks, Doctoralia, EasyFit — todos exigem um sistema separado para emitir notas. Nossa integração com NotaFácil (ScantelburyDevs) elimina esse atrito e é proprietária: não pode ser copiada.',
+              desc: 'Trinks, Doctoralia, EasyFit — todos exigem um sistema separado para emitir notas. Nossa integração com NotaFácil elimina esse atrito de uma vez por todas.',
               color: 'emerald',
             },
           ].map((item) => (
@@ -496,9 +496,6 @@ export default function Landing() {
             </tbody>
           </table>
         </div>
-        <p className="text-center text-xs text-slate-400 mt-4 font-mono">
-          ★ A integração NotaFácil é proprietária da ScantelburyDevs — não pode ser replicada por concorrentes.
-        </p>
       </section>
 
       {/* ── PRICING ── */}
@@ -566,36 +563,23 @@ export default function Landing() {
       {/* ── INTEGRAÇÕES ── */}
       <section id="integrações" className="max-w-6xl mx-auto px-6 py-16">
         <div className="text-center mb-10">
-          <div className="text-xs font-bold text-violet-600 font-mono tracking-widest uppercase mb-3">Ecossistema</div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Integrado ao ecossistema ScantelburyDevs</h2>
+          <div className="text-xs font-bold text-violet-600 font-mono tracking-widest uppercase mb-3">Integração</div>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">NF-e Nacional via NotaFácil</h2>
+          <p className="text-slate-500 text-sm mt-2 max-w-md mx-auto">Emissão automática de NFS-e ao finalizar o atendimento — sem abrir outro sistema, sem processo manual.</p>
         </div>
-        <div className="flex flex-wrap justify-center gap-4">
-          {[
-            { name: 'NotaFácil', desc: 'Emissão de NFS-e Nacional', color: '#00E8FF', bg: '#0A0F1E', href: 'https://www.emitirnotafacil.com.br/' },
-            { name: 'EventGear', desc: 'Gestão de eventos e contratos', color: '#F59E0B', bg: '#FFFBEB', href: 'https://eventgear-web.h1dq2d.easypanel.host/' },
-            { name: 'AgendaInteligente', desc: 'Você está aqui', color: '#7C3AED', bg: '#F5F3FF', current: true, href: null },
-          ].map((p) => {
-            const inner = (
-              <>
-                <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: p.color }} />
-                <div>
-                  <div className="text-sm font-bold" style={{ color: p.current ? p.color : '#1E293B' }}>{p.name}</div>
-                  <div className="text-xs text-slate-400">{p.desc}</div>
-                </div>
-              </>
-            )
-            const cls = `flex items-center gap-3 px-5 py-3.5 rounded-2xl border shadow-sm transition-all ${p.current ? 'border-violet-300 ring-2 ring-violet-100' : 'border-slate-200 bg-white hover:shadow-md hover:-translate-y-0.5'}`
-            const style = p.current ? { background: p.bg, borderColor: p.color + '40' } : {}
-            return p.href ? (
-              <a key={p.name} href={p.href} target="_blank" rel="noopener noreferrer" className={cls} style={style}>
-                {inner}
-              </a>
-            ) : (
-              <div key={p.name} className={cls} style={style}>
-                {inner}
-              </div>
-            )
-          })}
+        <div className="flex justify-center">
+          <a
+            href="https://www.emitirnotafacil.com.br/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 px-6 py-4 rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
+          >
+            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: '#00E8FF' }} />
+            <div>
+              <div className="text-sm font-bold text-slate-900">NotaFácil</div>
+              <div className="text-xs text-slate-400">Emissão de NFS-e Nacional</div>
+            </div>
+          </a>
         </div>
       </section>
 
@@ -637,7 +621,6 @@ export default function Landing() {
             <span className="text-sm font-bold text-slate-300">
               Agenda<span className="text-violet-400">Inteligente</span>
             </span>
-            <a href="https://scantelburydevs.com.br" target="_blank" rel="noopener noreferrer" className="text-slate-600 hover:text-violet-400 text-xs ml-2 transition-colors">by ScantelburyDevs</a>
           </div>
           <div className="flex items-center gap-6">
             {['Termos', 'Privacidade', 'Suporte'].map((l) => (
@@ -647,7 +630,7 @@ export default function Landing() {
             ))}
           </div>
           <div className="text-xs text-slate-600 font-mono">
-            © 2026 ScantelburyDevs · Build · Migrate · Innovate
+            © 2026 AgendaInteligente
           </div>
         </div>
       </footer>

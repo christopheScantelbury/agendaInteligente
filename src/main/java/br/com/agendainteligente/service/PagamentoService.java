@@ -8,7 +8,6 @@ import br.com.agendainteligente.domain.enums.TipoPagamento;
 import br.com.agendainteligente.dto.PagamentoDTO;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
-import br.com.agendainteligente.integration.PaymentGatewayIntegration;
 import br.com.agendainteligente.mapper.PagamentoMapper;
 import br.com.agendainteligente.repository.AgendamentoRepository;
 import br.com.agendainteligente.repository.PagamentoRepository;
@@ -30,7 +29,6 @@ public class PagamentoService {
     private final PagamentoRepository pagamentoRepository;
     private final AgendamentoRepository agendamentoRepository;
     private final PagamentoMapper pagamentoMapper;
-    private final PaymentGatewayIntegration paymentGatewayIntegration;
 
     @Transactional(readOnly = true)
     public PagamentoDTO buscarPorAgendamentoId(Long agendamentoId) {
@@ -179,52 +177,9 @@ public class PagamentoService {
         pagamento.setTipoPagamento(tipoPagamento);
         pagamento.setValor(valorPagoAtual.add(valorRestante));
         pagamento.setStatus(StatusPagamento.PENDENTE);
-        
-        // Integração com gateway de pagamento
-        try {
-            var resultadoPagamento = paymentGatewayIntegration.criarPagamento(
-                    valorRestante,
-                    tipoPagamento,
-                    agendamento.getId().toString()
-            );
-            
-            pagamento.setIdTransacaoGateway(resultadoPagamento.getIdTransacao());
-            pagamento.setUrlPagamento(resultadoPagamento.getUrlPagamento());
-            pagamento.setStatus(StatusPagamento.PROCESSANDO);
-            
-        } catch (Exception e) {
-            log.error("Erro ao processar pagamento no gateway", e);
-            pagamento.setStatus(StatusPagamento.RECUSADO);
-            throw new BusinessException("Erro ao processar pagamento: " + e.getMessage());
-        }
-        
         pagamento = pagamentoRepository.save(pagamento);
         log.info("Pagamento criado com sucesso. ID: {}", pagamento.getId());
         return pagamentoMapper.toDTO(pagamento);
     }
 
-    @Transactional
-    public void confirmarPagamento(String idTransacaoGateway) {
-        log.debug("Confirmando pagamento com transação: {}", idTransacaoGateway);
-        
-        Pagamento pagamento = pagamentoRepository.findByIdTransacaoGateway(idTransacaoGateway)
-                .orElseThrow(() -> new ResourceNotFoundException("Pagamento não encontrado"));
-        
-        if (pagamento.getStatus() == StatusPagamento.APROVADO) {
-            log.warn("Pagamento já está aprovado. ID: {}", pagamento.getId());
-            return;
-        }
-        
-        pagamento.setStatus(StatusPagamento.APROVADO);
-        pagamento.setDataPagamento(LocalDateTime.now());
-        pagamentoRepository.save(pagamento);
-        
-        // Atualiza status do agendamento
-        Agendamento agendamento = pagamento.getAgendamento();
-        agendamento.setValorFinal(pagamento.getValor());
-        agendamento.setStatus(StatusAgendamento.CONFIRMADO);
-        agendamentoRepository.save(agendamento);
-        
-        log.info("Pagamento confirmado com sucesso. ID: {}", pagamento.getId());
-    }
 }

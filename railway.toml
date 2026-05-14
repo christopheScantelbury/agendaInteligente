@@ -23,8 +23,6 @@
 #
 # Variáveis opcionais:
 #   GROQ_API_KEY         → IA (Groq LLaMA)
-#   PAYMENT_API_KEY      → gateway de pagamento
-#   PAYMENT_WEBHOOK_SECRET
 #   NOTAFACIL_API_URL
 #   NOTAFACIL_WEBHOOK_BASE_URL
 

@@ -137,7 +137,7 @@ export default function Login() {
 
         {/* Footer note */}
         <p className="text-center text-xs text-slate-400 mt-4">
-          © 2026 AgendaInteligente · ScantelburyDevs
+          © 2026 AgendaInteligente
         </p>
       </div>
     </div>

@@ -82,12 +82,6 @@ nfse:
       max-attempts: 3
       delay: 1000
 
-# Configurações de Pagamento
-payment:
-  gateway:
-    provider: ${PAYMENT_PROVIDER:stripe}
-    api-key: ${PAYMENT_API_KEY:}
-    webhook-secret: ${PAYMENT_WEBHOOK_SECRET:}
 
 # Chave para endpoint temporario de correcao de senha do admin (env: FIX_ADMIN_KEY). Deixe vazio ou remova apos usar.
 app:

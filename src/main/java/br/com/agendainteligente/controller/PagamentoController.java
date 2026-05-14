@@ -63,10 +63,4 @@ public class PagamentoController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/confirmar/{idTransacao}")
-    @Operation(summary = "Confirmar pagamento via webhook")
-    public ResponseEntity<Void> confirmarPagamento(@PathVariable String idTransacao) {
-        pagamentoService.confirmarPagamento(idTransacao);
-        return ResponseEntity.noContent().build();
-    }
 }
