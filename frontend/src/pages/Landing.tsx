@@ -438,7 +438,7 @@ export default function Landing() {
             <thead>
               <tr className="bg-slate-900 text-white">
                 <th className="text-left px-5 py-4 text-sm font-semibold rounded-tl-xl">Produto</th>
-                {['Agendamento online', 'Multi-unidade', 'NF-e nativa', 'Pagamento online', 'Lembretes', 'Preço/mês'].map((h, i, arr) => (
+                {['Agendamento online', 'Multi-unidade', 'NF-e nativa', 'Lembretes', 'Preço/mês'].map((h, i, arr) => (
                   <th key={h} className={`px-4 py-4 text-xs font-semibold text-center ${i === arr.length - 1 ? 'rounded-tr-xl' : ''}`}>{h}</th>
                 ))}
               </tr>
@@ -448,28 +448,28 @@ export default function Landing() {
                 {
                   name: '★ AgendaInteligente',
                   our: true,
-                  cols: ['✓ Completo', '✓ Sim', '✓ Nativa', '⚠ Manual', '✓ Email', 'R$79–249'],
-                  colTypes: ['has', 'has', 'has', 'partial', 'has', 'has'],
+                  cols: ['✓ Completo', '✓ Sim', '✓ Nativa', '✓ Email', 'R$79–249'],
+                  colTypes: ['has', 'has', 'has', 'has', 'has'],
                 },
                 {
                   name: 'Trinks',
-                  cols: ['✓', '⚠ Limitado', '✕', '✓', '✓', 'R$89–299'],
-                  colTypes: ['has', 'partial', 'no', 'has', 'has', 'neutral'],
+                  cols: ['✓', '⚠ Limitado', '✕', '✓', 'R$89–299'],
+                  colTypes: ['has', 'partial', 'no', 'has', 'neutral'],
                 },
                 {
                   name: 'Doctoralia',
-                  cols: ['✓', '⚠', '✕', '✕', '⚠', 'R$149–449'],
-                  colTypes: ['has', 'partial', 'no', 'no', 'partial', 'neutral'],
+                  cols: ['✓', '⚠', '✕', '⚠', 'R$149–449'],
+                  colTypes: ['has', 'partial', 'no', 'partial', 'neutral'],
                 },
                 {
                   name: 'EasyFit',
-                  cols: ['✓', '✓', '✕', '✓', '⚠', 'R$199–599'],
-                  colTypes: ['has', 'has', 'no', 'has', 'partial', 'neutral'],
+                  cols: ['✓', '✓', '✕', '⚠', 'R$199–599'],
+                  colTypes: ['has', 'has', 'no', 'partial', 'neutral'],
                 },
                 {
                   name: 'Calendly',
-                  cols: ['✓', '✕', '✕', '⚠', '✕', 'US$8–16'],
-                  colTypes: ['has', 'no', 'no', 'partial', 'no', 'neutral'],
+                  cols: ['✓', '✕', '✕', '✕', 'US$8–16'],
+                  colTypes: ['has', 'no', 'no', 'no', 'neutral'],
                 },
               ].map((row) => (
                 <tr key={row.name} className={row.our ? 'bg-violet-50' : 'hover:bg-slate-50'}>
