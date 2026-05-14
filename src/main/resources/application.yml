@@ -36,17 +36,6 @@ spring:
       write-dates-as-timestamps: false
     time-zone: America/Manaus
 
-  mail:
-    host: smtp.resend.com
-    port: 587
-    username: resend
-    password: ${RESEND_API_KEY:}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
 
 server:
   port: 8080
@@ -104,22 +93,6 @@ payment:
 app:
   fix-admin-key: ${FIX_ADMIN_KEY:}
   url-base: ${APP_URL_BASE:http://localhost:5173}
-  email:
-    remetente: ${EMAIL_REMETENTE:noreply@agendainteligente.com.br}
-    habilitado: ${EMAIL_HABILITADO:false}
-
-resend:
-  api-key: ${RESEND_API_KEY:}
-
-# Chatbot WhatsApp (Evolution API + Gemini Flash)
-chatbot:
-  habilitado: ${CHATBOT_HABILITADO:false}
-  evolution:
-    api-url: ${EVOLUTION_API_URL:}
-    api-key: ${EVOLUTION_API_KEY:}
-    instance: ${EVOLUTION_INSTANCE:agendainteligente}
-  gemini:
-    api-key: ${GEMINI_API_KEY:}
 
 # JWT
 # IMPORTANTE: JWT_SECRET deve vir do ambiente em prod (gerar com: openssl rand -base64 64).

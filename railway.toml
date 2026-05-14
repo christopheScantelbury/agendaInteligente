@@ -22,7 +22,6 @@
 #   REDIS_URL   → URL completa do Redis add-on (redis://...)
 #
 # Variáveis opcionais:
-#   RESEND_API_KEY       → envio de e-mails via Resend
 #   GROQ_API_KEY         → IA (Groq LLaMA)
 #   PAYMENT_API_KEY      → gateway de pagamento
 #   PAYMENT_WEBHOOK_SECRET

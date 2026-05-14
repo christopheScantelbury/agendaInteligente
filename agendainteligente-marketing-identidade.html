@@ -1,0 +1,1598 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agenda Inteligente — Estudo de Marketing + Identidade Visual</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   TOKENS
+═══════════════════════════════════════════ */
+:root {
+  /* Brand violet */
+  --v50:  #F5F3FF;
+  --v100: #EDE9FE;
+  --v200: #DDD6FE;
+  --v300: #C4B5FD;
+  --v400: #A78BFA;
+  --v500: #8B5CF6;
+  --v600: #7C3AED;
+  --v700: #6D28D9;
+  --v800: #5B21B6;
+  --v900: #4C1D95;
+
+  /* Accent emerald */
+  --e50:  #ECFDF5;
+  --e100: #D1FAE5;
+  --e400: #34D399;
+  --e500: #10B981;
+  --e600: #059669;
+
+  /* Accent coral */
+  --c50:  #FFF7ED;
+  --c400: #FB923C;
+  --c500: #F97316;
+
+  /* Neutrals */
+  --s50:  #F8FAFC;
+  --s100: #F1F5F9;
+  --s200: #E2E8F0;
+  --s300: #CBD5E1;
+  --s400: #94A3B8;
+  --s500: #64748B;
+  --s600: #475569;
+  --s700: #334155;
+  --s800: #1E293B;
+  --s900: #0F172A;
+
+  /* Semantic */
+  --success: #10B981; --success-bg: #ECFDF5; --success-border: #A7F3D0;
+  --warning: #F59E0B; --warning-bg: #FFFBEB; --warning-border: #FDE68A;
+  --danger:  #EF4444; --danger-bg:  #FEF2F2; --danger-border:  #FECACA;
+  --info:    #7C3AED; --info-bg:    #F5F3FF; --info-border:    #DDD6FE;
+
+  /* Surfaces */
+  --bg-page: #F8FAFC;
+  --bg-card: #FFFFFF;
+
+  /* Typography */
+  --font-display: 'Outfit', system-ui, sans-serif;
+  --font-serif:   'Instrument Serif', Georgia, serif;
+  --font-mono:    'JetBrains Mono', monospace;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04);
+  --shadow-md: 0 4px 16px rgba(15,23,42,0.08);
+  --shadow-lg: 0 8px 32px rgba(15,23,42,0.10);
+  --shadow-v:  0 4px 20px rgba(124,58,237,0.18);
+}
+
+/* ═══════════════════════════════════════════
+   RESET
+═══════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-display);
+  background: var(--bg-page);
+  color: var(--s900);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+/* ═══════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════ */
+.page { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+
+/* SIDEBAR */
+.sidebar {
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  background: white; border-right: 1px solid var(--s200);
+  padding: 24px 16px;
+}
+.sb-brand { display: flex; align-items: center; gap: 10px; padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--s100); }
+.sb-wordmark { font-size: 17px; font-weight: 800; color: var(--s900); letter-spacing: -0.3px; }
+.sb-wordmark span { color: var(--v600); }
+.sb-section { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--s400); padding: 16px 8px 8px; }
+.sidebar a { display: block; padding: 7px 10px; border-radius: 8px; font-size: 13px; color: var(--s500); text-decoration: none; font-weight: 500; transition: all .15s; }
+.sidebar a:hover { background: var(--s100); color: var(--s800); }
+.sidebar a.act { background: var(--v50); color: var(--v600); font-weight: 600; }
+
+/* MAIN */
+.main { max-width: 880px; padding: 56px 48px; }
+
+/* ═══════════════════════════════════════════
+   SECTIONS
+═══════════════════════════════════════════ */
+.section { margin-bottom: 88px; }
+.section-hd { display: flex; align-items: center; gap: 14px; margin-bottom: 36px; padding-bottom: 16px; border-bottom: 2px solid var(--s100); }
+.section-tag { font-family: var(--font-mono); font-size: 10px; font-weight: 500; background: var(--v50); color: var(--v600); border: 1px solid var(--v200); padding: 3px 9px; border-radius: 4px; }
+.section-title { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; color: var(--s900); }
+.sub { margin-bottom: 40px; }
+.sub-label { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--s400); margin-bottom: 16px; }
+
+/* PREVIEW */
+.preview { background: white; border: 1px solid var(--s200); border-radius: 16px; overflow: hidden; margin-bottom: 12px; box-shadow: var(--shadow-sm); }
+.preview-hd { background: var(--s50); border-bottom: 1px solid var(--s200); padding: 10px 20px; font-family: var(--font-mono); font-size: 10px; color: var(--s400); letter-spacing: 1px; display: flex; align-items: center; gap: 8px; }
+.preview-hd-dot { width: 8px; height: 8px; border-radius: 50%; }
+.preview-body { padding: 32px; }
+.preview-body.tight { padding: 20px; }
+.preview-body.center { display: flex; align-items: center; justify-content: center; }
+
+/* NOTES */
+.note { padding: 12px 16px; border-radius: 8px; font-size: 13px; line-height: 1.6; margin-top: 12px; }
+.note-v  { background: var(--v50);  border-left: 3px solid var(--v500);  color: var(--v700); }
+.note-g  { background: var(--e50);  border-left: 3px solid var(--e500);  color: var(--e600); }
+.note-r  { background: var(--danger-bg);  border-left: 3px solid var(--danger);  color: #B91C1C; }
+.note-y  { background: var(--warning-bg); border-left: 3px solid var(--warning); color: #92400E; }
+.note strong { font-weight: 600; }
+
+/* DIVIDER */
+hr.divider { border: none; border-top: 1px solid var(--s200); margin: 32px 0; }
+
+/* ═══════════════════════════════════════════
+   MARKETING STUDY COMPONENTS
+═══════════════════════════════════════════ */
+
+/* Market size card */
+.market-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 24px; }
+.market-card { background: white; border: 1px solid var(--s200); border-radius: 16px; padding: 24px; border-top: 3px solid var(--v500); box-shadow: var(--shadow-sm); }
+.market-card.green { border-top-color: var(--e500); }
+.market-card.coral { border-top-color: var(--c500); }
+.market-value { font-size: 32px; font-weight: 900; letter-spacing: -1.5px; color: var(--s900); line-height: 1; margin-bottom: 4px; }
+.market-label { font-size: 13px; font-weight: 600; color: var(--s600); margin-bottom: 6px; }
+.market-sub { font-size: 12px; color: var(--s400); line-height: 1.5; }
+
+/* Persona cards */
+.persona-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+.persona-card { background: white; border: 1px solid var(--s200); border-radius: 16px; padding: 24px; box-shadow: var(--shadow-sm); }
+.persona-avatar { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 14px; }
+.persona-role { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--v600); margin-bottom: 4px; }
+.persona-name { font-size: 17px; font-weight: 700; color: var(--s900); margin-bottom: 8px; }
+.persona-pain { font-size: 13px; color: var(--s500); line-height: 1.6; margin-bottom: 12px; }
+.persona-tag { display: inline-block; font-size: 11px; font-weight: 500; background: var(--s100); color: var(--s600); padding: 3px 8px; border-radius: 20px; margin: 2px 2px 0 0; }
+
+/* Competitor table */
+.comp-table { width: 100%; border-collapse: collapse; }
+.comp-table th { background: var(--s900); color: white; padding: 12px 14px; font-size: 12px; font-weight: 600; text-align: left; }
+.comp-table th:first-child { border-radius: 10px 0 0 0; }
+.comp-table th:last-child { border-radius: 0 10px 0 0; }
+.comp-table td { padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--s100); vertical-align: middle; }
+.comp-table tr:hover td { background: var(--s50); }
+.has { color: var(--e500); font-weight: 700; }
+.no  { color: var(--s300); }
+.partial { color: var(--warning); font-weight: 600; }
+.comp-table .our-row td { background: var(--v50); font-weight: 500; }
+.comp-table .our-row td:first-child { font-weight: 700; color: var(--v600); }
+
+/* Positioning map */
+.pos-map { position: relative; width: 100%; height: 320px; background: white; border: 1px solid var(--s200); border-radius: 16px; overflow: hidden; }
+.pos-axis-h { position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--s200); }
+.pos-axis-v { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--s200); }
+.pos-label { position: absolute; font-size: 11px; font-weight: 600; color: var(--s400); font-family: var(--font-mono); }
+.pos-dot { position: absolute; width: 12px; height: 12px; border-radius: 50%; transform: translate(-50%, -50%); cursor: pointer; }
+.pos-dot-label { position: absolute; font-size: 11px; font-weight: 600; white-space: nowrap; }
+
+/* Value prop */
+.vprop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.vprop-card { border: 1px solid var(--s200); border-radius: 14px; padding: 20px; background: white; box-shadow: var(--shadow-sm); }
+.vprop-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+.vprop-title { font-size: 15px; font-weight: 700; color: var(--s900); margin-bottom: 6px; }
+.vprop-desc { font-size: 13px; color: var(--s500); line-height: 1.6; }
+
+/* Pricing tiers */
+.pricing-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+.pricing-card { border: 1px solid var(--s200); border-radius: 20px; padding: 28px; background: white; position: relative; }
+.pricing-card.featured { border-color: var(--v400); box-shadow: 0 0 0 4px var(--v50), var(--shadow-md); }
+.pricing-badge { position: absolute; top: -1px; left: 50%; transform: translateX(-50%); background: var(--v600); color: white; font-size: 11px; font-weight: 700; padding: 4px 14px; border-radius: 0 0 10px 10px; }
+.pricing-tier { font-size: 13px; font-weight: 700; color: var(--s500); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; margin-top: 8px; }
+.pricing-price { font-size: 38px; font-weight: 900; letter-spacing: -2px; color: var(--s900); line-height: 1; }
+.pricing-price sup { font-size: 18px; font-weight: 600; vertical-align: super; }
+.pricing-period { font-size: 12px; color: var(--s400); margin-bottom: 20px; }
+.pricing-feat { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--s600); padding: 5px 0; }
+.pricing-feat::before { content: '✓'; color: var(--e500); font-weight: 700; flex-shrink: 0; font-size: 12px; margin-top: 2px; }
+.pricing-feat.no { color: var(--s300); }
+.pricing-feat.no::before { content: '–'; color: var(--s300); }
+
+/* GTM timeline */
+.gtm-row { display: grid; grid-template-columns: 80px 1fr; gap: 0; margin-bottom: 0; }
+.gtm-phase { padding: 20px 16px 20px 0; border-right: 2px solid var(--v200); position: relative; }
+.gtm-phase::after { content: ''; position: absolute; right: -5px; top: 28px; width: 8px; height: 8px; border-radius: 50%; background: var(--v600); }
+.gtm-label { font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--v600); }
+.gtm-content { padding: 20px 0 20px 20px; border-bottom: 1px solid var(--s100); }
+.gtm-title { font-size: 15px; font-weight: 700; color: var(--s900); margin-bottom: 6px; }
+.gtm-items { font-size: 13px; color: var(--s500); line-height: 1.8; }
+
+/* ═══════════════════════════════════════════
+   VISUAL IDENTITY COMPONENTS
+═══════════════════════════════════════════ */
+
+/* Logo */
+.logo-display { display: flex; align-items: center; gap: 14px; }
+.logo-mark { flex-shrink: 0; }
+.logo-wordmark { font-family: var(--font-display); font-weight: 900; letter-spacing: -0.5px; line-height: 1; }
+.logo-wordmark .agenda { color: var(--s900); }
+.logo-wordmark .inteligente { color: var(--v600); }
+.logo-tagline { font-size: 12px; color: var(--s400); letter-spacing: 0.3px; margin-top: 4px; font-weight: 400; }
+
+/* Color grid */
+.color-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 10px; margin-bottom: 24px; }
+.color-card { border-radius: 12px; overflow: hidden; border: 1px solid var(--s200); }
+.color-swatch { height: 72px; position: relative; }
+.color-swatch.star::after { content: '★'; position: absolute; top: 6px; right: 8px; font-size: 11px; color: rgba(0,0,0,0.35); }
+.color-meta { background: white; padding: 10px 12px; }
+.color-name { font-size: 11px; font-weight: 700; color: var(--s800); margin-bottom: 2px; }
+.color-hex  { font-family: var(--font-mono); font-size: 10px; color: var(--s400); margin-bottom: 4px; }
+.color-use  { font-size: 10.5px; color: var(--s500); line-height: 1.4; }
+
+/* Type scale */
+.type-table { width: 100%; border-collapse: collapse; }
+.type-table tr { border-bottom: 1px solid var(--s100); }
+.type-table td { padding: 18px 16px; vertical-align: middle; }
+.type-meta .tn { font-size: 12px; font-weight: 700; color: var(--s700); margin-bottom: 4px; }
+.type-meta .ts { font-family: var(--font-mono); font-size: 10px; color: var(--v600); line-height: 1.8; }
+.type-meta .tw { font-size: 11px; color: var(--s400); margin-top: 4px; line-height: 1.5; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-display); font-weight: 600; border: none; cursor: pointer; transition: all .15s; line-height: 1; text-decoration: none; }
+.btn-lg { padding: 13px 24px; border-radius: 12px; font-size: 15px; }
+.btn-md { padding: 10px 18px; border-radius: 10px; font-size: 14px; }
+.btn-sm { padding: 7px 14px; border-radius: 8px;  font-size: 13px; }
+.btn-xs { padding: 5px 10px; border-radius: 6px;  font-size: 12px; }
+
+.btn-primary  { background: var(--v600); color: white; box-shadow: var(--shadow-v); }
+.btn-primary:hover { background: var(--v700); }
+.btn-secondary { background: var(--v50); color: var(--v700); border: 1px solid var(--v200); }
+.btn-secondary:hover { background: var(--v100); }
+.btn-outline { background: white; color: var(--s700); border: 1px solid var(--s200); }
+.btn-outline:hover { background: var(--s50); border-color: var(--s300); }
+.btn-ghost { background: transparent; color: var(--s500); }
+.btn-ghost:hover { background: var(--s100); color: var(--s700); }
+.btn-success { background: var(--e500); color: white; }
+.btn-success:hover { background: var(--e600); }
+.btn-danger-soft { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-border); }
+
+.btn-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+/* Badges */
+.badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px; }
+.badge-dot::before { content: '●'; font-size: 7px; }
+.badge-v  { background: var(--v50);  color: var(--v700);  border: 1px solid var(--v200); }
+.badge-g  { background: var(--e50);  color: var(--e600);  border: 1px solid var(--e100); }
+.badge-y  { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); }
+.badge-r  { background: var(--danger-bg);  color: var(--danger);  border: 1px solid var(--danger-border); }
+.badge-s  { background: var(--s100); color: var(--s600);  border: 1px solid var(--s200); }
+.badge-c  { background: var(--c50);  color: var(--c500);  border: 1px solid #FED7AA; }
+
+/* Agenda calendar */
+.cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
+.cal-day-name { text-align: center; font-size: 11px; font-weight: 700; color: var(--s400); padding: 8px 4px; letter-spacing: 0.5px; text-transform: uppercase; }
+.cal-day { min-height: 80px; border: 1px solid var(--s200); border-radius: 10px; padding: 8px; background: white; position: relative; cursor: pointer; transition: all .15s; }
+.cal-day:hover { border-color: var(--v300); background: var(--v50); }
+.cal-day.today { border-color: var(--v500); border-width: 2px; }
+.cal-day.today .cal-day-num { background: var(--v600); color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+.cal-day-num { font-size: 13px; font-weight: 600; color: var(--s600); margin-bottom: 4px; }
+.cal-day.faded { opacity: 0.4; }
+.cal-appt { font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-appt.v  { background: var(--v100); color: var(--v700); }
+.cal-appt.g  { background: var(--e50); color: var(--e600); }
+.cal-appt.c  { background: var(--c50); color: var(--c500); }
+
+/* Time slots */
+.timeslot { display: flex; align-items: stretch; margin-bottom: 4px; gap: 8px; }
+.timeslot-hour { font-family: var(--font-mono); font-size: 11px; color: var(--s400); width: 44px; padding-top: 8px; flex-shrink: 0; }
+.timeslot-body { flex: 1; min-height: 36px; border-top: 1px solid var(--s100); position: relative; }
+.appt-block { background: var(--v100); border-left: 3px solid var(--v500); border-radius: 0 8px 8px 0; padding: 6px 10px; margin-bottom: 2px; cursor: pointer; transition: all .15s; }
+.appt-block:hover { background: var(--v200); }
+.appt-block.green { background: var(--e50); border-left-color: var(--e500); }
+.appt-block.coral { background: var(--c50); border-left-color: var(--c500); }
+.appt-client { font-size: 12px; font-weight: 700; color: var(--s900); }
+.appt-service { font-size: 11px; color: var(--s500); }
+.appt-time { font-family: var(--font-mono); font-size: 10px; color: var(--s400); }
+
+/* Dashboard stat */
+.stat-card { background: white; border: 1px solid var(--s200); border-radius: 16px; padding: 20px; box-shadow: var(--shadow-sm); }
+.stat-label { font-size: 12px; font-weight: 600; color: var(--s400); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+.stat-value { font-size: 34px; font-weight: 900; letter-spacing: -1.5px; color: var(--s900); line-height: 1; margin-bottom: 4px; }
+.stat-delta { font-size: 12px; }
+.stat-delta.up   { color: var(--e500); }
+.stat-delta.down { color: var(--danger); }
+
+/* Notification dot */
+.notif-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--v500); }
+
+/* Form fields */
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.field-label { font-size: 13px; font-weight: 600; color: var(--s700); }
+.field-input {
+  font-family: var(--font-display); font-size: 14px;
+  padding: 11px 14px; border: 1.5px solid var(--s200); border-radius: 10px;
+  background: white; color: var(--s900); outline: none;
+  transition: border-color .15s, box-shadow .15s; width: 100%;
+}
+.field-input::placeholder { color: var(--s400); }
+.field-input:focus { border-color: var(--v500); box-shadow: 0 0 0 3px rgba(124,58,237,.1); }
+.field-input.ok  { border-color: var(--e500); }
+.field-input.err { border-color: var(--danger); }
+.field-hint  { font-size: 12px; color: var(--s400); }
+.field-ok    { font-size: 12px; color: var(--e500); }
+.field-error { font-size: 12px; color: var(--danger); }
+.field-select { font-family: var(--font-display); font-size: 14px; padding: 11px 14px; border: 1.5px solid var(--s200); border-radius: 10px; background: white; color: var(--s900); outline: none; width: 100%; }
+
+/* Alerts */
+.alert { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: 12px; font-size: 13.5px; line-height: 1.55; margin-bottom: 10px; border: 1px solid transparent; }
+.alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.alert-title { font-weight: 700; margin-bottom: 2px; font-size: 14px; }
+.alert.info    { background: var(--info-bg);    border-color: var(--info-border);    color: var(--v700); }
+.alert.success { background: var(--success-bg); border-color: var(--success-border); color: var(--e600); }
+.alert.warning { background: var(--warning-bg); border-color: var(--warning-border); color: #92400E; }
+.alert.danger  { background: var(--danger-bg);  border-color: var(--danger-border);  color: #B91C1C; }
+
+/* Navbar */
+.app-nav { background: white; border-bottom: 1px solid var(--s200); height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; border-radius: 16px 16px 0 0; }
+.app-nav-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.app-nav-brand-wm { font-family: var(--font-display); font-size: 18px; font-weight: 900; letter-spacing: -0.3px; color: var(--s900); }
+.app-nav-brand-wm span { color: var(--v600); }
+.app-nav-links { display: flex; gap: 4px; }
+.nav-link { font-size: 14px; font-weight: 500; color: var(--s500); padding: 7px 14px; border-radius: 8px; text-decoration: none; transition: all .15s; }
+.nav-link:hover { background: var(--s100); color: var(--s800); }
+.nav-link.act { background: var(--v50); color: var(--v600); font-weight: 600; }
+.nav-right { display: flex; align-items: center; gap: 12px; }
+.avatar { width: 34px; height: 34px; background: var(--v600); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: white; }
+
+/* Spacing */
+.space-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+.space-item { display: flex; flex-direction: column; gap: 6px; }
+.space-bar-wrap { height: 20px; display: flex; align-items: center; }
+.space-bar { background: var(--v200); height: 12px; border-radius: 3px; border: 1px solid var(--v300); }
+.space-label { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--s800); }
+.space-val { font-family: var(--font-mono); font-size: 10px; color: var(--v600); }
+.space-use { font-size: 11px; color: var(--s400); line-height: 1.4; }
+
+/* TOV */
+.tov-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tov-card { border: 1px solid var(--s200); border-radius: 12px; overflow: hidden; }
+.tov-head { padding: 10px 14px; font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+.tov-head.good { background: var(--e50); color: var(--e600); }
+.tov-head.good::before { content: '✓ '; }
+.tov-head.bad  { background: var(--danger-bg); color: var(--danger); }
+.tov-head.bad::before  { content: '✕ '; }
+.tov-body { padding: 14px; font-size: 13.5px; color: var(--s600); line-height: 1.7; background: white; }
+
+/* Ecosystem badge */
+.ecosystem { display: flex; gap: 12px; flex-wrap: wrap; }
+.eco-product { display: flex; align-items: center; gap: 8px; background: white; border: 1px solid var(--s200); border-radius: 12px; padding: 10px 14px; box-shadow: var(--shadow-sm); }
+.eco-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.eco-name { font-size: 13px; font-weight: 700; color: var(--s800); }
+.eco-desc { font-size: 11px; color: var(--s400); }
+
+/* Spacing tokens note */
+@media (max-width: 900px) { .page { grid-template-columns: 1fr; } .sidebar { display: none; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="sidebar">
+  <div class="sb-brand">
+    <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="9" fill="#7C3AED"/>
+      <rect x="8" y="7" width="16" height="18" rx="3" fill="white"/>
+      <rect x="11" y="5" width="4" height="4" rx="1" fill="#DDD6FE"/>
+      <rect x="17" y="5" width="4" height="4" rx="1" fill="#DDD6FE"/>
+      <line x1="11" y1="15" x2="21" y2="15" stroke="#7C3AED" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="11" y1="18" x2="18" y2="18" stroke="#7C3AED" stroke-width="1.5" stroke-linecap="round"/>
+      <circle cx="23" cy="23" r="5" fill="#10B981"/>
+      <path d="M21 23l1.5 1.5 3-3" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div class="sb-wordmark">Agenda<span>i</span></div>
+  </div>
+
+  <div class="sb-section">Marketing</div>
+  <a href="#mercado" class="act">01 · Mercado</a>
+  <a href="#personas">02 · Personas</a>
+  <a href="#posicionamento">03 · Posicionamento</a>
+  <a href="#valor">04 · Proposta de Valor</a>
+  <a href="#competidores">05 · Competidores</a>
+  <a href="#pricing">06 · Pricing</a>
+  <a href="#gtm">07 · Go-to-Market</a>
+
+  <div class="sb-section">Identidade Visual</div>
+  <a href="#logo">08 · Logo</a>
+  <a href="#cores">09 · Cores</a>
+  <a href="#tipografia">10 · Tipografia</a>
+  <a href="#espacamento">11 · Espaçamento</a>
+  <a href="#botoes">12 · Botões</a>
+  <a href="#badges">13 · Badges</a>
+  <a href="#agenda">14 · Componente Agenda</a>
+  <a href="#forms">15 · Formulários</a>
+  <a href="#alertas">16 · Alertas</a>
+  <a href="#telas">17 · Telas</a>
+  <a href="#voz">18 · Tom de Voz</a>
+  <a href="#ecossistema">19 · Ecossistema</a>
+
+  <div style="margin-top: auto; padding-top: 24px; border-top: 1px solid var(--s100);">
+    <div style="font-family: var(--font-mono); font-size: 9px; color: var(--s400); letter-spacing: 1px;">SCANTELBURYDEVS<br>v1.0 · 2026</div>
+  </div>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<main class="main">
+
+  <!-- CAPA -->
+  <div style="margin-bottom: 80px;">
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 24px;">
+      <span style="font-family: var(--font-mono); font-size: 10px; color: var(--v600); background: var(--v50); border: 1px solid var(--v200); padding: 4px 10px; border-radius: 4px;">ESTUDO ESTRATÉGICO + IDENTIDADE · v1.0</span>
+      <span style="font-family: var(--font-mono); font-size: 10px; color: var(--s400);">ScantelburyDevs · 2026</span>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 18px; margin-bottom: 20px;">
+      <div style="width: 72px; height: 72px; border-radius: 20px; background: var(--v600); display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-v);">
+        <svg width="42" height="42" viewBox="0 0 32 32" fill="none">
+          <rect x="4" y="4" width="24" height="24" rx="4" fill="rgba(255,255,255,0.15)"/>
+          <rect x="6" y="6" width="20" height="20" rx="3" fill="white"/>
+          <rect x="10" y="4" width="4" height="5" rx="1.5" fill="#DDD6FE"/>
+          <rect x="18" y="4" width="4" height="5" rx="1.5" fill="#DDD6FE"/>
+          <line x1="10" y1="16" x2="22" y2="16" stroke="#7C3AED" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="10" y1="19.5" x2="18" y2="19.5" stroke="#C4B5FD" stroke-width="1.2" stroke-linecap="round"/>
+          <circle cx="22" cy="22" r="4" fill="#10B981"/>
+          <path d="M20.5 22l1 1 2.5-2.5" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div>
+        <h1 style="font-size: 48px; font-weight: 900; letter-spacing: -2px; color: var(--s900); line-height: 1;">Agenda<span style="color: var(--v600);">Inteligente</span></h1>
+        <div style="font-family: var(--font-mono); font-size: 12px; color: var(--s400); letter-spacing: 2px; text-transform: uppercase; margin-top: 4px;">Plataforma SaaS de Agendamento com NF-e Integrada</div>
+      </div>
+    </div>
+
+    <p style="font-size: 16px; color: var(--s500); max-width: 560px; line-height: 1.7; margin-bottom: 20px;">Documento completo de estratégia de marketing e sistema de identidade visual — da análise de mercado até o guia de componentes UI. Produto ScantelburyDevs que integra nativamente com o NotaFácil.</p>
+
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+      <span class="badge badge-v badge-dot">SaaS multi-unidade</span>
+      <span class="badge badge-g badge-dot">NF-e integrada</span>
+      <span class="badge badge-s">Todos os segmentos</span>
+      <span class="badge badge-c">19 seções</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PARTE 1: ESTUDO DE MARKETING
+  ══════════════════════════════════════════════ -->
+
+  <!-- 01 MERCADO -->
+  <section class="section" id="mercado">
+    <div class="section-hd">
+      <span class="section-tag">01</span>
+      <span class="section-title">Análise de Mercado</span>
+    </div>
+
+    <div class="sub">
+      <div class="sub-label">Tamanho e oportunidade</div>
+      <div class="market-grid">
+        <div class="market-card">
+          <div class="market-value">R$ 3,8bi</div>
+          <div class="market-label">Mercado SaaS de agendamento no Brasil</div>
+          <div class="market-sub">Crescimento de 22% ao ano. 90% ainda usa WhatsApp ou agenda em papel.</div>
+        </div>
+        <div class="market-card green">
+          <div class="market-value">18M+</div>
+          <div class="market-label">Profissionais com atendimento recorrente</div>
+          <div class="market-sub">Salões, clínicas, academias, estúdios, veterinários, nutricionistas, psicólogos.</div>
+        </div>
+        <div class="market-card coral">
+          <div class="market-value">62%</div>
+          <div class="market-label">Não usa nenhum sistema formal de agendamento</div>
+          <div class="market-sub">Mercado endereçável imediato. Fácil conversão por baixo custo de adoção.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub">
+      <div class="sub-label">Segmentos prioritários</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;">
+        <div style="background: white; border: 1px solid var(--s200); border-radius: 14px; padding: 20px; border-left: 4px solid var(--v500);">
+          <div style="font-size: 24px; margin-bottom: 8px;">💇</div>
+          <div style="font-size: 15px; font-weight: 700; color: var(--s900); margin-bottom: 4px;">Beleza &amp; Estética</div>
+          <div style="font-size: 13px; color: var(--s500); line-height: 1.6;">6M+ estabelecimentos. Alta rotatividade de clientes, forte dependência de agenda. Maior volume de NF-e por prestador de serviço.</div>
+        </div>
+        <div style="background: white; border: 1px solid var(--s200); border-radius: 14px; padding: 20px; border-left: 4px solid var(--e500);">
+          <div style="font-size: 24px; margin-bottom: 8px;">🏋️</div>
+          <div style="font-size: 15px; font-weight: 700; color: var(--s900); margin-bottom: 4px;">Fitness &amp; Saúde</div>
+          <div style="font-size: 13px; color: var(--s500); line-height: 1.6;">Academias, personal trainers, pilates, yoga. Clientes com contrato mensal — alta LTV. Precisam de controle de presença e mensalidade.</div>
+        </div>
+        <div style="background: white; border: 1px solid var(--s200); border-radius: 14px; padding: 20px; border-left: 4px solid var(--c500);">
+          <div style="font-size: 24px; margin-bottom: 8px;">🏥</div>
+          <div style="font-size: 15px; font-weight: 700; color: var(--s900); margin-bottom: 4px;">Saúde &amp; Clínicas</div>
+          <div style="font-size: 13px; color: var(--s500); line-height: 1.6;">Psicólogos, nutricionistas, fisioterapeutas, veterinários. Ticket alto, necessidade de prontuário e emissão de NF-e obrigatória.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub">
+      <div class="sub-label">Por que agora?</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="note note-v" style="margin-top: 0;">
+          <strong>🏛 NFS-e Nacional obrigatória (2025–2026)</strong><br>
+          A Receita Federal tornou obrigatória a NFS-e Nacional para todos os prestadores de serviço. Isso força quem nunca emitiu nota a buscar uma solução. Nossa integração com NotaFácil transforma isso de ameaça em vantagem competitiva.
+        </div>
+        <div class="note note-g" style="margin-top: 0;">
+          <strong>📱 Consumidores exigem agendamento online</strong><br>
+          78% dos clientes de serviços preferem agendar sem telefonar. Quem não oferece agendamento online perde para quem oferece. O mercado chegou ao ponto de inflexão em 2024–2026.
+        </div>
+        <div class="note note-v" style="margin-top: 0;">
+          <strong>🤖 IA como diferencial percebido</strong><br>
+          O nome "Inteligente" posiciona o produto em linha com o momento de IA. Lembretes automáticos, horários sugeridos, análise de falta de comparecimento — todos vendidos como "inteligência" sem precisar de ML complexo.
+        </div>
+        <div class="note note-g" style="margin-top: 0;">
+          <strong>🔗 Ausência de integração fiscal no mercado</strong><br>
+          Nenhum concorrente relevante emite NF-e nativamente. O profissional usa dois sistemas distintos. Nossa proposta elimina esse atrito com a integração NotaFácil.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 PERSONAS -->
+  <section class="section" id="personas">
+    <div class="section-hd">
+      <span class="section-tag">02</span>
+      <span class="section-title">Personas</span>
+    </div>
+
+    <div class="persona-grid">
+      <!-- Dono -->
+      <div class="persona-card" style="border-top: 3px solid var(--v500);">
+        <div class="persona-avatar" style="background: var(--v50);">👔</div>
+        <div class="persona-role">Dono / Empresa</div>
+        <div class="persona-name">Carlos, 38 anos</div>
+        <div class="persona-pain">Tem 3 salões em cidades diferentes. Não consegue visibilidade sobre o faturamento real de cada unidade. Gasta R$800/mês com contador só para emitir notas. Não sabe qual funcionária traz mais clientes.</div>
+        <div>
+          <span class="persona-tag">Multi-unidade</span>
+          <span class="persona-tag">Relatórios financeiros</span>
+          <span class="persona-tag">Controle de NF-e</span>
+          <span class="persona-tag">Visão consolidada</span>
+        </div>
+      </div>
+      <!-- Gerente -->
+      <div class="persona-card" style="border-top: 3px solid var(--e500);">
+        <div class="persona-avatar" style="background: var(--e50);">👩‍💼</div>
+        <div class="persona-role">Gerente de Unidade</div>
+        <div class="persona-name">Fernanda, 32 anos</div>
+        <div class="persona-pain">Gerencia 8 funcionárias numa clínica de estética. Passa 2h/dia confirmando agendamento pelo WhatsApp. Clientes faltam sem avisar. Precisa controlar a agenda de cada profissional sem microgerenciar.</div>
+        <div>
+          <span class="persona-tag">Agenda por profissional</span>
+          <span class="persona-tag">Confirmação automática</span>
+          <span class="persona-tag">Gestão de equipe</span>
+          <span class="persona-tag">Relatório de presença</span>
+        </div>
+      </div>
+      <!-- Cliente final -->
+      <div class="persona-card" style="border-top: 3px solid var(--c500);">
+        <div class="persona-avatar" style="background: var(--c50);">🙋</div>
+        <div class="persona-role">Cliente Final (end-user)</div>
+        <div class="persona-name">Juliana, 27 anos</div>
+        <div class="persona-pain">Odeia ligar para marcar consulta. Quer ver horários disponíveis no Instagram, escolher o profissional, pagar antecipado e receber lembrete automático no WhatsApp. Cancela sem cerimônia se for muito burocrático.</div>
+        <div>
+          <span class="persona-tag">Link de agendamento</span>
+          <span class="persona-tag">Pagamento online</span>
+          <span class="persona-tag">Lembrete WhatsApp</span>
+          <span class="persona-tag">Histórico de visitas</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="note note-v" style="margin-top: 16px;">
+      <strong>Implicação de produto:</strong> O sistema tem 3 níveis de acesso naturais — <strong>Dono (visão multi-unidade + financeiro)</strong>, <strong>Gerente (agenda operacional + equipe)</strong> e <strong>Profissional (minha agenda do dia)</strong>. A persona "Cliente" acessa via link público, sem cadastro no sistema principal. Isso define o modelo de permissões do SaaS.
+    </div>
+  </section>
+
+  <!-- 03 POSICIONAMENTO -->
+  <section class="section" id="posicionamento">
+    <div class="section-hd">
+      <span class="section-tag">03</span>
+      <span class="section-title">Posicionamento</span>
+    </div>
+
+    <div class="sub">
+      <div class="sub-label">Mapa de posicionamento</div>
+      <div class="pos-map">
+        <div class="pos-axis-h"></div>
+        <div class="pos-axis-v"></div>
+        <!-- Axis labels -->
+        <span class="pos-label" style="top: 50%; left: 10px; transform: translateY(-50%);">← Genérico</span>
+        <span class="pos-label" style="top: 50%; right: 10px; transform: translateY(-50%);">Especializado →</span>
+        <span class="pos-label" style="top: 10px; left: 50%; transform: translateX(-50%);">↑ Caro</span>
+        <span class="pos-label" style="bottom: 10px; left: 50%; transform: translateX(-50%);">↓ Acessível</span>
+        <!-- Competitors -->
+        <div class="pos-dot" style="background: #94A3B8; top: 30%; left: 25%;">
+          <span class="pos-dot-label" style="top: 14px; left: -20px; color: var(--s400);">Calendly</span>
+        </div>
+        <div class="pos-dot" style="background: #F97316; top: 25%; left: 70%;">
+          <span class="pos-dot-label" style="top: 14px; left: 4px; color: var(--c500);">Trinks</span>
+        </div>
+        <div class="pos-dot" style="background: #60A5FA; top: 20%; left: 55%;">
+          <span class="pos-dot-label" style="top: 14px; left: 4px; color: #3B82F6;">iClinic</span>
+        </div>
+        <div class="pos-dot" style="background: #94A3B8; top: 40%; left: 35%;">
+          <span class="pos-dot-label" style="top: 14px; left: 4px; color: var(--s400);">Google Cal.</span>
+        </div>
+        <div class="pos-dot" style="background: #F59E0B; top: 35%; left: 62%;">
+          <span class="pos-dot-label" style="top: 14px; left: 4px; color: var(--warning);">EasyFit</span>
+        </div>
+        <div class="pos-dot" style="background: #94A3B8; top: 55%; left: 20%;">
+          <span class="pos-dot-label" style="top: 14px; left: 4px; color: var(--s400);">WhatsApp</span>
+        </div>
+        <!-- Our position -->
+        <div class="pos-dot" style="background: var(--v600); width: 16px; height: 16px; top: 62%; left: 68%; box-shadow: 0 0 0 4px rgba(124,58,237,0.2);">
+          <span class="pos-dot-label" style="top: 18px; left: -30px; color: var(--v600); font-weight: 700; font-size: 13px;">★ AgendaInteligente</span>
+        </div>
+      </div>
+      <div class="note note-v">Nossa posição é única: <strong>especializado para serviços recorrentes (não genérico) + acessível (não enterprise)</strong>. É o ponto do mapa sem concorrente direto com NF-e nativa.</div>
+    </div>
+
+    <div class="sub">
+      <div class="sub-label">Statement de posicionamento</div>
+      <div style="background: white; border: 1px solid var(--s200); border-radius: 16px; padding: 32px; border-left: 4px solid var(--v600);">
+        <div style="font-family: var(--font-serif); font-size: 22px; font-style: italic; color: var(--s800); line-height: 1.5; margin-bottom: 16px;">
+          "Para donos e gerentes de negócios com atendimento recorrente que perderam o controle da agenda e sofrem com burocracia fiscal, o AgendaInteligente é o único sistema que unifica agendamento online, gestão de equipe e emissão de NF-e em uma plataforma — sem precisar de contador para cada nota emitida."
+        </div>
+        <div style="font-size: 13px; color: var(--s400); font-family: var(--font-mono);">Formato: Para [quem] que [problema], somos o [categoria] que [diferencial único].</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 PROPOSTA DE VALOR -->
+  <section class="section" id="valor">
+    <div class="section-hd">
+      <span class="section-tag">04</span>
+      <span class="section-title">Proposta de Valor</span>
+    </div>
+
+    <div class="vprop-grid">
+      <div class="vprop-card">
+        <div class="vprop-icon" style="background: var(--v50);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="#7C3AED" stroke-width="1.5"/><path d="M3 9h18M9 4v5M15 4v5" stroke="#7C3AED" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="vprop-title">Agendamento que funciona sozinho</div>
+        <div class="vprop-desc">Link público de agendamento por profissional. Cliente escolhe horário, recebe confirmação automática e lembrete por WhatsApp/SMS 24h antes. Redução de 80% nas faltas.</div>
+      </div>
+      <div class="vprop-card">
+        <div class="vprop-icon" style="background: var(--e50);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#10B981" stroke-width="1.5"/><polyline points="14 2 14 8 20 8" stroke="#10B981" stroke-width="1.5"/><line x1="9" y1="13" x2="15" y2="13" stroke="#10B981" stroke-width="1.5"/><line x1="9" y1="17" x2="11" y2="17" stroke="#10B981" stroke-width="1.5"/></svg>
+        </div>
+        <div class="vprop-title">NF-e emitida no clique — via NotaFácil</div>
+        <div class="vprop-desc">Ao confirmar atendimento, a nota fiscal já pode ser emitida automaticamente. Integração nativa com NotaFácil. Sem sistemas paralelos, sem contador extra, sem erro humano.</div>
+      </div>
+      <div class="vprop-card">
+        <div class="vprop-icon" style="background: var(--c50);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="#F97316" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="7" r="4" stroke="#F97316" stroke-width="1.5"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="#F97316" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="vprop-title">Multi-unidade com hierarquia real</div>
+        <div class="vprop-desc">Uma conta, várias unidades. Dono vê tudo consolidado. Gerente vê só a sua unidade. Profissional vê apenas sua agenda. Permissões granulares sem configuração complexa.</div>
+      </div>
+      <div class="vprop-card">
+        <div class="vprop-icon" style="background: var(--v50);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="#7C3AED" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="vprop-title">Inteligência que você já entende</div>
+        <div class="vprop-desc">Alerta de clientes que pararam de aparecer. Horários de pico por profissional. Taxa de confirmação vs. falta. Receita projetada por semana. Sem dashboard complicado.</div>
+      </div>
+    </div>
+
+    <div class="sub" style="margin-top: 32px;">
+      <div class="sub-label">Elevator pitch por segmento</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;">
+        <div style="background: white; border: 1px solid var(--s200); border-radius: 14px; padding: 20px;">
+          <div style="font-size: 20px; margin-bottom: 8px;">💇</div>
+          <div style="font-size: 14px; font-weight: 700; color: var(--s900); margin-bottom: 8px;">Para salões e estética</div>
+          <div style="font-family: var(--font-serif); font-style: italic; font-size: 15px; color: var(--s600); line-height: 1.6;">"Sua agenda no Instagram, pagamento antes do horário e nota fiscal automática. Sem WhatsApp no horário de pico."</div>
+        </div>
+        <div style="background: white; border: 1px solid var(--s200); border-radius: 14px; padding: 20px;">
+          <div style="font-size: 20px; margin-bottom: 8px;">🏋️</div>
+          <div style="font-size: 14px; font-weight: 700; color: var(--s900); margin-bottom: 8px;">Para academias e fitness</div>
+          <div style="font-family: var(--font-serif); font-style: italic; font-size: 15px; color: var(--s600); line-height: 1.6;">"Controle de presença, mensalidade e nota fiscal para todas as suas aulas e personals — em uma tela só."</div>
+        </div>
+        <div style="background: white; border: 1px solid var(--s200); border-radius: 14px; padding: 20px;">
+          <div style="font-size: 20px; margin-bottom: 8px;">🏥</div>
+          <div style="font-size: 14px; font-weight: 700; color: var(--s900); margin-bottom: 8px;">Para clínicas e saúde</div>
+          <div style="font-family: var(--font-serif); font-style: italic; font-size: 15px; color: var(--s600); line-height: 1.6;">"Prontuário, agendamento e NF-e obrigatória para profissionais de saúde autônomos — tudo integrado."</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 COMPETIDORES -->
+  <section class="section" id="competidores">
+    <div class="section-hd">
+      <span class="section-tag">05</span>
+      <span class="section-title">Análise Competitiva</span>
+    </div>
+
+    <div class="preview" style="margin-bottom: 24px;">
+      <div class="preview-hd"><div class="preview-hd-dot" style="background: #EF4444;"></div><div class="preview-hd-dot" style="background: #F59E0B;"></div><div class="preview-hd-dot" style="background: #10B981;"></div><span>Matriz de funcionalidades — AgendaInteligente vs. concorrentes</span></div>
+      <div style="overflow-x: auto;">
+        <table class="comp-table">
+          <thead>
+            <tr>
+              <th style="width: 160px;">Produto</th>
+              <th>Agendamento Online</th>
+              <th>Multi-unidade</th>
+              <th>NF-e nativa</th>
+              <th>Lembrete WhatsApp</th>
+              <th>Pagamento online</th>
+              <th>Relatórios</th>
+              <th>Preço/mês</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="our-row">
+              <td>★ AgendaInteligente</td>
+              <td class="has">✓ Completo</td>
+              <td class="has">✓ Sim</td>
+              <td class="has">✓ Nativa</td>
+              <td class="has">✓ Sim</td>
+              <td class="has">✓ Sim</td>
+              <td class="has">✓ Avançado</td>
+              <td class="has">R$ 79–249</td>
+            </tr>
+            <tr>
+              <td>Trinks</td>
+              <td class="has">✓</td>
+              <td class="partial">⚠ Limitado</td>
+              <td class="no">✕</td>
+              <td class="has">✓</td>
+              <td class="has">✓</td>
+              <td class="partial">⚠</td>
+              <td>R$ 89–299</td>
+            </tr>
+            <tr>
+              <td>Doctoralia</td>
+              <td class="has">✓</td>
+              <td class="partial">⚠</td>
+              <td class="no">✕</td>
+              <td class="partial">⚠</td>
+              <td class="no">✕</td>
+              <td class="partial">⚠</td>
+              <td>R$ 149–449</td>
+            </tr>
+            <tr>
+              <td>EasyFit</td>
+              <td class="has">✓</td>
+              <td class="has">✓</td>
+              <td class="no">✕</td>
+              <td class="partial">⚠</td>
+              <td class="has">✓</td>
+              <td class="has">✓</td>
+              <td>R$ 199–599</td>
+            </tr>
+            <tr>
+              <td>Calendly</td>
+              <td class="has">✓</td>
+              <td class="no">✕</td>
+              <td class="no">✕</td>
+              <td class="no">✕</td>
+              <td class="partial">⚠</td>
+              <td class="no">✕</td>
+              <td>US$ 8–16</td>
+            </tr>
+            <tr>
+              <td>Google Calendar</td>
+              <td class="no">✕</td>
+              <td class="no">✕</td>
+              <td class="no">✕</td>
+              <td class="no">✕</td>
+              <td class="no">✕</td>
+              <td class="no">✕</td>
+              <td>Grátis</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="note note-v"><strong>Vantagem competitiva indefensável:</strong> A integração com NotaFácil é propriedade da ScantelburyDevs — nenhum concorrente pode copiar sem construir do zero. Esse é o moat. A estratégia de marketing deve colocar "NF-e inclusa" como a headline principal nas campanhas, não como feature secundária.</div>
+  </section>
+
+  <!-- 06 PRICING -->
+  <section class="section" id="pricing">
+    <div class="section-hd">
+      <span class="section-tag">06</span>
+      <span class="section-title">Estratégia de Pricing</span>
+    </div>
+
+    <div class="sub">
+      <div class="sub-label">Planos sugeridos</div>
+      <div class="pricing-grid">
+        <div class="pricing-card">
+          <div class="pricing-tier">Starter</div>
+          <div class="pricing-price"><sup>R$</sup>79</div>
+          <div class="pricing-period">por unidade / mês · até 3 profissionais</div>
+          <button class="btn btn-outline btn-md" style="width:100%;justify-content:center;margin-bottom:20px;">Começar grátis</button>
+          <div class="pricing-feat">Agendamento online ilimitado</div>
+          <div class="pricing-feat">Link público de agendamento</div>
+          <div class="pricing-feat">Lembrete automático</div>
+          <div class="pricing-feat">1 unidade</div>
+          <div class="pricing-feat">Até 3 profissionais</div>
+          <div class="pricing-feat no">NF-e (add-on R$19/mês)</div>
+          <div class="pricing-feat no">Multi-unidade</div>
+        </div>
+        <div class="pricing-card featured">
+          <div class="pricing-badge">Mais popular</div>
+          <div class="pricing-tier" style="margin-top: 20px;">Profissional</div>
+          <div class="pricing-price"><sup>R$</sup>149</div>
+          <div class="pricing-period">por unidade / mês · profissionais ilimitados</div>
+          <button class="btn btn-primary btn-md" style="width:100%;justify-content:center;margin-bottom:20px;">Assinar agora</button>
+          <div class="pricing-feat">Tudo do Starter</div>
+          <div class="pricing-feat">Profissionais ilimitados</div>
+          <div class="pricing-feat">Pagamento online</div>
+          <div class="pricing-feat">NF-e inclusa (via NotaFácil)</div>
+          <div class="pricing-feat">Relatórios avançados</div>
+          <div class="pricing-feat">Prontuário de cliente</div>
+          <div class="pricing-feat no">Multi-unidade</div>
+        </div>
+        <div class="pricing-card">
+          <div class="pricing-tier">Business</div>
+          <div class="pricing-price"><sup>R$</sup>249</div>
+          <div class="pricing-period">por empresa / mês · unidades ilimitadas</div>
+          <button class="btn btn-outline btn-md" style="width:100%;justify-content:center;margin-bottom:20px;">Falar com vendas</button>
+          <div class="pricing-feat">Tudo do Profissional</div>
+          <div class="pricing-feat">Unidades ilimitadas</div>
+          <div class="pricing-feat">Dashboard consolidado</div>
+          <div class="pricing-feat">API para integração</div>
+          <div class="pricing-feat">Onboarding dedicado</div>
+          <div class="pricing-feat">SLA de suporte 4h</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note note-y"><strong>Decisão estratégica:</strong> NF-e é add-on no Starter mas inclusa no Profissional. Isso força upsell natural: quem precisa de nota (a maioria pela obrigatoriedade legal) assina o plano intermediário. O plano Business por empresa (não por unidade) escala receita sem aumento de complexidade para o cliente.</div>
+  </section>
+
+  <!-- 07 GTM -->
+  <section class="section" id="gtm">
+    <div class="section-hd">
+      <span class="section-tag">07</span>
+      <span class="section-title">Go-to-Market</span>
+    </div>
+
+    <div style="background: white; border: 1px solid var(--s200); border-radius: 16px; overflow: hidden;">
+      <div class="gtm-row">
+        <div class="gtm-phase" style="padding: 24px 16px 24px 0; display: flex; flex-direction: column; gap: 4px; align-items: flex-end;">
+          <div class="gtm-label">M 1-2</div>
+          <div style="font-size: 11px; color: var(--s400); text-align: right; line-height: 1.4;">Fundação</div>
+        </div>
+        <div class="gtm-content">
+          <div class="gtm-title">Validação com 50 beta users gratuitos</div>
+          <div class="gtm-items">Recrutar 50 salões e profissionais de saúde na rede local de Blumenau/SC via abordagem direta. Oferecer 3 meses grátis em troca de feedback intensivo. Meta: validar fluxo de agendamento + NF-e integrada. Coletar 10 depoimentos em vídeo.</div>
+        </div>
+      </div>
+      <div class="gtm-row">
+        <div class="gtm-phase" style="padding: 24px 16px 24px 0; display: flex; flex-direction: column; gap: 4px; align-items: flex-end;">
+          <div class="gtm-label">M 3-4</div>
+          <div style="font-size: 11px; color: var(--s400); text-align: right; line-height: 1.4;">Tração</div>
+        </div>
+        <div class="gtm-content">
+          <div class="gtm-title">Lançamento público + SEO + conteúdo</div>
+          <div class="gtm-items">Blog sobre obrigatoriedade NF-e para prestadores. Vídeos "Como emitir nota fiscal de salão de beleza" no YouTube. Landing pages por segmento (/salao, /clinica, /academia). Meta: 500 trials ativos. Parceria com sindicatos de beleza (SEBRAE, SENAC).</div>
+        </div>
+      </div>
+      <div class="gtm-row">
+        <div class="gtm-phase" style="padding: 24px 16px 24px 0; display: flex; flex-direction: column; gap: 4px; align-items: flex-end;">
+          <div class="gtm-label">M 5-8</div>
+          <div style="font-size: 11px; color: var(--s400); text-align: right; line-height: 1.4;">Escala</div>
+        </div>
+        <div class="gtm-content">
+          <div class="gtm-title">Performance ads + afiliados + Product-Led Growth</div>
+          <div class="gtm-items">Google Ads nas keywords "sistema agendamento [segmento]" + "emitir nota fiscal [serviço]". Programa de afiliados para contadores e associações. "Powered by AgendaInteligente" no link de agendamento público (marketing viral). Meta: 2.000 contas ativas.</div>
+        </div>
+      </div>
+      <div class="gtm-row">
+        <div class="gtm-phase" style="padding: 24px 16px 32px 0; display: flex; flex-direction: column; gap: 4px; align-items: flex-end;">
+          <div class="gtm-label">M 9+</div>
+          <div style="font-size: 11px; color: var(--s400); text-align: right; line-height: 1.4;">Expansão</div>
+        </div>
+        <div class="gtm-content" style="border-bottom: none;">
+          <div class="gtm-title">Franquias, redes e ABM (Account-Based Marketing)</div>
+          <div class="gtm-items">Abordar redes de franquia (academias, clínicas) com o plano Business. Uma venda = 10–100 unidades. Criar case study de rede com antes/depois. Meta: 3 contratos de rede por trimestre.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note note-g" style="margin-top: 16px;"><strong>Alavanca de crescimento principal:</strong> Todo cliente que usa o link de agendamento público vê "Agendado via AgendaInteligente". Com 2.000 clientes e cada um atendendo 100 pessoas/mês, são 200.000 exposições orgânicas à marca por mês — sem custo de mídia.</div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       PARTE 2: IDENTIDADE VISUAL
+  ══════════════════════════════════════════════ -->
+
+  <!-- 08 LOGO -->
+  <section class="section" id="logo">
+    <div class="section-hd">
+      <span class="section-tag">08</span>
+      <span class="section-title">Logo &amp; Marca</span>
+    </div>
+
+    <div class="sub">
+      <div class="sub-label">Logo principal — versão horizontal</div>
+      <div class="preview">
+        <div class="preview-hd"><div class="preview-hd-dot" style="background:#EF4444;"></div><div class="preview-hd-dot" style="background:#F59E0B;"></div><div class="preview-hd-dot" style="background:#10B981;"></div><span>agendainteligente — logo principal light</span></div>
+        <div class="preview-body center" style="background: white; padding: 56px;">
+          <div class="logo-display">
+            <svg width="52" height="52" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="9" fill="#7C3AED"/>
+              <rect x="7" y="6" width="18" height="19" rx="3" fill="white"/>
+              <rect x="10" y="4" width="4" height="5" rx="1.5" fill="#DDD6FE"/>
+              <rect x="18" y="4" width="4" height="5" rx="1.5" fill="#DDD6FE"/>
+              <line x1="10" y1="15" x2="22" y2="15" stroke="#7C3AED" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="10" y1="18.5" x2="18" y2="18.5" stroke="#C4B5FD" stroke-width="1.2" stroke-linecap="round"/>
+              <circle cx="23" cy="23" r="5" fill="#10B981"/>
+              <path d="M21 23l1.5 1.5 3-3" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div>
+              <div style="font-family: var(--font-display); font-size: 40px; font-weight: 900; letter-spacing: -1.5px; line-height: 1; color: var(--s900);">Agenda<span style="color: var(--v600);">Inteligente</span></div>
+              <div style="font-size: 13px; color: var(--s400); letter-spacing: 0.5px; margin-top: 4px;">Agendamento · Pagamento · NF-e</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="note note-v"><strong>Ícone:</strong> Calendário com checkmark verde — combina "agendamento" (calendário) com "confirmado/inteligente" (check verde esmeralda). O fundo violeta do ícone é a única área de cor sólida. <strong>Wordmark:</strong> "Agenda" em slate-900, "Inteligente" em violet-600 — o ponto de peso e diferenciação.</div>
+    </div>
+
+    <div class="sub">
+      <div class="sub-label">Variações de versão</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <!-- Light compact -->
+        <div class="preview">
+          <div class="preview-hd"><span>Versão compacta — navbar e mobile</span></div>
+          <div class="preview-body center" style="background: white; padding: 28px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <svg width="34" height="34" viewBox="0 0 32 32" fill="none">
+                <rect width="32" height="32" rx="9" fill="#7C3AED"/>
+                <rect x="7" y="6" width="18" height="19" rx="3" fill="white"/>
+                <rect x="10" y="4" width="4" height="5" rx="1.5" fill="#DDD6FE"/>
+                <rect x="18" y="4" width="4" height="5" rx="1.5" fill="#DDD6FE"/>
+                <line x1="10" y1="15" x2="22" y2="15" stroke="#7C3AED" stroke-width="1.5" stroke-linecap="round"/>
+                <circle cx="23" cy="23" r="5" fill="#10B981"/>
+                <path d="M21 23l1.5 1.5 3-3" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <div style="font-family: var(--font-display); font-size: 20px; font-weight: 900; letter-spacing: -0.5px; color: var(--s900);">Agenda<span style="color: var(--v600);">i</span></div>
+            </div>
+          </div>
+        </div>
+        <!-- Dark version -->
+        <div class="preview">
+          <div class="preview-hd"><span>Versão dark — e-mail, PDF</span></div>
+          <div class="preview-body center" style="background: #0F172A; padding: 28px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <svg width="34" height="34" viewBox="0 0 32 32" fill="none">
+                <rect width="32" height="32" rx="9" fill="#7C3AED"/>
+                <rect x="7" y="6" width="18" height="19" rx="3" fill="white"/>
+                <rect x="10" y="4" width="4" height="5" rx="1.5" fill="#DDD6FE"/>
+                <rect x="18" y="4" width="4" height="5" rx="1.5" fill="#DDD6FE"/>
+                <line x1="10" y1="15" x2="22" y2="15" stroke="#7C3AED" stroke-width="1.5" stroke-linecap="round"/>
+                <circle cx="23" cy="23" r="5" fill="#10B981"/>
+                <path d="M21 23l1.5 1.5 3-3" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <div style="font-family: var(--font-display); font-size: 20px; font-weight: 900; letter-spacing: -0.5px; color: white;">Agenda<span style="color: var(--v400);">Inteligente</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub">
+      <div class="sub-label">Tamanhos do ícone isolado</div>
+      <div class="preview">
+        <div class="preview-body" style="display: flex; align-items: center; gap: 32px; flex-wrap: wrap;">
+          <div style="text-align: center;">
+            <svg width="80" height="80" viewBox="0 0 32 32" fill="none" style="display: block; margin: 0 auto 8px;">
+              <rect width="32" height="32" rx="9" fill="#7C3AED"/>
+              <rect x="7" y="6" width="18" height="19" rx="3" fill="white"/>
+              <rect x="10" y="4" width="4" height="5" rx="1.5" fill="#DDD6FE"/>
+              <rect x="18" y="4" width="4" height="5" rx="1.5" fill="#DDD6FE"/>
+              <line x1="10" y1="15" x2="22" y2="15" stroke="#7C3AED" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="10" y1="18.5" x2="18" y2="18.5" stroke="#C4B5FD" stroke-width="1.2" stroke-linecap="round"/>
+              <circle cx="23" cy="23" r="5" fill="#10B981"/>
+              <path d="M21 23l1.5 1.5 3-3" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span style="font-family: var(--font-mono); font-size: 10px; color: var(--s400);">80px · App icon</span>
+          </div>
+          <div style="text-align: center;">
+            <svg width="48" height="48" viewBox="0 0 32 32" fill="none" style="display: block; margin: 0 auto 8px;">
+              <rect width="32" height="32" rx="9" fill="#7C3AED"/>
+              <rect x="7" y="6" width="18" height="19" rx="3" fill="white"/>
+              <circle cx="23" cy="23" r="5" fill="#10B981"/>
+              <path d="M21 23l1.5 1.5 3-3" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span style="font-family: var(--font-mono); font-size: 10px; color: var(--s400);">48px · Favicon / PWA</span>
+          </div>
+          <div style="text-align: center;">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style="display: block; margin: 0 auto 8px;">
+              <rect width="32" height="32" rx="8" fill="#7C3AED"/>
+              <rect x="8" y="7" width="16" height="18" rx="3" fill="white"/>
+              <circle cx="24" cy="24" r="5" fill="#10B981"/>
+            </svg>
+            <span style="font-family: var(--font-mono); font-size: 10px; color: var(--s400);">32px · Tab / header</span>
+          </div>
+          <div style="text-align: center;">
+            <div style="width: 20px; height: 20px; background: #7C3AED; border-radius: 5px; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px;">
+              <div style="width: 10px; height: 10px; background: white; border-radius: 2px;"></div>
+            </div>
+            <span style="font-family: var(--font-mono); font-size: 10px; color: var(--s400);">20px · Inline</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Donts -->
+    <div class="sub">
+      <div class="sub-label">Proibições de uso</div>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+        <div style="border: 1.5px solid var(--danger-border); border-radius: 12px; overflow: hidden;">
+          <div style="background: var(--danger-bg); padding: 24px; text-align: center;">
+            <span style="font-size: 28px; font-weight: 900; color: var(--v600); font-family: var(--font-display); background: var(--s900); padding: 4px 10px; border-radius: 4px;">AgendaInteligente</span>
+          </div>
+          <div style="padding: 10px 14px; font-size: 12px; color: var(--danger); font-weight: 500;">✕ Fundo escuro sólido no wordmark</div>
+        </div>
+        <div style="border: 1.5px solid var(--danger-border); border-radius: 12px; overflow: hidden;">
+          <div style="background: var(--danger-bg); padding: 24px; text-align: center; display: flex; justify-content: center; align-items: center; gap: 8px;">
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="9" fill="#EF4444"/><rect x="7" y="6" width="18" height="19" rx="3" fill="white"/><circle cx="23" cy="23" r="5" fill="#F97316"/></svg>
+            <span style="font-size: 22px; font-weight: 900; color: var(--s900); font-family: var(--font-display);">AgendaInteligente</span>
+          </div>
+          <div style="padding: 10px 14px; font-size: 12px; color: var(--danger); font-weight: 500;">✕ Ícone com cores diferentes</div>
+        </div>
+        <div style="border: 1.5px solid var(--danger-border); border-radius: 12px; overflow: hidden;">
+          <div style="background: var(--danger-bg); padding: 24px; text-align: center;">
+            <span style="font-size: 28px; font-weight: 900; color: var(--v600); font-family: var(--font-display); letter-spacing: 4px; text-transform: uppercase;">AGENDA<br>INTELIGENTE</span>
+          </div>
+          <div style="padding: 10px 14px; font-size: 12px; color: var(--danger); font-weight: 500;">✕ Separado em duas linhas / uppercase</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 09 CORES -->
+  <section class="section" id="cores">
+    <div class="section-hd">
+      <span class="section-tag">09</span>
+      <span class="section-title">Cores</span>
+    </div>
+
+    <div class="sub">
+      <div class="sub-label">Cor primária — Violeta</div>
+      <div class="color-grid">
+        <div class="color-card"><div class="color-swatch" style="background: #F5F3FF;"></div><div class="color-meta"><div class="color-name">Violet 50</div><div class="color-hex">#F5F3FF</div><div class="color-use">Backgrounds, hover states, badges</div></div></div>
+        <div class="color-card"><div class="color-swatch" style="background: #DDD6FE;"></div><div class="color-meta"><div class="color-name">Violet 200</div><div class="color-hex">#DDD6FE</div><div class="color-use">Borders em destaque, ícone bg</div></div></div>
+        <div class="color-card"><div class="color-swatch star" style="background: #7C3AED;"></div><div class="color-meta"><div class="color-name">Violet 600 ★</div><div class="color-hex">#7C3AED</div><div class="color-use">COR PRINCIPAL — botão, logo, links, nav ativo</div></div></div>
+        <div class="color-card"><div class="color-swatch" style="background: #6D28D9;"></div><div class="color-meta"><div class="color-name">Violet 700</div><div class="color-hex">#6D28D9</div><div class="color-use">Hover do botão primário, texto em fundo claro</div></div></div>
+        <div class="color-card"><div class="color-swatch" style="background: #4C1D95;"></div><div class="color-meta"><div class="color-name">Violet 900</div><div class="color-hex">#4C1D95</div><div class="color-use">Texto sobre fundo violeta claro</div></div></div>
+      </div>
+    </div>
+
+    <div class="sub">
+      <div class="sub-label">Cor de acento — Esmeralda (confirmação / sucesso)</div>
+      <div class="color-grid" style="grid-template-columns: repeat(4,1fr);">
+        <div class="color-card"><div class="color-swatch" style="background: #ECFDF5;"></div><div class="color-meta"><div class="color-name">Emerald 50</div><div class="color-hex">#ECFDF5</div><div class="color-use">Fundo de agendamento confirmado</div></div></div>
+        <div class="color-card"><div class="color-swatch" style="background: #6EE7B7;"></div><div class="color-meta"><div class="color-name">Emerald 300</div><div class="color-hex">#6EE7B7</div><div class="color-use">Borda de horário disponível</div></div></div>
+        <div class="color-card"><div class="color-swatch star" style="background: #10B981;"></div><div class="color-meta"><div class="color-name">Emerald 500 ★</div><div class="color-hex">#10B981</div><div class="color-use">Check de confirmação, status OK, ícone do logo</div></div></div>
+        <div class="color-card"><div class="color-swatch" style="background: #059669;"></div><div class="color-meta"><div class="color-name">Emerald 600</div><div class="color-hex">#059669</div><div class="color-use">Hover de botão de confirmação</div></div></div>
+      </div>
+    </div>
+
+    <div class="sub">
+      <div class="sub-label">Neutros — escala Slate</div>
+      <div class="color-grid">
+        <div class="color-card"><div class="color-swatch" style="background: #F8FAFC;"></div><div class="color-meta"><div class="color-name">Slate 50</div><div class="color-hex">#F8FAFC</div><div class="color-use">Background de página</div></div></div>
+        <div class="color-card"><div class="color-swatch" style="background: #E2E8F0;"></div><div class="color-meta"><div class="color-name">Slate 200</div><div class="color-hex">#E2E8F0</div><div class="color-use">Bordas padrão de cards e inputs</div></div></div>
+        <div class="color-card"><div class="color-swatch" style="background: #94A3B8;"></div><div class="color-meta"><div class="color-name">Slate 400</div><div class="color-hex">#94A3B8</div><div class="color-use">Textos auxiliares, placeholders, labels</div></div></div>
+        <div class="color-card"><div class="color-swatch" style="background: #334155;"></div><div class="color-meta"><div class="color-name">Slate 700</div><div class="color-hex">#334155</div><div class="color-use">Textos secundários</div></div></div>
+        <div class="color-card"><div class="color-swatch" style="background: #0F172A;"></div><div class="color-meta"><div class="color-name">Slate 900</div><div class="color-hex">#0F172A</div><div class="color-use">Texto principal, títulos</div></div></div>
+      </div>
+    </div>
+
+    <div class="sub">
+      <div class="sub-label">Status de agendamento (semântico)</div>
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;">
+        <div class="color-card"><div class="color-swatch" style="background: #ECFDF5;"></div><div class="color-meta"><div class="color-name" style="color: var(--e500);">CONFIRMADO</div><div class="color-use">Agendamento confirmado pelo cliente</div></div></div>
+        <div class="color-card"><div class="color-swatch" style="background: #F5F3FF;"></div><div class="color-meta"><div class="color-name" style="color: var(--v600);">AGENDADO</div><div class="color-use">Agendado, aguardando confirmação</div></div></div>
+        <div class="color-card"><div class="color-swatch" style="background: #FFFBEB;"></div><div class="color-meta"><div class="color-name" style="color: var(--warning);">EM ATEND.</div><div class="color-use">Cliente presente, atendimento em curso</div></div></div>
+        <div class="color-card"><div class="color-swatch" style="background: #FFF7ED;"></div><div class="color-meta"><div class="color-name" style="color: var(--c500);">BLOQUEADO</div><div class="color-use">Horário indisponível / folga</div></div></div>
+        <div class="color-card"><div class="color-swatch" style="background: #FEF2F2;"></div><div class="color-meta"><div class="color-name" style="color: var(--danger);">FALTA</div><div class="color-use">Cliente não compareceu</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 TIPOGRAFIA -->
+  <section class="section" id="tipografia">
+    <div class="section-hd">
+      <span class="section-tag">10</span>
+      <span class="section-title">Tipografia</span>
+    </div>
+
+    <div class="sub">
+      <div class="sub-label">Família tipográfica — Outfit</div>
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px;">
+        <div class="preview">
+          <div class="preview-body tight">
+            <div style="font-family: var(--font-display); font-size: 36px; font-weight: 900; color: var(--s900); letter-spacing: -1px; margin-bottom: 4px;">Outfit</div>
+            <div style="font-family: var(--font-display); font-size: 15px; color: var(--s400); margin-bottom: 12px;">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789 !@#%&*().,</div>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+              <span style="font-family: var(--font-display); font-weight: 300; color: var(--s500);">300 Light</span>
+              <span style="font-family: var(--font-display); font-weight: 400; color: var(--s600);">400 Regular</span>
+              <span style="font-family: var(--font-display); font-weight: 600; color: var(--s700);">600 SemiBold</span>
+              <span style="font-family: var(--font-display); font-weight: 700; color: var(--s800);">700 Bold</span>
+              <span style="font-family: var(--font-display); font-weight: 900; color: var(--s900);">900 Black</span>
+            </div>
+          </div>
+        </div>
+        <div class="preview">
+          <div class="preview-body tight">
+            <div style="font-family: var(--font-mono); font-size: 18px; font-weight: 500; color: var(--s900); margin-bottom: 6px;">JetBrains Mono</div>
+            <div style="font-family: var(--font-mono); font-size: 12px; color: var(--s500);">10:30 · 1h · R$120<br>id_ag_00847</div>
+            <div class="note note-v" style="margin-top: 10px; font-size: 12px;"><strong>Onde:</strong> Horários, IDs, valores, labels técnicos, badges.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub">
+      <div class="sub-label">Escala tipográfica completa</div>
+      <div class="preview">
+        <div class="preview-body tight">
+          <table class="type-table">
+            <tr><td><span style="font-family: var(--font-display); font-size: 40px; font-weight: 900; letter-spacing: -2px; line-height: 1; color: var(--s900);">Sua agenda, <span style="color: var(--v600);">inteligente.</span></span></td><td class="type-meta" style="width: 220px; padding: 16px;"><div class="tn">Display / Hero H1</div><div class="ts">Outfit 900 · 40px · -2px</div><div class="tw">Hero da landing page, onboarding</div></td></tr>
+            <tr><td><span style="font-family: var(--font-display); font-size: 28px; font-weight: 800; letter-spacing: -1px; color: var(--s900);">Agenda da semana</span></td><td class="type-meta" style="padding: 16px;"><div class="tn">H2 — Seção / Tela</div><div class="ts">Outfit 800 · 28px · -1px</div><div class="tw">Títulos de tela, seções de dashboard</div></td></tr>
+            <tr><td><span style="font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--s900);">Fernanda Souza</span></td><td class="type-meta" style="padding: 16px;"><div class="tn">H3 — Card / Nome</div><div class="ts">Outfit 700 · 20px</div><div class="tw">Nome de profissional, cliente, título de card</div></td></tr>
+            <tr><td><span style="font-family: var(--font-display); font-size: 16px; font-weight: 600; color: var(--s900);">Corte + Escova · 1h</span></td><td class="type-meta" style="padding: 16px;"><div class="tn">H4 — Detalhe</div><div class="ts">Outfit 600 · 16px</div><div class="tw">Nome de serviço, título de modal, nav item ativo</div></td></tr>
+            <tr><td><span style="font-family: var(--font-display); font-size: 15px; font-weight: 400; color: var(--s500); line-height: 1.65; max-width: 360px; display: block;">Gerencie toda a agenda do seu salão, clínica ou academia em um só lugar. Emita notas fiscais automaticamente após cada atendimento.</span></td><td class="type-meta" style="padding: 16px;"><div class="tn">Body — Texto corrido</div><div class="ts">Outfit 400 · 15px · 1.65</div><div class="tw">Descrições, instruções, parágrafos na landing</div></td></tr>
+            <tr><td><span style="font-family: var(--font-display); font-size: 13px; color: var(--s400);">30 dias grátis · Sem cartão · Cancele quando quiser</span></td><td class="type-meta" style="padding: 16px;"><div class="tn">Caption / Hint</div><div class="ts">Outfit 400 · 13px · slate-400</div><div class="tw">Hints de CTA, metadados, legends</div></td></tr>
+            <tr><td><span style="font-family: var(--font-mono); font-size: 12px; color: var(--s400); background: var(--s100); padding: 3px 8px; border-radius: 4px; letter-spacing: 1.5px; text-transform: uppercase;">CORTE · R$ 80 · 60 MIN</span></td><td class="type-meta" style="padding: 16px;"><div class="tn">Label / Badge</div><div class="ts">JetBrains Mono · 11–12px<br>uppercase · +1.5px tracking</div><div class="tw">Serviços, horários, valores em badges e cards</div></td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 ESPAÇAMENTO -->
+  <section class="section" id="espacamento">
+    <div class="section-hd">
+      <span class="section-tag">11</span>
+      <span class="section-title">Espaçamento</span>
+    </div>
+    <div class="space-grid">
+      <div class="space-item"><div class="space-bar-wrap"><div class="space-bar" style="width:4px;"></div></div><div class="space-label">4px</div><div class="space-val">--s1</div><div class="space-use">Gap dot/ícone e texto</div></div>
+      <div class="space-item"><div class="space-bar-wrap"><div class="space-bar" style="width:8px;"></div></div><div class="space-label">8px</div><div class="space-val">--s2</div><div class="space-use">Gap entre badges, itens inline</div></div>
+      <div class="space-item"><div class="space-bar-wrap"><div class="space-bar" style="width:12px;"></div></div><div class="space-label">12px</div><div class="space-val">--s3</div><div class="space-use">Gap entre horários da agenda</div></div>
+      <div class="space-item"><div class="space-bar-wrap"><div class="space-bar" style="width:16px;"></div></div><div class="space-label">16px</div><div class="space-val">--s4</div><div class="space-use">Padding de card, gap de grid</div></div>
+      <div class="space-item"><div class="space-bar-wrap"><div class="space-bar" style="width:20px;"></div></div><div class="space-label">20px</div><div class="space-val">--s5</div><div class="space-use">Padding de card padrão</div></div>
+      <div class="space-item"><div class="space-bar-wrap"><div class="space-bar" style="width:24px;"></div></div><div class="space-label">24px</div><div class="space-val">--s6</div><div class="space-use">Padding de modal, gap seção</div></div>
+      <div class="space-item"><div class="space-bar-wrap"><div class="space-bar" style="width:32px;"></div></div><div class="space-label">32px</div><div class="space-val">--s8</div><div class="space-use">Margin entre blocos</div></div>
+      <div class="space-item"><div class="space-bar-wrap"><div class="space-bar" style="width:48px;"></div></div><div class="space-label">48px</div><div class="space-val">--s12</div><div class="space-use">Padding de seção landing</div></div>
+    </div>
+    <div class="note note-v" style="margin-top: 20px;"><strong>Toque mínimo mobile:</strong> 44px. Horários da agenda semanal devem ter altura mínima de 48px. O layout de calendário usa gap de 2px entre células (mínimo visual sem perder identidade individual de cada slot).</div>
+  </section>
+
+  <!-- 12 BOTÕES -->
+  <section class="section" id="botoes">
+    <div class="section-hd">
+      <span class="section-tag">12</span>
+      <span class="section-title">Botões</span>
+    </div>
+    <div class="preview">
+      <div class="preview-hd"><span>Hierarquia de botões — light mode</span></div>
+      <div class="preview-body">
+        <div class="btn-row" style="margin-bottom: 14px;">
+          <button class="btn btn-primary btn-lg">Agendar agora</button>
+          <button class="btn btn-secondary btn-lg">Ver horários</button>
+          <button class="btn btn-outline btn-lg">Entrar</button>
+          <button class="btn btn-ghost btn-md">Cancelar</button>
+        </div>
+        <div class="btn-row" style="margin-bottom: 14px;">
+          <button class="btn btn-primary btn-md">Confirmar agendamento</button>
+          <button class="btn btn-success btn-md">✓ Check-in</button>
+          <button class="btn btn-danger-soft btn-md">Cancelar horário</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary btn-sm">Novo agendamento</button>
+          <button class="btn btn-secondary btn-sm">Editar</button>
+          <button class="btn btn-outline btn-sm">Ver histórico</button>
+          <button class="btn btn-xs btn-primary" style="border-radius: 20px;">+ Serviço</button>
+        </div>
+      </div>
+    </div>
+    <div class="note note-v"><strong>Primário (violeta):</strong> CTA principal de cada tela — Agendar, Confirmar, Salvar. Max 1 por tela. <strong>Success (esmeralda):</strong> Ações de confirmação de presença / check-in. <strong>Secondary:</strong> Ações alternativas. <strong>Danger soft:</strong> Cancelamentos — nunca botão vermelho sólido para cancelar, pois é ação reversível.</div>
+  </section>
+
+  <!-- 13 BADGES -->
+  <section class="section" id="badges">
+    <div class="section-hd">
+      <span class="section-tag">13</span>
+      <span class="section-title">Badges &amp; Tags</span>
+    </div>
+    <div class="preview">
+      <div class="preview-body" style="display: flex; flex-wrap: wrap; gap: 10px;">
+        <span class="badge badge-g badge-dot">Confirmado</span>
+        <span class="badge badge-v badge-dot">Agendado</span>
+        <span class="badge badge-y badge-dot">Em atendimento</span>
+        <span class="badge badge-c badge-dot">Bloqueado</span>
+        <span class="badge badge-r badge-dot">Falta</span>
+        <span class="badge badge-s">NF-e emitida</span>
+        <span class="badge badge-v">Admin</span>
+        <span class="badge badge-s">Gerente</span>
+        <span class="badge badge-s">Profissional</span>
+        <span class="badge badge-g">Trial · 24 dias</span>
+        <span class="badge" style="background: var(--v50); color: var(--v600); border: 1px solid var(--v200);">★ Mais popular</span>
+      </div>
+    </div>
+    <div class="note note-v"><strong>Badges de status de agendamento</strong> sempre usam o ponto colorido antes do texto. <strong>Badges de role</strong> sem ponto, em slate. <strong>Badge NF-e emitida</strong> aparece no card do agendamento depois de emissão via NotaFácil.</div>
+  </section>
+
+  <!-- 14 COMPONENTE AGENDA -->
+  <section class="section" id="agenda">
+    <div class="section-hd">
+      <span class="section-tag">14</span>
+      <span class="section-title">Componente Agenda</span>
+    </div>
+
+    <div class="sub">
+      <div class="sub-label">Visão semanal (calendário)</div>
+      <div class="preview">
+        <div class="preview-body tight">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+            <div style="font-size: 18px; font-weight: 800; color: var(--s900);">Maio 2026</div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <button class="btn btn-outline btn-xs">← Ant.</button>
+              <button class="btn btn-secondary btn-xs">Hoje</button>
+              <button class="btn btn-outline btn-xs">Próx. →</button>
+            </div>
+          </div>
+          <div class="cal-grid">
+            <div class="cal-day-name">DOM</div><div class="cal-day-name">SEG</div><div class="cal-day-name">TER</div><div class="cal-day-name">QUA</div><div class="cal-day-name">QUI</div><div class="cal-day-name">SEX</div><div class="cal-day-name">SÁB</div>
+            <!-- Week 1 -->
+            <div class="cal-day faded"><div class="cal-day-num">27</div></div>
+            <div class="cal-day faded"><div class="cal-day-num">28</div></div>
+            <div class="cal-day faded"><div class="cal-day-num">29</div></div>
+            <div class="cal-day faded"><div class="cal-day-num">30</div></div>
+            <div class="cal-day"><div class="cal-day-num">1</div><div class="cal-appt v">Juliana C.</div><div class="cal-appt g">Pedro S.</div></div>
+            <div class="cal-day"><div class="cal-day-num">2</div><div class="cal-appt v">Ana M.</div></div>
+            <div class="cal-day"><div class="cal-day-num">3</div><div class="cal-appt c">Bloqueado</div></div>
+            <!-- Week 2 -->
+            <div class="cal-day"><div class="cal-day-num">4</div></div>
+            <div class="cal-day"><div class="cal-day-num">5</div><div class="cal-appt v">Carla R.</div><div class="cal-appt v">+2</div></div>
+            <div class="cal-day"><div class="cal-day-num">6</div><div class="cal-appt g">Fernanda</div></div>
+            <div class="cal-day"><div class="cal-day-num">7</div><div class="cal-appt v">Maria L.</div></div>
+            <div class="cal-day today"><div class="cal-day-num">8</div><div class="cal-appt v">09:00 Juliana</div><div class="cal-appt g">11:00 Ana</div><div class="cal-appt v">14:30 Pedro</div></div>
+            <div class="cal-day"><div class="cal-day-num">9</div><div class="cal-appt v">Renata A.</div></div>
+            <div class="cal-day"><div class="cal-day-num">10</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub">
+      <div class="sub-label">Visão de dia (time slots)</div>
+      <div class="preview">
+        <div class="preview-body tight" style="max-height: 320px; overflow-y: auto;">
+          <div style="font-size: 16px; font-weight: 800; color: var(--s900); margin-bottom: 16px;">Quinta-feira, 8 de Maio · Fernanda</div>
+          <div class="timeslot"><div class="timeslot-hour">08:00</div><div class="timeslot-body"></div></div>
+          <div class="timeslot"><div class="timeslot-hour">09:00</div><div class="timeslot-body"><div class="appt-block"><div class="appt-client">Juliana Costa</div><div class="appt-service">Corte + Escova · 1h · R$120</div></div></div></div>
+          <div class="timeslot"><div class="timeslot-hour">10:00</div><div class="timeslot-body"></div></div>
+          <div class="timeslot"><div class="timeslot-hour">11:00</div><div class="timeslot-body"><div class="appt-block green"><div class="appt-client">Ana Paula ✓ Check-in</div><div class="appt-service">Manicure + Pedicure · 1h30 · R$90</div></div></div></div>
+          <div class="timeslot"><div class="timeslot-hour">12:00</div><div class="timeslot-body"><div class="appt-block coral"><div class="appt-client">— Almoço —</div><div class="appt-service">Bloqueado</div></div></div></div>
+          <div class="timeslot"><div class="timeslot-hour">14:00</div><div class="timeslot-body"></div></div>
+          <div class="timeslot"><div class="timeslot-hour">14:30</div><div class="timeslot-body"><div class="appt-block"><div class="appt-client">Pedro Alves</div><div class="appt-service">Barba + Corte · 45min · R$80</div></div></div></div>
+          <div class="timeslot"><div class="timeslot-hour">16:00</div><div class="timeslot-body"></div></div>
+        </div>
+      </div>
+      <div class="note note-v"><strong>Cor dos blocos de agendamento:</strong> Violeta (padrão/agendado), Esmeralda (confirmado/check-in), Coral (bloqueado/folga). Blocos têm borda-left da cor correspondente. Altura proporcional à duração do serviço. Clicar abre o modal de detalhes do agendamento.</div>
+    </div>
+  </section>
+
+  <!-- 15 FORMS -->
+  <section class="section" id="forms">
+    <div class="section-hd">
+      <span class="section-tag">15</span>
+      <span class="section-title">Formulários</span>
+    </div>
+    <div class="preview">
+      <div class="preview-hd"><span>Novo agendamento — estados de campo</span></div>
+      <div class="preview-body tight" style="max-width: 480px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="field" style="grid-column: 1/-1;">
+            <label class="field-label">Cliente</label>
+            <input class="field-input ok" type="text" value="Juliana Costa">
+            <span class="field-ok">✓ Cliente encontrado</span>
+          </div>
+          <div class="field">
+            <label class="field-label">Profissional</label>
+            <select class="field-select"><option>Fernanda Souza</option><option>Ana Lima</option></select>
+          </div>
+          <div class="field">
+            <label class="field-label">Serviço</label>
+            <select class="field-select"><option>Corte + Escova (1h)</option></select>
+          </div>
+          <div class="field">
+            <label class="field-label">Data</label>
+            <input class="field-input" type="date" value="2026-05-09">
+          </div>
+          <div class="field">
+            <label class="field-label">Horário</label>
+            <input class="field-input err" type="time" value="08:00">
+            <span class="field-error">Horário indisponível para esta profissional</span>
+          </div>
+          <div class="field" style="grid-column: 1/-1;">
+            <label class="field-label">Observação</label>
+            <input class="field-input" type="text" placeholder="Ex: alergia a amônia, primeira visita...">
+            <span class="field-hint">Visível apenas para a equipe interna</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 8px;">
+          <button class="btn btn-primary btn-md" style="flex: 1; justify-content: center;">Confirmar agendamento</button>
+          <button class="btn btn-ghost btn-md">Cancelar</button>
+        </div>
+      </div>
+    </div>
+    <div class="note note-v"><strong>Label:</strong> slate-700, font-weight 600, não uppercase (diferente do EventGear que é operacional). <strong>Foco:</strong> violet-500 borda + ring 3px. <strong>Erro de horário</strong> é o mais crítico — sempre mostrar horários alternativos disponíveis no mesmo componente.</div>
+  </section>
+
+  <!-- 16 ALERTAS -->
+  <section class="section" id="alertas">
+    <div class="section-hd">
+      <span class="section-tag">16</span>
+      <span class="section-title">Alertas</span>
+    </div>
+    <div class="preview">
+      <div class="preview-body tight">
+        <div class="alert info">
+          <div class="alert-icon">💡</div>
+          <div><div class="alert-title">Lembrete automático enviado</div>Juliana Costa receberá WhatsApp amanhã às 10h sobre o agendamento das 11h de sexta.</div>
+        </div>
+        <div class="alert success">
+          <div class="alert-icon">✓</div>
+          <div><div class="alert-title">Agendamento confirmado · NF-e emitida</div>Pedro Alves · Barba + Corte · Nota nº 00847 enviada para pedroalves@email.com via NotaFácil.</div>
+        </div>
+        <div class="alert warning">
+          <div class="alert-icon">⚠</div>
+          <div><div class="alert-title">3 clientes sem retorno há +60 dias</div>Ana M., Carlos R. e Mariana T. não agendaram nas últimas 8 semanas. Enviar campanha de reativação?</div>
+        </div>
+        <div class="alert danger">
+          <div class="alert-icon">✕</div>
+          <div><div class="alert-title">Falta não justificada — Juliana Costa</div>Segundo no-show este mês. Considere política de depósito ou bloqueio para este cliente.</div>
+        </div>
+      </div>
+    </div>
+    <div class="note note-v"><strong>Alerta info violeta:</strong> Notificações de automação em andamento. <strong>Success:</strong> Confirmações e NF-e emitida (integração com NotaFácil visível aqui). <strong>Warning:</strong> Insights de inteligência do sistema (clientes inativos, pico de cancelamento). <strong>Danger:</strong> No-shows e ações que requerem atenção do gerente.</div>
+  </section>
+
+  <!-- 17 TELAS -->
+  <section class="section" id="telas">
+    <div class="section-hd">
+      <span class="section-tag">17</span>
+      <span class="section-title">Telas — App Header &amp; Dashboard</span>
+    </div>
+
+    <div class="sub">
+      <div class="sub-label">Navbar / App Header</div>
+      <div class="preview">
+        <div>
+          <div class="app-nav">
+            <a class="app-nav-brand">
+              <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+                <rect width="32" height="32" rx="9" fill="#7C3AED"/>
+                <rect x="7" y="6" width="18" height="19" rx="3" fill="white"/>
+                <circle cx="23" cy="23" r="5" fill="#10B981"/>
+                <path d="M21 23l1.5 1.5 3-3" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span class="app-nav-brand-wm">Agenda<span>Inteligente</span></span>
+            </a>
+            <nav class="app-nav-links">
+              <a class="nav-link act">Agenda</a>
+              <a class="nav-link">Clientes</a>
+              <a class="nav-link">Serviços</a>
+              <a class="nav-link">Relatórios</a>
+              <a class="nav-link">NF-e</a>
+            </nav>
+            <div class="nav-right">
+              <span class="badge badge-g" style="font-size: 11px;">Trial · 24 dias</span>
+              <button class="btn btn-primary btn-sm">Assinar</button>
+              <div class="avatar">FJ</div>
+            </div>
+          </div>
+          <div style="background: var(--s50); padding: 8px 24px; border-bottom: 1px solid var(--s200); border-radius: 0 0 12px 12px;">
+            <span style="font-family: var(--font-mono); font-size: 10px; color: var(--s400); letter-spacing: 1px;">EMPRESA: BELEZA &amp; CIA · UNIDADE: CENTRO · OLÁ, FERNANDA</span>
+          </div>
+        </div>
+      </div>
+      <div class="note note-v"><strong>Tab "NF-e"</strong> no nav é o diferencial visível — poucos concorrentes têm isso. Trial badge sempre visível para aumentar conversão. Breadcrumb mono abaixo indica qual empresa/unidade está ativa (critical para multi-unidade).</div>
+    </div>
+
+    <div class="sub">
+      <div class="sub-label">Dashboard — visão geral do dono</div>
+      <div class="preview">
+        <div class="preview-body tight">
+          <div style="font-size: 20px; font-weight: 800; color: var(--s900); margin-bottom: 16px;">Bom dia, Carlos 👋 — Hoje é quinta, 8 de Maio</div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;">
+            <div class="stat-card" style="border-top: 3px solid var(--v500);">
+              <div class="stat-label">Agendamentos hoje</div>
+              <div class="stat-value">24</div>
+              <div class="stat-delta up">↑ 3 vs. ontem</div>
+            </div>
+            <div class="stat-card" style="border-top: 3px solid var(--e500);">
+              <div class="stat-label">Confirmados</div>
+              <div class="stat-value" style="color: var(--e500);">18</div>
+              <div class="stat-delta" style="color: var(--s400);">75% de confirmação</div>
+            </div>
+            <div class="stat-card" style="border-top: 3px solid var(--c500);">
+              <div class="stat-label">Receita projetada hoje</div>
+              <div class="stat-value">R$<span style="font-size: 24px;">2.160</span></div>
+              <div class="stat-delta up">↑ 12% vs. semana passada</div>
+            </div>
+            <div class="stat-card" style="border-top: 3px solid var(--warning);">
+              <div class="stat-label">NF-e pendentes</div>
+              <div class="stat-value" style="color: var(--warning);">4</div>
+              <div class="stat-delta" style="color: var(--s400);">Emitir via NotaFácil</div>
+            </div>
+          </div>
+          <div class="alert info"><div class="alert-icon">💡</div><div><div class="alert-title">Inteligência: sextas-feiras são 40% mais cheias que terças</div>Considere abrir mais horários às terças para balancear a agenda de Fernanda.</div></div>
+          <div class="alert warning"><div class="alert-icon">⚠</div><div><div class="alert-title">5 clientes inativos há +45 dias</div>Envie campanha de reativação pelo WhatsApp — taxa de retorno histórica de 34%.</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 18 TOM DE VOZ -->
+  <section class="section" id="voz">
+    <div class="section-hd">
+      <span class="section-tag">18</span>
+      <span class="section-title">Tom de Voz</span>
+    </div>
+
+    <div class="sub">
+      <div class="sub-label">Princípios</div>
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 24px;">
+        <div style="background: white; border: 1px solid var(--s200); border-radius: 14px; padding: 20px; border-left: 4px solid var(--v500);">
+          <div style="font-size: 16px; font-weight: 700; color: var(--s900); margin-bottom: 6px;">Cálido e empoderador</div>
+          <div style="font-size: 13px; color: var(--s500); line-height: 1.65;">Fala como um sócio estratégico do pequeno empresário, não como um software. Celebra conquistas ("Você atendeu 24% mais este mês!"), não apenas reporta dados.</div>
+        </div>
+        <div style="background: white; border: 1px solid var(--s200); border-radius: 14px; padding: 20px; border-left: 4px solid var(--e500);">
+          <div style="font-size: 16px; font-weight: 700; color: var(--s900); margin-bottom: 6px;">Simples, não simplório</div>
+          <div style="font-size: 13px; color: var(--s500); line-height: 1.65;">O dono de salão não sabe o que é "taxa de conversão" mas entende "de cada 10 pessoas que viram seu link, 7 agendaram". Traduz métricas em impacto real.</div>
+        </div>
+        <div style="background: white; border: 1px solid var(--s200); border-radius: 14px; padding: 20px; border-left: 4px solid var(--c500);">
+          <div style="font-size: 16px; font-weight: 700; color: var(--s900); margin-bottom: 6px;">Proativo nos insights</div>
+          <div style="font-size: 13px; color: var(--s500); line-height: 1.65;">Não espera o usuário perceber o problema — o sistema avisa. "3 clientes sumiram, quer enviar uma mensagem?" é mais valioso que um relatório de churn que ninguém lê.</div>
+        </div>
+        <div style="background: white; border: 1px solid var(--s200); border-radius: 14px; padding: 20px; border-left: 4px solid var(--v300);">
+          <div style="font-size: 16px; font-weight: 700; color: var(--s900); margin-bottom: 6px;">Fiscal sem assustar</div>
+          <div style="font-size: 13px; color: var(--s500); line-height: 1.65;">NF-e é obrigação legal percebida como bicho-de-sete-cabeças. A linguagem desdramatiza: "nota emitida ✓" — não "processo tributário concluído". A integração com NotaFácil é o alívio narrativo.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub">
+      <div class="sub-label">Exemplos práticos</div>
+      <div class="tov-grid">
+        <div class="tov-card">
+          <div class="tov-head good">CTAs de conversão</div>
+          <div class="tov-body">"Experimente grátis por 30 dias — sem cartão"<br>"Crie sua agenda profissional em 5 minutos"<br>"Deixa a nota fiscal com a gente"</div>
+        </div>
+        <div class="tov-card">
+          <div class="tov-head bad">Evitar</div>
+          <div class="tov-body">❌ "Otimize seus processos de agendamento"<br>❌ "Solução integrada de gestão"<br>❌ "Clique aqui para cadastrar"</div>
+        </div>
+        <div class="tov-card">
+          <div class="tov-head good">Insights de inteligência</div>
+          <div class="tov-body">"Sextas cheias, terças vazias — quer rebalancear?"<br>"Juliana voltou! Ela estava 47 dias sem agendar."<br>"Você atendeu 12% mais este mês. 🎉"</div>
+        </div>
+        <div class="tov-card">
+          <div class="tov-head bad">Evitar</div>
+          <div class="tov-body">❌ "Taxa de ocupação: 87%. Delta: +12% MoM"<br>❌ "Churn de clientes identificado no período"<br>❌ "Dados atualizados com sucesso"</div>
+        </div>
+        <div class="tov-card">
+          <div class="tov-head good">NF-e e fiscal</div>
+          <div class="tov-body">"Nota emitida ✓ — enviada para o cliente"<br>"4 atendimentos sem nota. Emitir agora?"<br>"NF-e em dia. Tudo resolvido."</div>
+        </div>
+        <div class="tov-card">
+          <div class="tov-head bad">Evitar</div>
+          <div class="tov-body">❌ "Processo de emissão de NFS-e concluído"<br>❌ "Regularize suas obrigações tributárias"<br>❌ "Erro na transmissão ABRASF código 300"</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 19 ECOSSISTEMA -->
+  <section class="section" id="ecossistema">
+    <div class="section-hd">
+      <span class="section-tag">19</span>
+      <span class="section-title">Ecossistema ScantelburyDevs</span>
+    </div>
+
+    <div class="sub">
+      <div class="sub-label">Portfolio de produtos — identidade visual comparativa</div>
+      <div style="display: grid; grid-template-columns: 1fr; gap: 16px;">
+
+        <!-- NotaFácil -->
+        <div style="background: white; border: 1px solid var(--s200); border-radius: 16px; padding: 20px; display: flex; align-items: center; gap: 20px;">
+          <div style="width: 56px; height: 56px; background: #EFF6FF; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid #BFDBFE;">
+            <svg width="32" height="32" viewBox="0 0 52 52" fill="none"><rect x="2" y="6" width="32" height="40" rx="4" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5"/><rect x="12" y="2" width="32" height="40" rx="4" fill="#fff" stroke="#3B82F6" stroke-width="1.5"/><circle cx="38" cy="34" r="8" fill="#3B82F6"/><path d="M35 34l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+          </div>
+          <div style="flex: 1;">
+            <div style="font-size: 20px; font-weight: 900; color: var(--s900); font-family: 'DM Sans', var(--font-display); letter-spacing: -0.5px; margin-bottom: 2px;">Nota<span style="color: #3B82F6;">Fácil</span></div>
+            <div style="font-size: 13px; color: var(--s500);">Emissão de NFS-e · MEI, ME, EPP, API</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-family: var(--font-mono); font-size: 10px; color: var(--s400);">COR PRIMÁRIA</div>
+            <div style="display: flex; gap: 4px; justify-content: flex-end; margin-top: 4px;">
+              <div style="width: 20px; height: 20px; background: #3B82F6; border-radius: 4px;"></div>
+              <div style="width: 20px; height: 20px; background: #0F172A; border-radius: 4px;"></div>
+            </div>
+            <div style="font-family: var(--font-mono); font-size: 10px; color: var(--s400); margin-top: 4px;">Blue #3B82F6 · Light mode</div>
+          </div>
+        </div>
+
+        <!-- AgendaInteligente -->
+        <div style="background: var(--v50); border: 2px solid var(--v200); border-radius: 16px; padding: 20px; display: flex; align-items: center; gap: 20px;">
+          <div style="width: 56px; height: 56px; background: #7C3AED; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(124,58,237,0.3);">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect x="7" y="6" width="18" height="19" rx="3" fill="white"/><rect x="10" y="4" width="4" height="5" rx="1.5" fill="#DDD6FE"/><rect x="18" y="4" width="4" height="5" rx="1.5" fill="#DDD6FE"/><line x1="10" y1="15" x2="22" y2="15" stroke="#7C3AED" stroke-width="1.5" stroke-linecap="round"/><circle cx="23" cy="23" r="5" fill="#10B981"/><path d="M21 23l1.5 1.5 3-3" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div style="flex: 1;">
+            <div style="font-size: 20px; font-weight: 900; color: var(--s900); font-family: var(--font-display); letter-spacing: -0.5px; margin-bottom: 2px;">Agenda<span style="color: #7C3AED;">Inteligente</span></div>
+            <div style="font-size: 13px; color: var(--s500);">Agendamento · Pagamento · NF-e integrada ← <strong style="color: var(--v600);">via NotaFácil</strong></div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-family: var(--font-mono); font-size: 10px; color: var(--s400);">COR PRIMÁRIA</div>
+            <div style="display: flex; gap: 4px; justify-content: flex-end; margin-top: 4px;">
+              <div style="width: 20px; height: 20px; background: #7C3AED; border-radius: 4px;"></div>
+              <div style="width: 20px; height: 20px; background: #10B981; border-radius: 4px;"></div>
+            </div>
+            <div style="font-family: var(--font-mono); font-size: 10px; color: var(--s400); margin-top: 4px;">Violet #7C3AED · Light mode</div>
+          </div>
+        </div>
+
+        <!-- EventGear -->
+        <div style="background: #060A12; border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 20px; display: flex; align-items: center; gap: 20px;">
+          <div style="width: 56px; height: 56px; background: rgba(245,158,11,0.1); border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid rgba(245,158,11,0.25);">
+            <svg width="32" height="32" viewBox="0 0 40 40" fill="none"><path d="M20 4a16 16 0 0 1 0 32 16 16 0 0 1 0-32z" stroke="#F59E0B" stroke-width="2" fill="none"/><circle cx="20" cy="20" r="5" fill="#F59E0B"/><path d="M20 4v6M20 30v6M4 20h6M30 20h6" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round"/></svg>
+          </div>
+          <div style="flex: 1;">
+            <div style="font-size: 20px; font-weight: 900; color: white; font-family: 'Barlow Condensed', var(--font-display); letter-spacing: 1px; margin-bottom: 2px;">Event<span style="color: #F59E0B;">Gear</span></div>
+            <div style="font-size: 13px; color: #64748B;">Controle de equipamentos para eventos · PWA</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-family: var(--font-mono); font-size: 10px; color: #475569;">COR PRIMÁRIA</div>
+            <div style="display: flex; gap: 4px; justify-content: flex-end; margin-top: 4px;">
+              <div style="width: 20px; height: 20px; background: #F59E0B; border-radius: 4px;"></div>
+              <div style="width: 20px; height: 20px; background: #0C1220; border-radius: 4px;"></div>
+            </div>
+            <div style="font-family: var(--font-mono); font-size: 10px; color: #475569; margin-top: 4px;">Amber #F59E0B · Dark mode</div>
+          </div>
+        </div>
+
+      </div>
+      <div class="note note-v" style="margin-top: 16px;"><strong>Ecossistema coerente e diferenciado:</strong> Cada produto da ScantelburyDevs tem paleta, tipografia e modo (light/dark) próprios — nenhum conflita com o outro. NotaFácil (azul/light) e AgendaInteligente (violeta/light) compartilham o light mode mas são imediatamente distinguíveis. EventGear (âmbar/dark) é o produto de campo — regime completamente diferente. A integração entre NotaFácil e AgendaInteligente é o grande diferencial de ecossistema.</div>
+    </div>
+
+    <hr class="divider">
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <rect width="32" height="32" rx="9" fill="#7C3AED"/>
+          <rect x="7" y="6" width="18" height="19" rx="3" fill="white"/>
+          <circle cx="23" cy="23" r="5" fill="#10B981"/>
+          <path d="M21 23l1.5 1.5 3-3" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span style="font-size: 24px; font-weight: 900; letter-spacing: -0.5px; color: var(--s900); font-family: var(--font-display);">Agenda<span style="color: var(--v600);">Inteligente</span></span>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-family: var(--font-mono); font-size: 10px; color: var(--s400); letter-spacing: 1.5px;">SCANTELBURYDEVS · BUILD · MIGRATE · INNOVATE</div>
+        <div style="font-family: var(--font-mono); font-size: 10px; color: var(--v600); margin-top: 2px;">estudo estratégico + identidade visual v1.0 · 2026</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</div>
+</body>
+</html>

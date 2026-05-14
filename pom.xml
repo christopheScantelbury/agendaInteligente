@@ -98,12 +98,6 @@
             <version>1.5.5.Final</version>
         </dependency>
         
-        <!-- Email via Resend SMTP -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-mail</artifactId>
-        </dependency>
-        
         <!-- Redis Cache -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

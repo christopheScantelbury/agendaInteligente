@@ -2044,28 +2044,28 @@ export default function Agendamentos() {
                 <button
                   onClick={() => setViewMode('timeline')}
                   type="button"
-                  title="Linha do tempo"
                   aria-label="Linha do tempo"
-                  className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 ${
+                  className={`flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold transition-all duration-200 ${
                     viewMode === 'timeline'
                       ? 'bg-slate-900 text-white shadow-[0_10px_24px_-18px_rgba(15,23,42,0.9)]'
                       : 'text-slate-500 hover:bg-slate-100/90 hover:text-slate-900'
                   }`}
                 >
-                  <List className="h-5 w-5" strokeWidth={2.3} />
+                  <List className="h-4 w-4" strokeWidth={2.3} />
+                  <span>Lista</span>
                 </button>
                 <button
                   onClick={() => setViewMode('calendar')}
                   type="button"
-                  title="Calendário"
                   aria-label="Calendário"
-                  className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 ${
+                  className={`flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold transition-all duration-200 ${
                     viewMode === 'calendar'
                       ? 'bg-slate-900 text-white shadow-[0_10px_24px_-18px_rgba(15,23,42,0.9)]'
                       : 'text-slate-500 hover:bg-slate-100/90 hover:text-slate-900'
                   }`}
                 >
-                  <CalendarDays className="h-5 w-5" strokeWidth={2.3} />
+                  <CalendarDays className="h-4 w-4" strokeWidth={2.3} />
+                  <span>Calendário</span>
                 </button>
               </div>
               {podeEditarAgendamentos && (
@@ -2085,11 +2085,11 @@ export default function Agendamentos() {
                     setServicosSelecionados([])
                   }}
                   variant="primary"
-                  title="Novo agendamento"
                   aria-label="Novo agendamento"
-                  className="h-11 w-full rounded-2xl border border-blue-400/20 bg-gradient-to-r from-blue-600 to-cyan-500 px-0 text-sm font-semibold shadow-[0_14px_34px_-20px_rgba(37,99,235,0.9)] hover:from-blue-700 hover:to-cyan-600 sm:h-9 sm:w-9"
+                  className="flex h-10 w-full items-center justify-center gap-2 rounded-2xl border border-blue-400/20 bg-gradient-to-r from-blue-600 to-cyan-500 px-4 text-sm font-semibold text-white shadow-[0_14px_34px_-20px_rgba(37,99,235,0.9)] hover:from-blue-700 hover:to-cyan-600 sm:w-auto"
                 >
-                  <Plus className="h-6 w-6" strokeWidth={2.5} />
+                  <Plus className="h-4 w-4" strokeWidth={2.5} />
+                  Novo agendamento
                 </Button>
               )}
             </div>

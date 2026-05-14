@@ -1,8 +1,11 @@
+/* ─── Base ──────────────────────────────────────────────── */
 .calendar-view-shell .rbc-calendar {
   font-size: 14px;
   color: #0f172a;
+  height: 100%;
 }
 
+/* ─── Time view ─────────────────────────────────────────── */
 .calendar-view-shell .rbc-time-view {
   overflow: hidden;
   border: 1px solid #e2e8f0;
@@ -20,12 +23,12 @@
 
 .calendar-view-shell .rbc-header {
   display: flex;
-  min-height: 46px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   border-bottom: 1px solid #e2e8f0;
   padding: 8px 6px;
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 700;
   color: #334155;
   text-transform: none;
@@ -37,8 +40,8 @@
 
 .calendar-view-shell .rbc-time-gutter,
 .calendar-view-shell .rbc-time-header-gutter {
-  width: 58px;
-  min-width: 58px;
+  width: 54px;
+  min-width: 54px;
   background: #f8fafc;
 }
 
@@ -47,18 +50,19 @@
 }
 
 .calendar-view-shell .rbc-label {
-  color: #475569;
-  font-size: 0.8rem;
+  color: #64748b;
+  font-size: 0.75rem;
   font-weight: 600;
 }
 
 .calendar-view-shell .rbc-time-slot {
   min-height: 34px;
-  border-top: 1px solid #edf2f7;
+  border-top: 1px solid #f1f5f9;
 }
 
 .calendar-view-shell .rbc-timeslot-group {
   min-height: 68px;
+  border-bottom: 1px solid #e7edf4;
 }
 
 .calendar-view-shell .rbc-day-bg {
@@ -71,7 +75,7 @@
 
 .calendar-view-shell .rbc-day-bg.rbc-today,
 .calendar-view-shell .rbc-day-slot.rbc-today {
-  background: #f5f3ff;
+  background: #faf8ff;
 }
 
 .calendar-view-shell .rbc-off-range-bg {
@@ -81,24 +85,37 @@
 .calendar-view-shell .rbc-current-time-indicator {
   height: 2px;
   background-color: #7c3aed;
+  opacity: 0.7;
 }
 
 .calendar-view-shell .rbc-allday-cell {
   display: none !important;
 }
 
+/* ─── Events ─────────────────────────────────────────────── */
 .calendar-view-shell .rbc-event {
   overflow: hidden;
-  min-height: 52px;
-  border-radius: 10px;
-  border-width: 1px !important;
+  min-height: 50px;
+  border-radius: 8px !important;
+  /* Reset all borders — left border comes from inline style in eventStyleGetter */
+  border-top: none !important;
+  border-right: none !important;
+  border-bottom: none !important;
   padding: 0 !important;
+}
+
+/* Remove the default RBC selected event blue ring */
+.calendar-view-shell .rbc-event:focus,
+.calendar-view-shell .rbc-event.rbc-selected {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.3) !important;
 }
 
 .calendar-view-shell .rbc-event-label {
   display: none;
 }
 
+/* ─── Event card ─────────────────────────────────────────── */
 .calendar-view-shell .calendar-event-card {
   display: flex;
   height: 100%;
@@ -106,105 +123,107 @@
   justify-content: flex-start;
   align-items: flex-start;
   gap: 1px;
-  padding: 6px 8px;
+  padding: 5px 7px;
   line-height: 1.2;
+  /* color is set inline from STATUS_STYLE */
 }
 
 .calendar-view-shell .calendar-event-time {
   width: 100%;
-  text-align: left;
   flex-shrink: 0;
   font-size: 10px;
-  font-weight: 700;
-  opacity: 0.96;
+  font-weight: 600;
+  opacity: 0.75;
+  letter-spacing: 0.01em;
 }
 
 .calendar-view-shell .calendar-event-title {
-  flex: 1;
-  min-height: 0;
-  display: block;
+  flex: 0 0 auto;
   width: 100%;
-  text-align: left;
-  overflow: hidden;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.15;
-}
-
-.calendar-view-shell .calendar-event-observation {
-  width: 100%;
-  min-height: 13px;
-  margin-top: 1px;
-  text-align: left;
-  font-size: 10px;
-  font-weight: 500;
-  line-height: 1.1;
-  opacity: 0.95;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
+.calendar-view-shell .calendar-event-service {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.2;
+  opacity: 0.75;
+}
+
+/* ─── Disabled slots ─────────────────────────────────────── */
 .calendar-view-shell .calendar-slot-disabled {
   background-image: repeating-linear-gradient(
     -45deg,
-    rgba(148, 163, 184, 0.1),
-    rgba(148, 163, 184, 0.1) 2px,
+    rgba(148, 163, 184, 0.08),
+    rgba(148, 163, 184, 0.08) 2px,
     rgba(255, 255, 255, 0.9) 2px,
     rgba(255, 255, 255, 0.9) 6px
   );
 }
 
+/* ─── Show more ──────────────────────────────────────────── */
 .calendar-view-shell .rbc-show-more {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #7c3aed;
 }
 
+/* ─── Responsive: tablet ─────────────────────────────────── */
 @media (max-width: 1024px) {
   .calendar-view-shell .rbc-time-gutter,
   .calendar-view-shell .rbc-time-header-gutter {
-    width: 52px;
-    min-width: 52px;
+    width: 48px;
+    min-width: 48px;
   }
 
   .calendar-view-shell .rbc-header {
-    min-height: 42px;
-    font-size: 0.82rem;
-    padding: 8px 6px;
+    min-height: 40px;
+    font-size: 0.78rem;
+    padding: 6px 4px;
   }
 }
 
+/* ─── Responsive: mobile ─────────────────────────────────── */
 @media (max-width: 768px) {
-  .calendar-view-shell {
-    overflow-x: auto;
-  }
-
+  /* Day view is used on mobile — no min-width needed */
   .calendar-view-shell .rbc-time-view {
-    min-width: 620px;
+    min-width: unset;
   }
 
   .calendar-view-shell .rbc-time-slot {
-    min-height: 32px;
+    min-height: 30px;
   }
 
   .calendar-view-shell .rbc-timeslot-group {
-    min-height: 64px;
+    min-height: 60px;
   }
 
   .calendar-view-shell .rbc-event {
-    min-height: 48px;
+    min-height: 46px;
+  }
+
+  .calendar-view-shell .rbc-time-gutter,
+  .calendar-view-shell .rbc-time-header-gutter {
+    width: 44px;
+    min-width: 44px;
   }
 
   .calendar-view-shell .calendar-event-title {
-    font-size: 10px;
-    line-height: 1.1;
+    font-size: 11px;
   }
 
-  .calendar-view-shell .calendar-event-observation {
+  .calendar-view-shell .calendar-event-service {
     font-size: 9px;
   }
 }
