@@ -15,12 +15,20 @@ on:
           - backend
           - frontend
 
-# Aguarda o CI passar antes de disparar deploy
 concurrency:
   group: deploy-easypanel
   cancel-in-progress: false
 
+env:
+  EASYPANEL_HOST: http://31.97.162.185:3000
+  PROJECT_NAME: agenda-inteligente
+  BACKEND_SERVICE: agenda_backend
+  FRONTEND_SERVICE: agenda_frontend
+  BACKEND_HEALTH_URL: https://agendainteligentebackend.agendainteligenteapp.cloud/actuator/health
+  FRONTEND_URL: https://www.agendainteligenteapp.cloud/
+
 jobs:
+  # Aguarda os checks CRÍTICOS do CI. mobile-typecheck é condicional e não bloqueia deploy.
   wait-for-ci:
     name: Aguardar CI passar
     if: github.event_name == 'push'
@@ -38,13 +46,6 @@ jobs:
           check-name: 'Frontend (Vite + TypeScript)'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 15
-      - uses: lewagon/wait-on-check-action@v1.3.4
-        with:
-          ref: ${{ github.sha }}
-          check-name: 'Mobile (Expo, type-check)'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 15
-          allowed-conclusions: success,skipped,neutral
 
   docker-backend:
     name: Build + push imagem backend (GHCR)
@@ -58,15 +59,18 @@ jobs:
       contents: read
       packages: write
     outputs:
-      image: ${{ steps.image_tag.outputs.tag }}
+      image_repo: ${{ steps.meta.outputs.image_repo }}
+      image_tag: ${{ steps.meta.outputs.image_tag }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Calcular tag da imagem (GHCR exige lowercase)
-        id: image_tag
+      - name: Computar metadados da imagem
+        id: meta
         run: |
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          echo "tag=ghcr.io/${OWNER}/agendainteligente-backend:latest" >> "$GITHUB_OUTPUT"
+          SHORT_SHA="${GITHUB_SHA::7}"
+          echo "image_repo=ghcr.io/${OWNER}/agendainteligente-backend" >> "$GITHUB_OUTPUT"
+          echo "image_tag=sha-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Setup JDK 21
         uses: actions/setup-java@v4
@@ -75,64 +79,102 @@ jobs:
           java-version: '21'
           cache: maven
 
-      - name: Build JAR (GitHub Actions tem acesso confiavel ao Maven Central)
-        run: mvn -B -ntp -DskipTests verify
+      - name: Build JAR (pula testes — já rodaram no CI)
+        run: mvn -B -ntp -DskipTests package
 
-      - name: Log in to GHCR
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build e push imagem runtime
+      - name: Build + push imagem (com cache de layers GHA)
         uses: docker/build-push-action@v5
         with:
           context: .
           file: Dockerfile.backend-runtime
           push: true
-          tags: ${{ steps.image_tag.outputs.tag }}
+          tags: |
+            ${{ steps.meta.outputs.image_repo }}:latest
+            ${{ steps.meta.outputs.image_repo }}:${{ steps.meta.outputs.image_tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
 
   deploy-backend:
-    name: Deploy backend (Easypanel)
-    needs: [wait-for-ci, docker-backend]
+    name: Deploy backend (Easypanel) + health check
+    needs: docker-backend
     if: |
       always() &&
       needs.docker-backend.result == 'success' &&
       (github.event_name == 'push' || github.event.inputs.target == 'both' || github.event.inputs.target == 'backend')
     runs-on: ubuntu-latest
     steps:
-      - name: Atualizar source da service para imagem GHCR
+      - name: Apontar serviço para a imagem nova (tag SHA evita cache de :latest)
         run: |
-          IMAGE="${{ needs.docker-backend.outputs.image }}"
+          IMAGE="${{ needs.docker-backend.outputs.image_repo }}:${{ needs.docker-backend.outputs.image_tag }}"
           curl --fail --silent --show-error \
-            -X POST "http://31.97.162.185:3000/api/trpc/services.app.updateSourceImage" \
+            -X POST "${EASYPANEL_HOST}/api/trpc/services.app.updateSourceImage" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${{ secrets.EASYPANEL_API_TOKEN }}" \
-            -d "{\"json\":{\"projectName\":\"agenda-inteligente\",\"serviceName\":\"agenda_backend\",\"image\":\"${IMAGE}\"}}"
+            -d "{\"json\":{\"projectName\":\"${PROJECT_NAME}\",\"serviceName\":\"${BACKEND_SERVICE}\",\"image\":\"${IMAGE}\"}}"
+          echo "Imagem apontada para: ${IMAGE}"
 
       - name: Disparar deploy
         run: |
           curl --fail --silent --show-error \
-            -X POST "http://31.97.162.185:3000/api/trpc/services.app.deployService" \
+            -X POST "${EASYPANEL_HOST}/api/trpc/services.app.deployService" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${{ secrets.EASYPANEL_API_TOKEN }}" \
-            -d '{"json":{"projectName":"agenda-inteligente","serviceName":"agenda_backend"}}'
-          echo "Backend deploy disparado."
+            -d "{\"json\":{\"projectName\":\"${PROJECT_NAME}\",\"serviceName\":\"${BACKEND_SERVICE}\"}}"
+          echo "Deploy do backend disparado."
+
+      - name: Aguardar /actuator/health (timeout 6min)
+        run: |
+          for i in $(seq 1 36); do
+            if curl --fail --silent --max-time 10 -o /dev/null "${BACKEND_HEALTH_URL}"; then
+              echo "Backend respondendo OK após ${i} tentativas."
+              exit 0
+            fi
+            echo "Tentativa ${i}/36 — backend ainda não respondeu. Aguardando 10s..."
+            sleep 10
+          done
+          echo "::error::Backend não passou no healthcheck em 6 minutos."
+          exit 1
 
   deploy-frontend:
-    name: Deploy frontend (Easypanel)
-    needs: [wait-for-ci]
+    name: Deploy frontend (Easypanel) + smoke test
+    needs: wait-for-ci
     if: |
       always() &&
       (needs.wait-for-ci.result == 'success' || github.event_name == 'workflow_dispatch') &&
       (github.event_name == 'push' || github.event.inputs.target == 'both' || github.event.inputs.target == 'frontend')
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Easypanel deploy (frontend)
+      - name: Disparar deploy (rebuild do Dockerfile no Easypanel)
         run: |
           curl --fail --silent --show-error \
-            -X POST "${{ secrets.EASYPANEL_DEPLOY_FRONTEND_URL }}" \
+            -X POST "${EASYPANEL_HOST}/api/trpc/services.app.deployService" \
             -H "Content-Type: application/json" \
-            -d '{}'
-          echo "Frontend deploy disparado."
+            -H "Authorization: Bearer ${{ secrets.EASYPANEL_API_TOKEN }}" \
+            -d "{\"json\":{\"projectName\":\"${PROJECT_NAME}\",\"serviceName\":\"${FRONTEND_SERVICE}\"}}"
+          echo "Deploy do frontend disparado."
+
+      - name: Aguardar landing responder 200 (timeout 6min)
+        run: |
+          for i in $(seq 1 36); do
+            if curl --fail --silent --max-time 10 -o /dev/null "${FRONTEND_URL}"; then
+              echo "Frontend respondendo OK após ${i} tentativas."
+              exit 0
+            fi
+            echo "Tentativa ${i}/36 — frontend ainda não respondeu. Aguardando 10s..."
+            sleep 10
+          done
+          echo "::error::Frontend não respondeu 200 em 6 minutos."
+          exit 1
