@@ -8,7 +8,6 @@ import br.com.agendainteligente.domain.enums.TipoPagamento;
 import br.com.agendainteligente.dto.PagamentoDTO;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
-import br.com.agendainteligente.integration.PaymentGatewayIntegration;
 import br.com.agendainteligente.mapper.PagamentoMapper;
 import br.com.agendainteligente.repository.AgendamentoRepository;
 import br.com.agendainteligente.repository.PagamentoRepository;
@@ -36,7 +35,6 @@ class PagamentoServiceTest {
     @Mock private PagamentoRepository pagamentoRepository;
     @Mock private AgendamentoRepository agendamentoRepository;
     @Mock private PagamentoMapper pagamentoMapper;
-    @Mock private PaymentGatewayIntegration paymentGatewayIntegration;
 
     @InjectMocks private PagamentoService pagamentoService;
 
