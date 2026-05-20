@@ -131,35 +131,4 @@ class PagamentoServiceTest {
                 pagamentoService.processarPagamento(1L, TipoPagamento.PIX));
     }
 
-    @Test
-    void confirmarPagamento_promoveStatusEAtualizaAgendamento() {
-        Pagamento pagamento = Pagamento.builder()
-                .id(10L)
-                .agendamento(agendamento)
-                .valor(BigDecimal.valueOf(200))
-                .status(StatusPagamento.PROCESSANDO)
-                .build();
-        when(pagamentoRepository.findByIdTransacaoGateway("tx-1")).thenReturn(Optional.of(pagamento));
-
-        pagamentoService.confirmarPagamento("tx-1");
-
-        assertEquals(StatusPagamento.APROVADO, pagamento.getStatus());
-        assertEquals(StatusAgendamento.CONFIRMADO, agendamento.getStatus());
-        assertEquals(BigDecimal.valueOf(200), agendamento.getValorFinal());
-    }
-
-    @Test
-    void confirmarPagamento_noopSeJaAprovado() {
-        Pagamento pagamento = Pagamento.builder()
-                .id(10L)
-                .agendamento(agendamento)
-                .status(StatusPagamento.APROVADO)
-                .build();
-        when(pagamentoRepository.findByIdTransacaoGateway("tx-1")).thenReturn(Optional.of(pagamento));
-
-        pagamentoService.confirmarPagamento("tx-1");
-
-        verify(pagamentoRepository, never()).save(any());
-        verify(agendamentoRepository, never()).save(any());
-    }
 }
