@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  EASYPANEL_HOST: http://31.97.162.185:3000
+  EASYPANEL_HOST: https://easypanel.agendainteligenteapp.cloud
   PROJECT_NAME: agenda-inteligente
   BACKEND_SERVICE: agenda_backend
   FRONTEND_SERVICE: agenda_frontend
