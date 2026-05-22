@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Edit, Trash2, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react'
 import { clienteService } from '../../../services/clienteService'
 import { authService } from '../../../services/authService'
 import { perfilService } from '../../../services/perfilService'
@@ -28,6 +28,7 @@ export default function ClienteGerenciamento({ searchTerm }: Props) {
   const [filterAtivo, setFilterAtivo] = useState<string>('')
   const [page, setPage] = useState(0)
   const [quickModalId, setQuickModalId] = useState<number | null>(null)
+  const [sortAsc, setSortAsc] = useState(true)
 
   const usuario = authService.getUsuario()
   const { data: perfilUsuario } = useQuery({
@@ -55,8 +56,13 @@ export default function ClienteGerenciamento({ searchTerm }: Props) {
       const isAtivo = filterAtivo === 'true'
       filtered = filtered.filter((c) => (c.ativo ?? true) === isAtivo)
     }
+    filtered.sort((a, b) =>
+      sortAsc
+        ? a.nome.localeCompare(b.nome, 'pt-BR')
+        : b.nome.localeCompare(a.nome, 'pt-BR')
+    )
     return filtered
-  }, [clientes, searchTerm, filterAtivo])
+  }, [clientes, searchTerm, filterAtivo, sortAsc])
 
   const totalPages = Math.ceil(clientesFiltrados.length / PAGE_SIZE)
   const clientesPaginados = clientesFiltrados.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
@@ -129,8 +135,16 @@ export default function ClienteGerenciamento({ searchTerm }: Props) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-700">
-                    <th className="text-left px-4 py-3 text-gray-400 font-medium">Nome</th>
+                    <th className="text-left px-4 py-3 text-gray-400 font-medium">
+                      <button
+                        onClick={() => setSortAsc((v) => !v)}
+                        className="flex items-center gap-1 hover:text-gray-200 transition-colors"
+                      >
+                        Nome <ArrowUpDown className="h-3 w-3" />
+                      </button>
+                    </th>
                     <th className="text-left px-4 py-3 text-gray-400 font-medium">Telefone</th>
+                    <th className="text-left px-4 py-3 text-gray-400 font-medium hidden lg:table-cell">Endereço</th>
                     <th className="text-left px-4 py-3 text-gray-400 font-medium hidden md:table-cell">Data Nasc.</th>
                     <th className="text-left px-4 py-3 text-gray-400 font-medium hidden sm:table-cell">Status</th>
                     {podeEditarClientes && (
@@ -150,6 +164,7 @@ export default function ClienteGerenciamento({ searchTerm }: Props) {
                         </button>
                       </td>
                       <td className="px-4 py-3 text-gray-300">{cliente.telefone || '—'}</td>
+                      <td className="px-4 py-3 text-gray-300 hidden lg:table-cell">{cliente.endereco || '—'}</td>
                       <td className="px-4 py-3 text-gray-300 hidden md:table-cell">
                         {formatDate(cliente.dataNascimento)}
                       </td>

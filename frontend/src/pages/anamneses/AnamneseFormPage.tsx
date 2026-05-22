@@ -208,6 +208,10 @@ export default function AnamneseFormPage() {
       showNotification('error', 'Informe a data')
       return
     }
+    if (!form.servicoId && !form.servicoNome?.trim()) {
+      showNotification('error', 'Informe o procedimento')
+      return
+    }
     saveMutation.mutate(form)
   }
 
@@ -397,7 +401,9 @@ export default function AnamneseFormPage() {
 
           {/* Procedimento com autocomplete */}
           <div className="relative">
-            <label className="block text-sm font-medium text-gray-700">Procedimento</label>
+            <label className="block text-sm font-medium text-gray-700">
+              Procedimento <span className="text-red-500">*</span>
+            </label>
             <input
               type="text"
               value={servicoSearch}

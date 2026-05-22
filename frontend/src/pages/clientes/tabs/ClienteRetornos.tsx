@@ -26,7 +26,10 @@ export default function ClienteRetornos() {
 
   const [servicoId, setServicoId] = useState<number | null>(null)
   const [diasLimite, setDiasLimite] = useState(30)
+  const [customDias, setCustomDias] = useState('')
   const [quickModalId, setQuickModalId] = useState<number | null>(null)
+
+  const isCustom = !PRAZO_OPTIONS.some((o) => o.value === diasLimite)
 
   const { data: servicos = [] } = useQuery({
     queryKey: ['servicos'],
@@ -36,7 +39,7 @@ export default function ClienteRetornos() {
   const { data: retornos = [], isLoading, isFetching } = useQuery({
     queryKey: ['clientes-retornos', unidadeId, servicoId, diasLimite],
     queryFn: () => clienteService.buscarRetornos(unidadeId!, servicoId!, diasLimite),
-    enabled: !!unidadeId && !!servicoId,
+    enabled: !!unidadeId && !!servicoId && diasLimite > 0,
   })
 
   function getDiasBadge(dias: number) {
@@ -68,17 +71,46 @@ export default function ClienteRetornos() {
             ))}
           </select>
         </div>
-        <div>
-          <label className="block text-gray-400 text-xs mb-1">Prazo de retorno</label>
-          <select
-            value={diasLimite}
-            onChange={(e) => setDiasLimite(Number(e.target.value))}
-            className="bg-gray-700 text-gray-200 border border-gray-600 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            {PRAZO_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+        <div className="flex items-end gap-2">
+          <div>
+            <label className="block text-gray-400 text-xs mb-1">Prazo de retorno</label>
+            <select
+              value={isCustom ? 'custom' : diasLimite}
+              onChange={(e) => {
+                if (e.target.value === 'custom') {
+                  setCustomDias('')
+                  setDiasLimite(-1)
+                } else {
+                  setDiasLimite(Number(e.target.value))
+                  setCustomDias('')
+                }
+              }}
+              className="bg-gray-700 text-gray-200 border border-gray-600 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              {PRAZO_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+              <option value="custom">Personalizado</option>
+            </select>
+          </div>
+          {isCustom && (
+            <div>
+              <label className="block text-gray-400 text-xs mb-1">Dias</label>
+              <input
+                type="number"
+                min={1}
+                max={730}
+                value={customDias}
+                onChange={(e) => {
+                  setCustomDias(e.target.value)
+                  const n = parseInt(e.target.value, 10)
+                  if (n > 0) setDiasLimite(n)
+                }}
+                placeholder="ex: 45"
+                className="w-24 bg-gray-700 text-gray-200 border border-gray-600 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+          )}
         </div>
       </div>
 
