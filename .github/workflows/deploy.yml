@@ -23,7 +23,7 @@ env:
   RAILWAY_ENV_ID: 1311cc26-ebee-4989-b49b-0e905b9950cc
   RAILWAY_BACKEND_SERVICE_ID: 177577ac-0796-4351-b1d7-f2e6de397c83
   BACKEND_HEALTH_URL: https://agenda-backend-production-cc5e.up.railway.app/actuator/health
-  VERCEL_FRONTEND_URL: https://frontend-sage-two-xv3clkljqf.vercel.app
+  VERCEL_FRONTEND_URL: https://agenda-inteligente-app.vercel.app
 
 jobs:
   wait-for-ci:
