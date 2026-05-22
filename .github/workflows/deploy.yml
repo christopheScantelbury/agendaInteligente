@@ -98,7 +98,7 @@ jobs:
       - name: Build frontend
         run: cd frontend && npm run build
         env:
-          VITE_API_URL: https://agenda-backend-production-cc5e.up.railway.app
+          VITE_API_URL: https://agenda-backend-production-cc5e.up.railway.app/api
 
       - name: Deploy para Vercel (prebuilt)
         run: |
