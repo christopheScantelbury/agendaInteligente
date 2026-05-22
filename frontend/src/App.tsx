@@ -38,6 +38,8 @@ import ConvitesCliente from './pages/ConvitesCliente'
 import Relatorios from './pages/Relatorios'
 import RequirePermissao from './components/RequirePermissao'
 import Landing from './pages/Landing'
+import AnamneseListPage from './pages/anamneses/AnamneseListPage'
+import AnamneseFormPage from './pages/anamneses/AnamneseFormPage'
 
 
 function NavigateToAfterLogin() {
@@ -153,6 +155,9 @@ function App() {
                         <Route path="/clientes" element={<RequirePermissao path="/clientes" fallbackPaths={['/usuarios']}><Clientes /></RequirePermissao>} />
                         <Route path="/clientes/novo" element={<RequirePermissao path="/clientes" fallbackPaths={['/usuarios']}><ClienteFormPage /></RequirePermissao>} />
                         <Route path="/clientes/:id/editar" element={<RequirePermissao path="/clientes" fallbackPaths={['/usuarios']}><ClienteFormPage /></RequirePermissao>} />
+                        <Route path="/anamneses" element={<RequirePermissao path="/clientes" fallbackPaths={['/usuarios']}><AnamneseListPage /></RequirePermissao>} />
+                        <Route path="/anamneses/nova" element={<RequirePermissao path="/clientes" fallbackPaths={['/usuarios']}><AnamneseFormPage /></RequirePermissao>} />
+                        <Route path="/anamneses/:id" element={<RequirePermissao path="/clientes" fallbackPaths={['/usuarios']}><AnamneseFormPage /></RequirePermissao>} />
                         <Route path="/unidades" element={redirectAdminUnico(<RequirePermissao path="/unidades"><Unidades /></RequirePermissao>)} />
                         <Route path="/servicos" element={<RequirePermissao path="/servicos"><Servicos /></RequirePermissao>} />
                         <Route path="/usuarios" element={<RequirePermissao path="/usuarios"><Usuarios /></RequirePermissao>} />

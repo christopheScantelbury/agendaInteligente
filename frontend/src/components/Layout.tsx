@@ -17,6 +17,7 @@ import {
   Link2,
   UserPlus,
   BarChart2,
+  ClipboardList,
 } from 'lucide-react'
 import { authService } from '../services/authService'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -144,6 +145,12 @@ export default function Layout({ children }: LayoutProps) {
         label: 'Clientes',
         icon: <Users className="h-5 w-5" />,
         paths: ['/clientes'],
+      })
+      items.push({
+        path: '/anamneses',
+        label: 'Anamneses',
+        icon: <ClipboardList className="h-5 w-5" />,
+        paths: ['/anamneses'],
       })
     }
 
