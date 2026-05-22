@@ -21,7 +21,7 @@ export default function ClienteUnificarContatos() {
     setPrincipalMap((prev) => ({ ...prev, [grupoIdx]: clienteId }))
   }
 
-  function handleUnificar(grupoIdx: number) {
+  function handleUnificar(_grupoIdx: number) {
     showNotification('info', 'Funcionalidade em breve')
   }
 
