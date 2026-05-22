@@ -139,6 +139,58 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     @Query("SELECT a FROM Agendamento a WHERE a.cliente.id = :clienteId ORDER BY a.dataHoraInicio DESC")
     List<Agendamento> findByClienteIdOrderByDataDesc(@Param("clienteId") Long clienteId);
 
+    // ── Retornos ───────────────────────────────────────────────────────────────
+
+    /**
+     * Para cada cliente da unidade, retorna o último agendamento CONCLUIDO para o serviço dado.
+     * Resultado: [clienteId, clienteNome, clienteTelefone, dataHoraInicio, totalAtendimentos]
+     */
+    @Query(value = """
+            SELECT
+              c.id                          AS cliente_id,
+              c.nome                        AS cliente_nome,
+              c.telefone                    AS cliente_telefone,
+              MAX(a.data_hora_inicio)       AS ultimo_atendimento,
+              COUNT(a.id)                   AS total_atendimentos
+            FROM agendamentos a
+            JOIN clientes c ON c.id = a.cliente_id
+            JOIN agendamento_servicos ags ON ags.agendamento_id = a.id
+            WHERE a.unidade_id = :unidadeId
+              AND a.status = 'CONCLUIDO'
+              AND ags.servico_id = :servicoId
+            GROUP BY c.id, c.nome, c.telefone
+            """, nativeQuery = true)
+    List<Object[]> findUltimoAtendimentoPorServico(
+            @Param("unidadeId") Long unidadeId,
+            @Param("servicoId") Long servicoId);
+
+    // ── Sumidos ────────────────────────────────────────────────────────────────
+
+    /**
+     * Retorna clientes cujo último agendamento CONCLUIDO na unidade foi há pelo menos diasSemRetorno dias.
+     * Resultado: [clienteId, clienteNome, clienteTelefone, dataHoraInicio, totalAtendimentos]
+     */
+    @Query(value = """
+            SELECT
+              c.id                          AS cliente_id,
+              c.nome                        AS cliente_nome,
+              c.telefone                    AS cliente_telefone,
+              MAX(a.data_hora_inicio)       AS ultimo_atendimento,
+              COUNT(a.id)                   AS total_atendimentos
+            FROM agendamentos a
+            JOIN clientes c ON c.id = a.cliente_id
+            WHERE a.unidade_id = :unidadeId
+              AND a.status = 'CONCLUIDO'
+            GROUP BY c.id, c.nome, c.telefone
+            HAVING COUNT(a.id) >= :minAtendimentos
+               AND MAX(a.data_hora_inicio) <= NOW() - (:diasSemRetorno || ' days')\\:\\:interval
+            ORDER BY MAX(a.data_hora_inicio) ASC
+            """, nativeQuery = true)
+    List<Object[]> findClientesSumidos(
+            @Param("unidadeId") Long unidadeId,
+            @Param("diasSemRetorno") int diasSemRetorno,
+            @Param("minAtendimentos") int minAtendimentos);
+
     @Query("SELECT a FROM Agendamento a WHERE a.unidade.id = :unidadeId AND a.dataHoraInicio >= :inicio ORDER BY a.dataHoraInicio DESC")
     List<Agendamento> findByUnidadeIdAndPeriodo(
             @Param("unidadeId") Long unidadeId,
