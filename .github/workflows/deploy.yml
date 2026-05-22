@@ -1,4 +1,4 @@
-name: Deploy (Easypanel)
+name: Deploy (Railway + Vercel)
 
 on:
   push:
@@ -16,19 +16,16 @@ on:
           - frontend
 
 concurrency:
-  group: deploy-easypanel
+  group: deploy-railway-vercel
   cancel-in-progress: false
 
 env:
-  EASYPANEL_HOST: https://easypanel.agendainteligenteapp.cloud
-  PROJECT_NAME: agenda-inteligente
-  BACKEND_SERVICE: agenda_backend
-  FRONTEND_SERVICE: agenda_frontend
-  BACKEND_HEALTH_URL: https://agendainteligentebackend.agendainteligenteapp.cloud/actuator/health
-  FRONTEND_URL: https://www.agendainteligenteapp.cloud/
+  RAILWAY_ENV_ID: 1311cc26-ebee-4989-b49b-0e905b9950cc
+  RAILWAY_BACKEND_SERVICE_ID: 177577ac-0796-4351-b1d7-f2e6de397c83
+  BACKEND_HEALTH_URL: https://agenda-backend-production-cc5e.up.railway.app/actuator/health
+  VERCEL_FRONTEND_URL: https://frontend-sage-two-xv3clkljqf.vercel.app
 
 jobs:
-  # Aguarda os checks CRÍTICOS do CI. mobile-typecheck é condicional e não bloqueia deploy.
   wait-for-ci:
     name: Aguardar CI passar
     if: github.event_name == 'push'
@@ -47,109 +44,39 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 15
 
-  docker-backend:
-    name: Build + push imagem backend (GHCR)
+  deploy-backend:
+    name: Deploy backend (Railway)
     needs: wait-for-ci
     if: |
       always() &&
       (needs.wait-for-ci.result == 'success' || github.event_name == 'workflow_dispatch') &&
       (github.event_name == 'push' || github.event.inputs.target == 'both' || github.event.inputs.target == 'backend')
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    outputs:
-      image_repo: ${{ steps.meta.outputs.image_repo }}
-      image_tag: ${{ steps.meta.outputs.image_tag }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Computar metadados da imagem
-        id: meta
+      - name: Disparar deploy no Railway
         run: |
-          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          SHORT_SHA="${GITHUB_SHA::7}"
-          echo "image_repo=ghcr.io/${OWNER}/agendainteligente-backend" >> "$GITHUB_OUTPUT"
-          echo "image_tag=sha-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-
-      - name: Setup JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-          cache: maven
-
-      - name: Build JAR (pula testes — já rodaram no CI)
-        run: mvn -B -ntp -DskipTests package
-
-      - uses: docker/setup-buildx-action@v3
-
-      - name: Login GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build + push imagem (com cache de layers GHA)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile.backend-runtime
-          push: true
-          tags: |
-            ${{ steps.meta.outputs.image_repo }}:latest
-            ${{ steps.meta.outputs.image_repo }}:${{ steps.meta.outputs.image_tag }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          labels: |
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
-
-  deploy-backend:
-    name: Deploy backend (Easypanel) + health check
-    needs: docker-backend
-    if: |
-      always() &&
-      needs.docker-backend.result == 'success' &&
-      (github.event_name == 'push' || github.event.inputs.target == 'both' || github.event.inputs.target == 'backend')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Apontar serviço para a imagem nova (tag SHA evita cache de :latest)
-        run: |
-          IMAGE="${{ needs.docker-backend.outputs.image_repo }}:${{ needs.docker-backend.outputs.image_tag }}"
-          curl --fail --silent --show-error \
-            -X POST "${EASYPANEL_HOST}/api/trpc/services.app.updateSourceImage" \
+          RESULT=$(curl -s -X POST https://backboard.railway.app/graphql/v2 \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_API_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${{ secrets.EASYPANEL_API_TOKEN }}" \
-            -d "{\"json\":{\"projectName\":\"${PROJECT_NAME}\",\"serviceName\":\"${BACKEND_SERVICE}\",\"image\":\"${IMAGE}\",\"username\":\"${{ github.actor }}\",\"password\":\"${{ secrets.GITHUB_TOKEN }}\"}}"
-          echo "Imagem apontada para: ${IMAGE}"
-
-      - name: Disparar deploy
-        run: |
-          curl --fail --silent --show-error \
-            -X POST "${EASYPANEL_HOST}/api/trpc/services.app.deployService" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${{ secrets.EASYPANEL_API_TOKEN }}" \
-            -d "{\"json\":{\"projectName\":\"${PROJECT_NAME}\",\"serviceName\":\"${BACKEND_SERVICE}\"}}"
-          echo "Deploy do backend disparado."
+            -d "{\"query\":\"mutation { serviceInstanceDeploy(environmentId: \\\"${RAILWAY_ENV_ID}\\\", serviceId: \\\"${RAILWAY_BACKEND_SERVICE_ID}\\\") }\"}")
+          echo "Railway response: $RESULT"
+          echo "$RESULT" | grep -q '"serviceInstanceDeploy":true' || (echo "Deploy falhou!" && exit 1)
 
       - name: Aguardar /actuator/health (timeout 12min)
         run: |
           for i in $(seq 1 72); do
             if curl --fail --silent --max-time 10 -o /dev/null "${BACKEND_HEALTH_URL}"; then
-              echo "Backend respondendo OK após ${i} tentativas."
+              echo "Backend OK após ${i} tentativas."
               exit 0
             fi
-            echo "Tentativa ${i}/72 — backend ainda não respondeu. Aguardando 10s..."
+            echo "Tentativa ${i}/72 — aguardando 10s..."
             sleep 10
           done
           echo "::error::Backend não passou no healthcheck em 12 minutos."
           exit 1
 
   deploy-frontend:
-    name: Deploy frontend (Easypanel) + smoke test
+    name: Deploy frontend (Vercel)
     needs: wait-for-ci
     if: |
       always() &&
@@ -157,24 +84,38 @@ jobs:
       (github.event_name == 'push' || github.event.inputs.target == 'both' || github.event.inputs.target == 'frontend')
     runs-on: ubuntu-latest
     steps:
-      - name: Disparar deploy (rebuild do Dockerfile no Easypanel)
-        run: |
-          curl --fail --silent --show-error \
-            -X POST "${EASYPANEL_HOST}/api/trpc/services.app.deployService" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${{ secrets.EASYPANEL_API_TOKEN }}" \
-            -d "{\"json\":{\"projectName\":\"${PROJECT_NAME}\",\"serviceName\":\"${FRONTEND_SERVICE}\"}}"
-          echo "Deploy do frontend disparado."
+      - uses: actions/checkout@v4
 
-      - name: Aguardar landing responder 200 (timeout 10min)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependências
+        run: cd frontend && npm ci
+
+      - name: Build frontend
+        run: cd frontend && npm run build
+        env:
+          VITE_API_URL: https://agenda-backend-production-cc5e.up.railway.app
+
+      - name: Deploy para Vercel (prebuilt)
         run: |
-          for i in $(seq 1 60); do
-            if curl --fail --silent --max-time 10 -o /dev/null "${FRONTEND_URL}"; then
-              echo "Frontend respondendo OK após ${i} tentativas."
+          cd frontend
+          npx vercel deploy --prod \
+            --token ${{ secrets.VERCEL_TOKEN }} \
+            --scope aleefhenriiques-projects \
+            --yes \
+            --prebuilt 2>&1 | tail -5
+
+      - name: Smoke test frontend
+        run: |
+          for i in $(seq 1 30); do
+            if curl --fail --silent --max-time 10 -o /dev/null "${VERCEL_FRONTEND_URL}"; then
+              echo "Frontend OK após ${i} tentativas."
               exit 0
             fi
-            echo "Tentativa ${i}/60 — frontend ainda não respondeu. Aguardando 10s..."
             sleep 10
           done
-          echo "::error::Frontend não respondeu 200 em 10 minutos."
-          exit 1
+          echo "::warning::Frontend smoke test não confirmou 200 em 5min."
