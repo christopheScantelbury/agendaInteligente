@@ -46,7 +46,7 @@ app:
 
 # CORS — origens explicitas em producao
 cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:https://agenda-inteligente-app.vercel.app}
 
 # Actuator: expor apenas health para nao vazar info em prod
 management:
