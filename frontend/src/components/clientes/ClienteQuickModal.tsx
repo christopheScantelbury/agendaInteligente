@@ -75,19 +75,19 @@ export default function ClienteQuickModal({ clienteId, onClose }: ClienteQuickMo
         className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50"
         onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
       >
-        <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto border border-slate-200">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-700">
-            <h2 className="text-lg font-semibold text-white">Acesso Rápido</h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+          <div className="flex items-center justify-between p-4 border-b border-slate-200">
+            <h2 className="text-lg font-semibold text-slate-900">Acesso Rápido</h2>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-700 transition-colors">
               <X className="h-5 w-5" />
             </button>
           </div>
 
           {isLoading ? (
-            <div className="p-6 text-center text-gray-400">Carregando...</div>
+            <div className="p-6 text-center text-slate-400">Carregando...</div>
           ) : !resumo ? (
-            <div className="p-6 text-center text-gray-400">Cliente não encontrado.</div>
+            <div className="p-6 text-center text-slate-400">Cliente não encontrado.</div>
           ) : (
             <div className="p-4 space-y-4">
               {/* Action buttons */}
@@ -95,7 +95,7 @@ export default function ClienteQuickModal({ clienteId, onClose }: ClienteQuickMo
                 <button
                   onClick={handleLigar}
                   disabled={!resumo.telefone}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm rounded-md transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors"
                 >
                   <Phone className="h-4 w-4" />
                   Ligar
@@ -103,21 +103,21 @@ export default function ClienteQuickModal({ clienteId, onClose }: ClienteQuickMo
                 <button
                   onClick={handleWhatsApp}
                   disabled={!resumo.telefone}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm rounded-md transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors"
                 >
                   <MessageCircle className="h-4 w-4" />
                   WhatsApp
                 </button>
                 <button
                   onClick={handleEditar}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white text-sm rounded-md transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-sm rounded-lg transition-colors"
                 >
                   <Edit className="h-4 w-4" />
                   Editar
                 </button>
                 <button
                   onClick={() => setConfirmDelete(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm rounded-md transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors"
                 >
                   <Trash2 className="h-4 w-4" />
                   Excluir
@@ -125,27 +125,27 @@ export default function ClienteQuickModal({ clienteId, onClose }: ClienteQuickMo
               </div>
 
               {/* Basic info */}
-              <div className="bg-gray-900 rounded-md p-3 space-y-1.5">
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1.5">
                 <div>
-                  <span className="text-gray-400 text-sm">Nome: </span>
-                  <span className="text-white font-medium">{resumo.nome}</span>
+                  <span className="text-slate-500 text-sm">Nome: </span>
+                  <span className="text-slate-900 font-medium">{resumo.nome}</span>
                 </div>
                 {resumo.telefone && (
                   <div>
-                    <span className="text-gray-400 text-sm">Telefone: </span>
-                    <span className="text-white">{resumo.telefone}</span>
+                    <span className="text-slate-500 text-sm">Telefone: </span>
+                    <span className="text-slate-900">{resumo.telefone}</span>
                   </div>
                 )}
                 {resumo.dataNascimento && (
                   <div>
-                    <span className="text-gray-400 text-sm">Data de nascimento: </span>
-                    <span className="text-white">{formatBirthDate(resumo.dataNascimento)}</span>
+                    <span className="text-slate-500 text-sm">Data de nascimento: </span>
+                    <span className="text-slate-900">{formatBirthDate(resumo.dataNascimento)}</span>
                   </div>
                 )}
                 {resumo.email && (
                   <div>
-                    <span className="text-gray-400 text-sm">E-mail: </span>
-                    <span className="text-white">{resumo.email}</span>
+                    <span className="text-slate-500 text-sm">E-mail: </span>
+                    <span className="text-slate-900">{resumo.email}</span>
                   </div>
                 )}
               </div>
@@ -155,7 +155,7 @@ export default function ClienteQuickModal({ clienteId, onClose }: ClienteQuickMo
                 {(['Informações', 'Crédito', 'Anotações'] as const).map((label) => (
                   <button
                     key={label}
-                    className="px-3 py-1.5 border border-gray-600 text-gray-300 hover:text-white hover:border-gray-400 text-sm rounded-md transition-colors"
+                    className="px-3 py-1.5 border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 text-sm rounded-lg transition-colors"
                     onClick={() => showNotification('info', 'Funcionalidade em breve')}
                   >
                     {label}
@@ -164,11 +164,11 @@ export default function ClienteQuickModal({ clienteId, onClose }: ClienteQuickMo
               </div>
 
               {/* History */}
-              <div className="border-t border-gray-700 pt-3 space-y-1.5">
-                <h3 className="text-gray-300 font-medium text-sm uppercase tracking-wide">Histórico</h3>
+              <div className="border-t border-slate-200 pt-3 space-y-1.5">
+                <h3 className="text-slate-600 font-semibold text-xs uppercase tracking-wide">Histórico</h3>
                 <div>
-                  <span className="text-gray-400 text-sm">Último atendimento: </span>
-                  <span className="text-white text-sm">
+                  <span className="text-slate-500 text-sm">Último atendimento: </span>
+                  <span className="text-slate-900 text-sm">
                     {resumo.ultimoAtendimento
                       ? `${formatDate(resumo.ultimoAtendimento)} (há ${resumo.diasDesdeUltimoAtendimento} dia${resumo.diasDesdeUltimoAtendimento !== 1 ? 's' : ''})`
                       : 'Nenhum atendimento'}
@@ -176,8 +176,8 @@ export default function ClienteQuickModal({ clienteId, onClose }: ClienteQuickMo
                 </div>
                 {resumo.ultimosProcedimentos?.length > 0 && (
                   <div>
-                    <span className="text-gray-400 text-sm">Últimos procedimentos: </span>
-                    <span className="text-white text-sm">
+                    <span className="text-slate-500 text-sm">Últimos procedimentos: </span>
+                    <span className="text-slate-900 text-sm">
                       {resumo.ultimosProcedimentos
                         .slice(0, 3)
                         .map((p) => `${p.nome} (${formatDate(p.data)})`)
@@ -186,14 +186,14 @@ export default function ClienteQuickModal({ clienteId, onClose }: ClienteQuickMo
                   </div>
                 )}
                 <div>
-                  <span className="text-gray-400 text-sm">Cancelamentos: </span>
-                  <span className="text-white text-sm">{resumo.totalCancelamentos}</span>
-                  <span className="text-gray-400 text-sm ml-3">Não compareceu: </span>
-                  <span className="text-white text-sm">{resumo.totalNaoCompareceu}</span>
+                  <span className="text-slate-500 text-sm">Cancelamentos: </span>
+                  <span className="text-slate-900 text-sm">{resumo.totalCancelamentos}</span>
+                  <span className="text-slate-500 text-sm ml-3">Não compareceu: </span>
+                  <span className="text-slate-900 text-sm">{resumo.totalNaoCompareceu}</span>
                 </div>
                 <div>
-                  <span className="text-gray-400 text-sm">Cliente desde: </span>
-                  <span className="text-white text-sm">{formatDate(resumo.clienteDesde)}</span>
+                  <span className="text-slate-500 text-sm">Cliente desde: </span>
+                  <span className="text-slate-900 text-sm">{formatDate(resumo.clienteDesde)}</span>
                 </div>
               </div>
             </div>

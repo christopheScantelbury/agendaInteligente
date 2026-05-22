@@ -43,11 +43,11 @@ export default function ClienteSumidos() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
         <div>
-          <label className="block text-gray-400 text-xs mb-1">Último atendimento há</label>
+          <label className="block text-slate-500 text-xs mb-1 font-medium">Último atendimento há</label>
           <select
             value={diasSemRetorno}
             onChange={(e) => setDiasSemRetorno(Number(e.target.value))}
-            className="bg-gray-700 text-gray-200 border border-gray-600 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="bg-white text-slate-900 border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
           >
             {DIAS_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -55,11 +55,11 @@ export default function ClienteSumidos() {
           </select>
         </div>
         <div>
-          <label className="block text-gray-400 text-xs mb-1">Mínimo de atendimentos</label>
+          <label className="block text-slate-500 text-xs mb-1 font-medium">Mínimo de atendimentos</label>
           <select
             value={minAtendimentos}
             onChange={(e) => setMinAtendimentos(Number(e.target.value))}
-            className="bg-gray-700 text-gray-200 border border-gray-600 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="bg-white text-slate-900 border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
           >
             {MIN_ATENDIMENTOS_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -70,7 +70,7 @@ export default function ClienteSumidos() {
 
       {/* Counter */}
       {!isLoading && !isFetching && sumidos.length > 0 && (
-        <div className="inline-flex items-center gap-2 bg-orange-900/30 border border-orange-800/50 text-orange-400 px-3 py-1.5 rounded-md text-sm">
+        <div className="inline-flex items-center gap-2 bg-orange-50 border border-orange-200 text-orange-700 px-3 py-1.5 rounded-lg text-sm">
           <span className="font-bold text-base">{sumidos.length}</span>
           <span>cliente{sumidos.length !== 1 ? 's' : ''} sumido{sumidos.length !== 1 ? 's' : ''} há {diasSemRetorno}+ dias</span>
         </div>
@@ -78,43 +78,43 @@ export default function ClienteSumidos() {
 
       {/* Table */}
       {isLoading || isFetching ? (
-        <div className="text-center py-8 text-gray-400">Carregando...</div>
+        <div className="text-center py-8 text-slate-400">Carregando...</div>
       ) : sumidos.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">
+        <div className="text-center py-12 text-slate-400">
           Nenhum cliente sumido com os filtros selecionados.
         </div>
       ) : (
-        <div className="bg-gray-800 rounded-lg overflow-hidden">
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-700">
-                  <th className="text-left px-4 py-3 text-gray-400 font-medium">Nome</th>
-                  <th className="text-left px-4 py-3 text-gray-400 font-medium">Último atendimento</th>
-                  <th className="text-left px-4 py-3 text-gray-400 font-medium hidden sm:table-cell">Nº atend.</th>
+                <tr className="border-b border-slate-200 bg-slate-50">
+                  <th className="text-left px-4 py-3 text-slate-500 font-semibold">Nome</th>
+                  <th className="text-left px-4 py-3 text-slate-500 font-semibold">Último atendimento</th>
+                  <th className="text-left px-4 py-3 text-slate-500 font-semibold hidden sm:table-cell">Nº atend.</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-700">
+              <tbody className="divide-y divide-slate-100">
                 {sumidos.map((s) => (
-                  <tr key={s.clienteId} className="hover:bg-gray-700/50 transition-colors">
+                  <tr key={s.clienteId} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3">
                       <button
-                        className="text-blue-400 hover:text-blue-300 font-medium text-left"
+                        className="text-violet-700 hover:text-violet-900 font-medium text-left"
                         onClick={() => setQuickModalId(s.clienteId)}
                       >
                         {s.clienteNome}
                       </button>
                       {s.clienteTelefone && (
-                        <div className="text-gray-500 text-xs">{s.clienteTelefone}</div>
+                        <div className="text-slate-400 text-xs">{s.clienteTelefone}</div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-gray-300">
+                    <td className="px-4 py-3 text-slate-600">
                       <div>{formatDate(s.ultimoAtendimento)}</div>
-                      <div className="text-orange-400 text-xs">
+                      <div className="text-orange-600 text-xs">
                         há {s.diasSemRetorno} dia{s.diasSemRetorno !== 1 ? 's' : ''}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-300 hidden sm:table-cell">
+                    <td className="px-4 py-3 text-slate-600 hidden sm:table-cell">
                       {s.totalAtendimentos}
                     </td>
                   </tr>

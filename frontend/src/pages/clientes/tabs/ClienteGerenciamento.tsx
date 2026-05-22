@@ -91,7 +91,7 @@ export default function ClienteGerenciamento({ searchTerm }: Props) {
   }
 
   if (isLoading) {
-    return <div className="text-center py-8 text-gray-400">Carregando...</div>
+    return <div className="text-center py-8 text-slate-400">Carregando...</div>
   }
 
   return (
@@ -102,18 +102,18 @@ export default function ClienteGerenciamento({ searchTerm }: Props) {
           <select
             value={filterAtivo}
             onChange={(e) => setFilterAtivo(e.target.value)}
-            className="bg-gray-700 text-gray-200 border border-gray-600 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="bg-white text-slate-900 border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
           >
             <option value="">Todos os status</option>
             <option value="true">Ativos</option>
             <option value="false">Inativos</option>
           </select>
-          <span className="text-gray-400 text-sm">{clientesFiltrados.length} cliente{clientesFiltrados.length !== 1 ? 's' : ''}</span>
+          <span className="text-slate-500 text-sm">{clientesFiltrados.length} cliente{clientesFiltrados.length !== 1 ? 's' : ''}</span>
         </div>
         {podeEditarClientes && (
           <button
             onClick={() => navigate('/clientes/novo')}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-sm rounded-lg transition-colors"
           >
             <Plus className="h-4 w-4" />
             Novo {dict.rotuloCliente}
@@ -122,9 +122,9 @@ export default function ClienteGerenciamento({ searchTerm }: Props) {
       </div>
 
       {/* Table */}
-      <div className="bg-gray-800 rounded-lg overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
         {clientesFiltrados.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
+          <div className="text-center py-12 text-slate-400">
             {searchTerm || filterAtivo !== ''
               ? 'Nenhum cliente encontrado com os filtros aplicados'
               : 'Nenhum cliente cadastrado.'}
@@ -134,45 +134,45 @@ export default function ClienteGerenciamento({ searchTerm }: Props) {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-700">
-                    <th className="text-left px-4 py-3 text-gray-400 font-medium">
+                  <tr className="border-b border-slate-200 bg-slate-50">
+                    <th className="text-left px-4 py-3 text-slate-500 font-semibold">
                       <button
                         onClick={() => setSortAsc((v) => !v)}
-                        className="flex items-center gap-1 hover:text-gray-200 transition-colors"
+                        className="flex items-center gap-1 hover:text-slate-900 transition-colors"
                       >
                         Nome <ArrowUpDown className="h-3 w-3" />
                       </button>
                     </th>
-                    <th className="text-left px-4 py-3 text-gray-400 font-medium">Telefone</th>
-                    <th className="text-left px-4 py-3 text-gray-400 font-medium hidden lg:table-cell">Endereço</th>
-                    <th className="text-left px-4 py-3 text-gray-400 font-medium hidden md:table-cell">Data Nasc.</th>
-                    <th className="text-left px-4 py-3 text-gray-400 font-medium hidden sm:table-cell">Status</th>
+                    <th className="text-left px-4 py-3 text-slate-500 font-semibold">Telefone</th>
+                    <th className="text-left px-4 py-3 text-slate-500 font-semibold hidden lg:table-cell">Endereço</th>
+                    <th className="text-left px-4 py-3 text-slate-500 font-semibold hidden md:table-cell">Data Nasc.</th>
+                    <th className="text-left px-4 py-3 text-slate-500 font-semibold hidden sm:table-cell">Status</th>
                     {podeEditarClientes && (
-                      <th className="text-right px-4 py-3 text-gray-400 font-medium">Ações</th>
+                      <th className="text-right px-4 py-3 text-slate-500 font-semibold">Ações</th>
                     )}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-700">
+                <tbody className="divide-y divide-slate-100">
                   {clientesPaginados.map((cliente) => (
-                    <tr key={cliente.id} className="hover:bg-gray-700/50 transition-colors">
+                    <tr key={cliente.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3">
                         <button
-                          className="text-blue-400 hover:text-blue-300 font-medium text-left"
+                          className="text-violet-700 hover:text-violet-900 font-medium text-left"
                           onClick={() => setQuickModalId(cliente.id!)}
                         >
                           {cliente.nome}
                         </button>
                       </td>
-                      <td className="px-4 py-3 text-gray-300">{cliente.telefone || '—'}</td>
-                      <td className="px-4 py-3 text-gray-300 hidden lg:table-cell">{cliente.endereco || '—'}</td>
-                      <td className="px-4 py-3 text-gray-300 hidden md:table-cell">
+                      <td className="px-4 py-3 text-slate-600">{cliente.telefone || '—'}</td>
+                      <td className="px-4 py-3 text-slate-600 hidden lg:table-cell">{cliente.endereco || '—'}</td>
+                      <td className="px-4 py-3 text-slate-600 hidden md:table-cell">
                         {formatDate(cliente.dataNascimento)}
                       </td>
                       <td className="px-4 py-3 hidden sm:table-cell">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${
                           (cliente.ativo ?? true)
-                            ? 'bg-green-900/50 text-green-400'
-                            : 'bg-gray-700 text-gray-400'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-slate-100 text-slate-500 border-slate-200'
                         }`}>
                           {(cliente.ativo ?? true) ? 'Ativo' : 'Inativo'}
                         </span>
@@ -182,14 +182,14 @@ export default function ClienteGerenciamento({ searchTerm }: Props) {
                           <div className="flex justify-end gap-2">
                             <button
                               onClick={() => navigate(`/clientes/${cliente.id}/editar`)}
-                              className="text-blue-400 hover:text-blue-300 transition-colors"
+                              className="text-violet-600 hover:text-violet-800 transition-colors"
                               aria-label="Editar"
                             >
                               <Edit className="h-4 w-4" />
                             </button>
                             <button
                               onClick={() => setConfirmDelete({ isOpen: true, id: cliente.id! })}
-                              className="text-red-400 hover:text-red-300 transition-colors"
+                              className="text-red-500 hover:text-red-700 transition-colors"
                               aria-label="Excluir"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -205,22 +205,22 @@ export default function ClienteGerenciamento({ searchTerm }: Props) {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-700">
-                <span className="text-gray-400 text-sm">
+              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
+                <span className="text-slate-500 text-sm">
                   Página {page + 1} de {totalPages}
                 </span>
                 <div className="flex gap-1">
                   <button
                     onClick={() => setPage((p) => Math.max(0, p - 1))}
                     disabled={page === 0}
-                    className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="p-1.5 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                     disabled={page === totalPages - 1}
-                    className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="p-1.5 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>

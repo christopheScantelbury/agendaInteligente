@@ -24,23 +24,23 @@ export default function ClientesPage() {
     <div className="w-full space-y-4">
       {/* Page header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl sm:text-3xl font-bold text-white">{dict.rotuloClientePlural}</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{dict.rotuloClientePlural}</h1>
         {activeTab === 'gerenciamento' && (
           <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
             <input
               type="text"
               placeholder="Buscar por nome ou telefone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-gray-700 text-gray-200 border border-gray-600 rounded-md pl-9 pr-3 py-2 text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-white text-slate-900 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
             />
           </div>
         )}
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-700">
+      <div className="border-b border-slate-200">
         <nav className="-mb-px flex gap-0 overflow-x-auto">
           {TABS.map((tab) => (
             <button
@@ -48,8 +48,8 @@ export default function ClientesPage() {
               onClick={() => setActiveTab(tab.id)}
               className={`shrink-0 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab.id
-                  ? 'border-blue-500 text-blue-400'
-                  : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                  ? 'border-violet-600 text-violet-700'
+                  : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
               }`}
             >
               {tab.label}
