@@ -43,7 +43,7 @@ import AnamneseFormPage from './pages/anamneses/AnamneseFormPage'
 
 
 function NavigateToAfterLogin() {
-  return <Navigate to={authService.isPerfilCliente() ? '/cliente/agendar' : '/agendamentos'} replace />
+  return <Navigate to={authService.isPerfilCliente() ? '/cliente/agendar' : '/'} replace />
 }
 
 function DashboardOrAgendamentos() {
@@ -131,7 +131,13 @@ function App() {
                   clientePublicoService.isAuthenticated()
                     ? <Navigate to="/cliente/agendar" replace />
                     : authService.isAuthenticated()
-                      ? <Navigate to="/agendamentos" replace />
+                      ? (
+                        <ProtectedRoute>
+                          <Layout>
+                            <DashboardOrAgendamentos />
+                          </Layout>
+                        </ProtectedRoute>
+                      )
                       : <Landing />
                 }
               />
