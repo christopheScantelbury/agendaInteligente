@@ -21,6 +21,7 @@ export default function Configuracoes() {
     telefone: '',
     areaAtuacao: '',
   })
+  const [senhaAtual, setSenhaAtual] = useState('')
   const [senha, setSenha] = useState('')
   const [confirmarSenha, setConfirmarSenha] = useState('')
 
@@ -90,8 +91,9 @@ export default function Configuracoes() {
   })
 
   const alterarSenhaMutation = useMutation({
-    mutationFn: () => usuarioService.alterarSenha(usuarioToken!.usuarioId, senha),
+    mutationFn: () => usuarioService.alterarSenha(usuarioToken!.usuarioId, senha, senhaAtual),
     onSuccess: () => {
+      setSenhaAtual('')
       setSenha('')
       setConfirmarSenha('')
       showNotification('success', 'Senha alterada com sucesso.')
@@ -135,6 +137,10 @@ export default function Configuracoes() {
 
   const handleAlterarSenha = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!senhaAtual) {
+      showNotification('error', 'Informe a senha atual.')
+      return
+    }
     if (!senha || senha.length < 6) {
       showNotification('error', 'A senha deve ter no mínimo 6 caracteres.')
       return
@@ -230,6 +236,17 @@ export default function Configuracoes() {
         <form className="space-y-4 border-t pt-6" onSubmit={handleAlterarSenha}>
           <h3 className="text-lg font-medium text-gray-900">Alterar senha</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <FormField label="Senha atual" required>
+                <input
+                  type="password"
+                  required
+                  value={senhaAtual}
+                  onChange={(e) => setSenhaAtual(e.target.value)}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+                />
+              </FormField>
+            </div>
             <FormField label="Nova senha" required>
               <input
                 type="password"

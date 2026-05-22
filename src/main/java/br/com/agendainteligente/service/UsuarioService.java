@@ -372,9 +372,10 @@ public class UsuarioService {
 
     /**
      * Altera a senha de qualquer usuário. Somente ADMIN pode executar.
+     * Quando o admin altera a própria senha, senhaAtual é obrigatória para verificação.
      */
     @Transactional
-    public void alterarSenhaPorAdmin(Long id, String novaSenha) {
+    public void alterarSenhaPorAdmin(Long id, String novaSenha, String senhaAtual) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) {
             throw new BusinessException("Não autorizado");
@@ -390,6 +391,14 @@ public class UsuarioService {
         Usuario alvo = usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
         validarAcessoAdminUnico(admin, alvo);
+        if (admin.getId().equals(alvo.getId())) {
+            if (senhaAtual == null || senhaAtual.trim().isEmpty()) {
+                throw new BusinessException("Senha atual é obrigatória para alterar a própria senha");
+            }
+            if (!passwordEncoder.matches(senhaAtual.trim(), alvo.getSenha())) {
+                throw new BusinessException("Senha atual incorreta");
+            }
+        }
         alvo.setSenha(passwordEncoder.encode(novaSenha.trim()));
         usuarioRepository.save(alvo);
         log.info("Senha do usuário ID={} alterada por {} email={}", id, admin.getPerfil(), admin.getEmail());

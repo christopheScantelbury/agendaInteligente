@@ -44,8 +44,8 @@ export const usuarioService = {
     await api.delete(`/usuarios/${id}`)
   },
 
-  /** Altera a senha de um usuário. Somente ADMIN pode chamar. */
-  alterarSenha: async (id: number, novaSenha: string): Promise<void> => {
-    await api.put(`/usuarios/${id}/senha`, { novaSenha })
+  /** Altera a senha de um usuário. Somente ADMIN pode chamar. senhaAtual é obrigatória ao alterar a própria senha. */
+  alterarSenha: async (id: number, novaSenha: string, senhaAtual?: string): Promise<void> => {
+    await api.put(`/usuarios/${id}/senha`, { novaSenha, ...(senhaAtual ? { senhaAtual } : {}) })
   },
 }

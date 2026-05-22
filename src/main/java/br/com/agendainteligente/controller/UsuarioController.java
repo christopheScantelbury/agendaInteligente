@@ -54,7 +54,8 @@ public class UsuarioController {
     public ResponseEntity<Void> alterarSenha(@PathVariable Long id,
                                              @RequestBody Map<String, String> body) {
         String novaSenha = body != null ? body.get("novaSenha") : null;
-        usuarioService.alterarSenhaPorAdmin(id, novaSenha);
+        String senhaAtual = body != null ? body.get("senhaAtual") : null;
+        usuarioService.alterarSenhaPorAdmin(id, novaSenha, senhaAtual);
         return ResponseEntity.noContent().build();
     }
 

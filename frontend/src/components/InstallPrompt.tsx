@@ -41,11 +41,12 @@ export default function InstallPrompt() {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
 
-    // Para iOS - mostrar prompt personalizado após alguns segundos
-    if (iOS && !hasShownIOSPrompt) {
+    // Para iOS - mostrar prompt personalizado, somente uma vez por sessão e após 30s
+    const hasShownThisSession = sessionStorage.getItem('ios-install-prompt-session')
+    if (iOS && !hasShownIOSPrompt && !hasShownThisSession) {
       setTimeout(() => {
         setShowIOSPrompt(true)
-      }, 3000) // Mostrar após 3 segundos
+      }, 30000) // Mostrar após 30 segundos
     }
 
     return () => {
@@ -67,14 +68,15 @@ export default function InstallPrompt() {
   }
 
   const handleIOSInstall = () => {
-    // Marcar como mostrado
     localStorage.setItem('ios-install-prompt-shown', 'true')
+    sessionStorage.setItem('ios-install-prompt-session', 'true')
     setShowIOSPrompt(false)
   }
 
   const handleDismiss = () => {
     if (isIOS) {
       localStorage.setItem('ios-install-prompt-shown', 'true')
+      sessionStorage.setItem('ios-install-prompt-session', 'true')
       setShowIOSPrompt(false)
     } else {
       setDeferredPrompt(null)

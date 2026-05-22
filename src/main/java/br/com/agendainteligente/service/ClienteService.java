@@ -132,6 +132,18 @@ public class ClienteService {
                 }
                 return clienteRepository.findByUnidadeIdIn(unidadesProfissionalIds);
 
+            case ADMINISTRADOR:
+                log.debug("ADMINISTRADOR: listando clientes das unidades vinculadas");
+                List<Unidade> unidadesAdmin = unidadeRepository.findByAdminUnicoId(usuarioLogado.getId());
+                if (unidadesAdmin.isEmpty()) {
+                    log.warn("ADMINISTRADOR {} não tem unidades vinculadas", email);
+                    return List.of();
+                }
+                Set<Long> unidadeAdminIds = unidadesAdmin.stream()
+                        .map(Unidade::getId)
+                        .collect(Collectors.toSet());
+                return clienteRepository.findByUnidadeIdIn(unidadeAdminIds);
+
             case CLIENTE:
             default:
                 log.debug("CLIENTE ou perfil desconhecido: retornando lista vazia");
@@ -164,6 +176,9 @@ public class ClienteService {
                     return Set.of();
                 }
                 return usuarioLogado.getUnidades().stream().map(Unidade::getId).collect(Collectors.toSet());
+            case ADMINISTRADOR:
+                List<Unidade> adminUnidades = unidadeRepository.findByAdminUnicoId(usuarioLogado.getId());
+                return adminUnidades.stream().map(Unidade::getId).collect(Collectors.toSet());
             case PROFISSIONAL:
                 if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
                     return Set.of();

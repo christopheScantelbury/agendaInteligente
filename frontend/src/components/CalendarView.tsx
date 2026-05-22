@@ -180,27 +180,21 @@ export default function CalendarView({
   horarioAbertura,
   horarioFechamento,
 }: CalendarViewProps) {
-  const [currentView, setCurrentView] = useState<View>(view)
+  const initialMobile = typeof window !== 'undefined' && window.innerWidth < 768
+  const [currentView, setCurrentView] = useState<View>(initialMobile && view === 'week' ? 'day' : view)
   const [currentDate, setCurrentDate] = useState<Date>(date)
-  const [isMobile, setIsMobile] = useState(false)
+  const [isMobile, setIsMobile] = useState(initialMobile)
 
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 768
       setIsMobile(mobile)
-
-      if (mobile && currentView === 'week') {
-        setCurrentView('day')
-        if (onViewChange) {
-          onViewChange('day')
-        }
-      }
     }
 
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
-  }, [currentView, onViewChange])
+  }, [])
 
   const events: CalendarEvent[] = useMemo(() => {
     return agendamentos.map((agendamento) => {
@@ -295,7 +289,7 @@ export default function CalendarView({
     }
   }
 
-  const effectiveView = isMobile && currentView === 'week' ? 'day' : currentView
+  const effectiveView = currentView
 
   return (
     <div
