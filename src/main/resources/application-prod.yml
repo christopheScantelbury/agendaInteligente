@@ -4,8 +4,6 @@
 # Spring Boot lanca erro de inicializacao se uma variavel obrigatoria sem default estiver ausente.
 
 spring:
-  main:
-    lazy-initialization: true
   datasource:
     # Em produção (Railway), SPRING_DATASOURCE_URL/USERNAME/PASSWORD vêm como env vars do plugin Postgres
     url: ${SPRING_DATASOURCE_URL}

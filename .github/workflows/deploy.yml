@@ -21,7 +21,7 @@ concurrency:
 
 env:
   RAILWAY_ENV_ID: 1311cc26-ebee-4989-b49b-0e905b9950cc
-  RAILWAY_BACKEND_SERVICE_ID: 177577ac-0796-4351-b1d7-f2e6de397c83
+  RAILWAY_BACKEND_SERVICE_ID: 172a055d-4c11-47c7-b62b-6c02aab1e320
   BACKEND_HEALTH_URL: https://agenda-backend-production-cc5e.up.railway.app/actuator/health
   VERCEL_FRONTEND_URL: https://agendainteligente-aleefhenriiques-projects.vercel.app
 
