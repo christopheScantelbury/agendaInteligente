@@ -1,14 +1,14 @@
 [build]
-# Usar Nixpacks (builder nativo do Railway) em vez de Dockerfile.
-# O Docker builder do Railway tem bug de cache (usa mtime+size, nao content hash),
-# fazendo COPY src ser servido de cache incorreto mesmo com cacheEnabled=false.
-# Nixpacks usa content hashing correto e invalida cache quando fontes mudam.
-builder = "nixpacks"
+builder = "dockerfile"
+dockerfilePath = "Dockerfile.backend"
+# Desabilita cache remoto do BuildKit — necessario porque o Railway estava
+# servindo JAR compilado de commit antigo (COPY src cacheado incorretamente).
 cacheEnabled = false
 
 [deploy]
 # Garante perfil prod mesmo sem SPRING_PROFILES_ACTIVE no env do Railway.
-startCommand = "java -Dspring.profiles.active=prod -XX:+UseContainerSupport -XX:MaxRAMPercentage=70.0 -XX:InitialRAMPercentage=50.0 -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=64m -XX:+UseSerialGC -XX:+AlwaysActAsServerClassMachine -XX:+ExitOnOutOfMemoryError -Dfile.encoding=UTF-8 -Duser.timezone=America/Sao_Paulo -Djava.security.egd=file:/dev/./urandom -jar target/agenda-inteligente-1.0.0-SNAPSHOT.jar"
+# Sem isso o app sobe no perfil "default" (datasource hardcoded em localhost → Connection refused).
+startCommand = "java -Dspring.profiles.active=prod -XX:+UseContainerSupport -XX:MaxRAMPercentage=70.0 -XX:InitialRAMPercentage=50.0 -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=64m -XX:+UseSerialGC -XX:+AlwaysActAsServerClassMachine -XX:+ExitOnOutOfMemoryError -Dfile.encoding=UTF-8 -Duser.timezone=America/Sao_Paulo -Djava.security.egd=file:/dev/./urandom -jar app.jar"
 healthcheckPath = "/actuator/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
