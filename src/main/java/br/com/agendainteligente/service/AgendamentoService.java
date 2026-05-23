@@ -101,7 +101,8 @@ public class AgendamentoService {
 
         switch (perfil) {
             case ADMIN:
-                log.debug("ADMIN: listando todos os agendamentos");
+            case ADMINISTRADOR:
+                log.debug("ADMIN/ADMINISTRADOR: listando todos os agendamentos");
                 agendamentos = agendamentoRepository.findAllWithServicos();
                 break;
 
@@ -185,8 +186,9 @@ public class AgendamentoService {
         
         switch (perfil) {
             case ADMIN:
+            case ADMINISTRADOR:
                 return;
-                
+
             case GERENTE:
                 if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
                     throw new BusinessException("Gerente não está vinculado a uma unidade");
@@ -236,6 +238,7 @@ public class AgendamentoService {
         }
         switch (usuario.getPerfil()) {
             case ADMIN:
+            case ADMINISTRADOR:
                 return new java.util.HashSet<>(unidadeRepository.findAllIds());
             case GERENTE:
                 if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
@@ -277,7 +280,8 @@ public class AgendamentoService {
         
         switch (perfil) {
             case ADMIN:
-                // ADMIN pode visualizar qualquer agendamento
+            case ADMINISTRADOR:
+                // ADMIN/ADMINISTRADOR pode visualizar qualquer agendamento
                 return;
                 
             case GERENTE:

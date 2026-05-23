@@ -67,7 +67,8 @@ public class AtendenteService {
 
         switch (perfil) {
             case ADMIN:
-                log.debug("ADMIN: listando todos os atendentes");
+            case ADMINISTRADOR:
+                log.debug("ADMIN/ADMINISTRADOR: listando todos os atendentes");
                 return atendenteRepository.findAll();
 
             case GERENTE:
@@ -136,6 +137,7 @@ public class AtendenteService {
         }
         switch (usuarioLogado.getPerfil()) {
             case ADMIN:
+            case ADMINISTRADOR:
                 return new java.util.HashSet<>(unidadeRepository.findAllIds());
             case GERENTE:
                 if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {

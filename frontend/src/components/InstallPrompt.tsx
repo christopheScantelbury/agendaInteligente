@@ -33,10 +33,14 @@ export default function InstallPrompt() {
       return // Não mostrar se já está instalado
     }
 
-    // Para Android/Chrome - capturar evento beforeinstallprompt
+    // Para Android/Chrome - capturar evento beforeinstallprompt com delay de 30s
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault()
-      setDeferredPrompt(e as BeforeInstallPromptEvent)
+      if (!sessionStorage.getItem('android-install-prompt-session')) {
+        setTimeout(() => {
+          setDeferredPrompt(e as BeforeInstallPromptEvent)
+        }, 30000)
+      }
     }
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
@@ -79,6 +83,7 @@ export default function InstallPrompt() {
       sessionStorage.setItem('ios-install-prompt-session', 'true')
       setShowIOSPrompt(false)
     } else {
+      sessionStorage.setItem('android-install-prompt-session', 'true')
       setDeferredPrompt(null)
     }
   }

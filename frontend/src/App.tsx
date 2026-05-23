@@ -63,9 +63,10 @@ function DashboardOrAgendamentos() {
     return <div className="flex justify-center items-center min-h-[200px]">Carregando...</div>
   }
 
-  const podeVerInicio = perfil.permissoesGranulares?.['/'] === 'EDITAR' || perfil.permissoesGranulares?.['/'] === 'VISUALIZAR'
+  const perfilNorm = (usuario?.perfil ?? '').toUpperCase().replace('-', '_')
+  const isAdminPerfil = perfilNorm === 'ADMINISTRADOR' || perfilNorm === 'ADMIN'
+  const podeVerInicio = isAdminPerfil || perfil.permissoesGranulares?.['/'] === 'EDITAR' || perfil.permissoesGranulares?.['/'] === 'VISUALIZAR'
   if (location.pathname === '/' && !podeVerInicio) {
-    const perfilNorm = (usuario?.perfil ?? '').toUpperCase().replace('-', '_')
     const ordemRedirect = perfilNorm === 'ADMINISTRADOR'
       ? ORDEM_REDIRECT_SEM_INICIO.filter((path) => path !== '/usuarios')
       : ORDEM_REDIRECT_SEM_INICIO
