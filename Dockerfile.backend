@@ -13,7 +13,7 @@ COPY . .
 # - persiste dependencias entre builds (nao faz download toda vez)
 # - NAO cria camada Docker (portanto nao fica cacheado como layer)
 # - a etapa COPY . . acima e sempre executada com fontes frescas
-RUN --mount=type=cache,target=/root/.m2/repository \
+RUN --mount=type=cache,id=maven-repo,target=/root/.m2/repository \
     mkdir -p /root/.m2 && \
     cp /app/maven-settings.xml /root/.m2/settings.xml && \
     mvn clean package -DskipTests
