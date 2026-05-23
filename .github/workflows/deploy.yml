@@ -53,14 +53,14 @@ jobs:
       (github.event_name == 'push' || github.event.inputs.target == 'both' || github.event.inputs.target == 'backend')
     runs-on: ubuntu-latest
     steps:
-      - name: Disparar deploy no Railway
-        run: |
-          RESULT=$(curl -s -X POST https://backboard.railway.app/graphql/v2 \
-            -H "Authorization: Bearer ${{ secrets.RAILWAY_API_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"query\":\"mutation { serviceInstanceDeploy(environmentId: \\\"${RAILWAY_ENV_ID}\\\", serviceId: \\\"${RAILWAY_BACKEND_SERVICE_ID}\\\") }\"}")
-          echo "Railway response: $RESULT"
-          echo "$RESULT" | grep -q '"serviceInstanceDeploy":true' || (echo "Deploy falhou!" && exit 1)
+      - uses: actions/checkout@v4
+
+      # IMPORTANTE: NÃO chamamos serviceInstanceDeploy aqui.
+      # Railway está configurado para auto-build no push do GitHub. A mutation
+      # serviceInstanceDeploy apenas REDEPLOYA a imagem existente (sem rebuild)
+      # e pode interromper o auto-build em andamento, fixando o container na
+      # versão anterior. Confiamos no auto-build do Railway e ficamos
+      # polling /api/publico/version até bater com o marker do código.
 
       - name: Extrair marker esperado de application.yml
         id: marker
