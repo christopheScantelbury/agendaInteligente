@@ -61,6 +61,8 @@ management:
   health:
     mail:
       enabled: false
+    redis:
+      enabled: false
 
 # Swagger desabilitado em prod
 springdoc:
