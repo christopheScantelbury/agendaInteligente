@@ -468,7 +468,7 @@ As migrations do Flyway são executadas automaticamente na inicialização:
 Para informações mais detalhadas, consulte:
 
 - **[ARQUITETURA.md](ARQUITETURA.md)** - Arquitetura técnica e modelo de dados
-- **[DEPLOY_EASYPANEL.md](DEPLOY_EASYPANEL.md)** - Guia de deploy em produção com Easypanel
+- **Deploy:** automatizado via [.github/workflows/deploy.yml](.github/workflows/deploy.yml) — backend Railway, frontend Vercel (push para `main`)
 - **[TESTES.md](TESTES.md)** - Informações sobre testes
 - **[MELHORES_PRATICAS.md](MELHORES_PRATICAS.md)** - Boas práticas implementadas
 

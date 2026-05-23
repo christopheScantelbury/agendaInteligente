@@ -3,8 +3,8 @@
 ## Contexto do Sistema
 
 **Produto:** Agenda Inteligente — sistema SaaS de agendamento para clínicas e salões  
-**URL Produção (frontend):** https://agendainteligenteapp.cloud (ou URL configurada)  
-**URL Produção (backend):** https://agendainteligentebackend.agendainteligenteapp.cloud  
+**URL Produção (frontend):** https://agenda-inteligente-app.vercel.app  
+**URL Produção (backend):** https://agenda-backend-production-cc5e.up.railway.app  
 **Swagger:** `GET /swagger-ui.html`
 
 O sistema possui **5 perfis de usuário** com permissões distintas:

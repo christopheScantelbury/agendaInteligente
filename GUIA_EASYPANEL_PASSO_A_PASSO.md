@@ -1,5 +1,7 @@
 # 🚀 Guia Passo a Passo - Deploy no EasyPanel
 
+> ⚠️ **DEPRECADO** — Desde o commit `3441a60` o deploy de produção migrou para **Railway (backend)** + **Vercel (frontend)**. O pipeline em `.github/workflows/deploy.yml` automatiza tudo no push para `main`. Este guia permanece como referência histórica.
+
 Este guia é baseado na interface do EasyPanel que você está usando. Siga os passos na ordem apresentada.
 
 ---

@@ -36,7 +36,7 @@ public class NfseNotaFacilIntegration implements NfseIntegration {
 
     private final NotaFacilClient notaFacilClient;
 
-    @Value("${notafacil.webhook-base-url:https://agendainteligentebackend.agendainteligenteapp.cloud}")
+    @Value("${notafacil.webhook-base-url:https://agenda-backend-production-cc5e.up.railway.app}")
     private String webhookBaseUrl;
 
     // Código NBS padrão para "Outros serviços" — unidade pode sobrescrever futuramente

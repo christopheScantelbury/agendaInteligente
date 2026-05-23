@@ -1,6 +1,5 @@
 # Multi-stage build — usado em DESENVOLVIMENTO LOCAL via docker-compose.
-# Em produção (EasyPanel), o CI builda o JAR no GitHub Actions e empurra
-# uma imagem runtime via Dockerfile.backend-runtime (mais leve e rápida).
+# Em produção, o backend roda no Railway (build via Nixpacks, sem este Dockerfile).
 FROM maven:3.9-eclipse-temurin-21 AS build
 
 WORKDIR /app
@@ -12,7 +11,7 @@ RUN mvn dependency:go-offline -B
 COPY src ./src
 RUN mvn clean package -DskipTests
 
-# Runtime — alinhado com Dockerfile.backend-runtime
+# Runtime
 FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
@@ -43,6 +42,5 @@ ENTRYPOINT ["java", \
   "-Dfile.encoding=UTF-8", \
   "-Duser.timezone=America/Sao_Paulo", \
   "-Djava.security.egd=file:/dev/./urandom", \
-  "-Dspring.main.lazy-initialization=true", \
   "-jar", \
   "app.jar"]

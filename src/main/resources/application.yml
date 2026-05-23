@@ -34,7 +34,7 @@ spring:
   jackson:
     serialization:
       write-dates-as-timestamps: false
-    time-zone: America/Manaus
+    time-zone: America/Sao_Paulo
 
 
 server:
@@ -50,7 +50,7 @@ groq:
 # Provider de NFS-e: notafacil (API REST Nota MEI Gateway) | manaus_soap (ABRASF direto)
 notafacil:
   api-url: ${NOTAFACIL_API_URL:https://api.notameigateway.com.br}
-  webhook-base-url: ${NOTAFACIL_WEBHOOK_BASE_URL:https://agendainteligentebackend.agendainteligenteapp.cloud}
+  webhook-base-url: ${NOTAFACIL_WEBHOOK_BASE_URL:https://agenda-backend-production-cc5e.up.railway.app}
 
 # Configurações da API NFS-e Manaus (Padrão ABRASF)
 nfse:
