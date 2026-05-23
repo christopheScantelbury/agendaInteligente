@@ -1,6 +1,9 @@
 [build]
 builder = "dockerfile"
 dockerfilePath = "Dockerfile.backend"
+# Desabilita cache remoto do BuildKit — necessario porque o Railway estava
+# servindo JAR compilado de commit antigo (COPY src cacheado incorretamente).
+cacheEnabled = false
 
 [deploy]
 # Garante perfil prod mesmo sem SPRING_PROFILES_ACTIVE no env do Railway.
