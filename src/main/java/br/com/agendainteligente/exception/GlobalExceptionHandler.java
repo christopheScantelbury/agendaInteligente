@@ -63,11 +63,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
         log.error("Erro inesperado", ex);
+        // DEBUG TEMPORARIO: expor classe da excecao para diagnostico em prod
+        String debugMsg = ex.getClass().getName() + ": " + ex.getMessage();
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
                 .error("Internal Server Error")
-                .message("Ocorreu um erro inesperado. Tente novamente mais tarde.")
+                .message(debugMsg)
                 .build();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
