@@ -3,9 +3,11 @@ FROM maven:3.9-eclipse-temurin-21 AS build
 
 WORKDIR /app
 
-# Copia tudo em um unico passo.
-# O cache desta camada e invalidado pelo DEPLOY_TOKEN no .dockerignore
-# (uma regra real, nao comentario — muda as parsed rules a cada PR de deploy).
+# RAILWAY_GIT_COMMIT_SHA muda a cada commit, invalidando o cache do COPY abaixo.
+# Sem isso, Railway reutiliza o layer de COPY mesmo quando fontes mudaram.
+ARG RAILWAY_GIT_COMMIT_SHA=local
+RUN echo "commit=${RAILWAY_GIT_COMMIT_SHA}" > /tmp/commit-id.txt
+
 COPY . .
 
 RUN mkdir -p /root/.m2 && \
