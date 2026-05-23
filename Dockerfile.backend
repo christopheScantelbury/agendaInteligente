@@ -3,19 +3,12 @@ FROM maven:3.9-eclipse-temurin-21 AS build
 
 WORKDIR /app
 
-# Copia tudo em um unico COPY . .
-# Qualquer mudanca em qualquer arquivo de fonte invalida esta camada.
-# As dependencias Maven sao mantidas via BuildKit cache mount (nao via camada Docker),
-# o que evita o problema de caching incorreto de camadas anteriores.
+# Copia tudo em um unico passo — hash da camada inclui todos os arquivos.
+# Combinado com a mudanca de comentario no .dockerignore a cada PR, garante
+# que Railway recalcule o hash do build context e nao use cache de fonte antiga.
 COPY . .
 
-# BuildKit cache mount para ~/.m2/repository:
-# - persiste dependencias entre builds (nao faz download toda vez)
-# - NAO cria camada Docker (portanto nao fica cacheado como layer)
-# - a etapa COPY . . acima e sempre executada com fontes frescas
-RUN --mount=type=cache,id=maven-repo,target=/root/.m2/repository \
-    mkdir -p /root/.m2 && \
-    cp /app/maven-settings.xml /root/.m2/settings.xml && \
+RUN cp maven-settings.xml /root/.m2/settings.xml && \
     mvn clean package -DskipTests
 
 # Runtime
