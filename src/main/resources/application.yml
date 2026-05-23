@@ -88,7 +88,7 @@ app:
   fix-admin-key: ${FIX_ADMIN_KEY:}
   url-base: ${APP_URL_BASE:http://localhost:5173}
   # Marker para o pipeline CI/CD verificar se o redeploy realmente subiu — bumped a cada release.
-  version-marker: ${APP_VERSION_MARKER:2026-05-23-debug-exception}
+  version-marker: ${APP_VERSION_MARKER:2026-05-23-fix-lazy-init-v1}
 
 # JWT
 # IMPORTANTE: JWT_SECRET deve vir do ambiente em prod (gerar com: openssl rand -base64 64).

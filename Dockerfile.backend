@@ -8,6 +8,12 @@ COPY maven-settings.xml /root/.m2/settings.xml
 COPY pom.xml .
 RUN mvn dependency:go-offline -B
 
+# Railway injeta RAILWAY_GIT_COMMIT_SHA como build-arg em cada push.
+# Isso invalida o cache do COPY src sempre que o commit muda,
+# evitando que BuildKit sirva o JAR de um commit anterior.
+ARG RAILWAY_GIT_COMMIT_SHA=unknown
+RUN echo "Building commit: $RAILWAY_GIT_COMMIT_SHA"
+
 COPY src ./src
 RUN mvn clean package -DskipTests
 
