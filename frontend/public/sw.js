@@ -1,12 +1,14 @@
-const CACHE_NAME = 'agenda-inteligente-v1'
+// Bump CACHE_NAME a cada release pra invalidar o cache do client.
+const CACHE_NAME = 'agenda-inteligente-v2-2026-05-23'
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
 ]
 
-// Instalação do Service Worker
+// Instalação do Service Worker — skipWaiting força ativação imediata
 self.addEventListener('install', (event) => {
+  self.skipWaiting()
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -16,39 +18,47 @@ self.addEventListener('install', (event) => {
   )
 })
 
-// Ativação do Service Worker
+// Ativação do Service Worker — claim toma controle de clients já abertos
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Removendo cache antigo:', cacheName)
-            return caches.delete(cacheName)
-          }
-        })
-      )
-    })
+    Promise.all([
+      caches.keys().then((cacheNames) =>
+        Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== CACHE_NAME) {
+              console.log('Removendo cache antigo:', cacheName)
+              return caches.delete(cacheName)
+            }
+          })
+        )
+      ),
+      self.clients.claim(),
+    ])
   )
 })
 
 // Estratégia: Network First, fallback para Cache
+// IMPORTANTE: nunca cacheia chamadas API/auth — só estáticos. Caso contrário
+// um GET com bug retornando [] fica preso no client até reload manual.
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url)
+  const isApi = url.pathname.startsWith('/api') || url.pathname.startsWith('/auth')
+
+  if (isApi || event.request.method !== 'GET') {
+    // Bypass total do SW — vai direto à rede, sem cachear
+    return
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Clonar a resposta
         const responseToCache = response.clone()
-        
         caches.open(CACHE_NAME)
           .then((cache) => {
             cache.put(event.request, responseToCache)
           })
-        
         return response
       })
-      .catch(() => {
-        return caches.match(event.request)
-      })
+      .catch(() => caches.match(event.request))
   )
 })

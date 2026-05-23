@@ -62,17 +62,42 @@ jobs:
           echo "Railway response: $RESULT"
           echo "$RESULT" | grep -q '"serviceInstanceDeploy":true' || (echo "Deploy falhou!" && exit 1)
 
-      - name: Aguardar /actuator/health (timeout 12min)
+      - name: Extrair marker esperado de application.yml
+        id: marker
         run: |
-          for i in $(seq 1 72); do
-            if curl --fail --silent --max-time 10 -o /dev/null "${BACKEND_HEALTH_URL}"; then
-              echo "Backend OK após ${i} tentativas."
-              exit 0
+          MARKER=$(grep -oP 'version-marker: \$\{APP_VERSION_MARKER:\K[^}]+' src/main/resources/application.yml || true)
+          if [ -z "$MARKER" ]; then
+            echo "::warning::Nao foi possivel extrair version-marker; fallback para health-only check."
+            echo "marker=" >> $GITHUB_OUTPUT
+          else
+            echo "Expected version marker: $MARKER"
+            echo "marker=$MARKER" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Aguardar Railway subir nova versao (timeout 12min)
+        run: |
+          EXPECTED="${{ steps.marker.outputs.marker }}"
+          VERSION_URL="https://agenda-backend-production-cc5e.up.railway.app/api/publico/version"
+          # Sleep inicial: Railway demora ~30s pra trocar de container
+          sleep 30
+          for i in $(seq 1 70); do
+            if [ -n "$EXPECTED" ]; then
+              ACTUAL=$(curl --silent --max-time 10 "$VERSION_URL" | grep -oE '"marker":"[^"]+"' | sed 's/"marker":"\(.*\)"/\1/' || true)
+              if [ "$ACTUAL" = "$EXPECTED" ]; then
+                echo "Backend rodando versao esperada ($EXPECTED) apos ${i} tentativas."
+                exit 0
+              fi
+              echo "Tentativa ${i}/70 — marker atual='${ACTUAL}' esperado='${EXPECTED}', aguardando 10s..."
+            else
+              if curl --fail --silent --max-time 10 -o /dev/null "${BACKEND_HEALTH_URL}"; then
+                echo "Backend health OK apos ${i} tentativas (sem marker check)."
+                exit 0
+              fi
+              echo "Tentativa ${i}/70 — health falhou, aguardando 10s..."
             fi
-            echo "Tentativa ${i}/72 — aguardando 10s..."
             sleep 10
           done
-          echo "::error::Backend não passou no healthcheck em 12 minutos."
+          echo "::error::Backend nao subiu versao esperada em 12 minutos."
           exit 1
 
   deploy-frontend:

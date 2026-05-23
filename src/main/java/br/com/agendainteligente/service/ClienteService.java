@@ -17,7 +17,6 @@ import br.com.agendainteligente.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -45,9 +44,9 @@ public class ClienteService {
     
     private static final Pattern ONLY_DIGITS = Pattern.compile("\\D");
 
-    @Cacheable(value = "clientes",
-               key = "T(org.springframework.security.core.context.SecurityContextHolder)" +
-                     ".getContext().getAuthentication().getName()")
+    // @Cacheable removido: cachear resultados filtrados por permissão era frágil
+    // — uma única chamada com bug retornando [] envenenava o cache por 1h.
+    // Reads diretos no Postgres são rápidos o suficiente para este endpoint.
     @Transactional(readOnly = true)
     public List<ClienteDTO> listarTodos() {
         log.debug("Listando clientes com filtro de permissão");
