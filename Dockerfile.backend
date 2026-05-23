@@ -1,20 +1,22 @@
-# Multi-stage build — usado em DESENVOLVIMENTO LOCAL via docker-compose.
-# Em produção, o backend roda no Railway (build via Nixpacks, sem este Dockerfile).
+# Multi-stage build — backend para Railway e docker-compose local.
 FROM maven:3.9-eclipse-temurin-21 AS build
 
 WORKDIR /app
 
-COPY maven-settings.xml /root/.m2/settings.xml
-COPY pom.xml .
-RUN mvn dependency:go-offline -B
+# Copia tudo em um unico COPY . .
+# Qualquer mudanca em qualquer arquivo de fonte invalida esta camada.
+# As dependencias Maven sao mantidas via BuildKit cache mount (nao via camada Docker),
+# o que evita o problema de caching incorreto de camadas anteriores.
+COPY . .
 
-# .git/COMMIT_EDITMSG muda a cada commit (texto do ultimo commit).
-# Copiá-lo aqui garante que o hash da camada mude em cada push,
-# invalidando o cache de COPY src e forçando recompilação com fontes novas.
-COPY .git/COMMIT_EDITMSG /tmp/commit_msg
-
-COPY src ./src
-RUN mvn clean package -DskipTests
+# BuildKit cache mount para ~/.m2/repository:
+# - persiste dependencias entre builds (nao faz download toda vez)
+# - NAO cria camada Docker (portanto nao fica cacheado como layer)
+# - a etapa COPY . . acima e sempre executada com fontes frescas
+RUN --mount=type=cache,target=/root/.m2/repository \
+    mkdir -p /root/.m2 && \
+    cp /app/maven-settings.xml /root/.m2/settings.xml && \
+    mvn clean package -DskipTests
 
 # Runtime
 FROM eclipse-temurin:21-jre-alpine

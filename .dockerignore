@@ -1,6 +1,5 @@
-# Git — excluir tudo exceto COMMIT_EDITMSG (usado como cache-buster no Dockerfile)
+# Git
 .git
-!.git/COMMIT_EDITMSG
 .gitignore
 .gitattributes
 
