@@ -1,8 +1,8 @@
 # DEPLOY TOKEN — mudar este padrao a cada PR de deploy no Railway.
 # NAO e um comentario: e uma regra real de exclusao que muda os parsed rules
 # do .dockerignore, forcando Railway a invalidar o cache de COPY layers.
-# Instrucao: substituir DEPLOY-V053 pelo proximo numero a cada deploy.
-DEPLOY-V053
+# Instrucao: substituir DEPLOY-V054 pelo proximo numero a cada deploy.
+DEPLOY-V054
 # Git
 .git
 .gitignore
