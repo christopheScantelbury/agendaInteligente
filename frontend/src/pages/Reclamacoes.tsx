@@ -72,7 +72,6 @@ export default function Reclamacoes() {
 
           <FormField label="Sua Reclamação" required>
             <textarea
-              required
               value={formData.mensagem}
               onChange={(e) => setFormData({ ...formData, mensagem: e.target.value })}
               rows={8}
