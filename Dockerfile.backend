@@ -8,7 +8,8 @@ WORKDIR /app
 # que Railway recalcule o hash do build context e nao use cache de fonte antiga.
 COPY . .
 
-RUN cp maven-settings.xml /root/.m2/settings.xml && \
+RUN mkdir -p /root/.m2 && \
+    cp maven-settings.xml /root/.m2/settings.xml && \
     mvn clean package -DskipTests
 
 # Runtime
