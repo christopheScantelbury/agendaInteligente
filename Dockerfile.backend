@@ -3,9 +3,9 @@ FROM maven:3.9-eclipse-temurin-21 AS build
 
 WORKDIR /app
 
-# Copia tudo em um unico passo — hash da camada inclui todos os arquivos.
-# Combinado com a mudanca de comentario no .dockerignore a cada PR, garante
-# que Railway recalcule o hash do build context e nao use cache de fonte antiga.
+# Copia tudo em um unico passo.
+# O cache desta camada e invalidado pelo DEPLOY_TOKEN no .dockerignore
+# (uma regra real, nao comentario — muda as parsed rules a cada PR de deploy).
 COPY . .
 
 RUN mkdir -p /root/.m2 && \
