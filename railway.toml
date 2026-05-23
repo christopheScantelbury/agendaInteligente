@@ -3,6 +3,9 @@ builder = "dockerfile"
 dockerfilePath = "Dockerfile.backend"
 
 [deploy]
+# Garante perfil prod mesmo sem SPRING_PROFILES_ACTIVE no env do Railway.
+# Sem isso o app sobe no perfil "default" (datasource hardcoded em localhost → Connection refused).
+startCommand = "java -Dspring.profiles.active=prod -XX:+UseContainerSupport -XX:MaxRAMPercentage=70.0 -XX:InitialRAMPercentage=50.0 -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=64m -XX:+UseSerialGC -XX:+AlwaysActAsServerClassMachine -XX:+ExitOnOutOfMemoryError -Dfile.encoding=UTF-8 -Duser.timezone=America/Sao_Paulo -Djava.security.egd=file:/dev/./urandom -jar app.jar"
 healthcheckPath = "/actuator/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
