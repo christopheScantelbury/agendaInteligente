@@ -74,9 +74,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
-        log.error("Erro inesperado", ex);
-        // DEBUG TEMPORARIO: expor classe da excecao para diagnostico em prod
-        String debugMsg = ex.getClass().getName() + ": " + ex.getMessage();
+        log.error("HANDLER_V56 Erro inesperado: {}", ex.getClass().getName(), ex);
+        String debugMsg = "BUILD-V56:" + ex.getClass().getName() + ":" + ex.getMessage();
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())

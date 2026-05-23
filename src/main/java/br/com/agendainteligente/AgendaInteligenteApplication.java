@@ -16,6 +16,6 @@ public class AgendaInteligenteApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(AgendaInteligenteApplication.class, args);
-        log.info("DEPLOY_MARKER=PR55_2026-05-23_FRESH-BUILD");
+        log.info("DEPLOY_MARKER=PR56_2026-05-23_CACHE-BUST");
     }
 }
