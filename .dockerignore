@@ -1,4 +1,4 @@
-# Cache bust: 50 — incrementar este numero a cada PR de deploy no Railway
+# Cache bust: 51 — incrementar este numero a cada PR de deploy no Railway
 # (Railway usa hash do arquivo .dockerignore no contexto do build; mudar este
 # comentario muda o hash e forca Railway a recompilar sem cache incorreto)
 # Git
