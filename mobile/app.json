@@ -29,7 +29,7 @@
       "expo-router"
     ],
     "extra": {
-      "apiUrl": "https://agenda-backend-production-cc5e.up.railway.app/api"
+      "apiUrl": "https://agendainteligente-production.up.railway.app/api"
     },
     "expo-router": {
       "root": "./app"

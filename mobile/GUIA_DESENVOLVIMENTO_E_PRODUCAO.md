@@ -30,7 +30,7 @@ A URL da API está configurada em `app.json`:
 {
   "expo": {
     "extra": {
-      "apiUrl": "https://agenda-backend-production-cc5e.up.railway.app/api"
+      "apiUrl": "https://agendainteligente-production.up.railway.app/api"
     }
   }
 }
@@ -125,7 +125,7 @@ Edite o arquivo `eas.json` criado:
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://agenda-backend-production-cc5e.up.railway.app/api"
+        "EXPO_PUBLIC_API_URL": "https://agendainteligente-production.up.railway.app/api"
       }
     }
   },
@@ -202,7 +202,7 @@ npx expo run:ios
 A URL da API está em `app.json`:
 ```json
 "extra": {
-  "apiUrl": "https://agenda-backend-production-cc5e.up.railway.app/api"
+  "apiUrl": "https://agendainteligente-production.up.railway.app/api"
 }
 ```
 
@@ -215,7 +215,7 @@ Use variáveis de ambiente no `eas.json`:
   "build": {
     "production": {
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://agenda-backend-production-cc5e.up.railway.app/api"
+        "EXPO_PUBLIC_API_URL": "https://agendainteligente-production.up.railway.app/api"
       }
     }
   }

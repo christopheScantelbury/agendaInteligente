@@ -20,7 +20,7 @@ Aplicação mobile desenvolvida com React Native e Expo para iOS e Android.
 2. **A URL da API já está configurada** em `app.json` apontando para o backend no Railway:
    ```json
    "extra": {
-     "apiUrl": "https://agenda-backend-production-cc5e.up.railway.app/api"
+     "apiUrl": "https://agendainteligente-production.up.railway.app/api"
    }
    ```
 

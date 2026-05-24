@@ -4,7 +4,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://agenda-backend-production-cc5e.up.railway.app/api"
+        "EXPO_PUBLIC_API_URL": "https://agendainteligente-production.up.railway.app/api"
       }
     },
     "preview": {
@@ -16,12 +16,12 @@
         "simulator": false
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://agenda-backend-production-cc5e.up.railway.app/api"
+        "EXPO_PUBLIC_API_URL": "https://agendainteligente-production.up.railway.app/api"
       }
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://agenda-backend-production-cc5e.up.railway.app/api"
+        "EXPO_PUBLIC_API_URL": "https://agendainteligente-production.up.railway.app/api"
       }
     }
   },
