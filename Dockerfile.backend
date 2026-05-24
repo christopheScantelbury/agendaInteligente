@@ -3,16 +3,17 @@ FROM maven:3.9-eclipse-temurin-21 AS build
 
 WORKDIR /app
 
-# RAILWAY_GIT_COMMIT_SHA muda a cada commit, invalidando o cache do COPY abaixo.
-# Sem isso, Railway reutiliza o layer de COPY mesmo quando fontes mudaram.
-ARG RAILWAY_GIT_COMMIT_SHA=local
-RUN echo "commit=${RAILWAY_GIT_COMMIT_SHA}" > /tmp/commit-id.txt
-
-COPY . .
-
+# 1) Dependencias: layer cacheada enquanto pom.xml nao mudar.
+COPY pom.xml maven-settings.xml ./
 RUN mkdir -p /root/.m2 && \
     cp maven-settings.xml /root/.m2/settings.xml && \
-    mvn clean package -DskipTests
+    mvn dependency:go-offline -B -q
+
+# 2) Fonte: layer invalidada quando QUALQUER arquivo em src/ muda.
+#    Sem depender de build args, tokens manuais ou variaveis do Railway.
+COPY src/ ./src/
+
+RUN mvn package -DskipTests -o -q
 
 # Runtime
 FROM eclipse-temurin:21-jre-alpine
