@@ -37,6 +37,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/publico/**").permitAll() // Endpoints públicos para clientes
                         .requestMatchers("/api/nfse/test/**").permitAll()
                         .requestMatchers("/api/webhooks/**").permitAll() // Callbacks externos (NotaFácil, etc.)
+                        .requestMatchers("/api/admin/seed-demo").permitAll() // Protegido por X-Seed-Token (APP_SEED_TOKEN)
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .anyRequest().authenticated()

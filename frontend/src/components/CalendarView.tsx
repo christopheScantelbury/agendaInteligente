@@ -352,6 +352,7 @@ export default function CalendarView({
         }}
         min={new Date(2024, 0, 1, 8, 0, 0)}
         max={new Date(2024, 0, 1, 22, 0, 0)}
+        scrollToTime={new Date(2024, 0, 1, 8, 0, 0)}
         step={30}
         timeslots={1}
         defaultView={isMobile ? 'day' : 'week'}
