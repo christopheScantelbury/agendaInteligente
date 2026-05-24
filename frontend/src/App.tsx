@@ -159,6 +159,7 @@ function App() {
                     <Layout>
                       <Routes>
                         <Route path="/" element={<DashboardOrAgendamentos />} />
+                        <Route path="/dashboard" element={<DashboardOrAgendamentos />} />
                         <Route path="/clientes" element={<RequirePermissao path="/clientes" fallbackPaths={['/usuarios']}><Clientes /></RequirePermissao>} />
                         <Route path="/clientes/novo" element={<RequirePermissao path="/clientes" fallbackPaths={['/usuarios']}><ClienteFormPage /></RequirePermissao>} />
                         <Route path="/clientes/:id/editar" element={<RequirePermissao path="/clientes" fallbackPaths={['/usuarios']}><ClienteFormPage /></RequirePermissao>} />

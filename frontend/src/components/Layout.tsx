@@ -115,7 +115,7 @@ export default function Layout({ children }: LayoutProps) {
     
     // Início (Dashboard) - desabilitado para CLIENTE (ele vai direto para Agendamentos)
     if (!authService.isPerfilCliente() && temPermissaoMenu('/')) {
-      items.push({ path: '/', label: 'Início', icon: <HomeIcon className="h-5 w-5" /> })
+      items.push({ path: '/dashboard', label: 'Início', icon: <HomeIcon className="h-5 w-5" /> })
     }
     
     // Empresas - apenas para ADMIN (ADMINISTRADOR usa Configurações)
@@ -231,7 +231,7 @@ export default function Layout({ children }: LayoutProps) {
       >
         {/* Logo Header */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100">
-          <Link to={authService.isPerfilCliente() ? '/agendamentos' : '/'} className="flex items-center gap-2.5 overflow-hidden">
+          <Link to={authService.isPerfilCliente() ? '/agendamentos' : '/dashboard'} className="flex items-center gap-2.5 overflow-hidden">
             <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden className="flex-shrink-0">
               <rect width="32" height="32" rx="9" fill="#7C3AED" />
               <rect x="6" y="6" width="20" height="20" rx="3" fill="white" />
