@@ -19,6 +19,7 @@ import {
   BarChart2,
   ClipboardList,
   Wallet,
+  Percent,
 } from 'lucide-react'
 import { authService } from '../services/authService'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -203,6 +204,15 @@ export default function Layout({ children }: LayoutProps) {
         path: '/despesas',
         label: 'Despesas',
         icon: <Wallet className="h-5 w-5" />,
+      })
+    }
+
+    // Comissões — admin, administrador e gerente
+    if (isAdmin || usuario?.perfil === 'GERENTE') {
+      items.push({
+        path: '/comissoes',
+        label: 'Comissões',
+        icon: <Percent className="h-5 w-5" />,
       })
     }
 

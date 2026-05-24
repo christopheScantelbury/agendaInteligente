@@ -37,6 +37,7 @@ import ConvitesAcesso from './pages/ConvitesAcesso'
 import ConvitesCliente from './pages/ConvitesCliente'
 import Relatorios from './pages/Relatorios'
 import Despesas from './pages/Despesas'
+import Comissoes from './pages/Comissoes'
 import RequirePermissao from './components/RequirePermissao'
 import Landing from './pages/Landing'
 import AnamneseListPage from './pages/anamneses/AnamneseListPage'
@@ -185,6 +186,7 @@ function App() {
                         <Route path="/convites-cliente" element={<RequirePermissao path="/convites-cliente"><ConvitesCliente /></RequirePermissao>} />
                         <Route path="/relatorios" element={<Relatorios />} />
                         <Route path="/despesas" element={<Despesas />} />
+                        <Route path="/comissoes" element={<Comissoes />} />
                       </Routes>
                     </Layout>
                   </ProtectedRoute>
