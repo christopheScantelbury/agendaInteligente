@@ -411,7 +411,7 @@ export default function AgendarCliente() {
       {/* Footer viral */}
       <footer className="mt-6 pb-6 text-center">
         <a
-          href="https://agendainteligentefrontend.agendainteligenteapp.cloud"
+          href="https://agendainteligente-aleefhenriiques-projects.vercel.app"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-violet-600 transition-colors"

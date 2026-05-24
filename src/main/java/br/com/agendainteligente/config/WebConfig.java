@@ -9,7 +9,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    @Value("${cors.allowed-origins:http://localhost:5173,http://localhost:3000,http://localhost:80,https://agenda-inteligente-app.vercel.app,https://agendainteligenteapp.cloud,https://www.agendainteligenteapp.cloud,https://agendainteligentefrontend.agendainteligenteapp.cloud}")
+    @Value("${cors.allowed-origins:http://localhost:5173,http://localhost:3000,http://localhost:80,https://agendainteligente-aleefhenriiques-projects.vercel.app,https://agenda-inteligente-app.vercel.app}")
     private String allowedOrigins;
 
     @Override

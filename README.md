@@ -309,10 +309,10 @@ PG_HOST=localhost PG_USER=postgres PGPASSWORD=postgres \
   ./scripts/restore.sh ./backups/agenda_inteligente_2026-05-11_03-00-00.dump
 ```
 
-### Em produção (EasyPanel)
+### Em produção (Railway)
 
 Duas opções:
-1. **App separado de backup** apontando para o serviço Postgres do EasyPanel — copie `scripts/backup.sh` + `scripts/backup-entrypoint.sh` para a imagem e use as mesmas envs.
+1. **App separado de backup** apontando para o serviço Postgres do Railway — copie `scripts/backup.sh` + `scripts/backup-entrypoint.sh` para a imagem e use as mesmas envs.
 2. **Cron do host** chamando `pg_dump` diretamente para um volume externo.
 
 Em ambos os casos: garanta `BACKUP_DIR` num volume persistente e copie os dumps para storage externo (S3, etc.) com periodicidade — backup local protege contra erros de operação, não contra perda do volume.

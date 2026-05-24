@@ -1,4 +1,9 @@
-name: Deploy (EasyPanel + Vercel)
+name: Deploy (Railway + Vercel)
+
+# IMPORTANTE: o servico Railway do backend DEVE estar configurado como
+# Source = Docker Image apontando para ghcr.io/christophescantelbury/agendainteligente-backend:latest
+# com credencial PAT do GitHub (read:packages). A mutation serviceInstanceDeploy
+# abaixo forca o Railway a pullar a :latest mais recente.
 
 on:
   push:
@@ -16,14 +21,14 @@ on:
           - frontend
 
 concurrency:
-  group: deploy-easypanel-vercel
+  group: deploy-railway-vercel
   cancel-in-progress: false
 
 env:
-  EASYPANEL_URL: http://31.97.162.185:3000
-  EASYPANEL_PROJECT: agenda-inteligente
-  EASYPANEL_BACKEND_SERVICE: agenda_backend
-  BACKEND_BASE_URL: https://agendainteligentebackend.agendainteligenteapp.cloud
+  RAILWAY_PROJECT_ID: 9f219763-3614-4ab3-9ecd-6050bdc74c37
+  RAILWAY_ENV_ID: 1311cc26-ebee-4989-b49b-0e905b9950cc
+  RAILWAY_BACKEND_SERVICE_ID: 172a055d-4c11-47c7-b62b-6c02aab1e320
+  BACKEND_BASE_URL: https://agenda-backend-production-cc5e.up.railway.app
   VERCEL_FRONTEND_URL: https://agendainteligente-aleefhenriiques-projects.vercel.app
 
 jobs:
@@ -52,7 +57,7 @@ jobs:
           wait-interval: 15
 
   deploy-backend:
-    name: Deploy backend (EasyPanel)
+    name: Deploy backend (Railway)
     needs: wait-for-ci
     if: |
       always() &&
@@ -74,28 +79,31 @@ jobs:
             echo "marker=$MARKER" >> $GITHUB_OUTPUT
           fi
 
-      - name: Disparar redeploy no EasyPanel
+      - name: Disparar redeploy no Railway (pull GHCR :latest)
         run: |
           set -e
+          # serviceInstanceDeploy: forca pull da imagem atual configurada.
+          # Como o source no Railway eh image (GHCR :latest), isso puxa a
+          # :latest recem publicada pelo job publish-backend-image.
           RESP=$(curl --silent --max-time 30 -w "\n%{http_code}" \
-            -X POST "${EASYPANEL_URL}/api/trpc/services.app.deployService" \
-            -H "Authorization: Bearer ${{ secrets.EASYPANEL_API_TOKEN }}" \
+            -X POST "https://backboard.railway.com/graphql/v2" \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_API_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d "{\"json\":{\"projectName\":\"${EASYPANEL_PROJECT}\",\"serviceName\":\"${EASYPANEL_BACKEND_SERVICE}\"}}")
+            -d "{\"query\":\"mutation { serviceInstanceDeploy(environmentId: \\\"${RAILWAY_ENV_ID}\\\", serviceId: \\\"${RAILWAY_BACKEND_SERVICE_ID}\\\") }\"}")
           HTTP=$(echo "$RESP" | tail -1)
           BODY=$(echo "$RESP" | head -n -1)
           echo "HTTP $HTTP — $BODY"
-          if [ "$HTTP" != "200" ]; then
-            echo "::error::Falha ao disparar deploy no EasyPanel (HTTP $HTTP)"
+          if [ "$HTTP" != "200" ] || echo "$BODY" | grep -q '"errors"'; then
+            echo "::error::Falha ao disparar deploy no Railway"
             exit 1
           fi
 
-      - name: Aguardar EasyPanel subir nova versao (timeout 12min)
+      - name: Aguardar Railway subir nova versao (timeout 12min)
         run: |
           EXPECTED="${{ steps.marker.outputs.marker }}"
           HEALTH_URL="${BACKEND_BASE_URL}/actuator/health"
           VERSION_URL="${BACKEND_BASE_URL}/api/publico/version"
-          # EasyPanel pull + container restart leva ~30-60s
+          # Railway pull + container restart leva ~30-60s
           sleep 45
           for i in $(seq 1 70); do
             HEALTH=$(curl --silent --max-time 10 -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
