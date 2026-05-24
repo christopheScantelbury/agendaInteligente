@@ -13,7 +13,7 @@ RUN mkdir -p /root/.m2 && \
 #    Sem depender de build args, tokens manuais ou variaveis do Railway.
 COPY src/ ./src/
 
-RUN mvn package -DskipTests -o -q
+RUN mvn package -DskipTests -q
 
 # Runtime
 FROM eclipse-temurin:21-jre-alpine
