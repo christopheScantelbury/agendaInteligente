@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { servicoService, Servico } from '../services/servicoService'
 import { unidadeService } from '../services/unidadeService'
 import { usuarioService } from '../services/usuarioService'
+import { atendenteService } from '../services/atendenteService'
 import { authService } from '../services/authService'
 import { perfilService } from '../services/perfilService'
 import { podeEditar } from '../utils/permissions'
@@ -290,6 +291,13 @@ function ServicoForm({
     ativo: true,
   })
   const [loadingIa, setLoadingIa] = useState(false)
+  const [atendentesIdsSelecionados, setAtendentesIdsSelecionados] = useState<number[]>([])
+
+  const { data: atendentesUnidade = [] } = useQuery({
+    queryKey: ['atendentes', 'unidade', formData.unidadeId],
+    queryFn: () => atendenteService.listarPorUnidade(formData.unidadeId),
+    enabled: formData.unidadeId > 0,
+  })
 
   // Atualizar formData quando servico ou unidadesDisponiveis mudarem
   useEffect(() => {
@@ -304,6 +312,7 @@ function ServicoForm({
         unidadeId: servico.unidadeId || 0,
         ativo: servico.ativo !== undefined ? servico.ativo : true,
       })
+      setAtendentesIdsSelecionados(servico.atendentesIds ?? [])
     } else {
       // Ao criar: usar unidade padrão se houver apenas uma disponível
       const unidadePadrao = unidadesDisponiveis.length === 1 ? unidadesDisponiveis[0].id! : 0
@@ -316,6 +325,7 @@ function ServicoForm({
         unidadeId: unidadePadrao,
         ativo: true,
       })
+      setAtendentesIdsSelecionados([])
     }
   }, [servico, unidadesDisponiveis])
 
@@ -359,7 +369,7 @@ function ServicoForm({
       return
     }
 
-    saveMutation.mutate(formData)
+    saveMutation.mutate({ ...formData, atendentesIds: atendentesIdsSelecionados })
   }
 
   const handleSugerirComIa = async () => {
@@ -477,6 +487,39 @@ function ServicoForm({
           <span className="ml-2 text-sm text-gray-700">Ativo</span>
         </label>
       </FormField>
+
+      {atendentesUnidade.length > 0 && (
+        <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-gray-800">
+            Profissionais que realizam este serviço
+            {atendentesIdsSelecionados.length > 0 && (
+              <span className="ml-2 text-xs font-normal text-violet-600">
+                {atendentesIdsSelecionados.length} selecionado{atendentesIdsSelecionados.length > 1 ? 's' : ''}
+              </span>
+            )}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+            {atendentesUnidade.map((atendente) => (
+              <label key={atendente.id} className="flex items-center gap-2 cursor-pointer rounded-md px-2 py-1.5 hover:bg-white transition-colors">
+                <input
+                  type="checkbox"
+                  checked={atendentesIdsSelecionados.includes(atendente.id!)}
+                  onChange={(e) => {
+                    const id = atendente.id!
+                    if (e.target.checked) {
+                      setAtendentesIdsSelecionados((prev) => [...prev, id])
+                    } else {
+                      setAtendentesIdsSelecionados((prev) => prev.filter((x) => x !== id))
+                    }
+                  }}
+                  className="rounded border-gray-300 text-violet-600 focus:ring-violet-500 flex-shrink-0"
+                />
+                <span className="text-sm text-gray-700 truncate">{atendente.nomeUsuario ?? atendente.usuarioId}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex justify-end space-x-2 pt-4 border-t">
         <Button type="button" variant="secondary" onClick={onClose}>

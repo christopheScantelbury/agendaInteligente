@@ -8,6 +8,8 @@ import br.com.agendainteligente.dto.ServicoDTO;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
 import br.com.agendainteligente.mapper.ServicoMapper;
+import br.com.agendainteligente.domain.entity.Atendente;
+import br.com.agendainteligente.repository.AtendenteRepository;
 import br.com.agendainteligente.repository.ServicoRepository;
 import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.repository.UsuarioRepository;
@@ -19,6 +21,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -33,6 +36,7 @@ public class ServicoService {
     private final ServicoMapper servicoMapper;
     private final UnidadeRepository unidadeRepository;
     private final UsuarioRepository usuarioRepository;
+    private final AtendenteRepository atendenteRepository;
     private final PerfilService perfilService;
 
     @Transactional(readOnly = true)
@@ -190,7 +194,10 @@ public class ServicoService {
         if (servico.getUnidade() == null || !obterUnidadesIdsPermitidas().contains(servico.getUnidade().getId())) {
             throw new ResourceNotFoundException("Serviço não encontrado com id: " + id);
         }
-        return servicoMapper.toDTO(servico);
+        ServicoDTO dto = servicoMapper.toDTO(servico);
+        dto.setAtendentesIds(atendenteRepository.findByServicosId(servico.getId()).stream()
+                .map(Atendente::getId).collect(Collectors.toList()));
+        return dto;
     }
 
     @Transactional
@@ -225,8 +232,12 @@ public class ServicoService {
         servico.setUnidade(unidade);
         servico.setAdminUnicoId(getAdminUnicoIdDoUsuario(usuarioLogado));
         servico = servicoRepository.save(servico);
+        sincronizarAtendentes(servico, servicoDTO.getAtendentesIds());
         log.info("Serviço criado com sucesso. ID: {}, Unidade: {}", servico.getId(), unidade.getId());
-        return servicoMapper.toDTO(servico);
+        ServicoDTO dto = servicoMapper.toDTO(servico);
+        dto.setAtendentesIds(atendenteRepository.findByServicosId(servico.getId()).stream()
+                .map(Atendente::getId).collect(Collectors.toList()));
+        return dto;
     }
 
     @Transactional
@@ -261,8 +272,12 @@ public class ServicoService {
         servicoMapper.updateEntityFromDTO(servicoDTO, servico);
         servico.setAdminUnicoId(getAdminUnicoIdDoUsuario(usuarioLogado));
         servico = servicoRepository.save(servico);
+        sincronizarAtendentes(servico, servicoDTO.getAtendentesIds());
         log.info("Serviço atualizado com sucesso. ID: {}", servico.getId());
-        return servicoMapper.toDTO(servico);
+        ServicoDTO dto = servicoMapper.toDTO(servico);
+        dto.setAtendentesIds(atendenteRepository.findByServicosId(servico.getId()).stream()
+                .map(Atendente::getId).collect(Collectors.toList()));
+        return dto;
     }
 
     @Transactional
@@ -278,6 +293,34 @@ public class ServicoService {
         }
         servicoRepository.deleteById(id);
         log.info("Serviço excluído com sucesso. ID: {}", id);
+    }
+
+    private void sincronizarAtendentes(Servico servico, List<Long> atendentesIds) {
+        if (atendentesIds == null) return;
+        List<Atendente> atendentesAtuais = atendenteRepository.findByServicosId(servico.getId());
+        Set<Long> idsAtuais = atendentesAtuais.stream().map(Atendente::getId).collect(Collectors.toSet());
+        Set<Long> idsNovos = new java.util.HashSet<>(atendentesIds);
+        for (Atendente atendente : atendentesAtuais) {
+            if (!idsNovos.contains(atendente.getId())) {
+                List<Servico> servicosAtendente = new ArrayList<>(atendente.getServicos());
+                servicosAtendente.removeIf(s -> s.getId().equals(servico.getId()));
+                atendente.setServicos(servicosAtendente);
+                atendenteRepository.save(atendente);
+            }
+        }
+        for (Long atendenteId : atendentesIds) {
+            if (!idsAtuais.contains(atendenteId)) {
+                atendenteRepository.findById(atendenteId).ifPresent(atendente -> {
+                    List<Servico> servicosAtendente = new ArrayList<>(
+                            atendente.getServicos() != null ? atendente.getServicos() : List.of());
+                    if (servicosAtendente.stream().noneMatch(s -> s.getId().equals(servico.getId()))) {
+                        servicosAtendente.add(servico);
+                        atendente.setServicos(servicosAtendente);
+                        atendenteRepository.save(atendente);
+                    }
+                });
+            }
+        }
     }
 
     private Usuario getUsuarioLogado() {

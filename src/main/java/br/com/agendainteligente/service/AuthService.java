@@ -121,10 +121,12 @@ public class AuthService {
 
             log.info("Login realizado com sucesso. Email: {}", loginDTO.getEmail());
 
-            // Enviar o nome do perfil customizado quando existir, para o frontend carregar permissoesGranulares corretamente
-            String perfilParaToken = (usuario.getPerfilEntity() != null && usuario.getPerfilEntity().getNome() != null)
-                    ? usuario.getPerfilEntity().getNome()
-                    : usuario.getPerfil().name();
+            // perfilSistema sempre tem prioridade — frontend precisa do nome do enum para controle de acesso
+            String perfilParaToken = (usuario.getPerfilSistema() != null)
+                    ? usuario.getPerfilSistema().name()
+                    : (usuario.getPerfilEntity() != null && usuario.getPerfilEntity().getNome() != null)
+                        ? usuario.getPerfilEntity().getNome()
+                        : usuario.getPerfil().name();
 
             return TokenDTO.builder()
                     .token(token)

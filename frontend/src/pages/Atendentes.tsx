@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { atendenteService, Atendente } from '../services/atendenteService'
 import { unidadeService } from '../services/unidadeService'
 import { usuarioService, Usuario } from '../services/usuarioService'
+import { servicoService } from '../services/servicoService'
 import { Plus, Trash2, Edit } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import Modal from '../components/Modal'
@@ -366,6 +367,18 @@ function AtendenteForm({
     return primeiraUnidadeValida?.id ?? 0
   }, [isAdministrador, usuarioLogado?.unidadeId, unidades])
 
+  const unidadeIdEfetiva = formData.unidadeId && formData.unidadeId > 0
+    ? formData.unidadeId
+    : isAdministrador ? unidadePadraoAdministradorId : 0
+
+  const { data: servicosDisponiveis = [] } = useQuery({
+    queryKey: ['servicos', 'unidade', unidadeIdEfetiva],
+    queryFn: () => servicoService.listarAtivosPorUnidade(unidadeIdEfetiva),
+    enabled: unidadeIdEfetiva > 0,
+  })
+
+  const [servicosIdsSelecionados, setServicosIdsSelecionados] = useState<number[]>([])
+
   const [usuarioNovo, setUsuarioNovo] = useState({
     nome: '',
     email: '',
@@ -419,10 +432,11 @@ function AtendenteForm({
         cpf: atendente.cpf || '',
         telefone: atendente.telefone || '',
         percentualComissao: atendente.percentualComissao !== undefined && atendente.percentualComissao !== null && atendente.percentualComissao !== 0
-          ? atendente.percentualComissao 
+          ? atendente.percentualComissao
           : undefined,
         ativo: atendente.ativo !== undefined ? atendente.ativo : true,
       })
+      setServicosIdsSelecionados(atendente.servicosIds ?? [])
       setUsuarioNovo({
         nome: usuarioEdicaoResolvido?.nome || '',
         email: usuarioEdicaoResolvido?.email || '',
@@ -444,6 +458,7 @@ function AtendenteForm({
         ativo: true,
       })
       setUsuarioNovo({ nome: '', email: '', senha: '', perfilId: perfilPadraoId })
+      setServicosIdsSelecionados([])
     }
   }, [atendente, usuarioEdicaoResolvido, initialUnidadeId, isAdministrador, unidadePadraoAdministradorId, perfilPadraoId])
 
@@ -509,8 +524,9 @@ function AtendenteForm({
       unidadeId: unidadeIdFinal,
       cpf: cpfCnpjNumeros,
       percentualComissao: formData.percentualComissao === undefined || formData.percentualComissao === null
-        ? 0 
-        : formData.percentualComissao
+        ? 0
+        : formData.percentualComissao,
+      servicosIds: servicosIdsSelecionados,
     }
 
     let usuarioCriadoId: number | null = null
@@ -704,6 +720,39 @@ function AtendenteForm({
           </div>
         </div>
       </div>
+
+      {servicosDisponiveis.length > 0 && (
+        <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-gray-800">
+            Serviços
+            {servicosIdsSelecionados.length > 0 && (
+              <span className="ml-2 text-xs font-normal text-violet-600">
+                {servicosIdsSelecionados.length} selecionado{servicosIdsSelecionados.length > 1 ? 's' : ''}
+              </span>
+            )}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+            {servicosDisponiveis.map((servico) => (
+              <label key={servico.id} className="flex items-center gap-2 cursor-pointer rounded-md px-2 py-1.5 hover:bg-white transition-colors">
+                <input
+                  type="checkbox"
+                  checked={servicosIdsSelecionados.includes(servico.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setServicosIdsSelecionados((prev) => [...prev, servico.id])
+                    } else {
+                      setServicosIdsSelecionados((prev) => prev.filter((id) => id !== servico.id))
+                    }
+                  }}
+                  className="rounded border-gray-300 text-violet-600 focus:ring-violet-500 flex-shrink-0"
+                />
+                <span className="text-sm text-gray-700 truncate flex-1">{servico.nome}</span>
+                <span className="text-xs text-gray-400 flex-shrink-0">{servico.duracaoMinutos}min</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       <FormField label="Status">
         <label className="flex items-center">

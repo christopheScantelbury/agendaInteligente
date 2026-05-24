@@ -20,4 +20,7 @@ public interface AtendenteRepository extends JpaRepository<Atendente, Long> {
     /** Busca atendentes de um conjunto de unidades — evita findAll() + filtro em memória. */
     @Query("SELECT a FROM Atendente a WHERE a.unidade.id IN :unidadeIds")
     List<Atendente> findByUnidadeIdIn(@Param("unidadeIds") Collection<Long> unidadeIds);
+
+    @Query("SELECT a FROM Atendente a JOIN a.servicos s WHERE s.id = :servicoId")
+    List<Atendente> findByServicosId(@Param("servicoId") Long servicoId);
 }

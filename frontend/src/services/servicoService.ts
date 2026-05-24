@@ -8,6 +8,7 @@ export interface Servico {
   duracaoMinutos: number
   unidadeId: number
   ativo: boolean
+  atendentesIds?: number[]
 }
 
 export const servicoService = {

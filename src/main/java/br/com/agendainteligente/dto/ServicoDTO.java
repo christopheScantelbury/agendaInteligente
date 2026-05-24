@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 @Builder
@@ -36,5 +37,7 @@ public class ServicoDTO {
     private Long unidadeId;
     
     private Boolean ativo;
+
+    private List<Long> atendentesIds;
 }
 
