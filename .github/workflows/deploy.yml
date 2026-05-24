@@ -1,4 +1,4 @@
-name: Deploy (Railway + Vercel)
+name: Deploy (EasyPanel + Vercel)
 
 on:
   push:
@@ -16,13 +16,14 @@ on:
           - frontend
 
 concurrency:
-  group: deploy-railway-vercel
+  group: deploy-easypanel-vercel
   cancel-in-progress: false
 
 env:
-  RAILWAY_ENV_ID: 1311cc26-ebee-4989-b49b-0e905b9950cc
-  RAILWAY_BACKEND_SERVICE_ID: 172a055d-4c11-47c7-b62b-6c02aab1e320
-  BACKEND_HEALTH_URL: https://agenda-backend-production-cc5e.up.railway.app/actuator/health
+  EASYPANEL_URL: http://31.97.162.185:3000
+  EASYPANEL_PROJECT: agenda-inteligente
+  EASYPANEL_BACKEND_SERVICE: agenda_backend
+  BACKEND_BASE_URL: https://agendainteligentebackend.agendainteligenteapp.cloud
   VERCEL_FRONTEND_URL: https://agendainteligente-aleefhenriiques-projects.vercel.app
 
 jobs:
@@ -40,12 +41,18 @@ jobs:
       - uses: lewagon/wait-on-check-action@v1.3.4
         with:
           ref: ${{ github.sha }}
+          check-name: 'Publicar imagem backend no GHCR'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 15
+      - uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.sha }}
           check-name: 'Frontend (Vite + TypeScript)'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 15
 
   deploy-backend:
-    name: Deploy backend (Railway)
+    name: Deploy backend (EasyPanel)
     needs: wait-for-ci
     if: |
       always() &&
@@ -54,13 +61,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      # IMPORTANTE: NÃO chamamos serviceInstanceDeploy aqui.
-      # Railway está configurado para auto-build no push do GitHub. A mutation
-      # serviceInstanceDeploy apenas REDEPLOYA a imagem existente (sem rebuild)
-      # e pode interromper o auto-build em andamento, fixando o container na
-      # versão anterior. Confiamos no auto-build do Railway e ficamos
-      # polling /api/publico/version até bater com o marker do código.
 
       - name: Extrair marker esperado de application.yml
         id: marker
@@ -74,17 +74,33 @@ jobs:
             echo "marker=$MARKER" >> $GITHUB_OUTPUT
           fi
 
-      - name: Aguardar Railway subir nova versao (timeout 12min)
+      - name: Disparar redeploy no EasyPanel
+        run: |
+          set -e
+          RESP=$(curl --silent --max-time 30 -w "\n%{http_code}" \
+            -X POST "${EASYPANEL_URL}/api/trpc/services.app.deployService" \
+            -H "Authorization: Bearer ${{ secrets.EASYPANEL_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"json\":{\"projectName\":\"${EASYPANEL_PROJECT}\",\"serviceName\":\"${EASYPANEL_BACKEND_SERVICE}\"}}")
+          HTTP=$(echo "$RESP" | tail -1)
+          BODY=$(echo "$RESP" | head -n -1)
+          echo "HTTP $HTTP — $BODY"
+          if [ "$HTTP" != "200" ]; then
+            echo "::error::Falha ao disparar deploy no EasyPanel (HTTP $HTTP)"
+            exit 1
+          fi
+
+      - name: Aguardar EasyPanel subir nova versao (timeout 12min)
         run: |
           EXPECTED="${{ steps.marker.outputs.marker }}"
-          VERSION_URL="https://agenda-backend-production-cc5e.up.railway.app/api/publico/version"
-          # Sleep inicial: Railway demora ~30s pra trocar de container
-          sleep 30
+          HEALTH_URL="${BACKEND_BASE_URL}/actuator/health"
+          VERSION_URL="${BACKEND_BASE_URL}/api/publico/version"
+          # EasyPanel pull + container restart leva ~30-60s
+          sleep 45
           for i in $(seq 1 70); do
-            # Sempre verificar health primeiro
-            HEALTH=$(curl --silent --max-time 10 -o /dev/null -w "%{http_code}" "${BACKEND_HEALTH_URL}" || echo "000")
+            HEALTH=$(curl --silent --max-time 10 -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
             if [ "$HEALTH" != "200" ]; then
-              echo "Tentativa ${i}/70 — health retornou ${HEALTH}, aguardando 10s..."
+              echo "Tentativa ${i}/70 — health=${HEALTH}, aguardando 10s..."
               sleep 10
               continue
             fi
@@ -94,12 +110,6 @@ jobs:
               ACTUAL=$(echo "$VERSION_RESP" | grep -oE '"marker":"[^"]+"' | sed 's/"marker":"\(.*\)"/\1/' || true)
               if [ "$ACTUAL" = "$EXPECTED" ]; then
                 echo "Backend rodando versao esperada ($EXPECTED) apos ${i} tentativas."
-                exit 0
-              fi
-              # Se o endpoint retorna 500 (bug conhecido no GlobalExceptionHandler),
-              # confiar apenas no health check para evitar timeout desnecessario
-              if [ "$VERSION_HTTP" = "500" ] && [ "$HEALTH" = "200" ]; then
-                echo "::warning::Version endpoint retornou 500 mas health OK — aceitando deploy."
                 exit 0
               fi
               echo "Tentativa ${i}/70 — marker='${ACTUAL}' esperado='${EXPECTED}' (HTTP ${VERSION_HTTP}), aguardando 10s..."
@@ -128,9 +138,6 @@ jobs:
           node-version: '20'
 
       - name: Build e deploy Vercel
-        # VERCEL_ORG_ID + VERCEL_PROJECT_ID são lidos pelo CLI automaticamente (sem --scope).
-        # Sem --prebuilt: o CLI faz o build no próprio step (VITE_API_URL injetado via env do projeto).
-        # frontend/.vercel/project.json aponta para prj_Q2DmmfaWMXVa0FRgV37GIJuHHOWF / team_4hLqFiFQMFA6f4nG2RdmAaqL.
         run: |
           cd frontend
           npx vercel deploy --prod \
