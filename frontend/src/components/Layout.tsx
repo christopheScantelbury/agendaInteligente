@@ -18,6 +18,7 @@ import {
   UserPlus,
   BarChart2,
   ClipboardList,
+  Wallet,
 } from 'lucide-react'
 import { authService } from '../services/authService'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -193,6 +194,15 @@ export default function Layout({ children }: LayoutProps) {
         path: '/notificacoes',
         label: 'Notificações',
         icon: <Bell className="h-5 w-5" />,
+      })
+    }
+
+    // Despesas — admin, administrador e gerente
+    if (isAdmin || usuario?.perfil === 'GERENTE') {
+      items.push({
+        path: '/despesas',
+        label: 'Despesas',
+        icon: <Wallet className="h-5 w-5" />,
       })
     }
 
