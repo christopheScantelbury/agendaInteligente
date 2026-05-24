@@ -81,7 +81,7 @@ e este projeto adota versionamento semântico quando aplicável.
 ### Infra & DX
 - `docker-compose.yml` atualizado para frontend em modo dev (hot reload), volume de `node_modules` dedicado, vars `VITE_API_URL` e `VITE_PROXY_TARGET`, e `FIX_ADMIN_KEY`.
 - `frontend/vite.config.ts` carrega proxy dinâmico via `loadEnv`.
-- `GUIA_EASYPANEL_PASSO_A_PASSO.md` atualizado com `FIX_ADMIN_KEY`.
+- Documentação de deploy atualizada com `FIX_ADMIN_KEY`.
 
 ### Documentação
 - Criado o `CHANGELOG.md` no padrão Keep a Changelog.

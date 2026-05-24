@@ -17,10 +17,10 @@ Aplicação mobile desenvolvida com React Native e Expo para iOS e Android.
    npm install
    ```
 
-2. **A URL da API já está configurada** em `app.json` apontando para o backend no EasyPanel:
+2. **A URL da API já está configurada** em `app.json` apontando para o backend no Railway:
    ```json
    "extra": {
-     "apiUrl": "https://agendainteligentebackend.agendainteligenteapp.cloud/api"
+     "apiUrl": "https://agendainteligente-production.up.railway.app/api"
    }
    ```
 
@@ -32,9 +32,9 @@ Aplicação mobile desenvolvida com React Native e Expo para iOS e Android.
 4. **Escaneie o QR Code:**
    - Abra o app **Expo Go** no seu iPhone
    - Escaneie o QR Code exibido no terminal ou navegador
-   - O app será carregado automaticamente e conectará ao backend no EasyPanel
+   - O app será carregado automaticamente e conectará ao backend no Railway
 
-> **💡 Importante**: O app se conecta ao backend no EasyPanel via HTTPS. Não precisa de Docker para desenvolvimento mobile.
+> **💡 Importante**: O app se conecta ao backend no Railway via HTTPS. Não precisa de Docker para desenvolvimento mobile.
 
 ## 📁 Estrutura do Projeto
 

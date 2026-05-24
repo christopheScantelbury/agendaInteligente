@@ -6,7 +6,7 @@ O app mobile funciona de forma diferente do web:
 - **Desenvolvimento**: Usa Expo Go (app instalado no celular) + servidor Metro local
 - **Produção**: Build nativo (APK para Android, IPA para iOS) usando EAS Build
 
-O backend sempre fica no **EasyPanel** (ou local se você estiver testando localmente).
+O backend sempre fica no **Railway** (ou local se você estiver testando localmente).
 
 ---
 
@@ -18,7 +18,7 @@ O backend sempre fica no **EasyPanel** (ou local se você estiver testando local
 2. O Expo cria um servidor Metro (bundler) que serve o código JavaScript
 3. Você escaneia o QR Code com o **Expo Go** no seu celular
 4. O Expo Go baixa o código do servidor Metro e executa no celular
-5. O app se conecta ao backend no EasyPanel via HTTPS
+5. O app se conecta ao backend no Railway via HTTPS
 
 ### Passo a Passo
 
@@ -30,7 +30,7 @@ A URL da API está configurada em `app.json`:
 {
   "expo": {
     "extra": {
-      "apiUrl": "https://agendainteligentebackend.agendainteligenteapp.cloud/api"
+      "apiUrl": "https://agendainteligente-production.up.railway.app/api"
     }
   }
 }
@@ -69,11 +69,11 @@ Isso vai:
 
 **Importante:**
 - Seu celular e computador devem estar na **mesma rede Wi-Fi**
-- O backend no EasyPanel já está acessível via HTTPS, então funciona de qualquer lugar
+- O backend no Railway já está acessível via HTTPS, então funciona de qualquer lugar
 
 #### 5. Teste o App
 
-O app vai se conectar ao backend no EasyPanel automaticamente usando a URL configurada em `app.json`.
+O app vai se conectar ao backend no Railway automaticamente usando a URL configurada em `app.json`.
 
 ---
 
@@ -125,7 +125,7 @@ Edite o arquivo `eas.json` criado:
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://agendainteligentebackend.agendainteligenteapp.cloud/api"
+        "EXPO_PUBLIC_API_URL": "https://agendainteligente-production.up.railway.app/api"
       }
     }
   },
@@ -202,7 +202,7 @@ npx expo run:ios
 A URL da API está em `app.json`:
 ```json
 "extra": {
-  "apiUrl": "https://agendainteligentebackend.agendainteligenteapp.cloud/api"
+  "apiUrl": "https://agendainteligente-production.up.railway.app/api"
 }
 ```
 
@@ -215,7 +215,7 @@ Use variáveis de ambiente no `eas.json`:
   "build": {
     "production": {
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://agendainteligentebackend.agendainteligenteapp.cloud/api"
+        "EXPO_PUBLIC_API_URL": "https://agendainteligente-production.up.railway.app/api"
       }
     }
   }
@@ -235,7 +235,7 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL || Constants.expoConfig?.extra?.
 | Aspecto | Desenvolvimento (Expo Go) | Produção (Build Nativo) |
 |---------|---------------------------|--------------------------|
 | **Como roda** | Expo Go app + Metro bundler | App nativo instalado |
-| **Backend** | EasyPanel (HTTPS) | EasyPanel (HTTPS) |
+| **Backend** | Railway (HTTPS) | Railway (HTTPS) |
 | **Atualizações** | Instantâneas (hot reload) | Requer novo build |
 | **Distribuição** | QR Code | APK/IPA ou lojas |
 | **Performance** | Boa | Melhor (nativo) |
@@ -248,7 +248,7 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL || Constants.expoConfig?.extra?.
 ### Durante Desenvolvimento
 
 1. Use **Expo Go** para testar rapidamente
-2. Backend no **EasyPanel** (já configurado)
+2. Backend no **Railway** (já configurado)
 3. Faça mudanças e veja instantaneamente
 
 ### Antes de Publicar
@@ -265,11 +265,11 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL || Constants.expoConfig?.extra?.
 
 ### Posso usar o mesmo backend para desenvolvimento e produção?
 
-**Sim!** O backend no EasyPanel já está configurado e acessível via HTTPS. Tanto o Expo Go quanto o app nativo vão se conectar ao mesmo backend.
+**Sim!** O backend no Railway já está configurado e acessível via HTTPS. Tanto o Expo Go quanto o app nativo vão se conectar ao mesmo backend.
 
 ### Preciso mudar a URL da API entre dev e produção?
 
-**Não necessariamente.** Se você usar a mesma URL do EasyPanel em ambos, não precisa mudar nada. Mas se quiser testar com backend local, pode criar perfis diferentes no `eas.json`.
+**Não necessariamente.** Se você usar a mesma URL do Railway em ambos, não precisa mudar nada. Mas se quiser testar com backend local, pode criar perfis diferentes no `eas.json`.
 
 ### O Expo Go funciona sem internet?
 
