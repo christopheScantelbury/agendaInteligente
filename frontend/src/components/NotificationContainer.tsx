@@ -7,7 +7,7 @@ export default function NotificationContainer() {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (notifications.length > 0 && containerRef.current) {
+    if (notifications.length > 0 && containerRef.current && document.body.style.overflow !== 'hidden') {
       containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
   }, [notifications.length])

@@ -255,6 +255,7 @@ export default function Agendamentos() {
     formaPagamento: FormaPagamentoSinal
   } | null>(null)
   const [criarModal, setCriarModal] = useState<{ start: Date; end: Date } | null>(null)
+  const [createError, setCreateError] = useState<string | null>(null)
   const [view, setView] = useState<View>('week')
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
@@ -1490,6 +1491,7 @@ export default function Agendamentos() {
     },
     onError: (error: unknown) => {
       const msg = getApiErrorMessage(error, 'Erro ao criar agendamento. Verifique os dados e tente novamente.')
+      setCreateError(msg)
       showNotification('error', msg)
       if (import.meta.env.DEV) console.error('Erro ao criar agendamento:', error)
     },
@@ -1746,6 +1748,7 @@ export default function Agendamentos() {
 
   const resetCreateModal = () => {
     setCriarModal(null)
+    setCreateError(null)
     setFormData({
       clienteId: undefined,
       unidadeId: undefined,
@@ -2589,6 +2592,11 @@ export default function Agendamentos() {
                 )}
               </div>
 
+              {createError && (
+                <div className="mx-4 mb-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+                  {createError}
+                </div>
+              )}
               <div className="flex flex-col gap-2 border-t border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                 <Button
                   variant="secondary"
