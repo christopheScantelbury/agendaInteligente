@@ -16,6 +16,6 @@ public class AgendaInteligenteApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(AgendaInteligenteApplication.class, args);
-        log.info("DEPLOY_MARKER=PR60_2026-05-23_SPLIT-COPY-DEFINITIVE");
+        log.info("DEPLOY_MARKER=PR61_2026-05-24_FORCED-SRC-CACHE-BUST");
     }
 }
