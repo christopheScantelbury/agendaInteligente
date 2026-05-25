@@ -50,10 +50,16 @@ import HomeCliente from './pages/cliente/HomeCliente'
 import PerfilCliente from './pages/cliente/PerfilCliente'
 import RecuperarSenha from './pages/RecuperarSenha'
 import RedefinirSenha from './pages/RedefinirSenha'
+import ProfessionalLayout from './components/profissional/ProfessionalLayout'
+import HojeProfissional from './pages/profissional/HojeProfissional'
+import AgendaProfissional from './pages/profissional/AgendaProfissional'
+import PerfilProfissional from './pages/profissional/PerfilProfissional'
 
 
 function NavigateToAfterLogin() {
-  return <Navigate to={authService.isPerfilCliente() ? '/cliente' : '/'} replace />
+  if (authService.isPerfilCliente()) return <Navigate to="/cliente" replace />
+  if (authService.isPerfilProfissional()) return <Navigate to="/profissional/hoje" replace />
+  return <Navigate to="/" replace />
 }
 
 function DashboardOrAgendamentos() {
@@ -209,6 +215,32 @@ function App() {
                 }
               />
 
+              {/* Rotas do Profissional */}
+              <Route
+                path="/profissional/hoje"
+                element={
+                  authService.isAuthenticated() && authService.isPerfilProfissional()
+                    ? <ProfessionalLayout><HojeProfissional /></ProfessionalLayout>
+                    : <Navigate to="/login" replace />
+                }
+              />
+              <Route
+                path="/profissional/agenda"
+                element={
+                  authService.isAuthenticated() && authService.isPerfilProfissional()
+                    ? <ProfessionalLayout><AgendaProfissional /></ProfessionalLayout>
+                    : <Navigate to="/login" replace />
+                }
+              />
+              <Route
+                path="/profissional/perfil"
+                element={
+                  authService.isAuthenticated() && authService.isPerfilProfissional()
+                    ? <ProfessionalLayout><PerfilProfissional /></ProfessionalLayout>
+                    : <Navigate to="/login" replace />
+                }
+              />
+
               {/* Rotas administrativas */}
               <Route
                 path="/login"
@@ -221,6 +253,9 @@ function App() {
               <Route
                 path="/*"
                 element={
+                  authService.isPerfilProfissional() ? (
+                    <Navigate to="/profissional/hoje" replace />
+                  ) : (
                   <ProtectedRoute>
                     <Layout>
                       <Routes>
@@ -257,6 +292,7 @@ function App() {
                       </Routes>
                     </Layout>
                   </ProtectedRoute>
+                  )
                 }
               />
             </Routes>
