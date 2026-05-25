@@ -26,10 +26,11 @@ export default function ConvitesAcesso() {
   })
   const podeCriar = podeEditar(perfil, '/convites-acesso')
 
-  const { data: convites = [], isLoading } = useQuery({
+  const { data: convites = [], isLoading, error: convitesError } = useQuery({
     queryKey: ['convites-acesso'],
     queryFn: conviteService.listarConvitesAcesso,
     enabled: !!podeCriar || true,
+    retry: false,
   })
 
   const criarMutation = useMutation({
@@ -56,6 +57,21 @@ export default function ConvitesAcesso() {
 
   if (isLoading) {
     return <div className="text-center py-8">Carregando...</div>
+  }
+
+  if (convitesError) {
+    const msg = (convitesError as any)?.response?.data?.message ?? 'Erro ao carregar links de acesso'
+    return (
+      <div className="w-full">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Links de venda de acesso</h1>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+          <p className="text-yellow-800">{msg}</p>
+          <p className="text-xs text-yellow-700 mt-2">
+            Caso seja inesperado, peça ao administrador para revisar permissões em <strong>Perfis</strong>.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (

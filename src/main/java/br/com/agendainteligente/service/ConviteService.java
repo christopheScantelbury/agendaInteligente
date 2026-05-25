@@ -51,14 +51,19 @@ public class ConviteService {
 
     private boolean temPermissaoConvitesAcesso(boolean exigeEditar) {
         Usuario u = obterUsuarioLogado();
-        if (u.getPerfil() == Usuario.PerfilUsuario.ADMIN) return true;
+        // ADMIN global e ADMINISTRADOR (dono da empresa) sempre podem gerenciar links de acesso
+        if (u.getPerfil() == Usuario.PerfilUsuario.ADMIN
+                || u.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR) return true;
         String tipo = obterPermissaoGranular(u, PATH_CONVITES_ACESSO);
         return exigeEditar ? "EDITAR".equals(tipo) : "EDITAR".equals(tipo) || "VISUALIZAR".equals(tipo);
     }
 
     private boolean temPermissaoConvitesCliente(boolean exigeEditar) {
         Usuario u = obterUsuarioLogado();
-        if (u.getPerfil() == Usuario.PerfilUsuario.GERENTE) return true;
+        // ADMIN, ADMINISTRADOR e GERENTE podem gerenciar links de convite de cliente
+        if (u.getPerfil() == Usuario.PerfilUsuario.ADMIN
+                || u.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR
+                || u.getPerfil() == Usuario.PerfilUsuario.GERENTE) return true;
         String tipo = obterPermissaoGranular(u, PATH_CONVITES_CLIENTE);
         return exigeEditar ? "EDITAR".equals(tipo) : "EDITAR".equals(tipo) || "VISUALIZAR".equals(tipo);
     }

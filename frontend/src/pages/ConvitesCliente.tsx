@@ -32,10 +32,11 @@ export default function ConvitesCliente() {
     enabled: showModal,
   })
 
-  const { data: convites = [], isLoading } = useQuery({
+  const { data: convites = [], isLoading, error: convitesError } = useQuery({
     queryKey: ['convites-cliente'],
     queryFn: conviteService.listarConvitesCliente,
     enabled: !!podeCriar || true,
+    retry: false,
   })
 
   const criarMutation = useMutation({
@@ -62,6 +63,21 @@ export default function ConvitesCliente() {
 
   if (isLoading) {
     return <div className="text-center py-8">Carregando...</div>
+  }
+
+  if (convitesError) {
+    const msg = (convitesError as any)?.response?.data?.message ?? 'Erro ao carregar links de cliente'
+    return (
+      <div className="w-full">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Links para clientes</h1>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+          <p className="text-yellow-800">{msg}</p>
+          <p className="text-xs text-yellow-700 mt-2">
+            Caso seja inesperado, peça ao administrador para revisar permissões em <strong>Perfis</strong>.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (
