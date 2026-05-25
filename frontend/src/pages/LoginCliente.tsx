@@ -16,7 +16,7 @@ export default function LoginCliente() {
 
     try {
       await clientePublicoService.login({ emailOuCpf, senha })
-      navigate('/cliente/agendar')
+      navigate('/cliente')
     } catch (error: any) {
       setErro(error.response?.data?.message || 'Erro ao fazer login')
     } finally {

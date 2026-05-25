@@ -46,10 +46,11 @@ import AnamneseListPage from './pages/anamneses/AnamneseListPage'
 import AnamneseFormPage from './pages/anamneses/AnamneseFormPage'
 import AnamneseTemplatesPage from './pages/anamneses/AnamneseTemplatesPage'
 import ClientLayout from './components/cliente/ClientLayout'
+import HomeCliente from './pages/cliente/HomeCliente'
 
 
 function NavigateToAfterLogin() {
-  return <Navigate to={authService.isPerfilCliente() ? '/cliente/agendar' : '/'} replace />
+  return <Navigate to={authService.isPerfilCliente() ? '/cliente' : '/'} replace />
 }
 
 function DashboardOrAgendamentos() {
@@ -115,11 +116,19 @@ function App() {
               {/* Rotas públicas para clientes */}
               <Route
                 path="/cliente/login"
-                element={clientePublicoService.isAuthenticated() ? <Navigate to="/cliente/agendar" /> : <LoginCliente />}
+                element={clientePublicoService.isAuthenticated() ? <Navigate to="/cliente" /> : <LoginCliente />}
               />
               <Route
                 path="/cliente/cadastro"
-                element={clientePublicoService.isAuthenticated() ? <Navigate to="/cliente/agendar" /> : <CadastroCliente />}
+                element={clientePublicoService.isAuthenticated() ? <Navigate to="/cliente" /> : <CadastroCliente />}
+              />
+              <Route
+                path="/cliente"
+                element={
+                  clientePublicoService.isAuthenticated()
+                    ? <ClientLayout><HomeCliente /></ClientLayout>
+                    : <Navigate to="/cliente/login" />
+                }
               />
               <Route
                 path="/cliente/agendar"
@@ -144,7 +153,7 @@ function App() {
                 path="/"
                 element={
                   clientePublicoService.isAuthenticated()
-                    ? <Navigate to="/cliente/agendar" replace />
+                    ? <Navigate to="/cliente" replace />
                     : authService.isAuthenticated()
                       ? (
                         <ProtectedRoute>
