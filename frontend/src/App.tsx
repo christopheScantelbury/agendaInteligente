@@ -48,6 +48,7 @@ import AnamneseTemplatesPage from './pages/anamneses/AnamneseTemplatesPage'
 import ClientLayout from './components/cliente/ClientLayout'
 import HomeCliente from './pages/cliente/HomeCliente'
 import PerfilCliente from './pages/cliente/PerfilCliente'
+import DashboardPlataforma from './pages/plataforma/DashboardPlataforma'
 import RecuperarSenha from './pages/RecuperarSenha'
 import RedefinirSenha from './pages/RedefinirSenha'
 import ProfessionalLayout from './components/profissional/ProfessionalLayout'
@@ -237,6 +238,16 @@ function App() {
                 element={
                   authService.isAuthenticated() && authService.isPerfilProfissional()
                     ? <ProfessionalLayout><PerfilProfissional /></ProfessionalLayout>
+                    : <Navigate to="/login" replace />
+                }
+              />
+
+              {/* Rotas de Plataforma (ADMIN global) */}
+              <Route
+                path="/plataforma"
+                element={
+                  authService.isAuthenticated() && (authService.getUsuario()?.perfil ?? '').toUpperCase() === 'ADMIN'
+                    ? <Layout><DashboardPlataforma /></Layout>
                     : <Navigate to="/login" replace />
                 }
               />
