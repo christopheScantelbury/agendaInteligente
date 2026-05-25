@@ -16,6 +16,7 @@ import { authService } from '../../services/authService'
 import { atendenteService } from '../../services/atendenteService'
 import { agendamentoService, Agendamento } from '../../services/agendamentoService'
 import AcoesAgendamentoSheet from '../../components/profissional/AcoesAgendamentoSheet'
+import OnboardingProfissional from '../../components/profissional/OnboardingProfissional'
 
 const HORA_INICIO = 6
 const HORA_FIM = 22
@@ -160,6 +161,8 @@ export default function HojeProfissional() {
 
   return (
     <div className="max-w-md mx-auto">
+      <OnboardingProfissional />
+
       {/* Header */}
       <header data-tour="header-dia" className="px-4 pt-4 pb-3 bg-white border-b border-gray-100">
         <div className="flex items-center justify-between mb-2">

@@ -1,9 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
-import { LogOut, User, Mail, Hash } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { LogOut, RefreshCw, User, Mail, Hash, Briefcase, Clock } from 'lucide-react'
 import { authService } from '../../services/authService'
+import { atendenteService } from '../../services/atendenteService'
 import ConfirmDialog from '../../components/ConfirmDialog'
+import {
+  iniciarTourProfissional,
+  resetarOnboardingProfissional,
+} from '../../components/profissional/OnboardingProfissional'
 
 export default function PerfilProfissional() {
   const navigate = useNavigate()
@@ -11,11 +16,23 @@ export default function PerfilProfissional() {
   const usuario = authService.getUsuario()
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
+  const { data: atendente } = useQuery({
+    queryKey: ['atendente', 'meu', usuario?.usuarioId],
+    queryFn: () => atendenteService.buscarPorUsuarioId(usuario!.usuarioId),
+    enabled: !!usuario?.usuarioId,
+  })
+
   function handleSair() {
     setShowLogoutConfirm(false)
     queryClient.clear()
     authService.logout()
     setTimeout(() => navigate('/login'), 100)
+  }
+
+  function handleRefazerTour() {
+    resetarOnboardingProfissional()
+    navigate('/profissional/hoje')
+    setTimeout(() => iniciarTourProfissional(), 300)
   }
 
   return (
@@ -26,8 +43,38 @@ export default function PerfilProfissional() {
 
       <section className="bg-white border border-gray-200 rounded-2xl divide-y divide-gray-100">
         <Row icon={User} label="Nome" value={usuario?.nome ?? '—'} />
-        <Row icon={Mail} label="ID do usuário" value={usuario?.usuarioId?.toString() ?? '—'} />
         <Row icon={Hash} label="Perfil" value={usuario?.perfil ?? '—'} />
+        <Row icon={Mail} label="ID usuário" value={usuario?.usuarioId?.toString() ?? '—'} />
+        {atendente && (
+          <>
+            <Row icon={Briefcase} label="Atendente" value={`#${atendente.id}`} />
+            {atendente.unidadeId && (
+              <Row icon={Clock} label="Unidade" value={`#${atendente.unidadeId}`} />
+            )}
+          </>
+        )}
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold text-slate-700">Ajuda</h2>
+        <button
+          type="button"
+          onClick={handleRefazerTour}
+          className="
+            w-full flex items-center gap-3 p-4
+            bg-white border border-gray-200 rounded-xl
+            hover:border-violet-300 hover:shadow-sm transition
+            text-left
+          "
+        >
+          <div className="w-10 h-10 rounded-full bg-violet-50 flex items-center justify-center">
+            <RefreshCw className="h-5 w-5 text-violet-600" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-slate-900">Refazer tour</p>
+            <p className="text-xs text-gray-500">Conheça novamente como usar o Modo Dia</p>
+          </div>
+        </button>
       </section>
 
       <section className="space-y-2">
