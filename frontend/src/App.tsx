@@ -108,8 +108,8 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <NotificationProvider>
           <NotificationContainer />
-          <InstallPrompt />
           <Router>
+            <InstallPrompt />
             <Routes>
               {/* Rotas públicas para clientes */}
               <Route
