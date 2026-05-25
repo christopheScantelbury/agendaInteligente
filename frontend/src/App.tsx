@@ -49,6 +49,7 @@ import ClientLayout from './components/cliente/ClientLayout'
 import HomeCliente from './pages/cliente/HomeCliente'
 import PerfilCliente from './pages/cliente/PerfilCliente'
 import DashboardPlataforma from './pages/plataforma/DashboardPlataforma'
+import EmpresasPlataforma from './pages/plataforma/EmpresasPlataforma'
 import RecuperarSenha from './pages/RecuperarSenha'
 import RedefinirSenha from './pages/RedefinirSenha'
 import ProfessionalLayout from './components/profissional/ProfessionalLayout'
@@ -248,6 +249,14 @@ function App() {
                 element={
                   authService.isAuthenticated() && (authService.getUsuario()?.perfil ?? '').toUpperCase() === 'ADMIN'
                     ? <Layout><DashboardPlataforma /></Layout>
+                    : <Navigate to="/login" replace />
+                }
+              />
+              <Route
+                path="/plataforma/empresas"
+                element={
+                  authService.isAuthenticated() && (authService.getUsuario()?.perfil ?? '').toUpperCase() === 'ADMIN'
+                    ? <Layout><EmpresasPlataforma /></Layout>
                     : <Navigate to="/login" replace />
                 }
               />

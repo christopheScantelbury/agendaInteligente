@@ -1,8 +1,10 @@
 package br.com.agendainteligente.controller;
 
+import br.com.agendainteligente.domain.entity.Empresa;
 import br.com.agendainteligente.repository.AgendamentoRepository;
 import br.com.agendainteligente.repository.EmpresaRepository;
 import br.com.agendainteligente.repository.NotaFiscalRepository;
+import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -12,7 +14,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -25,6 +30,7 @@ import java.util.Map;
 public class PlataformaController {
 
     private final EmpresaRepository empresaRepository;
+    private final UnidadeRepository unidadeRepository;
     private final AgendamentoRepository agendamentoRepository;
     private final NotaFiscalRepository notaFiscalRepository;
     private final UsuarioRepository usuarioRepository;
@@ -61,5 +67,57 @@ public class PlataformaController {
         response.put("mrr", null);
         response.put("churn", null);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Listagem rica de empresas para o ADMIN global.
+     * Inclui status, qtd de agendamentos no mês e última atividade computados em memória.
+     * Para escalas maiores, migrar para query nativa com agregações.
+     */
+    @GetMapping("/empresas")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<Map<String, Object>>> listarEmpresasComMetricas() {
+        LocalDateTime inicioDoMes = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+        List<Empresa> empresas = empresaRepository.findAll();
+        List<Map<String, Object>> resultado = new ArrayList<>();
+
+        for (Empresa e : empresas) {
+            Long adminId = e.getAdminUnicoId();
+            List<Long> unidadeIds = adminId == null
+                    ? List.of()
+                    : unidadeRepository.findByAdminUnicoId(adminId).stream().map(u -> u.getId()).toList();
+
+            long qtdAgendamentosMes = unidadeIds.isEmpty()
+                    ? 0
+                    : agendamentoRepository.findAll().stream()
+                            .filter(a -> a.getUnidade() != null && unidadeIds.contains(a.getUnidade().getId()))
+                            .filter(a -> a.getDataHoraInicio() != null && !a.getDataHoraInicio().isBefore(inicioDoMes))
+                            .count();
+
+            LocalDateTime ultimaAtividade = unidadeIds.isEmpty()
+                    ? e.getDataAtualizacao()
+                    : agendamentoRepository.findAll().stream()
+                            .filter(a -> a.getUnidade() != null && unidadeIds.contains(a.getUnidade().getId()))
+                            .map(a -> a.getDataAtualizacao() != null ? a.getDataAtualizacao() : a.getDataCriacao())
+                            .filter(d -> d != null)
+                            .max(Comparator.naturalOrder())
+                            .orElse(e.getDataAtualizacao());
+
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", e.getId());
+            item.put("nome", e.getNome());
+            item.put("razaoSocial", e.getRazaoSocial());
+            item.put("cnpj", e.getCnpj());
+            item.put("email", e.getEmail());
+            item.put("categoria", e.getCategoria() != null ? e.getCategoria().name() : null);
+            item.put("status", Boolean.TRUE.equals(e.getAtivo()) ? "ATIVA" : "INATIVA");
+            item.put("dataCadastro", e.getDataCriacao());
+            item.put("ultimaAtividade", ultimaAtividade);
+            item.put("agendamentosMes", qtdAgendamentosMes);
+            item.put("plano", null); // Placeholder — escopo Stripe
+            item.put("mrr", null);   // Placeholder — escopo Stripe
+            resultado.add(item);
+        }
+        return ResponseEntity.ok(resultado);
     }
 }
