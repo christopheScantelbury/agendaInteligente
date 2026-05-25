@@ -248,7 +248,7 @@ export default function Despesas() {
                   <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">{formatMoeda(d.valor)}</td>
                   <td className="px-4 py-3 text-sm">
                     {formatData(d.dataVencimento)}
-                    {d.diasAtraso && d.diasAtraso > 0 && (
+                    {(d.diasAtraso ?? 0) > 0 && (
                       <div className="text-xs text-red-600 flex items-center gap-1">
                         <Clock className="h-3 w-3" /> {d.diasAtraso}d atraso
                       </div>

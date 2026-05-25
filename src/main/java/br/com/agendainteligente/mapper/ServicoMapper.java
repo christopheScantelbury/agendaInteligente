@@ -16,7 +16,9 @@ public interface ServicoMapper {
     @Mapping(target = "unidade", ignore = true) // Será setado manualmente no service
     Servico toEntity(ServicoDTO servicoDTO);
     
+    @Mapping(target = "id", ignore = true) // Nunca sobrescrever id da entity gerenciada
     @Mapping(target = "unidade", ignore = true) // Será setado manualmente no service
+    @Mapping(target = "dataCriacao", ignore = true)
     void updateEntityFromDTO(ServicoDTO servicoDTO, @MappingTarget Servico servico);
 }
 
