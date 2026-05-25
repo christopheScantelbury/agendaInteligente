@@ -3,6 +3,7 @@ import { driver } from 'driver.js'
 import 'driver.js/dist/driver.css'
 import { Sparkles, X } from 'lucide-react'
 import { authService } from '../../services/authService'
+import { Events, track } from '../../lib/analytics'
 
 const STORAGE_KEY = 'profissional_onboarding_visto_v1'
 
@@ -38,8 +39,13 @@ export default function OnboardingProfissional({ forcado = false, onFinalizado }
     setModalAberto(false)
     marcarVisto()
     if (iniciarTour) {
-      iniciarTourProfissional(() => onFinalizado?.())
+      track(Events.ONBOARDING_TOUR_INICIADO, { perfil: 'PROFISSIONAL' })
+      iniciarTourProfissional(() => {
+        track(Events.ONBOARDING_TOUR_COMPLETO, { perfil: 'PROFISSIONAL' })
+        onFinalizado?.()
+      })
     } else {
+      track(Events.ONBOARDING_TOUR_PULADO, { perfil: 'PROFISSIONAL' })
       onFinalizado?.()
     }
   }

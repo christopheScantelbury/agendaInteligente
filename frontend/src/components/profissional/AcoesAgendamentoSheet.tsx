@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { agendamentoService, Agendamento } from '../../services/agendamentoService'
 import { useNotification } from '../../contexts/NotificationContext'
+import { Events, track } from '../../lib/analytics'
 import BottomSheet from '../ui/BottomSheet'
 
 interface AcoesAgendamentoSheetProps {
@@ -74,6 +75,9 @@ export default function AcoesAgendamentoSheet({ agendamento, onClose }: AcoesAge
 
   function alterarStatus(status: string) {
     if (!agendamento?.id) return
+    if (status === 'CONFIRMADO') track(Events.PROFISSIONAL_CHECKIN, { agendamentoId: agendamento.id })
+    if (status === 'EM_ANDAMENTO') track(Events.PROFISSIONAL_INICIAR_ATENDIMENTO, { agendamentoId: agendamento.id })
+    if (status === 'NO_SHOW') track(Events.PROFISSIONAL_NO_SHOW, { agendamentoId: agendamento.id })
     mutationStatus.mutate({ id: agendamento.id, status })
   }
 
@@ -84,6 +88,11 @@ export default function AcoesAgendamentoSheet({ agendamento, onClose }: AcoesAge
       showNotification('error', 'Valor inválido')
       return
     }
+    track(Events.PROFISSIONAL_FINALIZAR, {
+      agendamentoId: agendamento.id,
+      valorFinal: valorNum,
+      tipoPagamento,
+    })
     mutationFinalizar.mutate({ id: agendamento.id, valorFinalNum: valorNum, tipo: tipoPagamento })
   }
 

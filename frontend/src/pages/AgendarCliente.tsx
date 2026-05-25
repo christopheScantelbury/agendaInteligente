@@ -13,6 +13,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { clientePublicoService, HorarioDisponivel } from '../services/clientePublicoService'
+import { Events, track } from '../lib/analytics'
 import { unidadeService, Unidade } from '../services/unidadeService'
 import { servicoService, Servico } from '../services/servicoService'
 import { inteligenciaService, HorarioPopular } from '../services/inteligenciaService'
@@ -59,6 +60,7 @@ export default function AgendarCliente() {
       navigate('/cliente/login')
       return
     }
+    track(Events.CLIENTE_AGENDAMENTO_INICIADO)
     void carregarDados()
   }, [navigate])
 
@@ -154,6 +156,12 @@ export default function AgendarCliente() {
         ],
       }
       await clientePublicoService.criarAgendamento(agendamento)
+      track(Events.CLIENTE_AGENDAMENTO_CONCLUIDO, {
+        servicoId: selectedServico.id,
+        unidadeId: selectedUnidade.id,
+        formaPagamento,
+        valor: selectedServico.valor,
+      })
       showNotification('success', 'Agendamento realizado com sucesso!')
       setTimeout(() => navigate('/cliente'), 800)
     } catch (error: any) {
@@ -190,11 +198,13 @@ export default function AgendarCliente() {
 
   function handleServicoSelect(servico: Servico) {
     setSelectedServico(servico)
+    track(Events.CLIENTE_AGENDAMENTO_PASSO2, { servicoId: servico.id })
     setStep(2)
   }
 
   function handleSlotSelect(slot: Slot) {
     setSelectedSlot(slot)
+    track(Events.CLIENTE_AGENDAMENTO_PASSO3, { dataHoraInicio: slot.dataHoraInicio })
     setStep(3)
   }
 

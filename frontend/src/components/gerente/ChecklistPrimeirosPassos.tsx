@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Check, ChevronRight, PartyPopper, Rocket, X } from 'lucide-react'
 import { dashboardGerenteService } from '../../services/dashboardGerenteService'
+import { Events, track } from '../../lib/analytics'
 
 const DISMISSED_KEY = 'gerente_checklist_dispensado_v1'
 
@@ -91,7 +92,10 @@ export default function ChecklistPrimeirosPassos() {
           <li key={t.id}>
             <button
               type="button"
-              onClick={() => navigate(t.path)}
+              onClick={() => {
+                track(Events.GERENTE_CHECKLIST_TAREFA_CLICADA, { tarefaId: t.id, path: t.path })
+                navigate(t.path)
+              }}
               disabled={t.concluida}
               className={`
                 w-full flex items-center gap-3 p-2 rounded-lg text-left transition

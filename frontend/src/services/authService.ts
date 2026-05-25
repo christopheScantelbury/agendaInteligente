@@ -1,4 +1,5 @@
 import api from './api'
+import { Events, resetAnalytics, track } from '../lib/analytics'
 
 export interface LoginRequest {
   email: string
@@ -37,6 +38,8 @@ export const authService = {
   },
 
   logout: () => {
+    track(Events.LOGOUT, { tipo: 'usuario' })
+    resetAnalytics()
     // Limpar todos os dados de autenticação
     localStorage.removeItem('token')
     localStorage.removeItem('usuario')

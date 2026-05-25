@@ -3,6 +3,7 @@ import { driver } from 'driver.js'
 import 'driver.js/dist/driver.css'
 import { Sparkles, X } from 'lucide-react'
 import { clientePublicoService } from '../../services/clientePublicoService'
+import { Events, track } from '../../lib/analytics'
 
 const STORAGE_KEY = 'cliente_onboarding_visto_v1'
 
@@ -41,8 +42,13 @@ export default function OnboardingCliente({ forcado = false, onFinalizado }: Onb
     setModalAberto(false)
     marcarVisto()
     if (iniciarTour) {
-      iniciarTourCliente(() => onFinalizado?.())
+      track(Events.ONBOARDING_TOUR_INICIADO, { perfil: 'CLIENTE' })
+      iniciarTourCliente(() => {
+        track(Events.ONBOARDING_TOUR_COMPLETO, { perfil: 'CLIENTE' })
+        onFinalizado?.()
+      })
     } else {
+      track(Events.ONBOARDING_TOUR_PULADO, { perfil: 'CLIENTE' })
       onFinalizado?.()
     }
   }

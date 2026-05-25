@@ -1,4 +1,5 @@
 import api from './api'
+import { Events, resetAnalytics, track } from '../lib/analytics'
 
 export interface ClienteLoginRequest {
   emailOuCpf: string
@@ -57,6 +58,8 @@ export const clientePublicoService = {
   },
 
   logout: () => {
+    track(Events.LOGOUT, { tipo: 'cliente' })
+    resetAnalytics()
     localStorage.removeItem('clienteToken')
     localStorage.removeItem('cliente')
   },

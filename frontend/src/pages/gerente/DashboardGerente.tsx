@@ -1,4 +1,6 @@
+import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Events, track } from '../../lib/analytics'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
@@ -29,6 +31,10 @@ export default function DashboardGerente() {
     queryFn: () => dashboardGerenteService.kpis(),
     refetchInterval: 60_000,
   })
+
+  useEffect(() => {
+    track(Events.GERENTE_DASHBOARD_ABERTO)
+  }, [])
 
   if (error) {
     return (

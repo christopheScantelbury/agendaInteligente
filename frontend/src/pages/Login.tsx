@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { authService } from '../services/authService'
+import { Events, identify, track } from '../lib/analytics'
 import { Eye, EyeOff } from 'lucide-react'
 
 function LogoMark({ size = 36 }: { size?: number }) {
@@ -32,6 +33,8 @@ export default function Login() {
     setLoading(true)
     try {
       const data = await authService.login({ email, senha })
+      identify(data.usuarioId, { perfil: data.perfil, nome: data.nome })
+      track(Events.LOGIN_SUCCESS, { perfil: data.perfil, tipo: 'usuario' })
       navigate((data.perfil ?? '').toUpperCase() === 'CLIENTE' ? '/cliente/agendar' : '/agendamentos')
     } catch (error: any) {
       if (!error.response) {

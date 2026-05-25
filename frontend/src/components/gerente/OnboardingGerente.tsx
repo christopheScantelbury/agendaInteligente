@@ -3,6 +3,7 @@ import { driver } from 'driver.js'
 import 'driver.js/dist/driver.css'
 import { Sparkles, X } from 'lucide-react'
 import { authService } from '../../services/authService'
+import { Events, track } from '../../lib/analytics'
 
 const STORAGE_KEY = 'gerente_onboarding_visto_v1'
 
@@ -38,8 +39,13 @@ export default function OnboardingGerente({ forcado = false, onFinalizado }: Onb
     setModalAberto(false)
     marcarVisto()
     if (iniciarTour) {
-      iniciarTourGerente(() => onFinalizado?.())
+      track(Events.ONBOARDING_TOUR_INICIADO, { perfil: 'GERENTE' })
+      iniciarTourGerente(() => {
+        track(Events.ONBOARDING_TOUR_COMPLETO, { perfil: 'GERENTE' })
+        onFinalizado?.()
+      })
     } else {
+      track(Events.ONBOARDING_TOUR_PULADO, { perfil: 'GERENTE' })
       onFinalizado?.()
     }
   }

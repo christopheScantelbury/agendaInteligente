@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { clientePublicoService } from '../services/clientePublicoService'
+import { Events, identify, track } from '../lib/analytics'
 
 function LogoMark({ size = 36 }: { size?: number }) {
   return (
@@ -31,7 +32,9 @@ export default function LoginCliente() {
     setErro('')
     setLoading(true)
     try {
-      await clientePublicoService.login({ emailOuCpf, senha })
+      const data = await clientePublicoService.login({ emailOuCpf, senha })
+      identify(`cliente_${data.clienteId}`, { perfil: 'CLIENTE', nome: data.nome })
+      track(Events.LOGIN_SUCCESS, { perfil: 'CLIENTE', tipo: 'cliente' })
       navigate('/cliente')
     } catch (error: any) {
       setErro(error.response?.data?.message || 'E-mail/CPF ou senha incorretos.')

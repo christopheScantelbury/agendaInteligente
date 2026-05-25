@@ -16,6 +16,7 @@
     "date-fns": "^4.1.0",
     "driver.js": "^1.4.0",
     "lucide-react": "^0.468.0",
+    "posthog-js": "^1.376.0",
     "react": "^19.2.1",
     "react-big-calendar": "^1.19.4",
     "react-dom": "^19.2.1",
