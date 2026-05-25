@@ -45,6 +45,7 @@ import Landing from './pages/Landing'
 import AnamneseListPage from './pages/anamneses/AnamneseListPage'
 import AnamneseFormPage from './pages/anamneses/AnamneseFormPage'
 import AnamneseTemplatesPage from './pages/anamneses/AnamneseTemplatesPage'
+import ClientLayout from './components/cliente/ClientLayout'
 
 
 function NavigateToAfterLogin() {
@@ -122,11 +123,19 @@ function App() {
               />
               <Route
                 path="/cliente/agendar"
-                element={clientePublicoService.isAuthenticated() ? <AgendarCliente /> : <Navigate to="/cliente/login" />}
+                element={
+                  clientePublicoService.isAuthenticated()
+                    ? <ClientLayout><AgendarCliente /></ClientLayout>
+                    : <Navigate to="/cliente/login" />
+                }
               />
               <Route
                 path="/cliente/meus-agendamentos"
-                element={clientePublicoService.isAuthenticated() ? <MeusAgendamentosCliente /> : <Navigate to="/cliente/login" />}
+                element={
+                  clientePublicoService.isAuthenticated()
+                    ? <ClientLayout><MeusAgendamentosCliente /></ClientLayout>
+                    : <Navigate to="/cliente/login" />
+                }
               />
               <Route path="/reclamacoes" element={<Reclamacoes />} />
 
