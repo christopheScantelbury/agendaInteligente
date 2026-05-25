@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Edit, Trash2, Download, Tag, CheckCircle, AlertTriangle, Clock } from 'lucide-react'
 import {
@@ -55,9 +56,15 @@ const formatData = (s?: string | null) =>
 export default function Despesas() {
   const queryClient = useQueryClient()
   const { showNotification } = useNotification()
+  const navigate = useNavigate()
   const usuario = authService.getUsuario()
   const perfil = (usuario?.perfil ?? '').toUpperCase()
-  const podeEditar = perfil === 'ADMIN' || perfil === 'ADMINISTRADOR' || perfil === 'GERENTE'
+  const podeAcessar = perfil === 'ADMIN' || perfil === 'ADMINISTRADOR' || perfil === 'GERENTE'
+  const podeEditar = podeAcessar
+  if (!podeAcessar) {
+    setTimeout(() => navigate('/'), 0)
+    return <div className="p-8 text-center text-sm text-gray-500">Acesso negado.</div>
+  }
 
   const [inicio, setInicio] = useState(inicioDoMes())
   const [fim, setFim] = useState(fimDoMes())
@@ -129,7 +136,9 @@ export default function Despesas() {
     const link = document.createElement('a')
     link.href = url
     link.download = `despesas-${inicio}-a-${fim}.csv`
+    document.body.appendChild(link)
     link.click()
+    document.body.removeChild(link)
     URL.revokeObjectURL(url)
   }
 
@@ -144,7 +153,7 @@ export default function Despesas() {
           <Button variant="secondary" onClick={() => setShowCategorias(true)}>
             <Tag className="h-4 w-4 mr-1" /> Categorias
           </Button>
-          <Button variant="secondary" onClick={exportarCSV}>
+          <Button type="button" variant="secondary" onClick={exportarCSV}>
             <Download className="h-4 w-4 mr-1" /> Exportar CSV
           </Button>
           {podeEditar && (
@@ -268,19 +277,17 @@ export default function Despesas() {
                           <CheckCircle className="h-4 w-4" />
                         </button>
                       )}
-                      {podeEditar && (
-                        <>
-                          <button onClick={() => { setEditando(d); setShowForm(true) }}
-                            className="text-blue-600 hover:text-blue-800 p-1" title="Editar">
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          {d.status !== 'PAGA' && (
-                            <button onClick={() => setConfirmDelete({ open: true, id: d.id! })}
-                              className="text-red-600 hover:text-red-800 p-1" title="Excluir">
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
-                        </>
+                      {podeEditar && d.status !== 'PAGA' && d.status !== 'CANCELADA' && (
+                        <button onClick={() => { setEditando(d); setShowForm(true) }}
+                          className="text-blue-600 hover:text-blue-800 p-1" title="Editar">
+                          <Edit className="h-4 w-4" />
+                        </button>
+                      )}
+                      {podeEditar && d.status !== 'PAGA' && (
+                        <button onClick={() => setConfirmDelete({ open: true, id: d.id! })}
+                          className="text-red-600 hover:text-red-800 p-1" title="Excluir">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       )}
                     </div>
                   </td>

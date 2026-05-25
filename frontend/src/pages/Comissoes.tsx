@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DollarSign, CheckSquare, Square, Trash2, Plus, History } from 'lucide-react'
 import {
@@ -24,9 +25,15 @@ const formatDataHora = (s?: string) =>
 export default function Comissoes() {
   const queryClient = useQueryClient()
   const { showNotification } = useNotification()
+  const navigate = useNavigate()
   const usuario = authService.getUsuario()
   const perfil = (usuario?.perfil ?? '').toUpperCase()
-  const podeGerir = perfil === 'ADMIN' || perfil === 'ADMINISTRADOR' || perfil === 'GERENTE'
+  const podeAcessar = perfil === 'ADMIN' || perfil === 'ADMINISTRADOR' || perfil === 'GERENTE'
+  const podeGerir = podeAcessar
+  if (!podeAcessar) {
+    setTimeout(() => navigate('/'), 0)
+    return <div className="p-8 text-center text-sm text-gray-500">Acesso negado.</div>
+  }
 
   const [atendenteId, setAtendenteId] = useState<number | null>(null)
   const [selecionados, setSelecionados] = useState<Set<number>>(new Set())

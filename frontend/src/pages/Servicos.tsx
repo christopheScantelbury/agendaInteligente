@@ -267,7 +267,9 @@ function ServicoForm({
 
   // Filtrar unidades baseado no perfil
   const unidadesDisponiveis = useMemo(() => {
-    if (perfilLogado === 'ADMIN') {
+    // ADMIN e ADMINISTRADOR veem todas as unidades retornadas pelo backend
+    // (o backend já filtra por adminUnicoId para ADMINISTRADOR)
+    if (perfilLogado === 'ADMIN' || perfilLogado === 'ADMINISTRADOR') {
       return todasUnidades
     }
     // Para GERENTE e PROFISSIONAL, usar unidades do usuário completo

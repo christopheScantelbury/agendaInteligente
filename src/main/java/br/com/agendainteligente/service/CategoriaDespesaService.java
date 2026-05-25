@@ -36,11 +36,15 @@ public class CategoriaDespesaService {
 
     @Transactional
     public CategoriaDespesaDTO criar(CategoriaDespesaDTO dto) {
+        Long adminUnicoId = adminUnicoIdLogado();
+        if (adminUnicoId == null) {
+            throw new BusinessException("Usuário sem vínculo administrativo não pode criar categorias customizadas");
+        }
         CategoriaDespesa categoria = CategoriaDespesa.builder()
                 .nome(dto.getNome().trim())
                 .cor(dto.getCor())
                 .ativo(true)
-                .adminUnicoId(adminUnicoIdLogado())
+                .adminUnicoId(adminUnicoId)
                 .build();
         return toDTO(categoriaRepository.save(categoria));
     }

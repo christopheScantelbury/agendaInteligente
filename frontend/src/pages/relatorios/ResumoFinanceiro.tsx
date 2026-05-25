@@ -78,7 +78,9 @@ export default function ResumoFinanceiro() {
     const link = document.createElement('a')
     link.href = url
     link.download = `fluxo-caixa-${inicio}-a-${fim}.csv`
+    document.body.appendChild(link)
     link.click()
+    document.body.removeChild(link)
     URL.revokeObjectURL(url)
   }
 
@@ -171,7 +173,7 @@ export default function ResumoFinanceiro() {
               <input type="date" value={fim} onChange={(e) => setFim(e.target.value)}
                 className="mt-1 block rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500" />
             </FormField>
-            <Button variant="secondary" onClick={exportFluxoCSV}>
+            <Button type="button" variant="secondary" onClick={exportFluxoCSV}>
               <Download className="h-4 w-4 mr-1" /> Exportar CSV
             </Button>
           </div>

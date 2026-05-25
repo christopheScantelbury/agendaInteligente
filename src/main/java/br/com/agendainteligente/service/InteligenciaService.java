@@ -87,6 +87,7 @@ public class InteligenciaService {
         // No-show rate por hora
         Map<Integer, long[]> horaStats = new HashMap<>();
         for (Agendamento a : historico) {
+            if (a.getDataHoraInicio() == null) continue;
             int hora = a.getDataHoraInicio().getHour();
             long[] stats = horaStats.computeIfAbsent(hora, k -> new long[]{0, 0});
             stats[0]++;
@@ -94,6 +95,7 @@ public class InteligenciaService {
         }
 
         return proximos.stream()
+                .filter(a -> a.getDataHoraInicio() != null)
                 .filter(a -> a.getStatus() == StatusAgendamento.AGENDADO || a.getStatus() == StatusAgendamento.CONFIRMADO)
                 .map(a -> {
                     int score = calcularScore(a, clienteStats, horaStats);

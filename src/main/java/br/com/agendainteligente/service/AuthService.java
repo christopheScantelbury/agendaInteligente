@@ -117,6 +117,10 @@ public class AuthService {
                         .findFirst()
                         .map(Unidade::getId)
                         .orElse(null);
+                // Fallback: usar unidades vinculadas via usuario_unidades se admin não possui unidade própria
+                if (unidadeId == null && usuario.getUnidades() != null && !usuario.getUnidades().isEmpty()) {
+                    unidadeId = usuario.getUnidades().get(0).getId();
+                }
             }
 
             log.info("Login realizado com sucesso. Email: {}", loginDTO.getEmail());
