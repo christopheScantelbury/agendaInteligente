@@ -47,6 +47,8 @@ import AnamneseFormPage from './pages/anamneses/AnamneseFormPage'
 import AnamneseTemplatesPage from './pages/anamneses/AnamneseTemplatesPage'
 import ClientLayout from './components/cliente/ClientLayout'
 import HomeCliente from './pages/cliente/HomeCliente'
+import RecuperarSenha from './pages/RecuperarSenha'
+import RedefinirSenha from './pages/RedefinirSenha'
 
 
 function NavigateToAfterLogin() {
@@ -147,6 +149,38 @@ function App() {
                 }
               />
               <Route path="/reclamacoes" element={<Reclamacoes />} />
+
+              {/* Recuperação de senha */}
+              <Route
+                path="/recuperar-senha"
+                element={
+                  <RecuperarSenha
+                    tipo="usuario"
+                    voltarPara="/login"
+                    labelCampo="E-mail"
+                    placeholderCampo="seu@email.com"
+                  />
+                }
+              />
+              <Route
+                path="/redefinir-senha"
+                element={<RedefinirSenha tipo="usuario" loginUrl="/login" />}
+              />
+              <Route
+                path="/cliente/recuperar-senha"
+                element={
+                  <RecuperarSenha
+                    tipo="cliente"
+                    voltarPara="/cliente/login"
+                    labelCampo="E-mail ou CPF"
+                    placeholderCampo="seu@email.com ou 000.000.000-00"
+                  />
+                }
+              />
+              <Route
+                path="/cliente/redefinir-senha"
+                element={<RedefinirSenha tipo="cliente" loginUrl="/cliente/login" />}
+              />
 
               {/* Landing page — unauthenticated root */}
               <Route

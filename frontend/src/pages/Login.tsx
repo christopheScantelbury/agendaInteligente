@@ -116,6 +116,11 @@ export default function Login() {
                   {mostrarSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              <div className="text-right mt-1.5">
+                <Link to="/recuperar-senha" className="text-xs font-semibold text-violet-600 hover:text-violet-700">
+                  Esqueci minha senha
+                </Link>
+              </div>
             </div>
 
             <button

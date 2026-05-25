@@ -1,381 +1,264 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { clientePublicoService, ClienteCadastroRequest } from '../services/clientePublicoService'
-import FormField from '../components/FormField'
 import { useNotification } from '../contexts/NotificationContext'
+
+function LogoMark({ size = 36 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden>
+      <rect width="32" height="32" rx="9" fill="#7C3AED" />
+      <rect x="6" y="6" width="20" height="20" rx="3" fill="white" />
+      <rect x="10" y="4" width="4" height="5" rx="1.5" fill="#DDD6FE" />
+      <rect x="18" y="4" width="4" height="5" rx="1.5" fill="#DDD6FE" />
+      <line x1="10" y1="16" x2="22" y2="16" stroke="#7C3AED" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="10" y1="19.5" x2="18" y2="19.5" stroke="#C4B5FD" strokeWidth="1.2" strokeLinecap="round" />
+      <circle cx="22" cy="22" r="4" fill="#10B981" />
+      <path d="M20.5 22l1 1 2.5-2.5" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function formatarTelefone(valor: string): string {
+  const num = valor.replace(/\D/g, '').slice(0, 11)
+  if (num.length <= 10) return num.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').replace(/-$/, '')
+  return num.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3').replace(/-$/, '')
+}
+
+function formatarCpfCnpj(valor: string): string {
+  const num = valor.replace(/\D/g, '').slice(0, 14)
+  if (num.length <= 11) {
+    return num
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+  }
+  return num
+    .replace(/(\d{2})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1/$2')
+    .replace(/(\d{4})(\d{1,2})$/, '$1-$2')
+}
 
 export default function CadastroCliente() {
   const navigate = useNavigate()
   const { showNotification } = useNotification()
-  const [formData, setFormData] = useState<ClienteCadastroRequest>({
-    nome: '',
-    cpfCnpj: '',
-    email: '',
-    telefone: '',
-    endereco: '',
-    numero: '',
-    complemento: '',
-    bairro: '',
-    cep: '',
-    cidade: '',
-    uf: '',
-    dataNascimento: '',
-    senha: '',
-  })
+
+  const [nome, setNome] = useState('')
+  const [cpfCnpj, setCpfCnpj] = useState('')
+  const [dataNascimento, setDataNascimento] = useState('')
+  const [email, setEmail] = useState('')
+  const [telefone, setTelefone] = useState('')
+  const [senha, setSenha] = useState('')
   const [confirmarSenha, setConfirmarSenha] = useState('')
-  const [rg, setRg] = useState('')
   const [erro, setErro] = useState('')
   const [loading, setLoading] = useState(false)
-  const [irAgendarAposCadastro, setIrAgendarAposCadastro] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setErro('')
 
-    // Validações
-    if (formData.senha && formData.senha.length < 6) {
+    if (senha.length < 6) {
       setErro('A senha deve ter no mínimo 6 caracteres')
       return
     }
-
-    if (formData.senha !== confirmarSenha) {
+    if (senha !== confirmarSenha) {
       setErro('As senhas não coincidem')
       return
     }
 
     setLoading(true)
+    const dados: ClienteCadastroRequest = {
+      nome,
+      cpfCnpj: cpfCnpj.replace(/\D/g, ''),
+      dataNascimento,
+      email,
+      telefone: telefone.replace(/\D/g, ''),
+      senha,
+    }
 
     try {
-      // Preparar dados para envio
-      const dadosEnvio: any = {
-        ...formData,
-      }
-
-      // Adicionar rg se preenchido
-      if (rg) {
-        dadosEnvio.rg = rg
-      }
-
-      await clientePublicoService.cadastrar(dadosEnvio)
-
-      if (irAgendarAposCadastro && formData.email && formData.senha) {
-        try {
-          await clientePublicoService.login({
-            emailOuCpf: formData.email,
-            senha: formData.senha,
-          })
-          showNotification('success', 'Cadastro realizado! Agora escolha unidade, serviço e horário.')
-          navigate('/cliente/agendar')
-        } catch (_) {
-          showNotification('success', 'Cadastro realizado com sucesso! Faça login para agendar.')
-          navigate('/cliente/login')
-        }
-      } else {
-        showNotification('success', 'Cadastro realizado com sucesso! Faça login para continuar.')
+      await clientePublicoService.cadastrar(dados)
+      // Login automático após cadastro
+      try {
+        await clientePublicoService.login({ emailOuCpf: email, senha })
+        showNotification('success', 'Conta criada! Vamos agendar.')
+        navigate('/cliente/agendar')
+      } catch {
+        showNotification('success', 'Conta criada com sucesso! Faça login para continuar.')
         navigate('/cliente/login')
       }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Erro ao realizar cadastro. Tente novamente.'
-      setErro(errorMessage)
-      showNotification('error', errorMessage)
+      const msg = error.response?.data?.message || 'Erro ao criar conta. Tente novamente.'
+      setErro(msg)
     } finally {
       setLoading(false)
     }
   }
 
-  const formatarCep = (value: string) => {
-    const apenasNumeros = value.replace(/\D/g, '')
-    return apenasNumeros.replace(/(\d{5})(\d{3})/, '$1-$2')
-  }
-
-  const formatarTelefone = (value: string) => {
-    const apenasNumeros = value.replace(/\D/g, '')
-    if (apenasNumeros.length <= 10) {
-      return apenasNumeros.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')
-    } else {
-      return apenasNumeros.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
-    }
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-2xl w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Cadastro de Cliente
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Preencha seus dados para criar sua conta
-          </p>
-        </div>
+    <div
+      className="min-h-screen flex items-center justify-center bg-slate-50 px-4 py-8"
+      style={{ fontFamily: 'Outfit, system-ui, sans-serif' }}
+    >
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-violet-100 rounded-full opacity-60 blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-emerald-100 rounded-full opacity-40 blur-3xl" />
+      </div>
 
-        {erro && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-            {erro}
+      <div className="relative w-full max-w-sm">
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-6 sm:p-8">
+          <div className="flex flex-col items-center mb-6">
+            <Link to="/" className="flex items-center gap-2.5 mb-4">
+              <LogoMark size={40} />
+              <span className="text-xl font-black text-slate-900 tracking-tight">
+                Agenda<span className="text-violet-600">Inteligente</span>
+              </span>
+            </Link>
+            <h1 className="text-lg font-bold text-slate-800">Crie sua conta</h1>
+            <p className="text-sm text-slate-500 mt-1">É rápido — leva menos de 1 minuto</p>
           </div>
-        )}
 
-        <form className="mt-8 space-y-6 bg-white p-6 rounded-lg shadow" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Nome Completo */}
-            <div className="md:col-span-2">
-              <FormField label="Nome Completo" required>
-                <input
-                  type="text"
-                  required
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  placeholder="Digite seu nome completo"
-                />
-              </FormField>
-            </div>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            {erro && (
+              <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">
+                {erro}
+              </div>
+            )}
 
-            {/* CPF/CNPJ */}
-            <FormField label="CPF/CNPJ" required>
+            <Field id="nome" label="Nome completo" required>
               <input
+                id="nome"
                 type="text"
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                value={formData.cpfCnpj}
-                onChange={(e) => {
-                  const apenasNumeros = e.target.value.replace(/\D/g, '')
-                  setFormData({ ...formData, cpfCnpj: apenasNumeros })
-                }}
-                placeholder="000.000.000-00 ou 00.000.000/0000-00"
-                maxLength={18}
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                placeholder="Como devemos te chamar"
+                className={inputStyle}
               />
-            </FormField>
+            </Field>
 
-            {/* RG */}
-            <FormField label="RG">
+            <Field id="cpfCnpj" label="CPF" required>
               <input
+                id="cpfCnpj"
                 type="text"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                value={rg}
-                onChange={(e) => setRg(e.target.value)}
-                placeholder="Digite seu RG"
+                required
+                value={cpfCnpj}
+                onChange={(e) => setCpfCnpj(formatarCpfCnpj(e.target.value))}
+                placeholder="000.000.000-00"
+                inputMode="numeric"
+                className={inputStyle}
               />
-            </FormField>
+            </Field>
 
-            {/* Data de Nascimento */}
-            <FormField label="Data de Nascimento" required>
+            <Field id="dataNascimento" label="Data de nascimento" required>
               <input
+                id="dataNascimento"
                 type="date"
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                value={formData.dataNascimento}
-                onChange={(e) => setFormData({ ...formData, dataNascimento: e.target.value })}
+                value={dataNascimento}
+                onChange={(e) => setDataNascimento(e.target.value)}
                 max={new Date().toISOString().split('T')[0]}
+                className={inputStyle}
               />
-            </FormField>
+            </Field>
 
-            {/* Email */}
-            <FormField label="Email" required>
+            <Field id="email" label="E-mail" required>
               <input
+                id="email"
                 type="email"
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                value={formData.email || ''}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="seu@email.com"
+                className={inputStyle}
               />
-            </FormField>
+            </Field>
 
-            {/* Telefone */}
-            <FormField label="Telefone" required>
+            <Field id="telefone" label="Telefone (WhatsApp)" required>
               <input
-                type="text"
+                id="telefone"
+                type="tel"
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                value={formData.telefone || ''}
-                onChange={(e) => {
-                  const formatted = formatarTelefone(e.target.value)
-                  setFormData({ ...formData, telefone: formatted.replace(/\D/g, '') })
-                }}
+                value={telefone}
+                onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
                 placeholder="(00) 00000-0000"
-                maxLength={15}
+                inputMode="numeric"
+                className={inputStyle}
               />
-            </FormField>
+            </Field>
 
-            {/* CEP */}
-            <FormField label="CEP">
+            <Field id="senha" label="Senha" required hint="Mínimo 6 caracteres">
               <input
-                type="text"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                value={formData.cep || ''}
-                onChange={(e) => {
-                  const formatted = formatarCep(e.target.value)
-                  setFormData({ ...formData, cep: formatted.replace(/\D/g, '') })
-                }}
-                placeholder="00000-000"
-                maxLength={9}
-              />
-            </FormField>
-
-            {/* Endereço */}
-            <FormField label="Endereço">
-              <input
-                type="text"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                value={formData.endereco || ''}
-                onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-                placeholder="Rua, Avenida, etc"
-              />
-            </FormField>
-
-            {/* Número */}
-            <FormField label="Número">
-              <input
-                type="text"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                value={formData.numero || ''}
-                onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
-                placeholder="123"
-              />
-            </FormField>
-
-            {/* Complemento */}
-            <FormField label="Complemento">
-              <input
-                type="text"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                value={formData.complemento || ''}
-                onChange={(e) => setFormData({ ...formData, complemento: e.target.value })}
-                placeholder="Apto, Bloco, etc"
-              />
-            </FormField>
-
-            {/* Bairro */}
-            <FormField label="Bairro">
-              <input
-                type="text"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                value={formData.bairro || ''}
-                onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
-                placeholder="Nome do bairro"
-              />
-            </FormField>
-
-            {/* Cidade */}
-            <FormField label="Cidade">
-              <input
-                type="text"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                value={formData.cidade || ''}
-                onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-                placeholder="Nome da cidade"
-              />
-            </FormField>
-
-            {/* UF */}
-            <FormField label="UF">
-              <select
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                value={formData.uf || ''}
-                onChange={(e) => setFormData({ ...formData, uf: e.target.value })}
-              >
-                <option value="">Selecione</option>
-                <option value="AC">AC</option>
-                <option value="AL">AL</option>
-                <option value="AP">AP</option>
-                <option value="AM">AM</option>
-                <option value="BA">BA</option>
-                <option value="CE">CE</option>
-                <option value="DF">DF</option>
-                <option value="ES">ES</option>
-                <option value="GO">GO</option>
-                <option value="MA">MA</option>
-                <option value="MT">MT</option>
-                <option value="MS">MS</option>
-                <option value="MG">MG</option>
-                <option value="PA">PA</option>
-                <option value="PB">PB</option>
-                <option value="PR">PR</option>
-                <option value="PE">PE</option>
-                <option value="PI">PI</option>
-                <option value="RJ">RJ</option>
-                <option value="RN">RN</option>
-                <option value="RS">RS</option>
-                <option value="RO">RO</option>
-                <option value="RR">RR</option>
-                <option value="SC">SC</option>
-                <option value="SP">SP</option>
-                <option value="SE">SE</option>
-                <option value="TO">TO</option>
-              </select>
-            </FormField>
-
-            {/* Senha */}
-            <FormField label="Senha" required>
-              <input
+                id="senha"
                 type="password"
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                value={formData.senha || ''}
-                onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
-                placeholder="Mínimo 6 caracteres"
                 minLength={6}
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                placeholder="••••••••"
+                className={inputStyle}
               />
-            </FormField>
+            </Field>
 
-            {/* Confirmar Senha */}
-            <FormField label="Confirmar Senha" required>
+            <Field id="confirmarSenha" label="Confirmar senha" required>
               <input
+                id="confirmarSenha"
                 type="password"
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                minLength={6}
                 value={confirmarSenha}
                 onChange={(e) => setConfirmarSenha(e.target.value)}
-                placeholder="Digite a senha novamente"
-                minLength={6}
+                placeholder="Repita a senha"
+                className={inputStyle}
               />
-            </FormField>
-          </div>
+            </Field>
 
-          <div className="border-t border-gray-200 pt-4">
-            <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-gray-200 hover:bg-gray-50">
-              <input
-                type="checkbox"
-                checked={irAgendarAposCadastro}
-                onChange={(e) => setIrAgendarAposCadastro(e.target.checked)}
-                className="mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 flex-shrink-0"
-              />
-              <span className="text-sm text-gray-700">
-                Após o cadastro, já quero agendar uma consulta (será feita o login automático e você escolhe unidade, serviço e horário na próxima tela).
-              </span>
-            </label>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4">
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+              className="w-full py-3 px-4 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold transition-all shadow-md shadow-violet-200 disabled:opacity-60 disabled:cursor-not-allowed mt-2"
             >
-              {loading ? 'Cadastrando...' : irAgendarAposCadastro ? 'Cadastrar e ir agendar' : 'Cadastrar'}
+              {loading ? 'Criando conta...' : 'Criar conta'}
             </button>
-            <button
-              type="button"
-              onClick={() => navigate('/cliente/login')}
-              className="flex-1 flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Cancelar
-            </button>
-          </div>
+          </form>
 
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => navigate('/cliente/login')}
-              className="text-sm text-indigo-600 hover:text-indigo-500"
-            >
-              Já tem conta? Faça login
-            </button>
-          </div>
-        </form>
+          <p className="text-center text-sm text-slate-500 mt-5">
+            Já tem conta?{' '}
+            <Link to="/cliente/login" className="font-semibold text-violet-600 hover:text-violet-700">
+              Entrar
+            </Link>
+          </p>
+        </div>
+
+        <p className="text-center text-xs text-slate-400 mt-4">© 2026 AgendaInteligente</p>
       </div>
     </div>
   )
 }
 
+const inputStyle =
+  'w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition'
+
+function Field({
+  id,
+  label,
+  required,
+  hint,
+  children,
+}: {
+  id: string
+  label: string
+  required?: boolean
+  hint?: string
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-xs font-semibold text-slate-700 mb-1">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      {children}
+      {hint && <p className="text-xs text-slate-400 mt-1">{hint}</p>}
+    </div>
+  )
+}
