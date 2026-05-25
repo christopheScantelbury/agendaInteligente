@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   addDays,
@@ -15,6 +14,7 @@ import { ChevronLeft, ChevronRight, CalendarDays, TrendingUp, Activity } from 'l
 import { authService } from '../../services/authService'
 import { atendenteService } from '../../services/atendenteService'
 import { agendamentoService, Agendamento } from '../../services/agendamentoService'
+import AcoesAgendamentoSheet from '../../components/profissional/AcoesAgendamentoSheet'
 
 const HORA_INICIO = 6
 const HORA_FIM = 22
@@ -59,9 +59,9 @@ function iniciaisCliente(nome?: string): string {
 }
 
 export default function HojeProfissional() {
-  const navigate = useNavigate()
   const usuario = authService.getUsuario()
   const [dataSelecionada, setDataSelecionada] = useState<Date>(() => startOfDay(new Date()))
+  const [agendamentoSelecionado, setAgendamentoSelecionado] = useState<Agendamento | null>(null)
   const timelineRef = useRef<HTMLDivElement | null>(null)
   const [nowOffset, setNowOffset] = useState<number | null>(null)
 
@@ -257,13 +257,18 @@ export default function HojeProfissional() {
                   agendamento={agendamento}
                   topPx={topPx}
                   alturaPx={alturaPx}
-                  onClick={() => navigate(`/profissional/agendamento/${agendamento.id}`)}
+                  onClick={() => setAgendamentoSelecionado(agendamento)}
                 />
               ))}
             </div>
           </div>
         )}
       </div>
+
+      <AcoesAgendamentoSheet
+        agendamento={agendamentoSelecionado}
+        onClose={() => setAgendamentoSelecionado(null)}
+      />
     </div>
   )
 }
