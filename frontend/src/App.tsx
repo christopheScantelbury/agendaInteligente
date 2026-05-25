@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
@@ -13,50 +14,62 @@ import Layout from './components/Layout'
 import NotificationContainer from './components/NotificationContainer'
 import { NotificationProvider } from './contexts/NotificationContext'
 import InstallPrompt from './components/InstallPrompt'
+import RequirePermissao from './components/RequirePermissao'
+import ClientLayout from './components/cliente/ClientLayout'
+import ProfessionalLayout from './components/profissional/ProfessionalLayout'
+
+// Páginas eager (login, cadastro, landing, recuperação — primeiras views)
 import Login from './pages/Login'
 import Cadastro from './pages/Cadastro'
 import LoginCliente from './pages/LoginCliente'
 import CadastroCliente from './pages/CadastroCliente'
-import AgendarCliente from './pages/AgendarCliente'
-import MeusAgendamentosCliente from './pages/MeusAgendamentosCliente'
-import Dashboard from './pages/Dashboard'
-import Unidades from './pages/Unidades'
-import Servicos from './pages/Servicos'
-import Usuarios from './pages/Usuarios'
-import Clientes from './pages/Clientes'
-import ClienteFormPage from './pages/ClienteFormPage'
-import Agendamentos from './pages/Agendamentos'
-import NovoAgendamento from './pages/NovoAgendamento'
-import Reclamacoes from './pages/Reclamacoes'
-import Notificacoes from './pages/Notificacoes'
-import Empresas from './pages/Empresas'
-import Perfis from './pages/Perfis'
-import Profissionais from './pages/Profissionais'
-import Configuracoes from './pages/Configuracoes'
-import ConvitesAcesso from './pages/ConvitesAcesso'
-import ConvitesCliente from './pages/ConvitesCliente'
-import Relatorios from './pages/Relatorios'
-import Despesas from './pages/Despesas'
-import Comissoes from './pages/Comissoes'
-import Performance from './pages/relatorios/Performance'
-import ResumoFinanceiro from './pages/relatorios/ResumoFinanceiro'
-import RequirePermissao from './components/RequirePermissao'
 import Landing from './pages/Landing'
-import AnamneseListPage from './pages/anamneses/AnamneseListPage'
-import AnamneseFormPage from './pages/anamneses/AnamneseFormPage'
-import AnamneseTemplatesPage from './pages/anamneses/AnamneseTemplatesPage'
-import ClientLayout from './components/cliente/ClientLayout'
-import HomeCliente from './pages/cliente/HomeCliente'
-import PerfilCliente from './pages/cliente/PerfilCliente'
-import DashboardPlataforma from './pages/plataforma/DashboardPlataforma'
-import EmpresasPlataforma from './pages/plataforma/EmpresasPlataforma'
-import DashboardGerente from './pages/gerente/DashboardGerente'
 import RecuperarSenha from './pages/RecuperarSenha'
 import RedefinirSenha from './pages/RedefinirSenha'
-import ProfessionalLayout from './components/profissional/ProfessionalLayout'
-import HojeProfissional from './pages/profissional/HojeProfissional'
-import AgendaProfissional from './pages/profissional/AgendaProfissional'
-import PerfilProfissional from './pages/profissional/PerfilProfissional'
+import Reclamacoes from './pages/Reclamacoes'
+
+// Páginas lazy (rotas autenticadas — code split)
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Unidades = lazy(() => import('./pages/Unidades'))
+const Servicos = lazy(() => import('./pages/Servicos'))
+const Usuarios = lazy(() => import('./pages/Usuarios'))
+const Clientes = lazy(() => import('./pages/Clientes'))
+const ClienteFormPage = lazy(() => import('./pages/ClienteFormPage'))
+const Agendamentos = lazy(() => import('./pages/Agendamentos'))
+const NovoAgendamento = lazy(() => import('./pages/NovoAgendamento'))
+const Notificacoes = lazy(() => import('./pages/Notificacoes'))
+const Empresas = lazy(() => import('./pages/Empresas'))
+const Perfis = lazy(() => import('./pages/Perfis'))
+const Profissionais = lazy(() => import('./pages/Profissionais'))
+const Configuracoes = lazy(() => import('./pages/Configuracoes'))
+const ConvitesAcesso = lazy(() => import('./pages/ConvitesAcesso'))
+const ConvitesCliente = lazy(() => import('./pages/ConvitesCliente'))
+const Relatorios = lazy(() => import('./pages/Relatorios'))
+const Despesas = lazy(() => import('./pages/Despesas'))
+const Comissoes = lazy(() => import('./pages/Comissoes'))
+const Performance = lazy(() => import('./pages/relatorios/Performance'))
+const ResumoFinanceiro = lazy(() => import('./pages/relatorios/ResumoFinanceiro'))
+const AnamneseListPage = lazy(() => import('./pages/anamneses/AnamneseListPage'))
+const AnamneseFormPage = lazy(() => import('./pages/anamneses/AnamneseFormPage'))
+const AnamneseTemplatesPage = lazy(() => import('./pages/anamneses/AnamneseTemplatesPage'))
+const AgendarCliente = lazy(() => import('./pages/AgendarCliente'))
+const MeusAgendamentosCliente = lazy(() => import('./pages/MeusAgendamentosCliente'))
+const HomeCliente = lazy(() => import('./pages/cliente/HomeCliente'))
+const PerfilCliente = lazy(() => import('./pages/cliente/PerfilCliente'))
+const DashboardPlataforma = lazy(() => import('./pages/plataforma/DashboardPlataforma'))
+const EmpresasPlataforma = lazy(() => import('./pages/plataforma/EmpresasPlataforma'))
+const DashboardGerente = lazy(() => import('./pages/gerente/DashboardGerente'))
+const HojeProfissional = lazy(() => import('./pages/profissional/HojeProfissional'))
+const AgendaProfissional = lazy(() => import('./pages/profissional/AgendaProfissional'))
+const PerfilProfissional = lazy(() => import('./pages/profissional/PerfilProfissional'))
+
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-[200px] p-8">
+      <div className="h-8 w-8 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+}
 
 
 function NavigateToAfterLogin() {
@@ -125,6 +138,7 @@ function App() {
           <NotificationContainer />
           <Router>
             <InstallPrompt />
+            <Suspense fallback={<PageLoader />}>
             <Routes>
               {/* Rotas públicas para clientes */}
               <Route
@@ -328,6 +342,7 @@ function App() {
                 }
               />
             </Routes>
+            </Suspense>
           </Router>
           {isDev && <ReactQueryDevtools initialIsOpen={false} />}
         </NotificationProvider>
