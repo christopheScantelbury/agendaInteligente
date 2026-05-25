@@ -39,12 +39,19 @@ public class ServicoService {
     private final AtendenteRepository atendenteRepository;
     private final PerfilService perfilService;
 
+    private ServicoDTO toDTOComAtendentes(Servico servico) {
+        ServicoDTO dto = servicoMapper.toDTO(servico);
+        dto.setAtendentesIds(atendenteRepository.findByServicosId(servico.getId()).stream()
+                .map(Atendente::getId).collect(Collectors.toList()));
+        return dto;
+    }
+
     @Transactional(readOnly = true)
     public List<ServicoDTO> listarTodos() {
         log.debug("Listando todos os serviços");
         List<Servico> servicos = filtrarPorPermissao();
         return servicos.stream()
-                .map(servicoMapper::toDTO)
+                .map(this::toDTOComAtendentes)
                 .collect(Collectors.toList());
     }
 
@@ -54,7 +61,7 @@ public class ServicoService {
         List<Servico> servicos = filtrarPorPermissao();
         return servicos.stream()
                 .filter(Servico::getAtivo)
-                .map(servicoMapper::toDTO)
+                .map(this::toDTOComAtendentes)
                 .collect(Collectors.toList());
     }
 
@@ -63,7 +70,7 @@ public class ServicoService {
         log.debug("Listando serviços da unidade: {}", unidadeId);
         validarAcessoUnidade(unidadeId);
         return servicoRepository.findByUnidadeId(unidadeId).stream()
-                .map(servicoMapper::toDTO)
+                .map(this::toDTOComAtendentes)
                 .collect(Collectors.toList());
     }
 
@@ -72,7 +79,7 @@ public class ServicoService {
         log.debug("Listando serviços ativos da unidade: {}", unidadeId);
         validarAcessoUnidade(unidadeId);
         return servicoRepository.findByUnidadeIdAndAtivoTrue(unidadeId).stream()
-                .map(servicoMapper::toDTO)
+                .map(this::toDTOComAtendentes)
                 .collect(Collectors.toList());
     }
 

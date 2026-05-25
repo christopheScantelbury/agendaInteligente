@@ -460,7 +460,9 @@ function AtendenteForm({
       setUsuarioNovo({ nome: '', email: '', senha: '', perfilId: perfilPadraoId })
       setServicosIdsSelecionados([])
     }
-  }, [atendente, usuarioEdicaoResolvido, initialUnidadeId, isAdministrador, unidadePadraoAdministradorId, perfilPadraoId])
+    // Dep: atendente?.id apenas — evita reset acidental quando perfis/unidades terminam de carregar
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [atendente?.id])
 
 
   const saveMutation = useMutation({
