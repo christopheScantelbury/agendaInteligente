@@ -71,6 +71,9 @@ public class AnamneseDTO {
     // Observações
     private String observacoes;
 
+    /** Respostas das perguntas dinâmicas do template selecionado: perguntaId → { valor, obs } */
+    private java.util.Map<String, java.util.Map<String, Object>> respostas;
+
     // Auditoria
     private Long unidadeId;
     private LocalDateTime dataCriacao;

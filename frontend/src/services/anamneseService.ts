@@ -1,11 +1,19 @@
 import api from './api'
 
+export interface PerguntaTemplate {
+  id: string
+  label: string
+  tipo: 'sim_nao' | 'texto' | 'numero'
+  comObservacao?: boolean
+}
+
 export interface AnamneseTemplate {
   id: number
   nome: string
   descricao?: string
   ativo?: boolean
   unidadeId?: number
+  perguntas?: PerguntaTemplate[]
 }
 
 export interface AnamneseResumo {
@@ -59,6 +67,9 @@ export interface Anamnese {
   // Observações
   observacoes?: string
 
+  /** Respostas das perguntas dinâmicas do template: { perguntaId: { valor, obs } } */
+  respostas?: Record<string, { valor?: boolean | string | number | null; obs?: string }>
+
   unidadeId?: number
   dataCriacao?: string
   dataAtualizacao?: string
@@ -92,5 +103,24 @@ export const anamneseService = {
   listarTemplates: async (): Promise<AnamneseTemplate[]> => {
     const response = await api.get<AnamneseTemplate[]>('/anamnese-templates')
     return response.data
+  },
+
+  buscarTemplate: async (id: number): Promise<AnamneseTemplate> => {
+    const response = await api.get<AnamneseTemplate>(`/anamnese-templates/${id}`)
+    return response.data
+  },
+
+  criarTemplate: async (data: Omit<AnamneseTemplate, 'id'>): Promise<AnamneseTemplate> => {
+    const response = await api.post<AnamneseTemplate>('/anamnese-templates', data)
+    return response.data
+  },
+
+  atualizarTemplate: async (id: number, data: AnamneseTemplate): Promise<AnamneseTemplate> => {
+    const response = await api.put<AnamneseTemplate>(`/anamnese-templates/${id}`, data)
+    return response.data
+  },
+
+  inativarTemplate: async (id: number): Promise<void> => {
+    await api.delete(`/anamnese-templates/${id}`)
   },
 }

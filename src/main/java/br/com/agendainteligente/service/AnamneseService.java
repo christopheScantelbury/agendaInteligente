@@ -16,12 +16,17 @@ import br.com.agendainteligente.repository.ClienteRepository;
 import br.com.agendainteligente.repository.ServicoRepository;
 import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.repository.UsuarioRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import br.com.agendainteligente.exception.BusinessException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -37,6 +42,7 @@ public class AnamneseService {
     private final ServicoRepository servicoRepository;
     private final UnidadeRepository unidadeRepository;
     private final UsuarioRepository usuarioRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Transactional(readOnly = true)
     public List<AnamneseResumoDTO> listar(Long unidadeId, Long clienteId) {
@@ -113,6 +119,14 @@ public class AnamneseService {
                 .unidade(unidade)
                 .build();
 
+        if (dto.getRespostas() != null && !dto.getRespostas().isEmpty()) {
+            try {
+                anamnese.setRespostas(objectMapper.writeValueAsString(dto.getRespostas()));
+            } catch (JsonProcessingException e) {
+                throw new BusinessException("Falha ao serializar respostas da anamnese");
+            }
+        }
+
         anamnese = anamneseRepository.save(anamnese);
         log.info("Anamnese criada com sucesso. ID: {}", anamnese.getId());
         return toDTO(anamnese);
@@ -129,14 +143,79 @@ public class AnamneseService {
     @Transactional(readOnly = true)
     public List<AnamneseTemplateDTO> listarTemplatesAtivos() {
         return anamneseTemplateRepository.findByAtivoTrueOrderByNomeAsc().stream()
-                .map(t -> AnamneseTemplateDTO.builder()
-                        .id(t.getId())
-                        .nome(t.getNome())
-                        .descricao(t.getDescricao())
-                        .ativo(t.getAtivo())
-                        .unidadeId(t.getUnidade() != null ? t.getUnidade().getId() : null)
-                        .build())
+                .map(this::toTemplateDTO)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public AnamneseTemplateDTO buscarTemplatePorId(Long id) {
+        AnamneseTemplate t = anamneseTemplateRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Template não encontrado"));
+        return toTemplateDTO(t);
+    }
+
+    @Transactional
+    public AnamneseTemplateDTO salvarTemplate(AnamneseTemplateDTO dto) {
+        AnamneseTemplate template = dto.getId() != null
+                ? anamneseTemplateRepository.findById(dto.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Template não encontrado"))
+                : new AnamneseTemplate();
+        template.setNome(dto.getNome());
+        template.setDescricao(dto.getDescricao());
+        template.setAtivo(dto.getAtivo() != null ? dto.getAtivo() : true);
+        if (dto.getUnidadeId() != null) {
+            template.setUnidade(unidadeRepository.findById(dto.getUnidadeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada")));
+        }
+        Usuario logado = getUsuarioLogado();
+        Long adminUnicoId = logado.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR
+                ? logado.getId() : logado.getAdminUnicoId();
+        template.setAdminUnicoId(adminUnicoId);
+        try {
+            template.setPerguntas(dto.getPerguntas() != null
+                    ? objectMapper.writeValueAsString(dto.getPerguntas())
+                    : null);
+        } catch (JsonProcessingException e) {
+            throw new BusinessException("Falha ao serializar perguntas do template");
+        }
+        return toTemplateDTO(anamneseTemplateRepository.save(template));
+    }
+
+    @Transactional
+    public void inativarTemplate(Long id) {
+        AnamneseTemplate template = anamneseTemplateRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Template não encontrado"));
+        template.setAtivo(false);
+        anamneseTemplateRepository.save(template);
+    }
+
+    private AnamneseTemplateDTO toTemplateDTO(AnamneseTemplate t) {
+        List<AnamneseTemplateDTO.Pergunta> perguntas = null;
+        if (t.getPerguntas() != null && !t.getPerguntas().isBlank()) {
+            try {
+                perguntas = objectMapper.readValue(t.getPerguntas(),
+                        new TypeReference<List<AnamneseTemplateDTO.Pergunta>>() {});
+            } catch (JsonProcessingException e) {
+                log.warn("Falha ao desserializar perguntas do template {}: {}", t.getId(), e.getMessage());
+            }
+        }
+        return AnamneseTemplateDTO.builder()
+                .id(t.getId())
+                .nome(t.getNome())
+                .descricao(t.getDescricao())
+                .ativo(t.getAtivo())
+                .unidadeId(t.getUnidade() != null ? t.getUnidade().getId() : null)
+                .perguntas(perguntas)
+                .build();
+    }
+
+    private Usuario getUsuarioLogado() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new BusinessException("Não autorizado");
+        }
+        return usuarioRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
     }
 
     private AnamneseDTO toDTO(Anamnese a) {
@@ -174,10 +253,22 @@ public class AnamneseService {
                 .adesivo(a.getAdesivo())
                 .usoImagem(a.getUsoImagem())
                 .observacoes(a.getObservacoes())
+                .respostas(parseRespostas(a.getRespostas()))
                 .unidadeId(a.getUnidade() != null ? a.getUnidade().getId() : null)
                 .dataCriacao(a.getDataCriacao())
                 .dataAtualizacao(a.getDataAtualizacao())
                 .build();
+    }
+
+    private java.util.Map<String, java.util.Map<String, Object>> parseRespostas(String json) {
+        if (json == null || json.isBlank()) return null;
+        try {
+            return objectMapper.readValue(json,
+                    new TypeReference<java.util.Map<String, java.util.Map<String, Object>>>() {});
+        } catch (JsonProcessingException e) {
+            log.warn("Falha ao desserializar respostas: {}", e.getMessage());
+            return null;
+        }
     }
 
     private Unidade resolverUnidadeDoUsuarioLogado() {

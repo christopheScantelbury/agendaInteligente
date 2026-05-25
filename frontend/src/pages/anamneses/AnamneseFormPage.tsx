@@ -54,6 +54,7 @@ export default function AnamneseFormPage() {
   const anamneseId = id ? Number(id) : undefined
 
   const [form, setForm] = useState<AnamneseFormData>(emptyForm)
+  const [respostasDinamicas, setRespostasDinamicas] = useState<Record<string, { valor?: boolean | string | number | null; obs?: string }>>({})
 
   // Cliente autocomplete state
   const [clienteSearch, setClienteSearch] = useState('')
@@ -72,6 +73,9 @@ export default function AnamneseFormPage() {
     queryKey: ['anamnese-templates'],
     queryFn: anamneseService.listarTemplates,
   })
+
+  const templateSelecionado = templates.find((t) => t.id === form.templateId)
+  const usarPerguntasDinamicas = !!(templateSelecionado?.perguntas && templateSelecionado.perguntas.length > 0)
 
   const { data: todosServicos = [] } = useQuery({
     queryKey: ['servicos'],
@@ -117,7 +121,9 @@ export default function AnamneseFormPage() {
         adesivo: anamneseExistente.adesivo || '',
         usoImagem: anamneseExistente.usoImagem ?? false,
         observacoes: anamneseExistente.observacoes || '',
+        respostas: anamneseExistente.respostas,
       })
+      setRespostasDinamicas(anamneseExistente.respostas ?? {})
       setClienteNomeSelecionado(anamneseExistente.clienteNome || '')
       setClienteSearch(anamneseExistente.clienteNome || '')
       setServicoSearch(anamneseExistente.servicoNome || '')
@@ -212,7 +218,7 @@ export default function AnamneseFormPage() {
       showNotification('error', 'Informe o procedimento')
       return
     }
-    saveMutation.mutate(form)
+    saveMutation.mutate({ ...form, respostas: usarPerguntasDinamicas ? respostasDinamicas : undefined })
   }
 
   if (isView && isLoadingAnamnese) {
@@ -314,85 +320,96 @@ export default function AnamneseFormPage() {
           </div>
         </section>
 
-        {/* Seção 2 — Questionário */}
+        {/* Seção 2 — Questionário (dinâmico baseado no template) */}
         <section className={sectionClass}>
-          <h2 className={sectionTitleClass}>Questionário</h2>
-          <div className="space-y-5">
-            <SimNaoField
-              label="Usa rímel?"
-              value={form.usaRimel}
-              obsValue={form.usaRimelObs}
-              onChange={(v) => setForm({ ...form, usaRimel: v })}
-              onObsChange={(obs) => setForm({ ...form, usaRimelObs: obs })}
-            />
-            <SimNaoField
-              label="Realizou algum procedimento recente nos olhos?"
-              value={form.procedimentosRecentesOlhos}
-              obsValue={form.procedimentosRecentesOlhosObs}
-              onChange={(v) => setForm({ ...form, procedimentosRecentesOlhos: v })}
-              onObsChange={(obs) => setForm({ ...form, procedimentosRecentesOlhosObs: obs })}
-            />
-            <SimNaoField
-              label="Possui alergias?"
-              value={form.alergias}
-              obsValue={form.alergiasObs}
-              onChange={(v) => setForm({ ...form, alergias: v })}
-              onObsChange={(obs) => setForm({ ...form, alergiasObs: obs })}
-            />
-            <SimNaoField
-              label="Problemas oculares?"
-              value={form.problemasOculares}
-              obsValue={form.problemasOcularesObs}
-              onChange={(v) => setForm({ ...form, problemasOculares: v })}
-              onObsChange={(obs) => setForm({ ...form, problemasOcularesObs: obs })}
-            />
-            <SimNaoField
-              label="Está em tratamento oncológico?"
-              value={form.tratamentoOncologico}
-              obsValue={form.tratamentoOncologicoObs}
-              onChange={(v) => setForm({ ...form, tratamentoOncologico: v })}
-              onObsChange={(obs) => setForm({ ...form, tratamentoOncologicoObs: obs })}
-            />
-            <SimNaoField
-              label="Tem problema de tireoide?"
-              value={form.tireoide}
-              obsValue={form.tireoidedObs}
-              onChange={(v) => setForm({ ...form, tireoide: v })}
-              onObsChange={(obs) => setForm({ ...form, tireoidedObs: obs })}
-            />
-            <SimNaoField
-              label="Dorme de lado?"
-              value={form.dormeDeLado}
-              obsValue={form.dormeDeLadoObs}
-              onChange={(v) => setForm({ ...form, dormeDeLado: v })}
-              onObsChange={(obs) => setForm({ ...form, dormeDeLadoObs: obs })}
-            />
-            <SimNaoField
-              label="Está grávida?"
-              value={form.gravidez}
-              obsValue={form.gravidezObs}
-              onChange={(v) => setForm({ ...form, gravidez: v })}
-              onObsChange={(obs) => setForm({ ...form, gravidezObs: obs })}
-            />
-            <div className="space-y-2">
-              <SimNaoField
-                label="Outros problemas?"
-                value={form.outrosProblemas}
-                onChange={(v) => setForm({ ...form, outrosProblemas: v })}
-                showObs={false}
-              />
-              {form.outrosProblemas === true && (
-                <textarea
-                  value={form.outrosProblemasDescricao || ''}
-                  onChange={(e) => setForm({ ...form, outrosProblemasDescricao: e.target.value })}
-                  placeholder="Descreva os outros problemas..."
-                  rows={3}
-                  disabled={isView}
-                  className={fieldClass}
-                />
-              )}
+          <h2 className={sectionTitleClass}>
+            Questionário
+            {usarPerguntasDinamicas && (
+              <span className="ml-2 text-xs font-normal text-violet-600">
+                ({templateSelecionado?.perguntas?.length} pergunta{templateSelecionado!.perguntas!.length > 1 ? 's' : ''} do template)
+              </span>
+            )}
+          </h2>
+          {usarPerguntasDinamicas ? (
+            <div className="space-y-5">
+              {templateSelecionado!.perguntas!.map((pergunta) => {
+                const resposta = respostasDinamicas[pergunta.id] ?? {}
+                const setResposta = (patch: { valor?: boolean | string | null; obs?: string }) => {
+                  setRespostasDinamicas((prev) => ({
+                    ...prev,
+                    [pergunta.id]: { ...prev[pergunta.id], ...patch },
+                  }))
+                }
+                if (pergunta.tipo === 'sim_nao') {
+                  return (
+                    <SimNaoField
+                      key={pergunta.id}
+                      label={pergunta.label}
+                      value={typeof resposta.valor === 'boolean' ? resposta.valor : null}
+                      obsValue={resposta.obs ?? ''}
+                      showObs={pergunta.comObservacao !== false}
+                      onChange={(v) => setResposta({ valor: v })}
+                      onObsChange={(obs) => setResposta({ obs })}
+                    />
+                  )
+                }
+                return (
+                  <div key={pergunta.id} className="space-y-1">
+                    <label className="block text-sm font-medium text-gray-700">{pergunta.label}</label>
+                    <input
+                      type={pergunta.tipo === 'numero' ? 'number' : 'text'}
+                      value={(resposta.valor as string | undefined) ?? ''}
+                      onChange={(e) => setResposta({ valor: e.target.value })}
+                      disabled={isView}
+                      className={fieldClass}
+                    />
+                  </div>
+                )
+              })}
             </div>
-          </div>
+          ) : (
+            <div className="space-y-5">
+              {!form.templateId && (
+                <p className="text-xs text-gray-500 italic">
+                  Selecione um template acima para usar perguntas customizadas, ou preencha as perguntas padrão abaixo.
+                </p>
+              )}
+              <SimNaoField label="Usa rímel?" value={form.usaRimel} obsValue={form.usaRimelObs}
+                onChange={(v) => setForm({ ...form, usaRimel: v })}
+                onObsChange={(obs) => setForm({ ...form, usaRimelObs: obs })} />
+              <SimNaoField label="Realizou algum procedimento recente nos olhos?" value={form.procedimentosRecentesOlhos} obsValue={form.procedimentosRecentesOlhosObs}
+                onChange={(v) => setForm({ ...form, procedimentosRecentesOlhos: v })}
+                onObsChange={(obs) => setForm({ ...form, procedimentosRecentesOlhosObs: obs })} />
+              <SimNaoField label="Possui alergias?" value={form.alergias} obsValue={form.alergiasObs}
+                onChange={(v) => setForm({ ...form, alergias: v })}
+                onObsChange={(obs) => setForm({ ...form, alergiasObs: obs })} />
+              <SimNaoField label="Problemas oculares?" value={form.problemasOculares} obsValue={form.problemasOcularesObs}
+                onChange={(v) => setForm({ ...form, problemasOculares: v })}
+                onObsChange={(obs) => setForm({ ...form, problemasOcularesObs: obs })} />
+              <SimNaoField label="Está em tratamento oncológico?" value={form.tratamentoOncologico} obsValue={form.tratamentoOncologicoObs}
+                onChange={(v) => setForm({ ...form, tratamentoOncologico: v })}
+                onObsChange={(obs) => setForm({ ...form, tratamentoOncologicoObs: obs })} />
+              <SimNaoField label="Tem problema de tireoide?" value={form.tireoide} obsValue={form.tireoidedObs}
+                onChange={(v) => setForm({ ...form, tireoide: v })}
+                onObsChange={(obs) => setForm({ ...form, tireoidedObs: obs })} />
+              <SimNaoField label="Dorme de lado?" value={form.dormeDeLado} obsValue={form.dormeDeLadoObs}
+                onChange={(v) => setForm({ ...form, dormeDeLado: v })}
+                onObsChange={(obs) => setForm({ ...form, dormeDeLadoObs: obs })} />
+              <SimNaoField label="Está grávida?" value={form.gravidez} obsValue={form.gravidezObs}
+                onChange={(v) => setForm({ ...form, gravidez: v })}
+                onObsChange={(obs) => setForm({ ...form, gravidezObs: obs })} />
+              <div className="space-y-2">
+                <SimNaoField label="Outros problemas?" value={form.outrosProblemas}
+                  onChange={(v) => setForm({ ...form, outrosProblemas: v })} showObs={false} />
+                {form.outrosProblemas === true && (
+                  <textarea value={form.outrosProblemasDescricao || ''}
+                    onChange={(e) => setForm({ ...form, outrosProblemasDescricao: e.target.value })}
+                    placeholder="Descreva os outros problemas..." rows={3} disabled={isView}
+                    className={fieldClass} />
+                )}
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Seção 3 — Avaliação */}

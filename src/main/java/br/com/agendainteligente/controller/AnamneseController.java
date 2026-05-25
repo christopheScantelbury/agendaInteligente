@@ -55,9 +55,40 @@ public class AnamneseController {
     }
 
     @GetMapping("/api/anamnese-templates")
-    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'PROFISSIONAL')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRADOR', 'GERENTE', 'PROFISSIONAL')")
     @Operation(summary = "Listar templates de anamnese ativos")
     public ResponseEntity<List<AnamneseTemplateDTO>> listarTemplates() {
         return ResponseEntity.ok(anamneseService.listarTemplatesAtivos());
+    }
+
+    @GetMapping("/api/anamnese-templates/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRADOR', 'GERENTE', 'PROFISSIONAL')")
+    @Operation(summary = "Buscar template de anamnese por ID")
+    public ResponseEntity<AnamneseTemplateDTO> buscarTemplate(@PathVariable Long id) {
+        return ResponseEntity.ok(anamneseService.buscarTemplatePorId(id));
+    }
+
+    @PostMapping("/api/anamnese-templates")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRADOR', 'GERENTE')")
+    @Operation(summary = "Criar novo template de anamnese")
+    public ResponseEntity<AnamneseTemplateDTO> criarTemplate(@Valid @RequestBody AnamneseTemplateDTO dto) {
+        dto.setId(null);
+        return ResponseEntity.status(HttpStatus.CREATED).body(anamneseService.salvarTemplate(dto));
+    }
+
+    @PutMapping("/api/anamnese-templates/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRADOR', 'GERENTE')")
+    @Operation(summary = "Atualizar template de anamnese")
+    public ResponseEntity<AnamneseTemplateDTO> atualizarTemplate(@PathVariable Long id, @Valid @RequestBody AnamneseTemplateDTO dto) {
+        dto.setId(id);
+        return ResponseEntity.ok(anamneseService.salvarTemplate(dto));
+    }
+
+    @DeleteMapping("/api/anamnese-templates/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRADOR', 'GERENTE')")
+    @Operation(summary = "Inativar template de anamnese")
+    public ResponseEntity<Void> inativarTemplate(@PathVariable Long id) {
+        anamneseService.inativarTemplate(id);
+        return ResponseEntity.noContent().build();
     }
 }

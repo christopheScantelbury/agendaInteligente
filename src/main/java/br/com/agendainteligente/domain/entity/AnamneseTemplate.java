@@ -34,6 +34,13 @@ public class AnamneseTemplate {
     @JoinColumn(name = "unidade_id")
     private Unidade unidade;
 
+    @Column(name = "admin_unico_id")
+    private Long adminUnicoId;
+
+    /** JSON array de perguntas: [{id, label, tipo: 'sim_nao'|'texto'|'numero', comObservacao}] */
+    @Column(columnDefinition = "jsonb")
+    private String perguntas;
+
     @Column(name = "data_criacao", nullable = false, updatable = false)
     private LocalDateTime dataCriacao;
 

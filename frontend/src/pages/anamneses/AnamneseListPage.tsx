@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Trash2, Eye } from 'lucide-react'
+import { Plus, Trash2, Eye, ClipboardList } from 'lucide-react'
 import { anamneseService } from '../../services/anamneseService'
 import { useNotification } from '../../contexts/NotificationContext'
 import ConfirmDialog from '../../components/ConfirmDialog'
@@ -49,10 +49,16 @@ export default function AnamneseListPage() {
     <div className="w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Anamneses</h1>
-        <Button onClick={() => navigate('/anamneses/nova')}>
-          <Plus className="h-5 w-5 mr-2" />
-          Nova Ficha
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="secondary" onClick={() => navigate('/anamneses/templates')}>
+            <ClipboardList className="h-5 w-5 mr-2" />
+            Gerenciar Templates
+          </Button>
+          <Button onClick={() => navigate('/anamneses/nova')}>
+            <Plus className="h-5 w-5 mr-2" />
+            Nova Ficha
+          </Button>
+        </div>
       </div>
 
       <div className="mb-4">

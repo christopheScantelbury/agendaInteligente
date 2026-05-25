@@ -119,6 +119,10 @@ public class Anamnese {
     @Column(name = "observacoes", columnDefinition = "TEXT")
     private String observacoes;
 
+    /** JSON com respostas de perguntas dinâmicas do template: { perguntaId: {valor, obs} } */
+    @Column(columnDefinition = "jsonb")
+    private String respostas;
+
     // Auditoria
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "unidade_id")
