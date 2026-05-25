@@ -1,68 +1,80 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { clientePublicoService } from '../services/clientePublicoService'
+import { format, parseISO } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  MapPin,
+  Scissors,
+  Search,
+  Sparkles,
+} from 'lucide-react'
+import { clientePublicoService, HorarioDisponivel } from '../services/clientePublicoService'
 import { unidadeService, Unidade } from '../services/unidadeService'
 import { servicoService, Servico } from '../services/servicoService'
+import { inteligenciaService, HorarioPopular } from '../services/inteligenciaService'
 import { useNotification } from '../contexts/NotificationContext'
 import DateSlotPicker from '../components/DateSlotPicker'
-import { inteligenciaService, HorarioPopular } from '../services/inteligenciaService'
-import {
-  Building2,
-  MapPin,
-  ChevronRight,
-  Scissors,
-  Clock,
-  DollarSign,
-  CheckCircle2,
-  Calendar as CalendarIcon,
-  ArrowLeft
-} from 'lucide-react'
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 
-type Step = 'unidade' | 'servico' | 'data' | 'confirmacao'
+type Step = 1 | 2 | 3
+type FormaPagamento = 'PIX' | 'CARTAO' | 'NO_LOCAL'
+
+type Slot = HorarioDisponivel
+
+const STEP_TITLES: Record<Step, { title: string; subtitle: string }> = {
+  1: { title: 'Qual serviço você quer?', subtitle: 'Escolha o serviço para continuar' },
+  2: { title: 'Quando você prefere?', subtitle: 'Selecione data e horário disponíveis' },
+  3: { title: 'Quase lá!', subtitle: 'Confirme os detalhes do seu agendamento' },
+}
+
+const FORMAS_PAGAMENTO: { id: FormaPagamento; label: string; desc: string }[] = [
+  { id: 'NO_LOCAL', label: 'Pagar no local', desc: 'Dinheiro, cartão ou Pix com o profissional' },
+  { id: 'PIX', label: 'Pix', desc: 'Combinar com o estabelecimento' },
+  { id: 'CARTAO', label: 'Cartão', desc: 'Combinar com o estabelecimento' },
+]
 
 export default function AgendarCliente() {
   const navigate = useNavigate()
   const { showNotification } = useNotification()
 
-  // Data
+  const [step, setStep] = useState<Step>(1)
   const [unidades, setUnidades] = useState<Unidade[]>([])
   const [servicos, setServicos] = useState<Servico[]>([])
-
-  // Selection State
   const [selectedUnidade, setSelectedUnidade] = useState<Unidade | null>(null)
   const [selectedServico, setSelectedServico] = useState<Servico | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
-  const [selectedSlot, setSelectedSlot] = useState<any>(null)
-
-  // Flow State
-  const [currentStep, setCurrentStep] = useState<Step>('unidade')
-  const [loading, setLoading] = useState(false)
-  const [loadingSlots, setLoadingSlots] = useState(false)
-  const [availableSlots, setAvailableSlots] = useState<any[]>([])
+  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null)
+  const [availableSlots, setAvailableSlots] = useState<Slot[]>([])
   const [horariosPopulares, setHorariosPopulares] = useState<HorarioPopular[]>([])
+  const [loadingSlots, setLoadingSlots] = useState(false)
+  const [busca, setBusca] = useState('')
+  const [formaPagamento, setFormaPagamento] = useState<FormaPagamento>('NO_LOCAL')
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     if (!clientePublicoService.isAuthenticated()) {
       navigate('/cliente/login')
       return
     }
-    carregarDados()
+    void carregarDados()
   }, [navigate])
 
   useEffect(() => {
-    if (currentStep === 'data' && selectedUnidade && selectedServico) {
-      buscarHorarios(selectedDate)
-      if (!horariosPopulares.length) {
-        inteligenciaService.horariosPopulares(selectedUnidade.id)
+    if (step === 2 && selectedUnidade && selectedServico) {
+      void buscarHorarios(selectedDate)
+      if (horariosPopulares.length === 0) {
+        inteligenciaService
+          .horariosPopulares(selectedUnidade.id!)
           .then(setHorariosPopulares)
-          .catch(() => {}) // graceful fail — feature optional
+          .catch(() => {})
       }
     }
-  }, [currentStep, selectedDate, selectedUnidade, selectedServico])
+  }, [step, selectedDate, selectedUnidade?.id, selectedServico?.id])
 
-  const carregarDados = async () => {
+  async function carregarDados() {
     try {
       const [unidadesData, servicosData] = await Promise.all([
         unidadeService.listar(),
@@ -70,43 +82,60 @@ export default function AgendarCliente() {
       ])
       setUnidades(unidadesData)
       setServicos(servicosData)
-    } catch (error) {
+      if (unidadesData.length === 1) {
+        setSelectedUnidade(unidadesData[0])
+      }
+    } catch {
       showNotification('error', 'Erro ao carregar dados')
     }
   }
 
-  const buscarHorarios = async (date: Date) => {
+  async function buscarHorarios(date: Date) {
     if (!selectedUnidade || !selectedServico) return
-
     setLoadingSlots(true)
-    setAvailableSlots([]) // Clear previous slots
-    setSelectedSlot(null) // Deselect when date changes
-
+    setAvailableSlots([])
+    setSelectedSlot(null)
     try {
-      // API expects strings for startDate and endDate
-      // We will search for the specific selected day
       const dateStr = date.toISOString().split('T')[0]
-
       const horariosData = await clientePublicoService.buscarHorariosDisponiveis(
         selectedUnidade.id!,
         selectedServico.id!,
         dateStr,
-        dateStr // Same day to get specific slots
+        dateStr
       )
       setAvailableSlots(horariosData)
     } catch (error) {
       console.error(error)
-      // Doesn't need to notify error on every date change if empty
     } finally {
       setLoadingSlots(false)
     }
   }
 
-  const handleAgendar = async () => {
+  async function verificarDisponibilidadeESubmeter() {
     if (!selectedSlot || !selectedUnidade || !selectedServico) return
-
-    setLoading(true)
+    setSubmitting(true)
     try {
+      // Re-checa disponibilidade antes de submeter (evita race condition)
+      const dateStr = selectedSlot.dataHoraInicio.split('T')[0]
+      const horariosAtuais = await clientePublicoService.buscarHorariosDisponiveis(
+        selectedUnidade.id!,
+        selectedServico.id!,
+        dateStr,
+        dateStr
+      )
+      const aindaDisponivel = horariosAtuais.some(
+        (s) =>
+          s.dataHoraInicio === selectedSlot.dataHoraInicio &&
+          s.atendenteId === selectedSlot.atendenteId
+      )
+      if (!aindaDisponivel) {
+        showNotification('error', 'Esse horário foi ocupado enquanto você decidia. Escolha outro.')
+        setAvailableSlots(horariosAtuais)
+        setSelectedSlot(null)
+        setStep(2)
+        return
+      }
+
       const cliente = clientePublicoService.getCliente()
       if (!cliente) throw new Error('Cliente não encontrado')
 
@@ -115,6 +144,7 @@ export default function AgendarCliente() {
         unidadeId: selectedUnidade.id!,
         atendenteId: selectedSlot.atendenteId,
         dataHoraInicio: selectedSlot.dataHoraInicio,
+        observacoes: `Forma de pagamento preferida: ${formaPagamento}`,
         servicos: [
           {
             servicoId: selectedServico.id!,
@@ -123,311 +153,382 @@ export default function AgendarCliente() {
           },
         ],
       }
-
       await clientePublicoService.criarAgendamento(agendamento)
       showNotification('success', 'Agendamento realizado com sucesso!')
-
-      // Success Animation/Transition could go here
-      setTimeout(() => {
-        navigate('/cliente/meus-agendamentos')
-      }, 1000)
+      setTimeout(() => navigate('/cliente'), 800)
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Erro ao realizar agendamento'
       showNotification('error', errorMessage)
     } finally {
-      setLoading(false)
+      setSubmitting(false)
     }
   }
 
-  const steps = [
-    { id: 'unidade', label: 'Unidade', icon: Building2 },
-    { id: 'servico', label: 'Serviço', icon: Scissors },
-    { id: 'data', label: 'Data e Hora', icon: CalendarIcon },
-    { id: 'confirmacao', label: 'Confirmar', icon: CheckCircle2 },
-  ]
+  const servicosFiltrados = useMemo(() => {
+    const termo = busca.trim().toLowerCase()
+    let lista = servicos
+    if (selectedUnidade && unidades.length > 1) {
+      lista = lista.filter((s) => !s.unidadeId || s.unidadeId === selectedUnidade.id)
+    }
+    if (termo) {
+      lista = lista.filter(
+        (s) =>
+          s.nome.toLowerCase().includes(termo) ||
+          (s.descricao?.toLowerCase().includes(termo) ?? false)
+      )
+    }
+    return lista
+  }, [servicos, selectedUnidade, unidades.length, busca])
 
-  const getStepStatus = (stepId: string) => {
-    const stepOrder = ['unidade', 'servico', 'data', 'confirmacao']
-    const currentIndex = stepOrder.indexOf(currentStep)
-    const stepIndex = stepOrder.indexOf(stepId)
+  function handleBack() {
+    if (step === 1) {
+      navigate('/cliente')
+      return
+    }
+    setStep((step - 1) as Step)
+  }
 
-    if (stepIndex < currentIndex) return 'completed'
-    if (stepIndex === currentIndex) return 'current'
-    return 'upcoming'
+  function handleServicoSelect(servico: Servico) {
+    setSelectedServico(servico)
+    setStep(2)
+  }
+
+  function handleSlotSelect(slot: Slot) {
+    setSelectedSlot(slot)
+    setStep(3)
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="max-w-5xl mx-auto">
+    <div className="px-4 py-4 max-w-md mx-auto">
+      <ProgressHeader step={step} onBack={handleBack} />
 
-        {/* Progress Header */}
-        <div className="mb-8">
-          <nav aria-label="Progress">
-            <ol role="list" className="flex items-center">
-              {steps.map((step, stepIdx) => {
-                const status = getStepStatus(step.id)
-                return (
-                  <li key={step.id} className={`relative ${stepIdx !== steps.length - 1 ? 'pr-8 sm:pr-20' : ''}`}>
-                    {status === 'completed' ? (
-                      <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                        <div className="h-0.5 w-full bg-indigo-600" />
-                      </div>
-                    ) : null}
-                    <div className={`relative flex h-8 w-8 items-center justify-center rounded-full ${status === 'completed' || status === 'current' ? 'bg-indigo-600 hover:bg-indigo-900' : 'bg-gray-200'
-                      }`}>
-                      <step.icon className="h-5 w-5 text-white" aria-hidden="true" />
-                      <span className="sr-only">{step.label}</span>
-                    </div>
-                    <div className="mt-2 hidden sm:block">
-                      <span className={`text-xs font-medium ${status === 'current' ? 'text-indigo-600' : 'text-gray-500'}`}>
-                        {step.label}
-                      </span>
-                    </div>
-                  </li>
-                )
-              })}
-            </ol>
-          </nav>
+      <header className="mt-3 mb-5">
+        <h1 className="text-xl font-bold text-slate-900">{STEP_TITLES[step].title}</h1>
+        <p className="text-sm text-gray-500 mt-0.5">{STEP_TITLES[step].subtitle}</p>
+      </header>
+
+      {step === 1 && (
+        <Step1Servico
+          unidades={unidades}
+          selectedUnidade={selectedUnidade}
+          onUnidadeChange={setSelectedUnidade}
+          busca={busca}
+          onBuscaChange={setBusca}
+          servicos={servicosFiltrados}
+          onServicoSelect={handleServicoSelect}
+        />
+      )}
+
+      {step === 2 && selectedUnidade && selectedServico && (
+        <Step2Horario
+          unidade={selectedUnidade}
+          servico={selectedServico}
+          selectedDate={selectedDate}
+          onDateSelect={setSelectedDate}
+          slots={availableSlots}
+          loading={loadingSlots}
+          selectedSlot={selectedSlot}
+          horariosPopulares={horariosPopulares}
+          onSlotSelect={handleSlotSelect}
+        />
+      )}
+
+      {step === 3 && selectedUnidade && selectedServico && selectedSlot && (
+        <Step3Confirmar
+          unidade={selectedUnidade}
+          servico={selectedServico}
+          slot={selectedSlot}
+          formaPagamento={formaPagamento}
+          onFormaPagamentoChange={setFormaPagamento}
+          submitting={submitting}
+          onConfirm={verificarDisponibilidadeESubmeter}
+          onAlterarHorario={() => setStep(2)}
+        />
+      )}
+    </div>
+  )
+}
+
+function ProgressHeader({ step, onBack }: { step: Step; onBack: () => void }) {
+  return (
+    <div className="flex items-center gap-3">
+      <button
+        type="button"
+        onClick={onBack}
+        aria-label="Voltar"
+        className="p-2 -ml-2 rounded-full hover:bg-gray-100 text-gray-600"
+      >
+        <ArrowLeft className="h-5 w-5" />
+      </button>
+      <div className="flex-1 flex gap-1.5" aria-label={`Passo ${step} de 3`}>
+        {([1, 2, 3] as Step[]).map((s) => (
+          <div
+            key={s}
+            className={`flex-1 h-1.5 rounded-full transition-colors ${
+              s <= step ? 'bg-violet-600' : 'bg-gray-200'
+            }`}
+          />
+        ))}
+      </div>
+      <span className="text-xs text-gray-500 font-medium tabular-nums">{step}/3</span>
+    </div>
+  )
+}
+
+function Step1Servico({
+  unidades,
+  selectedUnidade,
+  onUnidadeChange,
+  busca,
+  onBuscaChange,
+  servicos,
+  onServicoSelect,
+}: {
+  unidades: Unidade[]
+  selectedUnidade: Unidade | null
+  onUnidadeChange: (u: Unidade) => void
+  busca: string
+  onBuscaChange: (s: string) => void
+  servicos: Servico[]
+  onServicoSelect: (s: Servico) => void
+}) {
+  return (
+    <div className="space-y-3">
+      {unidades.length > 1 && (
+        <div>
+          <label htmlFor="unidade" className="block text-xs font-medium text-gray-700 mb-1.5">
+            Unidade
+          </label>
+          <select
+            id="unidade"
+            value={selectedUnidade?.id ?? ''}
+            onChange={(e) => {
+              const u = unidades.find((x) => x.id === Number(e.target.value))
+              if (u) onUnidadeChange(u)
+            }}
+            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm focus:border-violet-400 focus:ring-2 focus:ring-violet-100 focus:outline-none"
+          >
+            <option value="" disabled>
+              Selecione...
+            </option>
+            {unidades.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.nome}
+              </option>
+            ))}
+          </select>
         </div>
+      )}
 
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden min-h-[600px] flex flex-col">
-          {/* Header Area with Back Button */}
-          <div className="p-6 border-b border-gray-100 flex items-center gap-4 bg-white sticky top-0 z-10">
-            {currentStep !== 'unidade' && (
-              <button
-                onClick={() => {
-                  if (currentStep === 'servico') setCurrentStep('unidade')
-                  if (currentStep === 'data') setCurrentStep('servico')
-                  if (currentStep === 'confirmacao') setCurrentStep('data')
-                }}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                title="Voltar"
-              >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
-              </button>
-            )}
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {currentStep === 'unidade' && 'Escolha a Unidade'}
-                {currentStep === 'servico' && 'Qual serviço você deseja?'}
-                {currentStep === 'data' && 'Escolha o melhor horário'}
-                {currentStep === 'confirmacao' && 'Revise seu agendamento'}
-              </h1>
-              <p className="text-gray-500 text-sm mt-1">
-                {currentStep === 'unidade' && 'Selecione a unidade mais próxima de você'}
-                {currentStep === 'servico' && 'Nossos profissionais são especialistas'}
-                {currentStep === 'data' && 'Horários disponíveis atualizados em tempo real'}
-                {currentStep === 'confirmacao' && 'Confirme se está tudo correto'}
-              </p>
-            </div>
-          </div>
-
-          <div className="p-6 md:p-8 flex-1 bg-gray-50/50">
-            {/* Step 1: Unidades */}
-            {currentStep === 'unidade' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn">
-                {unidades.map(unidade => (
-                  <button
-                    key={unidade.id}
-                    onClick={() => {
-                      setSelectedUnidade(unidade)
-                      setCurrentStep('servico')
-                    }}
-                    className="group bg-white rounded-xl p-6 shadow-sm hover:shadow-md border border-gray-100 hover:border-indigo-200 text-left transition-all duration-300 transform hover:-translate-y-1"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-indigo-50 group-hover:bg-indigo-100 flex items-center justify-center mb-4 transition-colors">
-                      <Building2 className="w-6 h-6 text-indigo-600" />
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">{unidade.nome}</h3>
-                    <div className="flex items-start gap-2 text-gray-500 text-sm">
-                      <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
-                      <span>{unidade.endereco || 'Endereço não informado'}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Step 2: Serviços */}
-            {currentStep === 'servico' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
-                {servicos.map(servico => (
-                  <button
-                    key={servico.id}
-                    onClick={() => {
-                      setSelectedServico(servico)
-                      setCurrentStep('data')
-                    }}
-                    className="flex items-center p-4 bg-white rounded-xl shadow-sm hover:shadow-md border border-gray-100 hover:border-indigo-200 transition-all duration-200 group"
-                  >
-                    <div className="w-16 h-16 rounded-lg bg-gray-100 group-hover:bg-indigo-50 flex items-center justify-center mr-4 transition-colors shrink-0">
-                      <Scissors className="w-7 h-7 text-gray-400 group-hover:text-indigo-600" />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <h3 className="text-lg font-bold text-gray-900 group-hover:text-indigo-700 transition-colors">
-                        {servico.nome}
-                      </h3>
-                      <p className="text-sm text-gray-500 line-clamp-1">{servico.descricao || 'Sem descrição'}</p>
-                      <div className="flex items-center gap-4 mt-2">
-                        <span className="inline-flex items-center text-sm font-medium text-gray-700 bg-gray-50 px-2 py-1 rounded">
-                          <Clock className="w-3.5 h-3.5 mr-1" />
-                          {servico.duracaoMinutos} min
-                        </span>
-                        <span className="inline-flex items-center text-sm font-bold text-green-700 bg-green-50 px-2 py-1 rounded">
-                          <DollarSign className="w-3.5 h-3.5 mr-1" />
-                          R$ {servico.valor.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-indigo-600 ml-2" />
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Step 3: Data e Hora */}
-            {currentStep === 'data' && (
-              <div className="animate-fadeIn max-w-4xl mx-auto">
-                <div className="bg-white rounded-xl p-4 mb-6 shadow-sm border border-gray-100 flex flex-wrap gap-4 items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-indigo-50 rounded-lg">
-                      <Building2 className="w-5 h-5 text-indigo-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 uppercase font-semibold">Unidade</p>
-                      <p className="font-medium text-gray-900">{selectedUnidade?.nome}</p>
-                    </div>
-                  </div>
-                  <div className="w-px h-10 bg-gray-200 hidden sm:block"></div>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-50 rounded-lg">
-                      <Scissors className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 uppercase font-semibold">Serviço</p>
-                      <p className="font-medium text-gray-900">{selectedServico?.nome}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <DateSlotPicker
-                  selectedDate={selectedDate}
-                  onDateSelect={setSelectedDate}
-                  slots={availableSlots}
-                  loading={loadingSlots}
-                  selectedSlot={selectedSlot}
-                  horariosPopulares={horariosPopulares}
-                  onSlotSelect={(slot) => {
-                    setSelectedSlot(slot)
-                    setCurrentStep('confirmacao')
-                  }}
-                />
-              </div>
-            )}
-
-            {/* Step 4: Confirmação */}
-            {currentStep === 'confirmacao' && selectedSlot && (
-              <div className="max-w-md mx-auto animate-fadeIn">
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                  <div className="bg-indigo-600 p-6 text-white text-center">
-                    <h2 className="text-2xl font-bold mb-1">Quase lá!</h2>
-                    <p className="text-indigo-100">Confirme os detalhes do seu agendamento</p>
-                  </div>
-
-                  <div className="p-6 space-y-6">
-                    {/* Info Items */}
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
-                        <CalendarIcon className="w-5 h-5 text-indigo-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Data e Hora</p>
-                        <p className="font-bold text-gray-900 text-lg">
-                          {format(new Date(selectedSlot.dataHoraInicio), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
-                        <Scissors className="w-5 h-5 text-indigo-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Serviço</p>
-                        <p className="font-bold text-gray-900">{selectedServico?.nome}</p>
-                        <p className="text-sm text-gray-600">R$ {selectedServico?.valor.toFixed(2)} • {selectedServico?.duracaoMinutos} min</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
-                        <MapPin className="w-5 h-5 text-indigo-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Local</p>
-                        <p className="font-bold text-gray-900">{selectedUnidade?.nome}</p>
-                        <p className="text-sm text-gray-600">{selectedUnidade?.endereco}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
-                        <Building2 className="w-5 h-5 text-indigo-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Profissional</p>
-                        <p className="font-bold text-gray-900">{selectedSlot.atendenteNome}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-6 bg-gray-50 border-t border-gray-100">
-                    <button
-                      onClick={handleAgendar}
-                      disabled={loading}
-                      className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold text-lg hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {loading ? (
-                        <>Processing...</>
-                      ) : (
-                        <>Confirmar Agendamento <CheckCircle2 className="w-5 h-5" /></>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => setCurrentStep('data')}
-                      disabled={loading}
-                      className="w-full mt-3 py-3 text-gray-600 font-medium hover:text-gray-900 transition-colors"
-                    >
-                      Escolher outro horário
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <input
+          type="search"
+          placeholder="Buscar serviço"
+          value={busca}
+          onChange={(e) => onBuscaChange(e.target.value)}
+          className="w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 py-3 text-sm focus:border-violet-400 focus:ring-2 focus:ring-violet-100 focus:outline-none"
+        />
       </div>
 
-      {/* Footer viral */}
-      <footer className="mt-6 pb-6 text-center">
-        <a
-          href="https://agendainteligente-aleefhenriiques-projects.vercel.app"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-violet-600 transition-colors"
-        >
-          <svg width="14" height="14" viewBox="0 0 32 32" fill="none" aria-hidden>
-            <rect width="32" height="32" rx="9" fill="#7C3AED" />
-            <rect x="6" y="6" width="20" height="20" rx="3" fill="white" />
-            <rect x="10" y="4" width="4" height="5" rx="1.5" fill="#DDD6FE" />
-            <rect x="18" y="4" width="4" height="5" rx="1.5" fill="#DDD6FE" />
-            <line x1="10" y1="16" x2="22" y2="16" stroke="#7C3AED" strokeWidth="1.5" strokeLinecap="round" />
-            <circle cx="22" cy="22" r="4" fill="#10B981" />
-            <path d="M20.5 22l1 1 2.5-2.5" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          Agendado via <span className="font-semibold text-violet-500">AgendaInteligente</span> · Agende grátis para seu negócio
-        </a>
-      </footer>
+      {servicos.length === 0 ? (
+        <div className="text-center py-10 text-sm text-gray-500">
+          {selectedUnidade ? 'Nenhum serviço encontrado.' : 'Selecione uma unidade primeiro.'}
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {servicos.map((s) => (
+            <li key={s.id}>
+              <button
+                type="button"
+                onClick={() => onServicoSelect(s)}
+                className="
+                  w-full flex items-center gap-3 p-3
+                  bg-white border border-gray-200 rounded-xl
+                  hover:border-violet-300 hover:shadow-sm transition
+                  text-left
+                "
+              >
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-violet-100 to-violet-50 flex items-center justify-center flex-shrink-0">
+                  <Scissors className="h-5 w-5 text-violet-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-slate-900 truncate">{s.nome}</p>
+                  {s.descricao && (
+                    <p className="text-xs text-gray-500 line-clamp-1">{s.descricao}</p>
+                  )}
+                  <div className="flex items-center gap-3 mt-1 text-xs">
+                    <span className="text-gray-600 flex items-center gap-1">
+                      <Clock className="h-3 w-3" /> {s.duracaoMinutos} min
+                    </span>
+                    <span className="font-semibold text-green-700">
+                      R$ {s.valor.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-gray-300 flex-shrink-0" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function Step2Horario({
+  unidade,
+  servico,
+  selectedDate,
+  onDateSelect,
+  slots,
+  loading,
+  selectedSlot,
+  horariosPopulares,
+  onSlotSelect,
+}: {
+  unidade: Unidade
+  servico: Servico
+  selectedDate: Date
+  onDateSelect: (d: Date) => void
+  slots: Slot[]
+  loading: boolean
+  selectedSlot: Slot | null
+  horariosPopulares: HorarioPopular[]
+  onSlotSelect: (s: Slot) => void
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="bg-white border border-gray-200 rounded-xl p-3 text-sm">
+        <p className="font-semibold text-slate-900 truncate">{servico.nome}</p>
+        <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+          <MapPin className="h-3 w-3" /> {unidade.nome}
+        </p>
+      </div>
+
+      <DateSlotPicker
+        selectedDate={selectedDate}
+        onDateSelect={onDateSelect}
+        slots={slots}
+        loading={loading}
+        selectedSlot={selectedSlot}
+        horariosPopulares={horariosPopulares}
+        onSlotSelect={onSlotSelect}
+      />
+    </div>
+  )
+}
+
+function Step3Confirmar({
+  unidade,
+  servico,
+  slot,
+  formaPagamento,
+  onFormaPagamentoChange,
+  submitting,
+  onConfirm,
+  onAlterarHorario,
+}: {
+  unidade: Unidade
+  servico: Servico
+  slot: Slot
+  formaPagamento: FormaPagamento
+  onFormaPagamentoChange: (f: FormaPagamento) => void
+  submitting: boolean
+  onConfirm: () => void
+  onAlterarHorario: () => void
+}) {
+  return (
+    <div className="space-y-4">
+      <section className="bg-white border border-gray-200 rounded-2xl divide-y divide-gray-100">
+        <Row label="Serviço" value={servico.nome} sub={`${servico.duracaoMinutos} min`} />
+        <Row
+          label="Data e hora"
+          value={format(parseISO(slot.dataHoraInicio), "EEEE, dd 'de' MMM 'às' HH:mm", { locale: ptBR })}
+        />
+        {slot.atendenteNome && <Row label="Profissional" value={slot.atendenteNome} />}
+        <Row label="Local" value={unidade.nome} sub={unidade.endereco ?? undefined} />
+        <Row label="Valor" value={`R$ ${servico.valor.toFixed(2)}`} bold />
+      </section>
+
+      <section aria-labelledby="pagamento-titulo">
+        <h2 id="pagamento-titulo" className="text-sm font-semibold text-gray-700 mb-2">
+          Forma de pagamento
+        </h2>
+        <fieldset className="space-y-2">
+          <legend className="sr-only">Forma de pagamento</legend>
+          {FORMAS_PAGAMENTO.map((f) => {
+            const ativo = f.id === formaPagamento
+            return (
+              <label
+                key={f.id}
+                className={`
+                  flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition
+                  ${ativo ? 'border-violet-500 bg-violet-50' : 'border-gray-200 bg-white hover:border-gray-300'}
+                `}
+              >
+                <input
+                  type="radio"
+                  name="formaPagamento"
+                  value={f.id}
+                  checked={ativo}
+                  onChange={() => onFormaPagamentoChange(f.id)}
+                  className="mt-0.5 text-violet-600 focus:ring-violet-500"
+                />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-slate-900">{f.label}</p>
+                  <p className="text-xs text-gray-500">{f.desc}</p>
+                </div>
+              </label>
+            )
+          })}
+        </fieldset>
+      </section>
+
+      <button
+        type="button"
+        onClick={onAlterarHorario}
+        disabled={submitting}
+        className="block w-full text-sm text-gray-600 hover:text-gray-900 underline-offset-4 hover:underline disabled:opacity-50"
+      >
+        Trocar horário
+      </button>
+
+      <button
+        type="button"
+        onClick={onConfirm}
+        disabled={submitting}
+        className="
+          flex items-center justify-center gap-2 w-full
+          bg-violet-600 hover:bg-violet-700 active:bg-violet-800
+          text-white font-semibold text-base
+          rounded-2xl py-4 shadow-sm
+          transition-colors disabled:opacity-70 disabled:cursor-not-allowed
+          min-h-[56px]
+        "
+      >
+        {submitting ? (
+          'Confirmando...'
+        ) : (
+          <>
+            Confirmar agendamento <CheckCircle2 className="h-5 w-5" />
+          </>
+        )}
+      </button>
+
+      <p className="text-xs text-gray-400 text-center flex items-center justify-center gap-1">
+        <Sparkles className="h-3 w-3" /> Agendado via AgendaInteligente
+      </p>
+    </div>
+  )
+}
+
+function Row({ label, value, sub, bold }: { label: string; value: string; sub?: string; bold?: boolean }) {
+  return (
+    <div className="px-4 py-3">
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className={`text-sm text-slate-900 ${bold ? 'font-bold' : 'font-medium'}`}>{value}</p>
+      {sub && <p className="text-xs text-gray-500 mt-0.5">{sub}</p>}
     </div>
   )
 }
