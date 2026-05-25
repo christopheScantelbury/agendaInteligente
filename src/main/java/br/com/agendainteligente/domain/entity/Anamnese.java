@@ -120,8 +120,9 @@ public class Anamnese {
     private String observacoes;
 
     /** JSON com respostas de perguntas dinâmicas do template: { perguntaId: {valor, obs} } */
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private String respostas;
+    private java.util.Map<String, java.util.Map<String, Object>> respostas;
 
     // Auditoria
     @ManyToOne(fetch = FetchType.LAZY)

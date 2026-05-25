@@ -5,8 +5,12 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "anamnese_templates")
@@ -38,8 +42,9 @@ public class AnamneseTemplate {
     private Long adminUnicoId;
 
     /** JSON array de perguntas: [{id, label, tipo: 'sim_nao'|'texto'|'numero', comObservacao}] */
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private String perguntas;
+    private List<Map<String, Object>> perguntas;
 
     @Column(name = "data_criacao", nullable = false, updatable = false)
     private LocalDateTime dataCriacao;

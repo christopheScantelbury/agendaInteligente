@@ -120,11 +120,7 @@ public class AnamneseService {
                 .build();
 
         if (dto.getRespostas() != null && !dto.getRespostas().isEmpty()) {
-            try {
-                anamnese.setRespostas(objectMapper.writeValueAsString(dto.getRespostas()));
-            } catch (JsonProcessingException e) {
-                throw new BusinessException("Falha ao serializar respostas da anamnese");
-            }
+            anamnese.setRespostas(dto.getRespostas());
         }
 
         anamnese = anamneseRepository.save(anamnese);
@@ -171,12 +167,13 @@ public class AnamneseService {
         Long adminUnicoId = logado.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR
                 ? logado.getId() : logado.getAdminUnicoId();
         template.setAdminUnicoId(adminUnicoId);
-        try {
-            template.setPerguntas(dto.getPerguntas() != null
-                    ? objectMapper.writeValueAsString(dto.getPerguntas())
-                    : null);
-        } catch (JsonProcessingException e) {
-            throw new BusinessException("Falha ao serializar perguntas do template");
+        // Converte List<Pergunta DTO> em List<Map<String,Object>> para persistência JSONB
+        if (dto.getPerguntas() != null) {
+            template.setPerguntas(dto.getPerguntas().stream()
+                    .map(p -> objectMapper.convertValue(p, new TypeReference<java.util.Map<String, Object>>() {}))
+                    .collect(java.util.stream.Collectors.toList()));
+        } else {
+            template.setPerguntas(null);
         }
         return toTemplateDTO(anamneseTemplateRepository.save(template));
     }
@@ -191,13 +188,10 @@ public class AnamneseService {
 
     private AnamneseTemplateDTO toTemplateDTO(AnamneseTemplate t) {
         List<AnamneseTemplateDTO.Pergunta> perguntas = null;
-        if (t.getPerguntas() != null && !t.getPerguntas().isBlank()) {
-            try {
-                perguntas = objectMapper.readValue(t.getPerguntas(),
-                        new TypeReference<List<AnamneseTemplateDTO.Pergunta>>() {});
-            } catch (JsonProcessingException e) {
-                log.warn("Falha ao desserializar perguntas do template {}: {}", t.getId(), e.getMessage());
-            }
+        if (t.getPerguntas() != null && !t.getPerguntas().isEmpty()) {
+            perguntas = t.getPerguntas().stream()
+                    .map(m -> objectMapper.convertValue(m, AnamneseTemplateDTO.Pergunta.class))
+                    .collect(Collectors.toList());
         }
         return AnamneseTemplateDTO.builder()
                 .id(t.getId())
@@ -253,23 +247,13 @@ public class AnamneseService {
                 .adesivo(a.getAdesivo())
                 .usoImagem(a.getUsoImagem())
                 .observacoes(a.getObservacoes())
-                .respostas(parseRespostas(a.getRespostas()))
+                .respostas(a.getRespostas())
                 .unidadeId(a.getUnidade() != null ? a.getUnidade().getId() : null)
                 .dataCriacao(a.getDataCriacao())
                 .dataAtualizacao(a.getDataAtualizacao())
                 .build();
     }
 
-    private java.util.Map<String, java.util.Map<String, Object>> parseRespostas(String json) {
-        if (json == null || json.isBlank()) return null;
-        try {
-            return objectMapper.readValue(json,
-                    new TypeReference<java.util.Map<String, java.util.Map<String, Object>>>() {});
-        } catch (JsonProcessingException e) {
-            log.warn("Falha ao desserializar respostas: {}", e.getMessage());
-            return null;
-        }
-    }
 
     private Unidade resolverUnidadeDoUsuarioLogado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
