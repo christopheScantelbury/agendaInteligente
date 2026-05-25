@@ -293,9 +293,11 @@ export default function Despesas() {
                         </button>
                       )}
                       {podeEditar && (d.status === 'PAGA' || d.status === 'CANCELADA') && (
-                        <span className="inline-flex p-1 text-gray-400 cursor-not-allowed"
-                          title={d.status === 'PAGA' ? 'Despesa paga — bloqueada para edição' : 'Despesa cancelada — bloqueada para edição'}>
+                        <span className="group relative inline-flex p-1 text-gray-400 cursor-not-allowed">
                           <Lock className="h-4 w-4" />
+                          <span className="invisible group-hover:visible absolute right-full top-1/2 -translate-y-1/2 mr-2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-white shadow-lg z-10">
+                            {d.status === 'PAGA' ? 'Despesa paga — bloqueada para edição' : 'Despesa cancelada — bloqueada para edição'}
+                          </span>
                         </span>
                       )}
                     </div>

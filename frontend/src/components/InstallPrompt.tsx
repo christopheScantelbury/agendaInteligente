@@ -1,5 +1,22 @@
 import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { X, Download } from 'lucide-react'
+
+// Rotas onde o prompt de instalação NÃO deve aparecer (formulários e fluxos críticos)
+const ROTAS_BLOQUEADAS = [
+  '/anamneses/nova',
+  '/anamneses/templates',
+  '/agendamentos/novo',
+  '/clientes/novo',
+  '/servicos/novo',
+]
+
+function rotaBloqueada(pathname: string) {
+  if (ROTAS_BLOQUEADAS.some((r) => pathname.startsWith(r))) return true
+  // Também bloqueia em rotas de edição (terminam com /editar ou têm ID numérico)
+  if (/\/(editar|\d+)$/.test(pathname) && pathname !== '/dashboard') return true
+  return false
+}
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -7,6 +24,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export default function InstallPrompt() {
+  const location = useLocation()
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showIOSPrompt, setShowIOSPrompt] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
@@ -90,6 +108,11 @@ export default function InstallPrompt() {
 
   // Não mostrar se já está instalado
   if (isStandalone) {
+    return null
+  }
+
+  // Não mostrar em rotas de formulário para evitar interromper preenchimento
+  if (rotaBloqueada(location.pathname)) {
     return null
   }
 

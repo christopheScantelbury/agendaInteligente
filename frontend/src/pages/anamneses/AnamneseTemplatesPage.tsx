@@ -182,6 +182,10 @@ function TemplateForm({
       if (patch.label !== undefined && p.id.startsWith('pergunta_')) {
         novo.id = slugify(patch.label) || p.id
       }
+      // Se tipo mudou para algo que não é sim_nao, limpa comObservacao para evitar inconsistência no payload
+      if (patch.tipo && patch.tipo !== 'sim_nao') {
+        novo.comObservacao = undefined
+      }
       return novo
     }))
   }
@@ -198,7 +202,10 @@ function TemplateForm({
     e.preventDefault()
     if (!nome.trim()) return showNotification('error', 'Nome é obrigatório')
     if (perguntas.length === 0) return showNotification('error', 'Adicione pelo menos uma pergunta')
-    if (perguntas.some((p) => !p.label.trim())) return showNotification('error', 'Todas as perguntas precisam de um texto')
+    const indicesVazias = perguntas.map((p, i) => !p.label.trim() ? i + 1 : null).filter(Boolean)
+    if (indicesVazias.length > 0) {
+      return showNotification('error', `Preencha o texto da${indicesVazias.length > 1 ? 's' : ''} pergunta${indicesVazias.length > 1 ? 's' : ''} ${indicesVazias.join(', ')}`)
+    }
 
     saveMutation.mutate({
       id: template?.id ?? 0,
@@ -210,7 +217,7 @@ function TemplateForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} noValidate className="space-y-4">
       <FormField label="Nome do template" required>
         <input required type="text" value={nome} onChange={(e) => setNome(e.target.value)}
           placeholder="Ex: Anamnese facial completa"
@@ -251,10 +258,15 @@ function TemplateForm({
                       className="text-gray-400 hover:text-gray-700 disabled:opacity-30" title="Descer">▼</button>
                   </div>
                   <div className="flex-1 space-y-2">
-                    <input type="text" required value={p.label}
+                    <input type="text" value={p.label}
                       onChange={(e) => atualizarPergunta(idx, { label: e.target.value })}
                       placeholder={`Pergunta ${idx + 1} (ex: Usa rímel?)`}
-                      className="block w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500" />
+                      className={`block w-full text-sm rounded-md shadow-sm focus:border-violet-500 focus:ring-violet-500 ${
+                        !p.label.trim() ? 'border-red-300' : 'border-gray-300'
+                      }`} />
+                    {!p.label.trim() && (
+                      <p className="text-xs text-red-600">Texto da pergunta é obrigatório</p>
+                    )}
                     <div className="flex flex-wrap gap-3 items-center text-xs">
                       <label className="flex items-center gap-1">
                         Tipo:
