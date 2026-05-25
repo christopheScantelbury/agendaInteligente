@@ -179,6 +179,111 @@ public class DashboardGerenteController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Equipe em tempo real: estado de cada profissional ativo da unidade.
+     */
+    @GetMapping("/equipe")
+    @PreAuthorize("hasAnyRole('ADMIN','ADMINISTRADOR','GERENTE')")
+    public ResponseEntity<List<Map<String, Object>>> equipe(@AuthenticationPrincipal Usuario usuario) {
+        List<Long> unidadeIds = unidadeIdsDoUsuario(usuario);
+        LocalDate hoje = LocalDate.now();
+        LocalDateTime inicioHoje = hoje.atStartOfDay();
+        LocalDateTime fimHoje = hoje.atTime(23, 59, 59);
+        LocalDateTime agora = LocalDateTime.now();
+
+        List<Agendamento> agendamentosHoje = agendamentoRepository.findAll().stream()
+                .filter(a -> a.getUnidade() != null && unidadeIds.contains(a.getUnidade().getId()))
+                .filter(a -> a.getDataHoraInicio() != null
+                        && !a.getDataHoraInicio().isBefore(inicioHoje)
+                        && !a.getDataHoraInicio().isAfter(fimHoje))
+                .toList();
+
+        List<Map<String, Object>> equipe = new ArrayList<>();
+        atendenteRepository.findByUnidadeIdIn(unidadeIds).stream()
+                .filter(at -> Boolean.TRUE.equals(at.getAtivo()))
+                .forEach(at -> {
+                    List<Agendamento> meus = agendamentosHoje.stream()
+                            .filter(a -> a.getAtendente() != null && at.getId().equals(a.getAtendente().getId()))
+                            .toList();
+
+                    String status = "LIVRE";
+                    Agendamento proximo = null;
+                    for (Agendamento a : meus) {
+                        String s = stringStatus(a);
+                        if ("EM_ANDAMENTO".equals(s)) {
+                            status = "EM_ATENDIMENTO";
+                            proximo = a;
+                            break;
+                        }
+                    }
+                    if ("LIVRE".equals(status)) {
+                        proximo = meus.stream()
+                                .filter(a -> !STATUS_PERDA.contains(stringStatus(a))
+                                        && !STATUS_CONCLUIDO.contains(stringStatus(a))
+                                        && a.getDataHoraInicio() != null
+                                        && a.getDataHoraInicio().isAfter(agora))
+                                .findFirst()
+                                .orElse(null);
+                        if (proximo != null
+                                && java.time.Duration.between(agora, proximo.getDataHoraInicio()).toMinutes() <= 30) {
+                            status = "PROXIMO";
+                        }
+                    }
+
+                    BigDecimal faturamentoDia = meus.stream()
+                            .filter(a -> STATUS_CONCLUIDO.contains(stringStatus(a)))
+                            .map(a -> a.getValorFinal() != null ? a.getValorFinal()
+                                    : (a.getValorTotal() != null ? a.getValorTotal() : BigDecimal.ZERO))
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("atendenteId", at.getId());
+                    item.put("nome", at.getUsuario() != null ? at.getUsuario().getNome() : "—");
+                    item.put("status", status);
+                    item.put("proximoHorario", proximo != null ? proximo.getDataHoraInicio() : null);
+                    item.put("faturamentoDia", faturamentoDia);
+                    item.put("atendimentosHoje", meus.size());
+                    equipe.add(item);
+                });
+        return ResponseEntity.ok(equipe);
+    }
+
+    /**
+     * Próximos 10 agendamentos de toda a unidade (cronológico, ativos).
+     */
+    @GetMapping("/proximos")
+    @PreAuthorize("hasAnyRole('ADMIN','ADMINISTRADOR','GERENTE')")
+    public ResponseEntity<List<Map<String, Object>>> proximos(@AuthenticationPrincipal Usuario usuario) {
+        List<Long> unidadeIds = unidadeIdsDoUsuario(usuario);
+        LocalDateTime agora = LocalDateTime.now();
+
+        List<Map<String, Object>> proximos = agendamentoRepository.findAll().stream()
+                .filter(a -> a.getUnidade() != null && unidadeIds.contains(a.getUnidade().getId()))
+                .filter(a -> a.getDataHoraInicio() != null && a.getDataHoraInicio().isAfter(agora))
+                .filter(a -> !STATUS_PERDA.contains(stringStatus(a))
+                        && !STATUS_CONCLUIDO.contains(stringStatus(a)))
+                .sorted((a, b) -> a.getDataHoraInicio().compareTo(b.getDataHoraInicio()))
+                .limit(10)
+                .map(a -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("id", a.getId());
+                    m.put("dataHoraInicio", a.getDataHoraInicio());
+                    m.put("status", a.getStatus() != null ? a.getStatus().name() : null);
+                    m.put("clienteNome", a.getCliente() != null ? a.getCliente().getNome() : "Cliente");
+                    m.put("atendenteNome", a.getAtendente() != null && a.getAtendente().getUsuario() != null
+                            ? a.getAtendente().getUsuario().getNome() : null);
+                    m.put("servicos", a.getServicos() != null
+                            ? a.getServicos().stream()
+                                .map(s -> s.getServico() != null ? s.getServico().getNome() : null)
+                                .filter(java.util.Objects::nonNull)
+                                .toList()
+                            : List.of());
+                    return m;
+                })
+                .toList();
+        return ResponseEntity.ok(proximos);
+    }
+
     private List<Long> unidadeIdsDoUsuario(Usuario usuario) {
         if (usuario == null) return List.of();
         Long adminId = usuario.getAdminUnicoId() != null ? usuario.getAdminUnicoId() : usuario.getId();

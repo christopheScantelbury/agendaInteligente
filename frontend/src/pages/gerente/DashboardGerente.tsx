@@ -12,6 +12,8 @@ import {
 } from 'lucide-react'
 import { dashboardGerenteService, KpisGerente } from '../../services/dashboardGerenteService'
 import GraficoFaturamento from '../../components/gerente/GraficoFaturamento'
+import EquipeTempoReal from '../../components/gerente/EquipeTempoReal'
+import ProximosAgendamentos from '../../components/gerente/ProximosAgendamentos'
 
 function formatBRL(valor: number | null | undefined): string {
   if (valor == null) return '—'
@@ -59,11 +61,11 @@ export default function DashboardGerente() {
       {/* Linha 2 — gráfico de faturamento */}
       <GraficoFaturamento />
 
-      <div data-tour="equipe" className="bg-white border border-gray-200 rounded-2xl p-6 mb-4">
-        <p className="text-sm font-semibold text-slate-700">Equipe em tempo real</p>
-        <p className="text-xs text-gray-400 mt-1">Cards de profissionais chegam em #98.</p>
-        <div className="mt-4 h-24 bg-gradient-to-b from-emerald-50 to-transparent rounded-xl border border-dashed border-emerald-200" />
-      </div>
+      {/* Linha 3 — equipe em tempo real */}
+      <EquipeTempoReal />
+
+      {/* Linha 4 — próximos agendamentos */}
+      <ProximosAgendamentos />
     </div>
   )
 }

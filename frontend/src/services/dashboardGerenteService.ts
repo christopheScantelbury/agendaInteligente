@@ -37,4 +37,34 @@ export const dashboardGerenteService = {
     })
     return response.data
   },
+
+  equipe: async (): Promise<MembroEquipe[]> => {
+    const response = await api.get<MembroEquipe[]>('/dashboard/gerente/equipe')
+    return response.data
+  },
+
+  proximos: async (): Promise<ProximoAgendamento[]> => {
+    const response = await api.get<ProximoAgendamento[]>('/dashboard/gerente/proximos')
+    return response.data
+  },
+}
+
+export type StatusMembro = 'LIVRE' | 'EM_ATENDIMENTO' | 'PROXIMO'
+
+export interface MembroEquipe {
+  atendenteId: number
+  nome: string
+  status: StatusMembro
+  proximoHorario: string | null
+  faturamentoDia: number
+  atendimentosHoje: number
+}
+
+export interface ProximoAgendamento {
+  id: number
+  dataHoraInicio: string
+  status: string | null
+  clienteNome: string
+  atendenteNome: string | null
+  servicos: string[]
 }
