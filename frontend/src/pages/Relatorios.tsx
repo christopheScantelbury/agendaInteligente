@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line,
@@ -75,6 +76,14 @@ export default function Relatorios() {
 
   return (
     <div className="w-full space-y-6">
+      {/* Sub-menu de relatórios */}
+      <div className="flex flex-wrap gap-2 text-sm">
+        <span className="text-gray-500">Ver também:</span>
+        <Link to="/relatorios/performance" className="text-violet-600 hover:text-violet-800 font-medium">Performance</Link>
+        <span className="text-gray-300">·</span>
+        <Link to="/relatorios/financeiro" className="text-violet-600 hover:text-violet-800 font-medium">Resumo Financeiro</Link>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">

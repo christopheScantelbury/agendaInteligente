@@ -38,6 +38,8 @@ import ConvitesCliente from './pages/ConvitesCliente'
 import Relatorios from './pages/Relatorios'
 import Despesas from './pages/Despesas'
 import Comissoes from './pages/Comissoes'
+import Performance from './pages/relatorios/Performance'
+import ResumoFinanceiro from './pages/relatorios/ResumoFinanceiro'
 import RequirePermissao from './components/RequirePermissao'
 import Landing from './pages/Landing'
 import AnamneseListPage from './pages/anamneses/AnamneseListPage'
@@ -187,6 +189,8 @@ function App() {
                         <Route path="/relatorios" element={<Relatorios />} />
                         <Route path="/despesas" element={<Despesas />} />
                         <Route path="/comissoes" element={<Comissoes />} />
+                        <Route path="/relatorios/performance" element={<Performance />} />
+                        <Route path="/relatorios/financeiro" element={<ResumoFinanceiro />} />
                       </Routes>
                     </Layout>
                   </ProtectedRoute>
