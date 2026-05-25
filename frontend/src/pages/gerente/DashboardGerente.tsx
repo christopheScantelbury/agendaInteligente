@@ -15,6 +15,8 @@ import GraficoFaturamento from '../../components/gerente/GraficoFaturamento'
 import EquipeTempoReal from '../../components/gerente/EquipeTempoReal'
 import ProximosAgendamentos from '../../components/gerente/ProximosAgendamentos'
 import ChecklistPrimeirosPassos from '../../components/gerente/ChecklistPrimeirosPassos'
+import OnboardingGerente from '../../components/gerente/OnboardingGerente'
+import { authService } from '../../services/authService'
 
 function formatBRL(valor: number | null | undefined): string {
   if (valor == null) return '—'
@@ -42,8 +44,14 @@ export default function DashboardGerente() {
     )
   }
 
+  // Onboarding aparece apenas para GERENTE/ADMINISTRADOR
+  const mostrarOnboarding = ['GERENTE', 'ADMINISTRADOR'].includes(
+    (authService.getUsuario()?.perfil ?? '').toUpperCase()
+  )
+
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6">
+      {mostrarOnboarding && <OnboardingGerente />}
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
         <p className="text-sm text-gray-500 mt-1 capitalize">
