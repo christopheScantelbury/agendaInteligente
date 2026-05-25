@@ -138,7 +138,16 @@ public class AnamneseService {
 
     @Transactional(readOnly = true)
     public List<AnamneseTemplateDTO> listarTemplatesAtivos() {
-        return anamneseTemplateRepository.findByAtivoTrueOrderByNomeAsc().stream()
+        Usuario logado = getUsuarioLogado();
+        // ADMIN global vê tudo; demais perfis veem só globais (NULL) + próprios
+        if (logado.getPerfil() == Usuario.PerfilUsuario.ADMIN) {
+            return anamneseTemplateRepository.findByAtivoTrueOrderByNomeAsc().stream()
+                    .map(this::toTemplateDTO)
+                    .collect(Collectors.toList());
+        }
+        Long adminUnicoId = logado.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR
+                ? logado.getId() : logado.getAdminUnicoId();
+        return anamneseTemplateRepository.findVisiveisPorAdmin(adminUnicoId).stream()
                 .map(this::toTemplateDTO)
                 .collect(Collectors.toList());
     }
@@ -147,15 +156,38 @@ public class AnamneseService {
     public AnamneseTemplateDTO buscarTemplatePorId(Long id) {
         AnamneseTemplate t = anamneseTemplateRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Template não encontrado"));
+        validarAcessoTemplate(t);
         return toTemplateDTO(t);
+    }
+
+    private void validarAcessoTemplate(AnamneseTemplate t) {
+        Usuario logado = getUsuarioLogado();
+        if (logado.getPerfil() == Usuario.PerfilUsuario.ADMIN) return;
+        // Globais (NULL) são acessíveis por todos
+        if (t.getAdminUnicoId() == null) return;
+        Long adminUnicoId = logado.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR
+                ? logado.getId() : logado.getAdminUnicoId();
+        if (!t.getAdminUnicoId().equals(adminUnicoId)) {
+            throw new ResourceNotFoundException("Template não encontrado");
+        }
     }
 
     @Transactional
     public AnamneseTemplateDTO salvarTemplate(AnamneseTemplateDTO dto) {
-        AnamneseTemplate template = dto.getId() != null
-                ? anamneseTemplateRepository.findById(dto.getId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Template não encontrado"))
-                : new AnamneseTemplate();
+        AnamneseTemplate template;
+        if (dto.getId() != null) {
+            template = anamneseTemplateRepository.findById(dto.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Template não encontrado"));
+            // Bloqueia edição de templates globais (NULL) por não-ADMIN e cross-tenant
+            Usuario logadoCheck = getUsuarioLogado();
+            if (template.getAdminUnicoId() == null
+                    && logadoCheck.getPerfil() != Usuario.PerfilUsuario.ADMIN) {
+                throw new BusinessException("Templates padrão do sistema não podem ser editados");
+            }
+            validarAcessoTemplate(template);
+        } else {
+            template = new AnamneseTemplate();
+        }
         template.setNome(dto.getNome());
         template.setDescricao(dto.getDescricao());
         template.setAtivo(dto.getAtivo() != null ? dto.getAtivo() : true);
@@ -182,6 +214,12 @@ public class AnamneseService {
     public void inativarTemplate(Long id) {
         AnamneseTemplate template = anamneseTemplateRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Template não encontrado"));
+        Usuario logado = getUsuarioLogado();
+        if (template.getAdminUnicoId() == null
+                && logado.getPerfil() != Usuario.PerfilUsuario.ADMIN) {
+            throw new BusinessException("Templates padrão do sistema não podem ser inativados");
+        }
+        validarAcessoTemplate(template);
         template.setAtivo(false);
         anamneseTemplateRepository.save(template);
     }
