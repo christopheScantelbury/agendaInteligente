@@ -133,7 +133,7 @@ export default function EmpresasPlataforma() {
                     key={e.id}
                     empresa={e}
                     onAssumirSessao={() =>
-                      showNotification('info', 'Em breve. Funcionalidade depende de #94 (backend).')
+                      showNotification('warning', '🚧 Assumir sessão chega em #94 (backend). Por enquanto, peça acesso temporário ao ADMINISTRADOR da empresa.', 6000)
                     }
                   />
                 ))

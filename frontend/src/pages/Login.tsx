@@ -35,7 +35,11 @@ export default function Login() {
       const data = await authService.login({ email, senha })
       identify(data.usuarioId, { perfil: data.perfil, nome: data.nome })
       track(Events.LOGIN_SUCCESS, { perfil: data.perfil, tipo: 'usuario' })
-      navigate((data.perfil ?? '').toUpperCase() === 'CLIENTE' ? '/cliente/agendar' : '/agendamentos')
+      const perfil = (data.perfil ?? '').toUpperCase()
+      if (perfil === 'CLIENTE') navigate('/cliente')
+      else if (perfil === 'PROFISSIONAL') navigate('/profissional/hoje')
+      else if (perfil === 'GERENTE') navigate('/gerente/dashboard')
+      else navigate('/')
     } catch (error: any) {
       if (!error.response) {
         setErro('Serviço temporariamente indisponível. Tente novamente em instantes.')

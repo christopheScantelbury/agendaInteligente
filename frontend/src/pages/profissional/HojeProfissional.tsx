@@ -83,19 +83,25 @@ export default function HojeProfissional() {
     }
   }, [dataParam])
 
-  // Buscar atendente do usuário logado
-  const { data: meuAtendente } = useQuery({
+  // Buscar atendente do usuário logado (pode ser null se profissional não tem atendente vinculado)
+  const { data: meuAtendente, isLoading: loadingAtendente, isFetched: atendenteFetched } = useQuery({
     queryKey: ['atendente', 'meu', usuario?.usuarioId],
     queryFn: () => atendenteService.buscarPorUsuarioId(usuario!.usuarioId),
     enabled: !!usuario?.usuarioId,
+    retry: false,
   })
 
-  // Buscar todos os agendamentos
-  const { data: agendamentos = [], isLoading } = useQuery({
+  // Buscar todos os agendamentos (só se tem atendente)
+  const { data: agendamentos = [], isLoading: loadingAgendamentos, error: errorAgendamentos } = useQuery({
     queryKey: ['agendamentos', 'todos'],
     queryFn: () => agendamentoService.listar(),
     refetchInterval: 60_000,
+    enabled: !!meuAtendente,
+    retry: false,
   })
+
+  const isLoading = loadingAtendente || (!!meuAtendente && loadingAgendamentos)
+  const semAtendente = atendenteFetched && !meuAtendente
 
   // Filtrar por atendente logado e data selecionada
   const agendamentosDoDia = useMemo(() => {
@@ -231,7 +237,11 @@ export default function HojeProfissional() {
         className="relative overflow-y-auto"
         style={{ maxHeight: 'calc(100vh - 280px)' }}
       >
-        {isLoading || !meuAtendente ? (
+        {semAtendente ? (
+          <SemAtendenteState />
+        ) : errorAgendamentos ? (
+          <ErrorState />
+        ) : isLoading ? (
           <TimelineSkeleton />
         ) : agendamentosDoDia.length === 0 ? (
           <EmptyState />
@@ -359,6 +369,33 @@ function EmptyState() {
       </div>
       <p className="text-sm text-gray-600">Sem atendimentos para esse dia.</p>
       <p className="text-xs text-gray-400 mt-1">Bom momento para descansar ou organizar sua agenda.</p>
+    </div>
+  )
+}
+
+function SemAtendenteState() {
+  return (
+    <div className="px-4 py-12 text-center max-w-md mx-auto">
+      <div className="mx-auto w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center mb-3">
+        <CalendarDays className="h-7 w-7 text-amber-600" />
+      </div>
+      <p className="text-sm font-semibold text-slate-900">Conta não vinculada como atendente</p>
+      <p className="text-xs text-gray-500 mt-2">
+        Sua conta tem perfil PROFISSIONAL mas ainda não foi vinculada a uma unidade como atendente.
+        Peça ao administrador para finalizar seu cadastro em <span className="font-mono text-gray-700">Profissionais → Editar → Vincular conta</span>.
+      </p>
+    </div>
+  )
+}
+
+function ErrorState() {
+  return (
+    <div className="px-4 py-12 text-center">
+      <div className="mx-auto w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mb-3">
+        <CalendarDays className="h-7 w-7 text-red-500" />
+      </div>
+      <p className="text-sm text-slate-900">Não foi possível carregar a agenda.</p>
+      <p className="text-xs text-gray-500 mt-1">Tente recarregar a página em instantes.</p>
     </div>
   )
 }

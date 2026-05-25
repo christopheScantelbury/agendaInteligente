@@ -22,16 +22,22 @@ export default function AgendaProfissional() {
   const navigate = useNavigate()
   const usuario = authService.getUsuario()
 
-  const { data: meuAtendente } = useQuery({
+  const { data: meuAtendente, isLoading: loadingAtendente, isFetched: atendenteFetched } = useQuery({
     queryKey: ['atendente', 'meu', usuario?.usuarioId],
     queryFn: () => atendenteService.buscarPorUsuarioId(usuario!.usuarioId),
     enabled: !!usuario?.usuarioId,
+    retry: false,
   })
 
-  const { data: agendamentos = [], isLoading } = useQuery({
+  const { data: agendamentos = [], isLoading: loadingAgendamentos } = useQuery({
     queryKey: ['agendamentos', 'todos'],
     queryFn: () => agendamentoService.listar(),
+    enabled: !!meuAtendente,
+    retry: false,
   })
+
+  const isLoading = loadingAtendente || (!!meuAtendente && loadingAgendamentos)
+  const semAtendente = atendenteFetched && !meuAtendente
 
   const dias: DiaResumo[] = useMemo(() => {
     if (!meuAtendente) return []
@@ -95,7 +101,14 @@ export default function AgendaProfissional() {
 
       {/* Lista de dias */}
       <section aria-label="Lista de dias da semana">
-        {isLoading || !meuAtendente ? (
+        {semAtendente ? (
+          <div className="px-4 py-12 text-center bg-white border border-amber-200 rounded-xl">
+            <p className="text-sm font-semibold text-slate-900">Conta não vinculada como atendente</p>
+            <p className="text-xs text-gray-500 mt-2">
+              Peça ao administrador para finalizar seu cadastro como atendente para ver sua agenda.
+            </p>
+          </div>
+        ) : isLoading ? (
           <ul className="space-y-2">
             {[...Array(7)].map((_, i) => (
               <li key={i} className="h-20 bg-gray-100 rounded-xl animate-pulse" />

@@ -268,17 +268,21 @@ function App() {
               <Route
                 path="/plataforma"
                 element={
-                  authService.isAuthenticated() && (authService.getUsuario()?.perfil ?? '').toUpperCase() === 'ADMIN'
-                    ? <Layout><DashboardPlataforma /></Layout>
-                    : <Navigate to="/login" replace />
+                  !authService.isAuthenticated()
+                    ? <Navigate to="/login" replace />
+                    : (authService.getUsuario()?.perfil ?? '').toUpperCase() === 'ADMIN'
+                      ? <Layout><DashboardPlataforma /></Layout>
+                      : <Navigate to="/" replace />
                 }
               />
               <Route
                 path="/plataforma/empresas"
                 element={
-                  authService.isAuthenticated() && (authService.getUsuario()?.perfil ?? '').toUpperCase() === 'ADMIN'
-                    ? <Layout><EmpresasPlataforma /></Layout>
-                    : <Navigate to="/login" replace />
+                  !authService.isAuthenticated()
+                    ? <Navigate to="/login" replace />
+                    : (authService.getUsuario()?.perfil ?? '').toUpperCase() === 'ADMIN'
+                      ? <Layout><EmpresasPlataforma /></Layout>
+                      : <Navigate to="/" replace />
                 }
               />
 

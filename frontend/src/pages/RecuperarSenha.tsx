@@ -43,12 +43,19 @@ export default function RecuperarSenha({
     setLoading(true)
     try {
       await recuperacaoSenhaService.solicitar(tipo, { emailOuCpf: valor })
-      setEnviado(true)
     } catch (error: any) {
-      setErro(error.response?.data?.message || 'Não foi possível enviar o link. Tente novamente.')
+      // BUG-02 (#105): erro 404 ("não encontrado") vaza existência de conta.
+      // Tratamos como sucesso silencioso — só erros não-404 viram feedback.
+      const status = error.response?.status
+      if (status && status !== 404 && status !== 400) {
+        setErro('Não foi possível enviar o link agora. Tente novamente em instantes.')
+        setLoading(false)
+        return
+      }
     } finally {
       setLoading(false)
     }
+    setEnviado(true)
   }
 
   return (

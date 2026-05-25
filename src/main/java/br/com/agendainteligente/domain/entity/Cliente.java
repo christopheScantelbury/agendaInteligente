@@ -71,8 +71,8 @@ public class Cliente {
     private Boolean ativo = true;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "unidade_id", nullable = false)
-    private Unidade unidade; // Unidade principal do cliente
+    @JoinColumn(name = "unidade_id")
+    private Unidade unidade; // Unidade principal do cliente (opcional — definida no 1º agendamento)
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataCriacao;

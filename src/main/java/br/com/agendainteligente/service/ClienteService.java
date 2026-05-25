@@ -219,7 +219,7 @@ public class ClienteService {
         
         Cliente cliente = clienteMapper.toEntity(clienteDTO);
         
-        // Buscar e associar unidade principal
+        // Unidade principal — opcional no auto-cadastro público; cliente escolhe no 1º agendamento.
         if (clienteDTO.getUnidadeId() != null) {
             Unidade unidade = unidadeRepository.findById(clienteDTO.getUnidadeId())
                     .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada com id: " + clienteDTO.getUnidadeId()));
@@ -227,9 +227,8 @@ public class ClienteService {
                 throw new BusinessException("Unidade não está ativa");
             }
             cliente.setUnidade(unidade);
-        } else {
-            throw new BusinessException("Unidade é obrigatória para criar um cliente");
         }
+        // Se unidadeId é null, cliente é criado sem unidade principal (BUG-01 #104).
         
         // Associar unidades adicionais ao cliente (além da principal)
         if (clienteDTO.getUnidadesIds() != null && !clienteDTO.getUnidadesIds().isEmpty()) {
