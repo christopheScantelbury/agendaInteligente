@@ -8,14 +8,12 @@ Cada arquivo abaixo é um prompt independente para o agente de QA. Cole em uma s
 | 2 — Profissional / Modo Dia | [sprint-2-profissional.md](sprint-2-profissional.md) | #87, #88, #89, #90, #91 |
 | 3 — Gerente / Dashboard | [sprint-3-gerente.md](sprint-3-gerente.md) | #96, #97, #98, #99, #100 |
 | 4 — Admin / Plataforma | [sprint-4-admin.md](sprint-4-admin.md) | #92, #93 (parcial; #94/#95 follow-up) |
+| 5 — Polimento (FAB + PostHog + Lazy) | [sprint-5-polimento.md](sprint-5-polimento.md) | #101, #102, #103 |
 
 ## Sprint 0 — Discovery
 Não tem QA funcional. Entregáveis são documentos:
 - [`docs/discovery/rotas.md`](../discovery/rotas.md) — inventário de rotas
 - [`docs/discovery/matriz.md`](../discovery/matriz.md) — matriz heurística
-
-## Sprint 5 — Polimento
-Em andamento. QA será adicionado quando o sprint fechar.
 
 ## Pré-requisito comum a todos os sprints
 Rodar `POST /api/admin/seed-demo` com header `X-Seed-Token` em prod uma vez antes de começar.
