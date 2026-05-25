@@ -32,6 +32,7 @@ export default function BottomNav() {
   return (
     <nav
       aria-label="Navegação principal"
+      data-tour="bottom-nav"
       className="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 pb-[env(safe-area-inset-bottom)]"
     >
       <ul className="flex justify-around items-stretch h-16 max-w-md mx-auto">

@@ -47,6 +47,7 @@ import AnamneseFormPage from './pages/anamneses/AnamneseFormPage'
 import AnamneseTemplatesPage from './pages/anamneses/AnamneseTemplatesPage'
 import ClientLayout from './components/cliente/ClientLayout'
 import HomeCliente from './pages/cliente/HomeCliente'
+import PerfilCliente from './pages/cliente/PerfilCliente'
 import RecuperarSenha from './pages/RecuperarSenha'
 import RedefinirSenha from './pages/RedefinirSenha'
 
@@ -145,6 +146,14 @@ function App() {
                 element={
                   clientePublicoService.isAuthenticated()
                     ? <ClientLayout><MeusAgendamentosCliente /></ClientLayout>
+                    : <Navigate to="/cliente/login" />
+                }
+              />
+              <Route
+                path="/cliente/perfil"
+                element={
+                  clientePublicoService.isAuthenticated()
+                    ? <ClientLayout><PerfilCliente /></ClientLayout>
                     : <Navigate to="/cliente/login" />
                 }
               />

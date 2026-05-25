@@ -5,6 +5,7 @@ import { Plus, ChevronDown, ChevronUp, Calendar, MapPin, User, Clock, Sparkles }
 import { format, formatDistanceToNow, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { clientePublicoService } from '../../services/clientePublicoService'
+import OnboardingCliente from '../../components/cliente/OnboardingCliente'
 
 const STATUS_INATIVO = new Set(['CANCELADO', 'CONCLUIDO', 'FINALIZADO', 'NO_SHOW'])
 
@@ -110,6 +111,8 @@ export default function HomeCliente() {
 
   return (
     <div className="px-4 py-6 space-y-6 max-w-md mx-auto">
+      <OnboardingCliente />
+
       {/* Saudação */}
       <header>
         <p className="text-sm text-gray-500">Olá,</p>
@@ -117,7 +120,7 @@ export default function HomeCliente() {
       </header>
 
       {/* Bloco 1 — Próximo horário */}
-      <section aria-labelledby="proximo-titulo">
+      <section aria-labelledby="proximo-titulo" data-tour="proximo-horario">
         <h2 id="proximo-titulo" className="text-sm font-semibold text-gray-700 mb-2">
           Próximo horário
         </h2>
@@ -134,6 +137,7 @@ export default function HomeCliente() {
       <section>
         <Link
           to="/cliente/agendar"
+          data-tour="cta-marcar"
           className="
             flex items-center justify-center gap-2 w-full
             bg-violet-600 hover:bg-violet-700 active:bg-violet-800
@@ -150,7 +154,7 @@ export default function HomeCliente() {
 
       {/* Bloco 3 — Favoritos */}
       {favoritos.length > 0 && (
-        <section aria-labelledby="favoritos-titulo">
+        <section aria-labelledby="favoritos-titulo" data-tour="favoritos">
           <h2 id="favoritos-titulo" className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
             <Sparkles className="h-4 w-4 text-violet-500" /> Seus serviços favoritos
           </h2>
