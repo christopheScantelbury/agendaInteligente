@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   addDays,
@@ -60,10 +61,26 @@ function iniciaisCliente(nome?: string): string {
 
 export default function HojeProfissional() {
   const usuario = authService.getUsuario()
-  const [dataSelecionada, setDataSelecionada] = useState<Date>(() => startOfDay(new Date()))
+  const [searchParams] = useSearchParams()
+  const dataParam = searchParams.get('data')
+  const [dataSelecionada, setDataSelecionada] = useState<Date>(() => {
+    if (dataParam) {
+      const [y, m, d] = dataParam.split('-').map(Number)
+      if (y && m && d) return startOfDay(new Date(y, m - 1, d))
+    }
+    return startOfDay(new Date())
+  })
   const [agendamentoSelecionado, setAgendamentoSelecionado] = useState<Agendamento | null>(null)
   const timelineRef = useRef<HTMLDivElement | null>(null)
   const [nowOffset, setNowOffset] = useState<number | null>(null)
+
+  // Reage a mudança do parâmetro "data" na URL (ex.: vindo da agenda 7 dias)
+  useEffect(() => {
+    if (dataParam) {
+      const [y, m, d] = dataParam.split('-').map(Number)
+      if (y && m && d) setDataSelecionada(startOfDay(new Date(y, m - 1, d)))
+    }
+  }, [dataParam])
 
   // Buscar atendente do usuário logado
   const { data: meuAtendente } = useQuery({
