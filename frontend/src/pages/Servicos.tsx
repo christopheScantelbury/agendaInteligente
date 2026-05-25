@@ -490,16 +490,20 @@ function ServicoForm({
         </label>
       </FormField>
 
-      {atendentesUnidade.length > 0 && (
-        <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 space-y-3">
-          <h3 className="text-sm font-semibold text-gray-800">
-            Profissionais que realizam este serviço
-            {atendentesIdsSelecionados.length > 0 && (
-              <span className="ml-2 text-xs font-normal text-violet-600">
-                {atendentesIdsSelecionados.length} selecionado{atendentesIdsSelecionados.length > 1 ? 's' : ''}
-              </span>
-            )}
-          </h3>
+      <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-800">
+          Profissionais que realizam este serviço
+          {atendentesIdsSelecionados.length > 0 && (
+            <span className="ml-2 text-xs font-normal text-violet-600">
+              {atendentesIdsSelecionados.length} selecionado{atendentesIdsSelecionados.length > 1 ? 's' : ''}
+            </span>
+          )}
+        </h3>
+        {!formData.unidadeId ? (
+          <p className="text-sm text-gray-500">Selecione uma unidade para listar os profissionais.</p>
+        ) : atendentesUnidade.length === 0 ? (
+          <p className="text-sm text-gray-500">Nenhum profissional cadastrado nesta unidade. Cadastre em <strong>Profissionais</strong> para poder vinculá-los aqui.</p>
+        ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
             {atendentesUnidade.map((atendente) => (
               <label key={atendente.id} className="flex items-center gap-2 cursor-pointer rounded-md px-2 py-1.5 hover:bg-white transition-colors">
@@ -520,8 +524,8 @@ function ServicoForm({
               </label>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="flex justify-end space-x-2 pt-4 border-t">
         <Button type="button" variant="secondary" onClick={onClose}>

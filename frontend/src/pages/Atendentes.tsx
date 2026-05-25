@@ -721,16 +721,20 @@ function AtendenteForm({
         </div>
       </div>
 
-      {servicosDisponiveis.length > 0 && (
-        <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 space-y-3">
-          <h3 className="text-sm font-semibold text-gray-800">
-            Serviços
-            {servicosIdsSelecionados.length > 0 && (
-              <span className="ml-2 text-xs font-normal text-violet-600">
-                {servicosIdsSelecionados.length} selecionado{servicosIdsSelecionados.length > 1 ? 's' : ''}
-              </span>
-            )}
-          </h3>
+      <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-800">
+          Serviços
+          {servicosIdsSelecionados.length > 0 && (
+            <span className="ml-2 text-xs font-normal text-violet-600">
+              {servicosIdsSelecionados.length} selecionado{servicosIdsSelecionados.length > 1 ? 's' : ''}
+            </span>
+          )}
+        </h3>
+        {unidadeIdEfetiva === 0 ? (
+          <p className="text-sm text-gray-500">Selecione uma unidade para listar os serviços.</p>
+        ) : servicosDisponiveis.length === 0 ? (
+          <p className="text-sm text-gray-500">Nenhum serviço cadastrado nesta unidade. Cadastre serviços em <strong>Serviços</strong> para poder vinculá-los aqui.</p>
+        ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
             {servicosDisponiveis.map((servico) => (
               <label key={servico.id} className="flex items-center gap-2 cursor-pointer rounded-md px-2 py-1.5 hover:bg-white transition-colors">
@@ -751,8 +755,8 @@ function AtendenteForm({
               </label>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <FormField label="Status">
         <label className="flex items-center">

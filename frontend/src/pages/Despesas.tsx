@@ -18,6 +18,7 @@ import FormField from '../components/FormField'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useNotification } from '../contexts/NotificationContext'
 import { getApiErrorMessage } from '../utils/apiError'
+import { baixarArquivo } from '../utils/downloadFile'
 
 const STATUS_LABEL: Record<StatusDespesa, string> = {
   RASCUNHO: 'Rascunho',
@@ -50,8 +51,13 @@ function fimDoMes() {
 }
 const formatMoeda = (v: number) =>
   (v ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-const formatData = (s?: string | null) =>
-  s ? new Date(s + 'T00:00:00').toLocaleDateString('pt-BR') : '—'
+const formatData = (s?: string | null) => {
+  if (!s) return '—'
+  // Extrai YYYY-MM-DD do início da string (ignora horário ou anos > 4 dígitos)
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!m) return s
+  return `${m[3]}/${m[2]}/${m[1]}`
+}
 
 export default function Despesas() {
   const queryClient = useQueryClient()
@@ -119,6 +125,10 @@ export default function Despesas() {
   })
 
   const exportarCSV = () => {
+    if (!despesas.length) {
+      showNotification('info', 'Sem dados para exportar no período')
+      return
+    }
     const header = ['Nome', 'Valor', 'Vencimento', 'Categoria', 'Status', 'Unidade', 'Recorrência', 'Fornecedor']
     const linhas = despesas.map((d) => [
       d.nome,
@@ -131,15 +141,8 @@ export default function Despesas() {
       d.fornecedor ?? '',
     ])
     const csv = [header, ...linhas].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `despesas-${inicio}-a-${fim}.csv`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    baixarArquivo(csv, `despesas-${inicio}-a-${fim}.csv`)
+    showNotification('success', `${despesas.length} despesa(s) exportada(s)`)
   }
 
   return (
@@ -416,11 +419,13 @@ function DespesaForm({
       <div className="grid grid-cols-2 gap-3">
         <FormField label="Data competência" required>
           <input required type="date" value={form.dataCompetencia}
+            min="2000-01-01" max="2099-12-31"
             onChange={(e) => setForm({ ...form, dataCompetencia: e.target.value })}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500" />
         </FormField>
         <FormField label="Data vencimento" required>
           <input required type="date" value={form.dataVencimento}
+            min="2000-01-01" max="2099-12-31"
             onChange={(e) => setForm({ ...form, dataVencimento: e.target.value })}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500" />
         </FormField>

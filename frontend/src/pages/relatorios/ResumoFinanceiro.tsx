@@ -9,6 +9,7 @@ import { relatorioService } from '../../services/relatorioService'
 import { authService } from '../../services/authService'
 import FormField from '../../components/FormField'
 import Button from '../../components/Button'
+import { baixarArquivo } from '../../utils/downloadFile'
 
 const formatMoeda = (v: number) =>
   (v ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -64,6 +65,7 @@ export default function ResumoFinanceiro() {
   }, [fluxo])
 
   const exportFluxoCSV = () => {
+    if (!fluxo.length) return
     const header = ['Dia', 'Entradas', 'Saidas', 'Saldo dia', 'Saldo acumulado']
     const linhas = fluxo.map((f) => [
       f.dia,
@@ -73,15 +75,7 @@ export default function ResumoFinanceiro() {
       String(f.saldoAcumulado).replace('.', ','),
     ])
     const csv = [header, ...linhas].map((r) => r.map((c) => `"${c}"`).join(',')).join('\n')
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `fluxo-caixa-${inicio}-a-${fim}.csv`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    baixarArquivo(csv, `fluxo-caixa-${inicio}-a-${fim}.csv`)
   }
 
   return (
