@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { clientePublicoService } from '../../services/clientePublicoService'
 import BottomNav from './BottomNav'
 import ConfirmDialog from '../ConfirmDialog'
+import HelpFab from '../HelpFab'
 
 interface ClientLayoutProps {
   children: React.ReactNode
@@ -53,6 +54,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
 
       <main className="flex-1 pb-20 overflow-x-hidden">{children}</main>
 
+      <HelpFab />
       <BottomNav />
 
       <ConfirmDialog

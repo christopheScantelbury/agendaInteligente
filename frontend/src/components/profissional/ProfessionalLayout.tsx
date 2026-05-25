@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { authService } from '../../services/authService'
 import BottomNavProfissional from './BottomNavProfissional'
+import HelpFab from '../HelpFab'
 
 interface ProfessionalLayoutProps {
   children: React.ReactNode
@@ -34,6 +35,7 @@ export default function ProfessionalLayout({ children }: ProfessionalLayoutProps
 
       <main className="flex-1 pb-20 overflow-x-hidden">{children}</main>
 
+      <HelpFab />
       <BottomNavProfissional />
     </div>
   )

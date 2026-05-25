@@ -26,6 +26,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { reclamacaoService } from '../services/reclamacaoService'
 import { perfilService } from '../services/perfilService'
 import ConfirmDialog from './ConfirmDialog'
+import HelpFab from './HelpFab'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -358,6 +359,8 @@ export default function Layout({ children }: LayoutProps) {
           {children}
         </main>
       </div>
+
+      <HelpFab />
 
       {/* Dialog de Confirmação de Logout */}
       <ConfirmDialog
