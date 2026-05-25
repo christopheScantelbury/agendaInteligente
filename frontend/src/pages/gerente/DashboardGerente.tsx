@@ -11,6 +11,7 @@ import {
   XCircle,
 } from 'lucide-react'
 import { dashboardGerenteService, KpisGerente } from '../../services/dashboardGerenteService'
+import GraficoFaturamento from '../../components/gerente/GraficoFaturamento'
 
 function formatBRL(valor: number | null | undefined): string {
   if (valor == null) return '—'
@@ -55,12 +56,8 @@ export default function DashboardGerente() {
         <KpiCancelamento data={data} loading={isLoading} />
       </div>
 
-      {/* Placeholder das próximas linhas */}
-      <div data-tour="grafico-faturamento" className="bg-white border border-gray-200 rounded-2xl p-6 mb-4">
-        <p className="text-sm font-semibold text-slate-700">Faturamento dos últimos 30 dias</p>
-        <p className="text-xs text-gray-400 mt-1">Gráfico chega na próxima story (#97).</p>
-        <div className="mt-4 h-48 bg-gradient-to-b from-violet-50 to-transparent rounded-xl border border-dashed border-violet-200" />
-      </div>
+      {/* Linha 2 — gráfico de faturamento */}
+      <GraficoFaturamento />
 
       <div data-tour="equipe" className="bg-white border border-gray-200 rounded-2xl p-6 mb-4">
         <p className="text-sm font-semibold text-slate-700">Equipe em tempo real</p>

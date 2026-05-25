@@ -19,10 +19,14 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * Endpoints do Dashboard do Gerente / Administrador.
@@ -110,6 +114,68 @@ public class DashboardGerenteController {
         response.put("taxaCancelamento", arredondar(taxaCancelamento, 1));
         response.put("ocupacaoMedia", arredondar(Math.min(ocupacao, 100), 1));
         response.put("profissionaisAtivos", profissionais);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Série diária de faturamento — período atual + período anterior comparável.
+     * Aceita: dias=7|30|90|365 (default 30).
+     */
+    @GetMapping("/faturamento-diario")
+    @PreAuthorize("hasAnyRole('ADMIN','ADMINISTRADOR','GERENTE')")
+    public ResponseEntity<Map<String, Object>> faturamentoDiario(
+            @AuthenticationPrincipal Usuario usuario,
+            @RequestParam(defaultValue = "30") int dias
+    ) {
+        int diasValido = Math.max(1, Math.min(dias, 365));
+        List<Long> unidadeIds = unidadeIdsDoUsuario(usuario);
+
+        LocalDate hoje = LocalDate.now();
+        LocalDate inicioAtual = hoje.minusDays(diasValido - 1L);
+        LocalDate inicioAnterior = inicioAtual.minusDays(diasValido);
+        LocalDateTime corteInicio = inicioAnterior.atStartOfDay();
+        LocalDateTime corteFim = hoje.atTime(23, 59, 59);
+
+        List<Agendamento> doEscopo = agendamentoRepository.findAll().stream()
+                .filter(a -> a.getUnidade() != null && unidadeIds.contains(a.getUnidade().getId()))
+                .filter(a -> a.getDataHoraInicio() != null
+                        && !a.getDataHoraInicio().isBefore(corteInicio)
+                        && !a.getDataHoraInicio().isAfter(corteFim))
+                .filter(a -> STATUS_CONCLUIDO.contains(stringStatus(a)))
+                .toList();
+
+        // Agrupa por data (formato ISO)
+        Map<LocalDate, BigDecimal> porDia = new HashMap<>();
+        for (Agendamento a : doEscopo) {
+            LocalDate d = a.getDataHoraInicio().toLocalDate();
+            BigDecimal v = a.getValorFinal() != null ? a.getValorFinal()
+                    : (a.getValorTotal() != null ? a.getValorTotal() : BigDecimal.ZERO);
+            porDia.merge(d, v, BigDecimal::add);
+        }
+
+        List<Map<String, Object>> atualSerie = new ArrayList<>();
+        List<Map<String, Object>> anteriorSerie = new ArrayList<>();
+        for (int i = 0; i < diasValido; i++) {
+            LocalDate dAtual = inicioAtual.plusDays(i);
+            LocalDate dAnterior = inicioAnterior.plusDays(i);
+            BigDecimal valAtual = porDia.getOrDefault(dAtual, BigDecimal.ZERO);
+            BigDecimal valAnterior = porDia.getOrDefault(dAnterior, BigDecimal.ZERO);
+            Map<String, Object> pAtual = new LinkedHashMap<>();
+            pAtual.put("data", dAtual.toString());
+            pAtual.put("valor", valAtual);
+            atualSerie.add(pAtual);
+            Map<String, Object> pAnt = new LinkedHashMap<>();
+            pAnt.put("data", dAnterior.toString());
+            pAnt.put("valor", valAnterior);
+            anteriorSerie.add(pAnt);
+        }
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("dias", diasValido);
+        response.put("inicioAtual", inicioAtual.toString());
+        response.put("inicioAnterior", inicioAnterior.toString());
+        response.put("atual", atualSerie);
+        response.put("anterior", anteriorSerie);
         return ResponseEntity.ok(response);
     }
 
