@@ -74,8 +74,8 @@ public class UnidadeService {
                 log.debug("ADMIN: listando todas as unidades");
                 return unidadeRepository.findAll();
             case ADMINISTRADOR:
-                log.debug("ADMINISTRADOR: listando todas as unidades");
-                return unidadeRepository.findAll();
+                log.debug("ADMINISTRADOR: listando unidades próprias (admin_unico_id={})", usuarioLogado.getId());
+                return unidadeRepository.findByAdminUnicoId(usuarioLogado.getId());
 
             case GERENTE:
                 log.debug("GERENTE: listando apenas unidades vinculadas ao gerente");

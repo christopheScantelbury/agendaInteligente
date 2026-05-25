@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Edit, Trash2, Download, Tag, CheckCircle, AlertTriangle, Clock } from 'lucide-react'
+import { Plus, Edit, Trash2, Download, Tag, CheckCircle, AlertTriangle, Clock, Lock } from 'lucide-react'
 import {
   despesaService,
   categoriaDespesaService,
@@ -291,6 +291,12 @@ export default function Despesas() {
                           className="text-red-600 hover:text-red-800 p-1" title="Excluir">
                           <Trash2 className="h-4 w-4" />
                         </button>
+                      )}
+                      {podeEditar && (d.status === 'PAGA' || d.status === 'CANCELADA') && (
+                        <span className="inline-flex p-1 text-gray-400 cursor-not-allowed"
+                          title={d.status === 'PAGA' ? 'Despesa paga — bloqueada para edição' : 'Despesa cancelada — bloqueada para edição'}>
+                          <Lock className="h-4 w-4" />
+                        </span>
                       )}
                     </div>
                   </td>

@@ -67,9 +67,18 @@ public class AtendenteService {
 
         switch (perfil) {
             case ADMIN:
-            case ADMINISTRADOR:
-                log.debug("ADMIN/ADMINISTRADOR: listando todos os atendentes");
+                log.debug("ADMIN: listando todos os atendentes");
                 return atendenteRepository.findAll();
+
+            case ADMINISTRADOR:
+                log.debug("ADMINISTRADOR: listando atendentes das próprias unidades (admin_unico_id={})", usuarioLogado.getId());
+                List<Long> unidadesAdministrador = unidadeRepository.findByAdminUnicoId(usuarioLogado.getId())
+                        .stream().map(Unidade::getId).collect(Collectors.toList());
+                if (unidadesAdministrador.isEmpty()) {
+                    log.warn("ADMINISTRADOR {} não tem unidades próprias", email);
+                    return List.of();
+                }
+                return atendenteRepository.findByUnidadeIdIn(unidadesAdministrador);
 
             case GERENTE:
                 log.debug("GERENTE: listando atendentes das unidades da mesma empresa");
