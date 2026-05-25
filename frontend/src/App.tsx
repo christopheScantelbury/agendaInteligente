@@ -50,6 +50,7 @@ import HomeCliente from './pages/cliente/HomeCliente'
 import PerfilCliente from './pages/cliente/PerfilCliente'
 import DashboardPlataforma from './pages/plataforma/DashboardPlataforma'
 import EmpresasPlataforma from './pages/plataforma/EmpresasPlataforma'
+import DashboardGerente from './pages/gerente/DashboardGerente'
 import RecuperarSenha from './pages/RecuperarSenha'
 import RedefinirSenha from './pages/RedefinirSenha'
 import ProfessionalLayout from './components/profissional/ProfessionalLayout'
@@ -61,6 +62,7 @@ import PerfilProfissional from './pages/profissional/PerfilProfissional'
 function NavigateToAfterLogin() {
   if (authService.isPerfilCliente()) return <Navigate to="/cliente" replace />
   if (authService.isPerfilProfissional()) return <Navigate to="/profissional/hoje" replace />
+  if (authService.isPerfilGerente()) return <Navigate to="/gerente/dashboard" replace />
   return <Navigate to="/" replace />
 }
 
@@ -257,6 +259,16 @@ function App() {
                 element={
                   authService.isAuthenticated() && (authService.getUsuario()?.perfil ?? '').toUpperCase() === 'ADMIN'
                     ? <Layout><EmpresasPlataforma /></Layout>
+                    : <Navigate to="/login" replace />
+                }
+              />
+
+              {/* Dashboard do Gerente */}
+              <Route
+                path="/gerente/dashboard"
+                element={
+                  authService.isAuthenticated() && ['GERENTE','ADMIN','ADMINISTRADOR'].includes((authService.getUsuario()?.perfil ?? '').toUpperCase())
+                    ? <Layout><DashboardGerente /></Layout>
                     : <Navigate to="/login" replace />
                 }
               />

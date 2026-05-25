@@ -73,4 +73,9 @@ export const authService = {
     const u = authService.getUsuario()
     return (u?.perfil ?? '').toUpperCase() === 'PROFISSIONAL'
   },
+
+  isPerfilGerente: (): boolean => {
+    const u = authService.getUsuario()
+    return (u?.perfil ?? '').toUpperCase() === 'GERENTE'
+  },
 }
