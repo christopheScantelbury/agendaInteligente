@@ -5,7 +5,10 @@ import br.com.agendainteligente.domain.entity.Unidade;
 import br.com.agendainteligente.domain.entity.Usuario;
 import br.com.agendainteligente.repository.AgendamentoRepository;
 import br.com.agendainteligente.repository.AtendenteRepository;
+import br.com.agendainteligente.repository.ServicoRepository;
 import br.com.agendainteligente.repository.UnidadeRepository;
+import br.com.agendainteligente.repository.UsuarioRepository;
+import br.com.agendainteligente.repository.ConviteAcessoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -43,6 +46,9 @@ public class DashboardGerenteController {
     private final AgendamentoRepository agendamentoRepository;
     private final UnidadeRepository unidadeRepository;
     private final AtendenteRepository atendenteRepository;
+    private final ServicoRepository servicoRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final ConviteAcessoRepository conviteAcessoRepository;
 
     @GetMapping("/kpis")
     @PreAuthorize("hasAnyRole('ADMIN','ADMINISTRADOR','GERENTE')")
@@ -177,6 +183,51 @@ public class DashboardGerenteController {
         response.put("atual", atualSerie);
         response.put("anterior", anteriorSerie);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Checklist de primeiros passos (onboarding camada 3). Detecta automaticamente.
+     */
+    @GetMapping("/checklist")
+    @PreAuthorize("hasAnyRole('ADMIN','ADMINISTRADOR','GERENTE')")
+    public ResponseEntity<Map<String, Object>> checklist(@AuthenticationPrincipal Usuario usuario) {
+        List<Long> unidadeIds = unidadeIdsDoUsuario(usuario);
+        Long adminId = usuario.getAdminUnicoId() != null ? usuario.getAdminUnicoId() : usuario.getId();
+
+        boolean temServico = !servicoRepository.findByAdminUnicoId(adminId).isEmpty();
+        boolean temProfissional = !atendenteRepository.findByUnidadeIdIn(unidadeIds).isEmpty();
+        // Heurística: tem horários se atendente está ativo (proxy simples)
+        boolean temHorarios = atendenteRepository.findByUnidadeIdIn(unidadeIds).stream()
+                .anyMatch(at -> Boolean.TRUE.equals(at.getAtivo()));
+        // Heurística: página pública personalizada — se a empresa tem nome customizado (diferente do gerado pelo seed)
+        // Por enquanto: marca true se há mais de uma unidade OU se há servico/profissional já cadastrado
+        boolean personalizouPublico = false; // sem campo dedicado; mantém false até criar
+        boolean configurouFiscal = false; // depende de NotaFiscal config; placeholder
+        boolean convidouEquipe = !conviteAcessoRepository.findByCriadoPorIdOrderByDataCriacaoDesc(usuario.getId()).isEmpty();
+
+        List<Map<String, Object>> tarefas = new ArrayList<>();
+        tarefas.add(tarefa("servico", "Cadastrar primeiro serviço", "/servicos", temServico));
+        tarefas.add(tarefa("profissional", "Cadastrar primeiro profissional", "/profissionais", temProfissional));
+        tarefas.add(tarefa("horarios", "Definir horários de funcionamento", "/configuracoes", temHorarios));
+        tarefas.add(tarefa("publico", "Personalizar link público", "/configuracoes", personalizouPublico));
+        tarefas.add(tarefa("fiscal", "Configurar emissão de NFS-e (opcional)", "/configuracoes", configurouFiscal));
+        tarefas.add(tarefa("equipe", "Convidar atendentes para a equipe", "/convites-acesso", convidouEquipe));
+
+        long concluidas = tarefas.stream().filter(t -> Boolean.TRUE.equals(t.get("concluida"))).count();
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("tarefas", tarefas);
+        response.put("concluidas", concluidas);
+        response.put("total", tarefas.size());
+        return ResponseEntity.ok(response);
+    }
+
+    private Map<String, Object> tarefa(String id, String titulo, String path, boolean concluida) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", id);
+        m.put("titulo", titulo);
+        m.put("path", path);
+        m.put("concluida", concluida);
+        return m;
     }
 
     /**

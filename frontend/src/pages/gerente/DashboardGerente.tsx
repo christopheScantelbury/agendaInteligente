@@ -14,6 +14,7 @@ import { dashboardGerenteService, KpisGerente } from '../../services/dashboardGe
 import GraficoFaturamento from '../../components/gerente/GraficoFaturamento'
 import EquipeTempoReal from '../../components/gerente/EquipeTempoReal'
 import ProximosAgendamentos from '../../components/gerente/ProximosAgendamentos'
+import ChecklistPrimeirosPassos from '../../components/gerente/ChecklistPrimeirosPassos'
 
 function formatBRL(valor: number | null | undefined): string {
   if (valor == null) return '—'
@@ -49,6 +50,9 @@ export default function DashboardGerente() {
           {format(new Date(), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
         </p>
       </header>
+
+      {/* Checklist de primeiros passos */}
+      <ChecklistPrimeirosPassos />
 
       {/* Linha 1 — 4 KPIs principais */}
       <div data-tour="kpis" className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">

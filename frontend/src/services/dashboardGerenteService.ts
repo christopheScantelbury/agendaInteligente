@@ -47,6 +47,24 @@ export const dashboardGerenteService = {
     const response = await api.get<ProximoAgendamento[]>('/dashboard/gerente/proximos')
     return response.data
   },
+
+  checklist: async (): Promise<ChecklistResposta> => {
+    const response = await api.get<ChecklistResposta>('/dashboard/gerente/checklist')
+    return response.data
+  },
+}
+
+export interface TarefaChecklist {
+  id: string
+  titulo: string
+  path: string
+  concluida: boolean
+}
+
+export interface ChecklistResposta {
+  tarefas: TarefaChecklist[]
+  concluidas: number
+  total: number
 }
 
 export type StatusMembro = 'LIVRE' | 'EM_ATENDIMENTO' | 'PROXIMO'
