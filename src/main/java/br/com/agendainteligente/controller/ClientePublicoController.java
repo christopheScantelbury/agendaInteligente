@@ -136,6 +136,7 @@ public class ClientePublicoController {
 
     @GetMapping("/unidades")
     @Operation(summary = "Listar unidades ativas disponíveis para agendamento (sem auth necessária)")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<List<java.util.Map<String, Object>>> listarUnidadesPublicas() {
         List<java.util.Map<String, Object>> unidades = unidadeRepository.findAll().stream()
                 .filter(u -> Boolean.TRUE.equals(u.getAtivo()))
