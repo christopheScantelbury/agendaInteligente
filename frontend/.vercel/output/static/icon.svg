@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="120" fill="#7C3AED"/>
+  <!-- Calendar body -->
+  <rect x="96" y="112" width="320" height="300" rx="28" fill="white" opacity="0.97"/>
+  <!-- Hook left -->
+  <rect x="152" y="80" width="48" height="72" rx="16" fill="#DDD6FE"/>
+  <!-- Hook right -->
+  <rect x="312" y="80" width="48" height="72" rx="16" fill="#DDD6FE"/>
+  <!-- Horizontal lines -->
+  <line x1="96" y1="192" x2="416" y2="192" stroke="#EDE9FE" stroke-width="4"/>
+  <line x1="96" y1="256" x2="416" y2="256" stroke="#EDE9FE" stroke-width="3"/>
+  <line x1="96" y1="320" x2="416" y2="320" stroke="#EDE9FE" stroke-width="3"/>
+  <!-- Appointment bar violet -->
+  <rect x="120" y="208" width="160" height="36" rx="8" fill="#7C3AED" opacity="0.15"/>
+  <rect x="120" y="208" width="5" height="36" rx="2" fill="#7C3AED"/>
+  <!-- Appointment bar emerald -->
+  <rect x="120" y="272" width="200" height="36" rx="8" fill="#10B981" opacity="0.12"/>
+  <rect x="120" y="272" width="5" height="36" rx="2" fill="#10B981"/>
+  <!-- Check circle -->
+  <circle cx="368" cy="368" r="64" fill="#10B981"/>
+  <path d="M340 368l18 18 42-42" stroke="white" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

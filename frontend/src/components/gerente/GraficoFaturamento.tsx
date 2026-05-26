@@ -102,7 +102,7 @@ export default function GraficoFaturamento() {
         {isLoading || !chartReady ? (
           <div className="w-full h-full bg-gray-100 rounded-xl animate-pulse" />
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" debounce={50}>
             <LineChart data={serieGrafico} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
               <XAxis

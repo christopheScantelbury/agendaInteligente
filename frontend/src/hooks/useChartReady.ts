@@ -19,8 +19,12 @@ export function useChartReady<T extends HTMLElement = HTMLDivElement>() {
   useEffect(() => {
     if (!containerRef.current) return
     const observer = new ResizeObserver((entries) => {
-      const w = entries[0]?.contentRect.width ?? 0
-      if (w > 0) setReady(true)
+      const rect = entries[0]?.contentRect
+      // Aguarda width E height > 0 para evitar warning "width(-1) height(-1)"
+      // (pode ocorrer ao fechar modal ou em transição de layout).
+      if (rect && rect.width > 0 && rect.height > 0) {
+        setReady(true)
+      }
     })
     observer.observe(containerRef.current)
     return () => observer.disconnect()

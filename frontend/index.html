@@ -36,17 +36,38 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      // Registrar Service Worker
+      // Registrar Service Worker + auto-reload em nova versão (BUG-CHUNK-01)
       if ('serviceWorker' in navigator) {
+        let reloading = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          // Novo SW assumiu controle — força reload para carregar chunks novos
+          if (reloading) return;
+          reloading = true;
+          window.location.reload();
+        });
+
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js')
             .then((registration) => {
-              console.log('SW registrado:', registration.scope)
+              console.log('SW registrado:', registration.scope);
+              // Quando uma nova versão for instalada (updatefound), promove imediatamente
+              registration.addEventListener('updatefound', () => {
+                const newSW = registration.installing;
+                if (!newSW) return;
+                newSW.addEventListener('statechange', () => {
+                  if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+                    // SW velho ainda controlando — pede ao novo para assumir
+                    newSW.postMessage({ type: 'SKIP_WAITING' });
+                  }
+                });
+              });
+              // Verifica updates periodicamente (a cada 5min) sem precisar de reload
+              setInterval(() => registration.update().catch(() => {}), 5 * 60 * 1000);
             })
             .catch((error) => {
-              console.log('SW falhou:', error)
-            })
-        })
+              console.log('SW falhou:', error);
+            });
+        });
       }
     </script>
   </body>

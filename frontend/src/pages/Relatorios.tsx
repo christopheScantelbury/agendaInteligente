@@ -228,7 +228,7 @@ function ChartContainerBar({ data }: { data: { mes: string; faturamento: number;
   return (
     <div ref={containerRef} style={{ width: '100%', height: 240 }}>
       {ready && (
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" debounce={50}>
           <BarChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
             <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
@@ -247,7 +247,7 @@ function ChartContainerLine({ data }: { data: { mes: string; taxa: number; clien
   return (
     <div ref={containerRef} style={{ width: '100%', height: 220 }}>
       {ready && (
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" debounce={50}>
           <LineChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
             <XAxis dataKey="mes" tick={{ fontSize: 12 }} />

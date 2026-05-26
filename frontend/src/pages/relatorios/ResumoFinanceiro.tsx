@@ -137,7 +137,7 @@ export default function ResumoFinanceiro() {
                 <h3 className="text-sm font-semibold text-gray-800 mb-3">Receita × Despesa por mês</h3>
                 <div ref={chartRef} style={{ width: '100%', height: 300 }}>
                   {chartReady && (
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" debounce={50}>
                       <BarChart data={chartReceitaDespesa}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="mes" />

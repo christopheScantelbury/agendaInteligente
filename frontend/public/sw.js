@@ -1,10 +1,17 @@
 // Bump CACHE_NAME a cada release pra invalidar o cache do client.
-const CACHE_NAME = 'agenda-inteligente-v2-2026-05-23'
+const CACHE_NAME = 'agenda-inteligente-v3-2026-05-26'
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
 ]
+
+// Aceita mensagem do client pedindo pra promover o SW novo (BUG-CHUNK-01)
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
+})
 
 // Instalação do Service Worker — skipWaiting força ativação imediata
 self.addEventListener('install', (event) => {

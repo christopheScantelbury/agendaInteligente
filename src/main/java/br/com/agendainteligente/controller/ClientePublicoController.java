@@ -51,27 +51,39 @@ public class ClientePublicoController {
     private final PasswordEncoder passwordEncoder;
 
     @PostMapping("/cadastro")
-    @Operation(summary = "Cadastro público de cliente")
-    public ResponseEntity<ClienteDTO> cadastrar(@Valid @RequestBody ClienteDTO clienteDTO, 
+    @Operation(summary = "Cadastro público de cliente — email + senha obrigatórios (cria credenciais de login)")
+    public ResponseEntity<ClienteDTO> cadastrar(@Valid @RequestBody ClienteDTO clienteDTO,
                                                  @RequestParam(required = false) String senha) {
         // Verificar se já existe
         if (clienteRepository.existsByCpfCnpj(clienteDTO.getCpfCnpj())) {
             throw new BusinessException("Já existe um cliente cadastrado com este CPF/CNPJ");
         }
-        
+
         if (clienteDTO.getEmail() != null && clienteRepository.existsByEmail(clienteDTO.getEmail())) {
             throw new BusinessException("Já existe um cliente cadastrado com este email");
         }
-        
+
         // Usar senha do parâmetro se fornecida, senão usar do DTO
         String senhaFinal = senha != null && !senha.isEmpty() ? senha : clienteDTO.getSenha();
         if (senhaFinal != null && !senhaFinal.isEmpty()) {
             clienteDTO.setSenha(senhaFinal);
         }
-        
-        // Criar cliente (já cria usuário automaticamente se tiver email e senha)
+
+        // Email + senha são OBRIGATÓRIOS no cadastro público — sem eles o cliente não consegue
+        // fazer login depois (sub-bug do #117 reportado pelo QA 26/05).
+        if (clienteDTO.getEmail() == null || clienteDTO.getEmail().isBlank()) {
+            throw new BusinessException("Email é obrigatório para cadastro público");
+        }
+        if (clienteDTO.getSenha() == null || clienteDTO.getSenha().isBlank()) {
+            throw new BusinessException("Senha é obrigatória para cadastro público");
+        }
+        if (clienteDTO.getSenha().length() < 6) {
+            throw new BusinessException("Senha deve ter no mínimo 6 caracteres");
+        }
+
+        // Criar cliente (já cria usuário automaticamente — email+senha agora garantidos)
         ClienteDTO clienteCriado = clienteService.criar(clienteDTO);
-        
+
         return ResponseEntity.status(HttpStatus.CREATED).body(clienteCriado);
     }
 

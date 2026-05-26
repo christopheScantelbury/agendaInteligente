@@ -8,14 +8,23 @@ import posthog from 'posthog-js'
 let initialized = false
 let noKeyLogged = false
 
+/**
+ * Inicializa PostHog se VITE_POSTHOG_KEY existir; senão é no-op silencioso.
+ *
+ * DECISÃO DE DESIGN (BUG-S5-01): o log "PostHog desabilitado" foi suprimido
+ * intencionalmente — em produção nada deve aparecer no console. Para diagnosticar
+ * em DEV, habilite via DevTools: `localStorage.setItem('debug-analytics', '1')`
+ * e dê reload. O log sai uma única vez por sessão.
+ *
+ * Se você está revisando código e esperava ver o log: ele NÃO deve aparecer
+ * em prod nem em DEV padrão — é comportamento correto.
+ */
 export function initAnalytics(): void {
   if (initialized) return
   const key = import.meta.env.VITE_POSTHOG_KEY
   if (!key) {
-    // Loga apenas UMA vez em DEV e somente se debug analytics estiver habilitado.
-    // Em prod nada aparece. Em DEV padrão também nada — só polui se quiser.
     if (import.meta.env.DEV && !noKeyLogged && localStorage.getItem('debug-analytics') === '1') {
-      console.info('[analytics] PostHog desabilitado (sem VITE_POSTHOG_KEY). Habilite com localStorage debug-analytics=1.')
+      console.info('[analytics] PostHog desabilitado (sem VITE_POSTHOG_KEY).')
       noKeyLogged = true
     }
     return

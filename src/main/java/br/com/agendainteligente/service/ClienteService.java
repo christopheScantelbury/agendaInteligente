@@ -289,8 +289,14 @@ public class ClienteService {
         cliente = clienteRepository.save(cliente);
         
         // Criar usuário automaticamente para o cliente se tiver email e senha
-        if (clienteDTO.getEmail() != null && !clienteDTO.getEmail().trim().isEmpty() 
+        if (clienteDTO.getEmail() != null && !clienteDTO.getEmail().trim().isEmpty()
             && clienteDTO.getSenha() != null && !clienteDTO.getSenha().trim().isEmpty()) {
+            // Verifica se email já existe em usuarios (qualquer perfil) — evita silent fail
+            if (usuarioRepository.existsByEmail(cliente.getEmail())) {
+                log.error("Não foi possível criar credenciais para cliente {} — email {} já está em uso por outro usuário",
+                        cliente.getId(), cliente.getEmail());
+                throw new BusinessException("Email já está em uso por outro usuário do sistema. Use outro email ou faça login.");
+            }
             try {
                 Usuario usuario = Usuario.builder()
                     .nome(cliente.getNome())
@@ -299,13 +305,14 @@ public class ClienteService {
                     .perfilSistema(Usuario.PerfilUsuario.CLIENTE)
                     .ativo(cliente.getAtivo())
                     .build();
-                
+
                 usuario = usuarioRepository.save(usuario);
-                log.info("Usuário criado automaticamente para cliente. Cliente ID: {}, Usuário ID: {}", 
+                log.info("Usuário criado automaticamente para cliente. Cliente ID: {}, Usuário ID: {}",
                     cliente.getId(), usuario.getId());
             } catch (Exception e) {
-                log.warn("Erro ao criar usuário para cliente ID: {}. Erro: {}", cliente.getId(), e.getMessage());
-                // Não falha o cadastro do cliente se houver erro ao criar usuário
+                // Falha real (DB error, constraint, etc) — agora é log ERROR e quebra a transação
+                log.error("Erro ao criar usuário para cliente ID: {}. Erro: {}", cliente.getId(), e.getMessage(), e);
+                throw new BusinessException("Não foi possível criar credenciais de login: " + e.getMessage());
             }
         }
         
