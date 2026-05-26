@@ -41,7 +41,8 @@ public class ClienteDTO {
     private LocalDate dataNascimento;
     private String rg;
     
-    // Senha para criação de usuário (opcional, não é persistida na entidade Cliente)
+    // Senha para criação de usuário (opcional). WRITE_ONLY — nunca volta na resposta (BUG-06 do QA Sprint 6).
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)
     private String senha;
     
     private Long unidadeId; // Unidade principal do cliente

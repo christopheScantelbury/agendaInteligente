@@ -9,10 +9,10 @@ import br.com.agendainteligente.repository.ServicoRepository;
 import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.repository.UsuarioRepository;
 import br.com.agendainteligente.repository.ConviteAcessoRepository;
+import br.com.agendainteligente.security.SecurityHelper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -49,11 +49,12 @@ public class DashboardGerenteController {
     private final ServicoRepository servicoRepository;
     private final UsuarioRepository usuarioRepository;
     private final ConviteAcessoRepository conviteAcessoRepository;
+    private final SecurityHelper securityHelper;
 
     @GetMapping("/kpis")
     @PreAuthorize("hasAnyRole('ADMIN','ADMINISTRADOR','GERENTE')")
-    public ResponseEntity<Map<String, Object>> kpis(@AuthenticationPrincipal Usuario usuario) {
-        List<Long> unidadeIds = unidadeIdsDoUsuario(usuario);
+    public ResponseEntity<Map<String, Object>> kpis() {
+        List<Long> unidadeIds = unidadeIdsDoUsuario(securityHelper.usuarioAtual());
 
         YearMonth atual = YearMonth.now();
         YearMonth anterior = atual.minusMonths(1);
@@ -130,11 +131,10 @@ public class DashboardGerenteController {
     @GetMapping("/faturamento-diario")
     @PreAuthorize("hasAnyRole('ADMIN','ADMINISTRADOR','GERENTE')")
     public ResponseEntity<Map<String, Object>> faturamentoDiario(
-            @AuthenticationPrincipal Usuario usuario,
             @RequestParam(defaultValue = "30") int dias
     ) {
         int diasValido = Math.max(1, Math.min(dias, 365));
-        List<Long> unidadeIds = unidadeIdsDoUsuario(usuario);
+        List<Long> unidadeIds = unidadeIdsDoUsuario(securityHelper.usuarioAtual());
 
         LocalDate hoje = LocalDate.now();
         LocalDate inicioAtual = hoje.minusDays(diasValido - 1L);
@@ -190,7 +190,8 @@ public class DashboardGerenteController {
      */
     @GetMapping("/checklist")
     @PreAuthorize("hasAnyRole('ADMIN','ADMINISTRADOR','GERENTE')")
-    public ResponseEntity<Map<String, Object>> checklist(@AuthenticationPrincipal Usuario usuario) {
+    public ResponseEntity<Map<String, Object>> checklist() {
+        Usuario usuario = securityHelper.usuarioAtual();
         List<Long> unidadeIds = unidadeIdsDoUsuario(usuario);
         Long adminId = usuario.getAdminUnicoId() != null ? usuario.getAdminUnicoId() : usuario.getId();
 
@@ -199,10 +200,8 @@ public class DashboardGerenteController {
         // Heurística: tem horários se atendente está ativo (proxy simples)
         boolean temHorarios = atendenteRepository.findByUnidadeIdIn(unidadeIds).stream()
                 .anyMatch(at -> Boolean.TRUE.equals(at.getAtivo()));
-        // Heurística: página pública personalizada — se a empresa tem nome customizado (diferente do gerado pelo seed)
-        // Por enquanto: marca true se há mais de uma unidade OU se há servico/profissional já cadastrado
         boolean personalizouPublico = false; // sem campo dedicado; mantém false até criar
-        boolean configurouFiscal = false; // depende de NotaFiscal config; placeholder
+        boolean configurouFiscal = false;
         boolean convidouEquipe = !conviteAcessoRepository.findByCriadoPorIdOrderByDataCriacaoDesc(usuario.getId()).isEmpty();
 
         List<Map<String, Object>> tarefas = new ArrayList<>();
@@ -235,8 +234,8 @@ public class DashboardGerenteController {
      */
     @GetMapping("/equipe")
     @PreAuthorize("hasAnyRole('ADMIN','ADMINISTRADOR','GERENTE')")
-    public ResponseEntity<List<Map<String, Object>>> equipe(@AuthenticationPrincipal Usuario usuario) {
-        List<Long> unidadeIds = unidadeIdsDoUsuario(usuario);
+    public ResponseEntity<List<Map<String, Object>>> equipe() {
+        List<Long> unidadeIds = unidadeIdsDoUsuario(securityHelper.usuarioAtual());
         LocalDate hoje = LocalDate.now();
         LocalDateTime inicioHoje = hoje.atStartOfDay();
         LocalDateTime fimHoje = hoje.atTime(23, 59, 59);
@@ -304,8 +303,8 @@ public class DashboardGerenteController {
      */
     @GetMapping("/proximos")
     @PreAuthorize("hasAnyRole('ADMIN','ADMINISTRADOR','GERENTE')")
-    public ResponseEntity<List<Map<String, Object>>> proximos(@AuthenticationPrincipal Usuario usuario) {
-        List<Long> unidadeIds = unidadeIdsDoUsuario(usuario);
+    public ResponseEntity<List<Map<String, Object>>> proximos() {
+        List<Long> unidadeIds = unidadeIdsDoUsuario(securityHelper.usuarioAtual());
         LocalDateTime agora = LocalDateTime.now();
 
         List<Map<String, Object>> proximos = agendamentoRepository.findAll().stream()

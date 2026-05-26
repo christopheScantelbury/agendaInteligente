@@ -10,6 +10,7 @@ import br.com.agendainteligente.repository.NotaFiscalRepository;
 import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.repository.UsuarioRepository;
 import br.com.agendainteligente.security.JwtTokenProvider;
+import br.com.agendainteligente.security.SecurityHelper;
 import br.com.agendainteligente.service.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,7 +20,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -53,6 +53,7 @@ public class PlataformaController {
     private final AuditLogRepository auditLogRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuditLogService auditLogService;
+    private final SecurityHelper securityHelper;
 
     // TTL curto da impersonação (15 minutos)
     private static final long IMPERSONATION_TTL_MS = 15 * 60 * 1000L;
@@ -150,10 +151,10 @@ public class PlataformaController {
     @PostMapping("/empresas/{empresaId}/assumir-sessao")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> assumirSessao(
-            @AuthenticationPrincipal Usuario admin,
             @PathVariable Long empresaId,
             @RequestBody Map<String, String> body
     ) {
+        Usuario admin = securityHelper.usuarioAtual();
         String motivo = body.getOrDefault("motivo", "").trim();
         if (motivo.isBlank() || motivo.length() < 5) {
             return ResponseEntity.badRequest().body(Map.of("error", "Motivo é obrigatório (mín. 5 caracteres)"));
