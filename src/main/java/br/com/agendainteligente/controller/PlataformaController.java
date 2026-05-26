@@ -1,16 +1,22 @@
 package br.com.agendainteligente.controller;
 
+import br.com.agendainteligente.domain.entity.AuditLog;
 import br.com.agendainteligente.domain.entity.Empresa;
 import br.com.agendainteligente.repository.AgendamentoRepository;
+import br.com.agendainteligente.repository.AuditLogRepository;
 import br.com.agendainteligente.repository.EmpresaRepository;
 import br.com.agendainteligente.repository.NotaFiscalRepository;
 import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
@@ -34,6 +40,7 @@ public class PlataformaController {
     private final AgendamentoRepository agendamentoRepository;
     private final NotaFiscalRepository notaFiscalRepository;
     private final UsuarioRepository usuarioRepository;
+    private final AuditLogRepository auditLogRepository;
 
     /**
      * Métricas agregadas da plataforma. Apenas counts; sem PII.
@@ -118,6 +125,26 @@ public class PlataformaController {
             item.put("mrr", null);   // Placeholder — escopo Stripe
             resultado.add(item);
         }
+        return ResponseEntity.ok(resultado);
+    }
+
+    /**
+     * Listagem paginada do audit log. #95.
+     */
+    @GetMapping("/audit-log")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Page<AuditLog>> auditLog(
+            @RequestParam(required = false) String tipoAcao,
+            @RequestParam(required = false) Long autorId,
+            @RequestParam(required = false) Long empresaId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime de,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime ate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size
+    ) {
+        Page<AuditLog> resultado = auditLogRepository.buscarComFiltros(
+                tipoAcao, autorId, empresaId, de, ate, PageRequest.of(page, Math.min(size, 200))
+        );
         return ResponseEntity.ok(resultado);
     }
 }

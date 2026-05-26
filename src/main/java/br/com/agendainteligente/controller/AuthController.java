@@ -5,6 +5,7 @@ import br.com.agendainteligente.dto.CadastroAdminDTO;
 import br.com.agendainteligente.dto.LoginDTO;
 import br.com.agendainteligente.dto.TokenDTO;
 import br.com.agendainteligente.repository.UsuarioRepository;
+import br.com.agendainteligente.service.AuditLogService;
 import br.com.agendainteligente.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,6 +25,7 @@ public class AuthController {
     private final AuthService authService;
     private final PasswordEncoder passwordEncoder;
     private final UsuarioRepository usuarioRepository;
+    private final AuditLogService auditLogService;
 
     @Value("${app.fix-admin-key:}")
     private String fixAdminKey;
@@ -31,7 +33,10 @@ public class AuthController {
     @PostMapping("/login")
     @Operation(summary = "Realizar login")
     public ResponseEntity<TokenDTO> login(@Valid @RequestBody LoginDTO loginDTO) {
-        return ResponseEntity.ok(authService.login(loginDTO));
+        TokenDTO token = authService.login(loginDTO);
+        auditLogService.registrar("LOGIN_SUCCESS", "Usuario", token.getUsuarioId(),
+                "Login de " + loginDTO.getEmail(), null);
+        return ResponseEntity.ok(token);
     }
 
     @PostMapping("/cadastro")

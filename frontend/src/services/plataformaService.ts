@@ -37,4 +37,44 @@ export const plataformaService = {
     const response = await api.get<EmpresaPlataforma[]>('/plataforma/empresas')
     return response.data
   },
+
+  auditLog: async (filtros: AuditLogFiltros = {}): Promise<AuditLogPage> => {
+    const response = await api.get<AuditLogPage>('/plataforma/audit-log', { params: filtros })
+    return response.data
+  },
+}
+
+export interface AuditLogFiltros {
+  tipoAcao?: string
+  autorId?: number
+  empresaId?: number
+  de?: string
+  ate?: string
+  page?: number
+  size?: number
+}
+
+export interface AuditLogEntry {
+  id: number
+  timestamp: string
+  autorId: number | null
+  autorEmail: string | null
+  autorPerfil: string | null
+  tipoAcao: string
+  entidade: string | null
+  entidadeId: number | null
+  descricao: string | null
+  ip: string | null
+  userAgent: string | null
+  metadata: Record<string, unknown> | null
+  empresaId: number | null
+  impersonatedBy: number | null
+}
+
+export interface AuditLogPage {
+  content: AuditLogEntry[]
+  totalElements: number
+  totalPages: number
+  number: number
+  size: number
 }
