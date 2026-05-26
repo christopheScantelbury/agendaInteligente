@@ -8,6 +8,7 @@ import br.com.agendainteligente.service.ComissaoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/comissoes")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN','ADMINISTRADOR','GERENTE')")
 public class ComissaoController {
 
     private final ComissaoService service;

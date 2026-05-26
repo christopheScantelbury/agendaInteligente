@@ -17,6 +17,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/usuarios")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN','ADMINISTRADOR','GERENTE')")
 @Tag(name = "Usuários", description = "API para gerenciamento de usuários")
 public class UsuarioController {
 

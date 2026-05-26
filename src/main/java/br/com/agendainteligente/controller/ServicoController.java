@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/servicos")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN','ADMINISTRADOR','GERENTE','PROFISSIONAL')")
 @Tag(name = "Serviços", description = "API para gerenciamento de serviços")
 public class ServicoController {
 
@@ -52,6 +54,7 @@ public class ServicoController {
 
     @PostMapping
     @Operation(summary = "Criar novo serviço")
+    @PreAuthorize("hasAnyRole('ADMIN','ADMINISTRADOR','GERENTE')")
     public ResponseEntity<ServicoDTO> criar(@Valid @RequestBody ServicoDTO servicoDTO) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(servicoService.criar(servicoDTO));
@@ -59,6 +62,7 @@ public class ServicoController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Atualizar serviço")
+    @PreAuthorize("hasAnyRole('ADMIN','ADMINISTRADOR','GERENTE')")
     public ResponseEntity<ServicoDTO> atualizar(@PathVariable Long id,
                                                 @Valid @RequestBody ServicoDTO servicoDTO) {
         return ResponseEntity.ok(servicoService.atualizar(id, servicoDTO));
@@ -66,6 +70,7 @@ public class ServicoController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Excluir serviço")
+    @PreAuthorize("hasAnyRole('ADMIN','ADMINISTRADOR','GERENTE')")
     public ResponseEntity<Void> excluir(@PathVariable Long id) {
         servicoService.excluir(id);
         return ResponseEntity.noContent().build();

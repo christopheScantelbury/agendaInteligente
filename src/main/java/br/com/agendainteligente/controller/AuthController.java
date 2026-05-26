@@ -46,12 +46,7 @@ public class AuthController {
         return ResponseEntity.status(201).build();
     }
 
-    @GetMapping("/hash/{senha}")
-    @Operation(summary = "Gerar hash de senha (temporário)")
-    public ResponseEntity<String> gerarHash(@PathVariable String senha) {
-        String hash = passwordEncoder.encode(senha);
-        return ResponseEntity.ok(hash);
-    }
+    // Endpoint /hash/{senha} removido (era utilitário de dev exposto em prod — #113)
 
     /**
      * Corrige a senha do admin usando o mesmo PasswordEncoder da aplicacao.
