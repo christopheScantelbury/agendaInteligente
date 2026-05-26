@@ -78,6 +78,26 @@ public class ClienteAuthService {
                 .build();
     }
 
+    /**
+     * Emite JWT temporário para cliente visitante (guest checkout, #86).
+     * Não exige senha — usado logo após criar Cliente + Agendamento atomicamente.
+     */
+    public String emitirTokenVisitante(Cliente cliente) {
+        String username = cliente.getEmail() != null && !cliente.getEmail().isEmpty()
+                ? cliente.getEmail()
+                : cliente.getCpfCnpj();
+
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                username,
+                null,
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_CLIENTE"))
+        );
+
+        String token = jwtTokenProvider.generateToken(authentication);
+        log.info("Token visitante emitido para cliente ID: {}", cliente.getId());
+        return token;
+    }
+
     @Transactional
     public void definirSenha(Long clienteId, String senha) {
         Cliente cliente = clienteRepository.findById(clienteId)

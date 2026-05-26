@@ -4,6 +4,7 @@ import br.com.agendainteligente.domain.entity.Agendamento;
 import br.com.agendainteligente.domain.entity.Cliente;
 import br.com.agendainteligente.domain.enums.StatusAgendamento;
 import br.com.agendainteligente.dto.AgendamentoDTO;
+import br.com.agendainteligente.dto.AgendarComoVisitanteDTO;
 import br.com.agendainteligente.dto.ClienteDTO;
 import br.com.agendainteligente.dto.ClienteLoginDTO;
 import br.com.agendainteligente.dto.ClienteTokenDTO;
@@ -74,6 +75,59 @@ public class ClientePublicoController {
     @Operation(summary = "Login de cliente")
     public ResponseEntity<ClienteTokenDTO> login(@Valid @RequestBody ClienteLoginDTO loginDTO) {
         return ResponseEntity.ok(clienteAuthService.login(loginDTO));
+    }
+
+    /**
+     * Guest checkout (#86): cria cliente (sem senha) + agendamento atomicamente.
+     * Retorna token JWT temporário pro cliente poder gerenciar o agendamento criado.
+     * Depois, o cliente pode "salvar conta" definindo senha via endpoint próprio.
+     */
+    @PostMapping("/agendar-como-visitante")
+    @Operation(summary = "Agendar sem cadastro prévio (guest checkout)")
+    public ResponseEntity<ClienteTokenDTO> agendarComoVisitante(@Valid @RequestBody AgendarComoVisitanteDTO dto) {
+        // Verificar se já existe cliente por email
+        Cliente cliente = clienteRepository.findByEmail(dto.getEmail()).orElse(null);
+        if (cliente == null && dto.getCpfCnpj() != null && !dto.getCpfCnpj().isBlank()) {
+            cliente = clienteRepository.findByCpfCnpj(dto.getCpfCnpj()).orElse(null);
+        }
+
+        if (cliente == null) {
+            // Cria sem senha (cliente "anônimo" — só pode logar via link de gestão futuramente)
+            ClienteDTO clienteDTO = new ClienteDTO();
+            clienteDTO.setNome(dto.getNome());
+            clienteDTO.setEmail(dto.getEmail());
+            clienteDTO.setTelefone(dto.getTelefone());
+            clienteDTO.setCpfCnpj(dto.getCpfCnpj());
+            ClienteDTO criado = clienteService.criar(clienteDTO);
+            cliente = clienteRepository.findById(criado.getId())
+                    .orElseThrow(() -> new BusinessException("Falha ao criar cliente visitante"));
+        }
+
+        // Cria agendamento
+        AgendamentoDTO ag = new AgendamentoDTO();
+        ag.setClienteId(cliente.getId());
+        ag.setUnidadeId(dto.getUnidadeId());
+        ag.setAtendenteId(dto.getAtendenteId());
+        ag.setDataHoraInicio(dto.getDataHoraInicio());
+        ag.setFormaPagamentoPreferida(dto.getFormaPagamentoPreferida());
+        ag.setServicos(dto.getServicos());
+        agendamentoService.criar(ag);
+
+        // Gera token JWT temporário pro cliente acompanhar
+        ClienteLoginDTO loginPayload = new ClienteLoginDTO();
+        loginPayload.setEmailOuCpf(cliente.getEmail());
+        // Senha temporária aleatória — não persistida; só serve pra emitir o token
+        // Alternativa: criar método clienteAuthService.emitirTokenSemSenha(cliente)
+        // Por hora, definimos senha temporária e logamos. Senha real fica null no banco.
+        String tokenTemp = clienteAuthService.emitirTokenVisitante(cliente);
+        ClienteTokenDTO token = new ClienteTokenDTO();
+        token.setToken(tokenTemp);
+        token.setTipo("Bearer");
+        token.setClienteId(cliente.getId());
+        token.setNome(cliente.getNome());
+        token.setEmail(cliente.getEmail());
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(token);
     }
 
     @GetMapping("/horarios-disponiveis")

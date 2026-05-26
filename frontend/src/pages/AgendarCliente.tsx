@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
@@ -40,6 +40,14 @@ const FORMAS_PAGAMENTO: { id: FormaPagamento; label: string; desc: string }[] = 
 export default function AgendarCliente() {
   const navigate = useNavigate()
   const { showNotification } = useNotification()
+  const [searchParams] = useSearchParams()
+  const modoGuest = searchParams.get('guest') === '1' && !clientePublicoService.isAuthenticated()
+
+  // Dados do visitante (modo guest)
+  const [guestNome, setGuestNome] = useState('')
+  const [guestEmail, setGuestEmail] = useState('')
+  const [guestTelefone, setGuestTelefone] = useState('')
+  const [guestCpf, setGuestCpf] = useState('')
 
   const [step, setStep] = useState<Step>(1)
   const [unidades, setUnidades] = useState<Unidade[]>([])
@@ -56,13 +64,13 @@ export default function AgendarCliente() {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    if (!clientePublicoService.isAuthenticated()) {
+    if (!clientePublicoService.isAuthenticated() && !modoGuest) {
       navigate('/cliente/login')
       return
     }
-    track(Events.CLIENTE_AGENDAMENTO_INICIADO)
+    track(Events.CLIENTE_AGENDAMENTO_INICIADO, { guest: modoGuest })
     void carregarDados()
-  }, [navigate])
+  }, [navigate, modoGuest])
 
   useEffect(() => {
     if (step === 2 && selectedUnidade && selectedServico) {
@@ -115,6 +123,15 @@ export default function AgendarCliente() {
 
   async function verificarDisponibilidadeESubmeter() {
     if (!selectedSlot || !selectedUnidade || !selectedServico) return
+
+    // Validação extra do form guest
+    if (modoGuest) {
+      if (!guestNome.trim() || !guestEmail.trim() || !guestTelefone.trim()) {
+        showNotification('error', 'Preencha nome, email e telefone para continuar.')
+        return
+      }
+    }
+
     setSubmitting(true)
     try {
       // Re-checa disponibilidade antes de submeter (evita race condition)
@@ -138,29 +155,45 @@ export default function AgendarCliente() {
         return
       }
 
-      const cliente = clientePublicoService.getCliente()
-      if (!cliente) throw new Error('Cliente não encontrado')
+      const servicos = [
+        {
+          servicoId: selectedServico.id!,
+          quantidade: 1,
+          valor: selectedServico.valor,
+        },
+      ]
 
-      const agendamento = {
-        clienteId: cliente.clienteId,
-        unidadeId: selectedUnidade.id!,
-        atendenteId: selectedSlot.atendenteId,
-        dataHoraInicio: selectedSlot.dataHoraInicio,
-        formaPagamentoPreferida: formaPagamento,
-        servicos: [
-          {
-            servicoId: selectedServico.id!,
-            quantidade: 1,
-            valor: selectedServico.valor,
-          },
-        ],
+      if (modoGuest) {
+        await clientePublicoService.agendarComoVisitante({
+          nome: guestNome.trim(),
+          email: guestEmail.trim(),
+          telefone: guestTelefone.replace(/\D/g, ''),
+          cpfCnpj: guestCpf.replace(/\D/g, '') || undefined,
+          unidadeId: selectedUnidade.id!,
+          atendenteId: selectedSlot.atendenteId,
+          dataHoraInicio: selectedSlot.dataHoraInicio,
+          formaPagamentoPreferida: formaPagamento,
+          servicos,
+        })
+      } else {
+        const cliente = clientePublicoService.getCliente()
+        if (!cliente) throw new Error('Cliente não encontrado')
+        await clientePublicoService.criarAgendamento({
+          clienteId: cliente.clienteId,
+          unidadeId: selectedUnidade.id!,
+          atendenteId: selectedSlot.atendenteId,
+          dataHoraInicio: selectedSlot.dataHoraInicio,
+          formaPagamentoPreferida: formaPagamento,
+          servicos,
+        })
       }
-      await clientePublicoService.criarAgendamento(agendamento)
+
       track(Events.CLIENTE_AGENDAMENTO_CONCLUIDO, {
         servicoId: selectedServico.id,
         unidadeId: selectedUnidade.id,
         formaPagamento,
         valor: selectedServico.valor,
+        guest: modoGuest,
       })
       showNotification('success', 'Agendamento realizado com sucesso!')
       setTimeout(() => navigate('/cliente'), 800)
@@ -253,6 +286,15 @@ export default function AgendarCliente() {
           submitting={submitting}
           onConfirm={verificarDisponibilidadeESubmeter}
           onAlterarHorario={() => setStep(2)}
+          modoGuest={modoGuest}
+          guestNome={guestNome}
+          setGuestNome={setGuestNome}
+          guestEmail={guestEmail}
+          setGuestEmail={setGuestEmail}
+          guestTelefone={guestTelefone}
+          setGuestTelefone={setGuestTelefone}
+          guestCpf={guestCpf}
+          setGuestCpf={setGuestCpf}
         />
       )}
     </div>
@@ -438,6 +480,15 @@ function Step3Confirmar({
   submitting,
   onConfirm,
   onAlterarHorario,
+  modoGuest,
+  guestNome,
+  setGuestNome,
+  guestEmail,
+  setGuestEmail,
+  guestTelefone,
+  setGuestTelefone,
+  guestCpf,
+  setGuestCpf,
 }: {
   unidade: Unidade
   servico: Servico
@@ -447,9 +498,62 @@ function Step3Confirmar({
   submitting: boolean
   onConfirm: () => void
   onAlterarHorario: () => void
+  modoGuest: boolean
+  guestNome: string
+  setGuestNome: (v: string) => void
+  guestEmail: string
+  setGuestEmail: (v: string) => void
+  guestTelefone: string
+  setGuestTelefone: (v: string) => void
+  guestCpf: string
+  setGuestCpf: (v: string) => void
 }) {
   return (
     <div className="space-y-4">
+      {modoGuest && (
+        <section className="bg-violet-50 border border-violet-200 rounded-2xl p-4 space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-violet-900">Seus dados</p>
+            <p className="text-xs text-violet-700 mt-0.5">
+              Sem criar conta. Você poderá salvar uma senha depois pra acompanhar seus horários.
+            </p>
+          </div>
+          <input
+            type="text"
+            value={guestNome}
+            onChange={(e) => setGuestNome(e.target.value)}
+            placeholder="Nome completo *"
+            required
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+          />
+          <input
+            type="email"
+            value={guestEmail}
+            onChange={(e) => setGuestEmail(e.target.value)}
+            placeholder="E-mail *"
+            required
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+          />
+          <input
+            type="tel"
+            value={guestTelefone}
+            onChange={(e) => setGuestTelefone(e.target.value)}
+            placeholder="Telefone (WhatsApp) *"
+            inputMode="numeric"
+            required
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+          />
+          <input
+            type="text"
+            value={guestCpf}
+            onChange={(e) => setGuestCpf(e.target.value)}
+            placeholder="CPF (opcional)"
+            inputMode="numeric"
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+          />
+        </section>
+      )}
+
       <section className="bg-white border border-gray-200 rounded-2xl divide-y divide-gray-100">
         <Row label="Serviço" value={servico.nome} sub={`${servico.duracaoMinutos} min`} />
         <Row

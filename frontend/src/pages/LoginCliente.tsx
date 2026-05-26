@@ -147,6 +147,22 @@ export default function LoginCliente() {
               Cadastre-se grátis
             </Link>
           </p>
+
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center" aria-hidden>
+              <div className="w-full border-t border-slate-200" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="px-2 bg-white text-slate-400">ou</span>
+            </div>
+          </div>
+
+          <Link
+            to="/cliente/agendar?guest=1"
+            className="block w-full py-2.5 px-4 rounded-xl border-2 border-violet-200 hover:border-violet-400 text-violet-700 text-sm font-semibold text-center transition"
+          >
+            Agendar sem criar conta
+          </Link>
         </div>
 
         <p className="text-center text-xs text-slate-400 mt-4">© 2026 AgendaInteligente</p>

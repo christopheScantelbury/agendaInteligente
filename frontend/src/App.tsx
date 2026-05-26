@@ -167,7 +167,9 @@ function App() {
                 element={
                   clientePublicoService.isAuthenticated()
                     ? <ClientLayout><AgendarCliente /></ClientLayout>
-                    : <Navigate to="/cliente/login" />
+                    : window.location.search.includes('guest=1')
+                      ? <AgendarCliente />
+                      : <Navigate to="/cliente/login" />
                 }
               />
               <Route

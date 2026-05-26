@@ -107,5 +107,29 @@ export const clientePublicoService = {
   cancelarAgendamento: async (id: number): Promise<void> => {
     await api.post(`/publico/clientes/agendamentos/${id}/cancelar`)
   },
+
+  /**
+   * Guest checkout (#86): cria cliente sem senha + agendamento atomicamente.
+   * Retorna ClienteTokenResponse (com JWT temporário). Service já salva no localStorage.
+   */
+  agendarComoVisitante: async (payload: AgendarComoVisitanteRequest): Promise<ClienteTokenResponse> => {
+    const response = await api.post<ClienteTokenResponse>('/publico/clientes/agendar-como-visitante', payload)
+    const token = response.data.token
+    localStorage.setItem('clienteToken', token)
+    localStorage.setItem('cliente', JSON.stringify(response.data))
+    return response.data
+  },
+}
+
+export interface AgendarComoVisitanteRequest {
+  nome: string
+  cpfCnpj?: string
+  email: string
+  telefone: string
+  unidadeId: number
+  atendenteId: number
+  dataHoraInicio: string
+  formaPagamentoPreferida?: string
+  servicos: { servicoId: number; quantidade?: number; valor?: number }[]
 }
 
