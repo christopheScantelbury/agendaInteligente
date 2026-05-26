@@ -1,17 +1,43 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { format, formatDistanceToNow, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Building2, Search, UserCog, AlertCircle } from 'lucide-react'
+import { Building2, Search, UserCog, AlertCircle, X } from 'lucide-react'
 import { plataformaService, EmpresaPlataforma } from '../../services/plataformaService'
 import { useNotification } from '../../contexts/NotificationContext'
+import { iniciarImpersonacao } from '../../lib/impersonation'
 
 type FiltroStatus = 'TODAS' | 'ATIVA' | 'INATIVA'
 
 export default function EmpresasPlataforma() {
+  const navigate = useNavigate()
   const { showNotification } = useNotification()
   const [busca, setBusca] = useState('')
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>('TODAS')
+  const [confirmacao, setConfirmacao] = useState<EmpresaPlataforma | null>(null)
+  const [motivo, setMotivo] = useState('')
+  const [carregando, setCarregando] = useState(false)
+
+  async function handleAssumir() {
+    if (!confirmacao) return
+    if (motivo.trim().length < 5) {
+      showNotification('error', 'Informe um motivo (mínimo 5 caracteres)')
+      return
+    }
+    setCarregando(true)
+    try {
+      await iniciarImpersonacao(confirmacao.id, motivo.trim())
+      showNotification('success', `Você está como ${confirmacao.nome}. Sessão expira em 15 min.`)
+      setConfirmacao(null)
+      setMotivo('')
+      navigate('/')
+    } catch (err: any) {
+      showNotification('error', err.response?.data?.error || 'Erro ao assumir sessão')
+    } finally {
+      setCarregando(false)
+    }
+  }
 
   const { data: empresas = [], isLoading, error } = useQuery({
     queryKey: ['plataforma', 'empresas'],
@@ -142,6 +168,66 @@ export default function EmpresasPlataforma() {
           </table>
         </div>
       </div>
+
+      {confirmacao && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !carregando && setConfirmacao(null)}>
+          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-amber-50 border-b border-amber-200 px-5 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <UserCog className="h-5 w-5 text-amber-700" />
+                <h3 className="text-base font-bold text-amber-900">Assumir sessão</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setConfirmacao(null)}
+                disabled={carregando}
+                aria-label="Fechar"
+                className="p-1 rounded-full text-amber-700 hover:bg-amber-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              <p className="text-sm text-slate-700">
+                Você vai operar como <strong>{confirmacao.nome}</strong> por <strong>15 minutos</strong>.
+                Toda ação será registrada na auditoria.
+              </p>
+              <div>
+                <label htmlFor="motivo" className="block text-xs font-semibold text-slate-700 mb-1">
+                  Motivo (obrigatório)
+                </label>
+                <textarea
+                  id="motivo"
+                  value={motivo}
+                  onChange={(e) => setMotivo(e.target.value)}
+                  rows={3}
+                  placeholder="Ex: Suporte ao chamado #1234 — cliente relatou erro ao emitir NFS-e"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setConfirmacao(null)}
+                disabled={carregando}
+                className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-slate-700 hover:bg-white disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleAssumir}
+                disabled={carregando || motivo.trim().length < 5}
+                className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold disabled:opacity-50"
+              >
+                {carregando ? 'Assumindo...' : 'Confirmar e assumir'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -42,6 +42,26 @@ export const plataformaService = {
     const response = await api.get<AuditLogPage>('/plataforma/audit-log', { params: filtros })
     return response.data
   },
+
+  assumirSessao: async (empresaId: number, motivo: string): Promise<AssumirSessaoResponse> => {
+    const response = await api.post<AssumirSessaoResponse>(
+      `/plataforma/empresas/${empresaId}/assumir-sessao`,
+      { motivo }
+    )
+    return response.data
+  },
+}
+
+export interface AssumirSessaoResponse {
+  token: string
+  tipo: string
+  expiresInMs: number
+  alvoUsuarioId: number
+  alvoEmail: string
+  alvoNome: string
+  alvoPerfil: string
+  empresaId: number
+  empresaNome: string
 }
 
 export interface AuditLogFiltros {

@@ -29,6 +29,21 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+
+  // Header X-Impersonated-By para audit log capturar quando admin global está impersonando (#94)
+  try {
+    const impersonationStr = localStorage.getItem('impersonation_dados_sessao')
+    const backupUsuario = localStorage.getItem('impersonation_backup_usuario')
+    if (impersonationStr && backupUsuario) {
+      const backup = JSON.parse(backupUsuario)
+      if (backup?.usuarioId) {
+        config.headers['X-Impersonated-By'] = String(backup.usuarioId)
+      }
+    }
+  } catch {
+    /* silencioso — header é só pra audit */
+  }
+
   return config
 })
 

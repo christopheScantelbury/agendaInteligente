@@ -29,21 +29,46 @@ public class JwtTokenProvider {
     }
 
     public String generateToken(Authentication authentication) {
+        return generateToken(authentication, null, null);
+    }
+
+    /**
+     * Gera token com claims extras de impersonação (#94).
+     * @param impersonatedBy id do ADMIN global que assumiu a sessão (claim "imp_by")
+     * @param ttlMillis TTL custom em ms (null = default 24h). Para impersonação: 15min.
+     */
+    public String generateToken(Authentication authentication, Long impersonatedBy, Long ttlMillis) {
         String username = authentication.getName();
         String authorities = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(","));
 
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + jwtExpiration);
+        long ttl = ttlMillis != null ? ttlMillis : jwtExpiration;
+        Date expiryDate = new Date(now.getTime() + ttl);
 
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(username)
                 .claim("authorities", authorities)
                 .issuedAt(now)
-                .expiration(expiryDate)
-                .signWith(getSigningKey())
-                .compact();
+                .expiration(expiryDate);
+
+        if (impersonatedBy != null) {
+            builder.claim("imp_by", impersonatedBy);
+        }
+
+        return builder.signWith(getSigningKey()).compact();
+    }
+
+    public Long getImpersonatedByFromToken(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+        Object imp = claims.get("imp_by");
+        if (imp == null) return null;
+        return Long.valueOf(imp.toString());
     }
 
     public String getUsernameFromToken(String token) {

@@ -13,6 +13,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 import NotificationContainer from './components/NotificationContainer'
+import ImpersonationBanner from './components/ImpersonationBanner'
 import { NotificationProvider } from './contexts/NotificationContext'
 import InstallPrompt from './components/InstallPrompt'
 import RequirePermissao from './components/RequirePermissao'
@@ -141,6 +142,7 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <NotificationProvider>
+          <ImpersonationBanner />
           <NotificationContainer />
           <Router>
             <InstallPrompt />

@@ -2,19 +2,29 @@ package br.com.agendainteligente.controller;
 
 import br.com.agendainteligente.domain.entity.AuditLog;
 import br.com.agendainteligente.domain.entity.Empresa;
+import br.com.agendainteligente.domain.entity.Usuario;
 import br.com.agendainteligente.repository.AgendamentoRepository;
 import br.com.agendainteligente.repository.AuditLogRepository;
 import br.com.agendainteligente.repository.EmpresaRepository;
 import br.com.agendainteligente.repository.NotaFiscalRepository;
 import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.repository.UsuarioRepository;
+import br.com.agendainteligente.security.JwtTokenProvider;
+import br.com.agendainteligente.service.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -41,6 +51,11 @@ public class PlataformaController {
     private final NotaFiscalRepository notaFiscalRepository;
     private final UsuarioRepository usuarioRepository;
     private final AuditLogRepository auditLogRepository;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final AuditLogService auditLogService;
+
+    // TTL curto da impersonação (15 minutos)
+    private static final long IMPERSONATION_TTL_MS = 15 * 60 * 1000L;
 
     /**
      * Métricas agregadas da plataforma. Apenas counts; sem PII.
@@ -126,6 +141,80 @@ public class PlataformaController {
             resultado.add(item);
         }
         return ResponseEntity.ok(resultado);
+    }
+
+    /**
+     * Assumir sessão (#94): ADMIN global emite JWT temporário (15min) como ADMINISTRADOR da empresa-alvo.
+     * Registra início e fim em audit_log com motivo obrigatório.
+     */
+    @PostMapping("/empresas/{empresaId}/assumir-sessao")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> assumirSessao(
+            @AuthenticationPrincipal Usuario admin,
+            @PathVariable Long empresaId,
+            @RequestBody Map<String, String> body
+    ) {
+        String motivo = body.getOrDefault("motivo", "").trim();
+        if (motivo.isBlank() || motivo.length() < 5) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Motivo é obrigatório (mín. 5 caracteres)"));
+        }
+
+        Empresa empresa = empresaRepository.findById(empresaId)
+                .orElseThrow(() -> new RuntimeException("Empresa não encontrada"));
+
+        Long adminUnicoId = empresa.getAdminUnicoId();
+        if (adminUnicoId == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Empresa sem ADMINISTRADOR vinculado"));
+        }
+
+        Usuario alvo = usuarioRepository.findById(adminUnicoId)
+                .orElseThrow(() -> new RuntimeException("ADMINISTRADOR alvo não encontrado"));
+
+        // Construir Authentication "como se fosse" o alvo
+        String perfil = alvo.getPerfilSistema() != null ? alvo.getPerfilSistema().name() : "ADMINISTRADOR";
+        Authentication authAlvo = new UsernamePasswordAuthenticationToken(
+                alvo.getEmail(),
+                null,
+                List.of(
+                        new SimpleGrantedAuthority("ROLE_" + perfil),
+                        new SimpleGrantedAuthority("ROLE_ADMIN") // ADMINISTRADOR já tem ambos
+                )
+        );
+
+        String token = jwtTokenProvider.generateToken(authAlvo, admin.getId(), IMPERSONATION_TTL_MS);
+
+        Map<String, Object> meta = new LinkedHashMap<>();
+        meta.put("motivo", motivo);
+        meta.put("empresaId", empresaId);
+        meta.put("empresaNome", empresa.getNome());
+        meta.put("alvoUsuarioId", alvo.getId());
+        meta.put("alvoEmail", alvo.getEmail());
+        auditLogService.registrar("IMPERSONATE_INICIO", "Empresa", empresaId,
+                "ADMIN " + admin.getEmail() + " assumiu sessão da empresa " + empresa.getNome(), meta);
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("token", token);
+        response.put("tipo", "Bearer");
+        response.put("expiresInMs", IMPERSONATION_TTL_MS);
+        response.put("alvoUsuarioId", alvo.getId());
+        response.put("alvoEmail", alvo.getEmail());
+        response.put("alvoNome", alvo.getNome());
+        response.put("alvoPerfil", perfil);
+        response.put("empresaId", empresaId);
+        response.put("empresaNome", empresa.getNome());
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Encerrar sessão impersonada. Só registra audit; o frontend já volta pro token original.
+     */
+    @PostMapping("/encerrar-sessao")
+    public ResponseEntity<Void> encerrarSessao(@RequestBody(required = false) Map<String, Object> body) {
+        Map<String, Object> meta = body != null ? body : new LinkedHashMap<>();
+        auditLogService.registrar("IMPERSONATE_FIM", "Empresa",
+                meta.get("empresaId") instanceof Number n ? n.longValue() : null,
+                "Sessão impersonada encerrada", meta);
+        return ResponseEntity.noContent().build();
     }
 
     /**
