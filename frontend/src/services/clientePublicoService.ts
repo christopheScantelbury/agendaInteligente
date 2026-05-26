@@ -126,6 +126,8 @@ export interface AgendarComoVisitanteRequest {
   cpfCnpj?: string
   email: string
   telefone: string
+  /** Opcional — se enviada, cria credenciais de login (mínimo 6 chars). */
+  senha?: string
   unidadeId: number
   atendenteId: number
   dataHoraInicio: string

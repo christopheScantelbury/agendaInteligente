@@ -108,12 +108,19 @@ public class ClientePublicoController {
         }
 
         if (cliente == null) {
-            // Cria sem senha (cliente "anônimo" — só pode logar via link de gestão futuramente)
             ClienteDTO clienteDTO = new ClienteDTO();
             clienteDTO.setNome(dto.getNome());
             clienteDTO.setEmail(dto.getEmail());
             clienteDTO.setTelefone(dto.getTelefone());
             clienteDTO.setCpfCnpj(dto.getCpfCnpj());
+            // T6.2: se o visitante optou por criar conta (enviou senha), persiste credenciais.
+            // ClienteService.criar cuida da criação do Usuario com perfilSistema=CLIENTE.
+            if (dto.getSenha() != null && !dto.getSenha().isBlank()) {
+                if (dto.getSenha().length() < 6) {
+                    throw new BusinessException("Senha deve ter no mínimo 6 caracteres");
+                }
+                clienteDTO.setSenha(dto.getSenha());
+            }
             ClienteDTO criado = clienteService.criar(clienteDTO);
             cliente = clienteRepository.findById(criado.getId())
                     .orElseThrow(() -> new BusinessException("Falha ao criar cliente visitante"));

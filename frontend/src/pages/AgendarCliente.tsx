@@ -48,6 +48,8 @@ export default function AgendarCliente() {
   const [guestEmail, setGuestEmail] = useState('')
   const [guestTelefone, setGuestTelefone] = useState('')
   const [guestCpf, setGuestCpf] = useState('')
+  const [guestCriarConta, setGuestCriarConta] = useState(false)
+  const [guestSenha, setGuestSenha] = useState('')
 
   const [step, setStep] = useState<Step>(1)
   const [unidades, setUnidades] = useState<Unidade[]>([])
@@ -130,6 +132,10 @@ export default function AgendarCliente() {
         showNotification('error', 'Preencha nome, email e telefone para continuar.')
         return
       }
+      if (guestCriarConta && guestSenha.length < 6) {
+        showNotification('error', 'Senha deve ter no mínimo 6 caracteres.')
+        return
+      }
     }
 
     setSubmitting(true)
@@ -169,6 +175,7 @@ export default function AgendarCliente() {
           email: guestEmail.trim(),
           telefone: guestTelefone.replace(/\D/g, ''),
           cpfCnpj: guestCpf.replace(/\D/g, '') || undefined,
+          senha: guestCriarConta && guestSenha.length >= 6 ? guestSenha : undefined,
           unidadeId: selectedUnidade.id!,
           atendenteId: selectedSlot.atendenteId,
           dataHoraInicio: selectedSlot.dataHoraInicio,
@@ -295,6 +302,10 @@ export default function AgendarCliente() {
           setGuestTelefone={setGuestTelefone}
           guestCpf={guestCpf}
           setGuestCpf={setGuestCpf}
+          guestCriarConta={guestCriarConta}
+          setGuestCriarConta={setGuestCriarConta}
+          guestSenha={guestSenha}
+          setGuestSenha={setGuestSenha}
         />
       )}
     </div>
@@ -489,6 +500,10 @@ function Step3Confirmar({
   setGuestTelefone,
   guestCpf,
   setGuestCpf,
+  guestCriarConta,
+  setGuestCriarConta,
+  guestSenha,
+  setGuestSenha,
 }: {
   unidade: Unidade
   servico: Servico
@@ -507,6 +522,10 @@ function Step3Confirmar({
   setGuestTelefone: (v: string) => void
   guestCpf: string
   setGuestCpf: (v: string) => void
+  guestCriarConta: boolean
+  setGuestCriarConta: (v: boolean) => void
+  guestSenha: string
+  setGuestSenha: (v: string) => void
 }) {
   return (
     <div className="space-y-4">
@@ -551,6 +570,30 @@ function Step3Confirmar({
             inputMode="numeric"
             className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
           />
+
+          <div className="pt-2 border-t border-violet-200">
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={guestCriarConta}
+                onChange={(e) => setGuestCriarConta(e.target.checked)}
+                className="mt-0.5 rounded border-violet-300 text-violet-600 focus:ring-violet-500"
+              />
+              <span className="text-xs text-violet-900">
+                Criar conta para acompanhar e cancelar meus agendamentos depois
+              </span>
+            </label>
+            {guestCriarConta && (
+              <input
+                type="password"
+                value={guestSenha}
+                onChange={(e) => setGuestSenha(e.target.value)}
+                placeholder="Senha (mínimo 6 caracteres)"
+                minLength={6}
+                className="mt-2 w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+              />
+            )}
+          </div>
         </section>
       )}
 

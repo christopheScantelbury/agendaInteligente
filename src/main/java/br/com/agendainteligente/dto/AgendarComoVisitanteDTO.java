@@ -45,6 +45,12 @@ public class AgendarComoVisitanteDTO {
     /** Forma de pagamento preferida pelo cliente (PIX | CARTAO | NO_LOCAL etc.). */
     private String formaPagamentoPreferida;
 
+    /**
+     * Senha opcional — se enviada, cria credenciais de login para o cliente.
+     * Mínimo 6 caracteres. Se omitida, cliente fica como guest (sem login).
+     */
+    private String senha;
+
     @Valid
     private List<AgendamentoServicoDTO> servicos;
 }

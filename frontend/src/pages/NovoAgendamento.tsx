@@ -22,6 +22,7 @@ export default function NovoAgendamento() {
     atendenteId: undefined,
     dataHoraInicio: '',
     observacoes: '',
+    formaPagamentoPreferida: '',
     servicos: [],
   })
 
@@ -142,6 +143,7 @@ export default function NovoAgendamento() {
       atendenteId: formData.atendenteId,
       dataHoraInicio: formData.dataHoraInicio,
       observacoes: formData.observacoes,
+      formaPagamentoPreferida: formData.formaPagamentoPreferida || undefined,
       servicos: servicosParaEnvio,
     } as Agendamento)
   }
@@ -290,6 +292,22 @@ export default function NovoAgendamento() {
               onChange={(e) => setFormData({ ...formData, dataHoraInicio: e.target.value })}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Forma de pagamento</label>
+            <select
+              value={formData.formaPagamentoPreferida ?? ''}
+              onChange={(e) => setFormData({ ...formData, formaPagamentoPreferida: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            >
+              <option value="">A combinar</option>
+              <option value="PIX">PIX</option>
+              <option value="DINHEIRO">Dinheiro</option>
+              <option value="CARTAO_CREDITO">Cartão de crédito</option>
+              <option value="CARTAO_DEBITO">Cartão de débito</option>
+              <option value="TRANSFERENCIA">Transferência</option>
+            </select>
           </div>
 
           <div>
