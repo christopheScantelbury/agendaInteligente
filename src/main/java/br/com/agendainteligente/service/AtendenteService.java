@@ -227,6 +227,10 @@ public class AtendenteService {
     public AtendenteDTO buscarPorId(Long id) {
         Atendente atendente = atendenteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Atendente não encontrado"));
+        // Tenant isolation: 404 (não 403) para não vazar existência de IDs de outros tenants
+        if (!podeAcessarAtendente(atendente)) {
+            throw new ResourceNotFoundException("Atendente não encontrado");
+        }
         return toDTO(atendente);
     }
 
@@ -352,6 +356,8 @@ public class AtendenteService {
                     .map(Servico::getId)
                     .collect(Collectors.toList()));
         }
+        // Mascarar CPF em todas as respostas REST (LGPD / proteção contra leak).
+        dto.setCpf(br.com.agendainteligente.util.CpfCnpjMask.mask(dto.getCpf()));
         return dto;
     }
 

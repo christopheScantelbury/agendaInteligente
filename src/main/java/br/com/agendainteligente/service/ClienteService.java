@@ -420,20 +420,22 @@ public class ClienteService {
      */
     private ClienteDTO toDTO(Cliente cliente) {
         ClienteDTO dto = clienteMapper.toDTO(cliente);
-        
+
         // Popular lista de unidades como objetos UnidadeDTO
         if (cliente.getUnidades() != null && !cliente.getUnidades().isEmpty()) {
             List<UnidadeDTO> unidadesDTO = cliente.getUnidades().stream()
                     .map(unidadeMapper::toDTO)
                     .collect(Collectors.toList());
             dto.setUnidades(unidadesDTO);
-            
+
             // Também popular unidadesIds para compatibilidade
             dto.setUnidadesIds(cliente.getUnidades().stream()
                     .map(Unidade::getId)
                     .collect(Collectors.toList()));
         }
-        
+
+        // Mascarar CPF/CNPJ em todas as respostas REST (LGPD / proteção contra leak).
+        dto.setCpfCnpj(br.com.agendainteligente.util.CpfCnpjMask.mask(dto.getCpfCnpj()));
         return dto;
     }
 }
