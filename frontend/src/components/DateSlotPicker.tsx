@@ -124,8 +124,8 @@ export default function DateSlotPicker({
                                     }
                 `}
                             >
-                                <span className="text-xs font-medium uppercase mb-1">
-                                    {format(date, 'EEE', { locale: ptBR })}
+                                <span className="text-[10px] font-medium uppercase mb-1 whitespace-nowrap tracking-tight">
+                                    {format(date, 'EEE', { locale: ptBR }).replace(/\.$/, '').slice(0, 3)}
                                 </span>
                                 <span className={`text-lg font-bold ${isSelected ? 'text-white' : 'text-gray-900'}`}>
                                     {format(date, 'dd')}
