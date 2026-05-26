@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { authService } from '../services/authService'
 import { Events, identify, track } from '../lib/analytics'
 import { Eye, EyeOff } from 'lucide-react'
@@ -20,7 +20,6 @@ function LogoMark({ size = 36 }: { size?: number }) {
 }
 
 export default function Login() {
-  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [erro, setErro] = useState('')
@@ -36,10 +35,14 @@ export default function Login() {
       identify(data.usuarioId, { perfil: data.perfil, nome: data.nome })
       track(Events.LOGIN_SUCCESS, { perfil: data.perfil, tipo: 'usuario' })
       const perfil = (data.perfil ?? '').toUpperCase()
-      if (perfil === 'CLIENTE') navigate('/cliente')
-      else if (perfil === 'PROFISSIONAL') navigate('/profissional/hoje')
-      else if (perfil === 'GERENTE') navigate('/gerente/dashboard')
-      else navigate('/')
+      // window.location.href força re-mount do App pra re-avaliar os guards
+      // de rota (que são calculados no JSX, não a cada navegação)
+      let destino = '/'
+      if (perfil === 'CLIENTE') destino = '/cliente'
+      else if (perfil === 'PROFISSIONAL') destino = '/profissional/hoje'
+      else if (perfil === 'GERENTE') destino = '/gerente/dashboard'
+      else if (perfil === 'ADMIN') destino = '/plataforma'
+      window.location.href = destino
     } catch (error: any) {
       if (!error.response) {
         setErro('Serviço temporariamente indisponível. Tente novamente em instantes.')

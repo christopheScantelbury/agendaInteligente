@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { clientePublicoService } from '../services/clientePublicoService'
 import { Events, identify, track } from '../lib/analytics'
@@ -20,7 +20,6 @@ function LogoMark({ size = 36 }: { size?: number }) {
 }
 
 export default function LoginCliente() {
-  const navigate = useNavigate()
   const [emailOuCpf, setEmailOuCpf] = useState('')
   const [senha, setSenha] = useState('')
   const [erro, setErro] = useState('')
@@ -35,7 +34,8 @@ export default function LoginCliente() {
       const data = await clientePublicoService.login({ emailOuCpf, senha })
       identify(`cliente_${data.clienteId}`, { perfil: 'CLIENTE', nome: data.nome })
       track(Events.LOGIN_SUCCESS, { perfil: 'CLIENTE', tipo: 'cliente' })
-      navigate('/cliente')
+      // Force re-mount do App pra re-avaliar guards (mesmo motivo do Login admin)
+      window.location.href = '/cliente'
     } catch (error: any) {
       setErro(error.response?.data?.message || 'E-mail/CPF ou senha incorretos.')
     } finally {

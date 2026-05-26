@@ -82,7 +82,8 @@ export default function CadastroCliente() {
       try {
         await clientePublicoService.login({ emailOuCpf: email, senha })
         showNotification('success', 'Conta criada! Vamos agendar.')
-        navigate('/cliente/agendar')
+        // Force re-mount do App pra re-avaliar guards de rota (mesmo bug do Login)
+        window.location.href = '/cliente/agendar'
       } catch {
         showNotification('success', 'Conta criada com sucesso! Faça login para continuar.')
         navigate('/cliente/login')
