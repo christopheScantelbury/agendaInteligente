@@ -168,8 +168,12 @@ public class ClienteService {
         }
         switch (usuarioLogado.getPerfil()) {
             case ADMIN:
-            case ADMINISTRADOR:
                 return new java.util.HashSet<>(unidadeRepository.findAllIds());
+            case ADMINISTRADOR:
+                // CRÍTICO (#79): ADMINISTRADOR só vê unidades do próprio tenant
+                Long admId = usuarioLogado.getAdminUnicoId() != null ? usuarioLogado.getAdminUnicoId() : usuarioLogado.getId();
+                return unidadeRepository.findByAdminUnicoId(admId).stream()
+                        .map(Unidade::getId).collect(Collectors.toSet());
             case GERENTE:
                 if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
                     return Set.of();

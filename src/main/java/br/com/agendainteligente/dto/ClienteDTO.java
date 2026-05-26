@@ -24,6 +24,11 @@ public class ClienteDTO {
     
     @Pattern(regexp = "^$|\\d{11}|\\d{14}", message = "CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos")
     private String cpfCnpj;
+
+    /** Setter defensivo: aceita CPF/CNPJ com ou sem máscara (#67). */
+    public void setCpfCnpj(String cpfCnpj) {
+        this.cpfCnpj = cpfCnpj == null ? null : cpfCnpj.replaceAll("\\D", "");
+    }
     
     @Email(message = "Email inválido")
     private String email;

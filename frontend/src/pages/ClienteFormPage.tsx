@@ -167,6 +167,10 @@ export default function ClienteFormPage() {
     const { unidades, ...dadosBase } = formData
     const dadosEnvio: Cliente = {
       ...dadosBase,
+      // #67: strip da máscara — backend valida 11/14 dígitos puros
+      cpfCnpj: (formData.cpfCnpj ?? '').replace(/\D/g, ''),
+      telefone: (formData.telefone ?? '').replace(/\D/g, ''),
+      cep: (formData.cep ?? '').replace(/\D/g, ''),
       unidadeId: formData.unidadesIds[0],
       unidadesIds: formData.unidadesIds,
       uf: formData.uf?.toUpperCase().slice(0, 2),
