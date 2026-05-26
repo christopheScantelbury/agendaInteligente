@@ -49,11 +49,21 @@ public class SeedAdminController {
     @PostMapping("/seed-demo")
     @Transactional
     public ResponseEntity<?> seedDemoUsers(@RequestHeader(value = "X-Seed-Token", required = false) String token) {
-        if (seedToken == null || seedToken.isBlank()) {
-            return ResponseEntity.status(503).body(Map.of("error", "Seed endpoint desabilitado (APP_SEED_TOKEN não configurado)"));
+        // Aceita autenticação como ADMIN global como alternativa ao X-Seed-Token
+        // (facilita execução pelo QA sem precisar do APP_SEED_TOKEN)
+        boolean autorizadoViaToken = seedToken != null && !seedToken.isBlank()
+                && token != null && token.equals(seedToken);
+        boolean autorizadoViaAdmin = false;
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated()) {
+            autorizadoViaAdmin = auth.getAuthorities().stream()
+                    .anyMatch(ga -> "ROLE_ADMIN".equals(ga.getAuthority()));
         }
-        if (token == null || !token.equals(seedToken)) {
-            return ResponseEntity.status(401).body(Map.of("error", "Token inválido"));
+        if (!autorizadoViaToken && !autorizadoViaAdmin) {
+            return ResponseEntity.status(401).body(Map.of(
+                    "error", "Não autorizado",
+                    "hint", "Envie X-Seed-Token ou autentique-se como ADMIN global"
+            ));
         }
 
         List<DemoUser> demos = List.of(

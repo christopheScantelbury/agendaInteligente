@@ -94,11 +94,12 @@ export default function GraficoFaturamento() {
         </div>
       </div>
 
-      <div className="h-56 sm:h-72">
+      <div className="h-56 sm:h-72 w-full" style={{ minWidth: 0 }}>
         {isLoading ? (
           <div className="w-full h-full bg-gray-100 rounded-xl animate-pulse" />
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
+          // minWidth/minHeight evita recharts warning width(-1) durante mount (BUG-S3-02)
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <LineChart data={serieGrafico} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
               <XAxis

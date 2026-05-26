@@ -37,10 +37,10 @@ export default function Login() {
       const perfil = (data.perfil ?? '').toUpperCase()
       // window.location.href força re-mount do App pra re-avaliar os guards
       // de rota (que são calculados no JSX, não a cada navegação)
-      let destino = '/'
+      let destino = '/dashboard'
       if (perfil === 'CLIENTE') destino = '/cliente'
       else if (perfil === 'PROFISSIONAL') destino = '/profissional/hoje'
-      else if (perfil === 'GERENTE') destino = '/gerente/dashboard'
+      else if (perfil === 'GERENTE' || perfil === 'ADMINISTRADOR') destino = '/gerente/dashboard'
       else if (perfil === 'ADMIN') destino = '/plataforma'
       window.location.href = destino
     } catch (error: any) {
