@@ -12,6 +12,8 @@ import br.com.agendainteligente.dto.HorarioDisponivelDTO;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.repository.AgendamentoRepository;
 import br.com.agendainteligente.repository.ClienteRepository;
+import br.com.agendainteligente.repository.ServicoRepository;
+import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.service.AgendamentoService;
 import br.com.agendainteligente.service.ClienteAuthService;
 import br.com.agendainteligente.service.ClienteService;
@@ -44,6 +46,8 @@ public class ClientePublicoController {
     private final AgendamentoService agendamentoService;
     private final ClienteRepository clienteRepository;
     private final AgendamentoRepository agendamentoRepository;
+    private final UnidadeRepository unidadeRepository;
+    private final ServicoRepository servicoRepository;
     private final PasswordEncoder passwordEncoder;
 
     @PostMapping("/cadastro")
@@ -128,6 +132,49 @@ public class ClientePublicoController {
         token.setEmail(cliente.getEmail());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(token);
+    }
+
+    @GetMapping("/unidades")
+    @Operation(summary = "Listar unidades ativas disponíveis para agendamento (sem auth necessária)")
+    public ResponseEntity<List<java.util.Map<String, Object>>> listarUnidadesPublicas() {
+        List<java.util.Map<String, Object>> unidades = unidadeRepository.findAll().stream()
+                .filter(u -> Boolean.TRUE.equals(u.getAtivo()))
+                .map(u -> {
+                    java.util.Map<String, Object> dto = new java.util.LinkedHashMap<>();
+                    dto.put("id", u.getId());
+                    dto.put("nome", u.getNome());
+                    dto.put("descricao", u.getDescricao());
+                    dto.put("endereco", u.getEndereco());
+                    dto.put("bairro", u.getBairro());
+                    dto.put("cidade", u.getCidade());
+                    dto.put("uf", u.getUf());
+                    dto.put("telefone", u.getTelefone());
+                    if (u.getEmpresa() != null) {
+                        dto.put("empresaNome", u.getEmpresa().getNome());
+                        dto.put("empresaCategoria", u.getEmpresa().getCategoria() != null
+                                ? u.getEmpresa().getCategoria().name() : null);
+                    }
+                    return dto;
+                })
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(unidades);
+    }
+
+    @GetMapping("/unidades/{unidadeId}/servicos")
+    @Operation(summary = "Listar serviços ativos de uma unidade (sem auth necessária)")
+    public ResponseEntity<List<java.util.Map<String, Object>>> listarServicosPublicos(@PathVariable Long unidadeId) {
+        List<java.util.Map<String, Object>> servicos = servicoRepository.findByUnidadeIdAndAtivoTrue(unidadeId).stream()
+                .map(s -> {
+                    java.util.Map<String, Object> dto = new java.util.LinkedHashMap<>();
+                    dto.put("id", s.getId());
+                    dto.put("nome", s.getNome());
+                    dto.put("descricao", s.getDescricao());
+                    dto.put("valor", s.getValor());
+                    dto.put("duracaoMinutos", s.getDuracaoMinutos());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(servicos);
     }
 
     @GetMapping("/horarios-disponiveis")

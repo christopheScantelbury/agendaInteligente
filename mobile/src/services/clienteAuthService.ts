@@ -44,6 +44,34 @@ export interface ClienteTokenResponse {
   email?: string
 }
 
+export interface UnidadePublica {
+  id: number
+  nome: string
+  descricao?: string
+  endereco?: string
+  bairro?: string
+  cidade?: string
+  uf?: string
+  telefone?: string
+  empresaNome?: string
+  empresaCategoria?: string
+}
+
+export interface ServicoPublico {
+  id: number
+  nome: string
+  descricao?: string
+  valor: number
+  duracaoMinutos: number
+}
+
+export interface HorarioDisponivel {
+  dataHora: string // ISO
+  atendenteId: number
+  atendenteNome?: string
+  disponivel: boolean
+}
+
 export const clienteAuthService = {
   api,
 
@@ -82,16 +110,26 @@ export const clienteAuthService = {
     return response.data as any[]
   },
 
+  listarUnidades: async (): Promise<UnidadePublica[]> => {
+    const response = await api.get<UnidadePublica[]>('/publico/clientes/unidades')
+    return response.data
+  },
+
+  listarServicos: async (unidadeId: number): Promise<ServicoPublico[]> => {
+    const response = await api.get<ServicoPublico[]>(`/publico/clientes/unidades/${unidadeId}/servicos`)
+    return response.data
+  },
+
   buscarHorariosDisponiveis: async (
     unidadeId: number,
     servicoId: number,
     dataInicio: string,
     dataFim: string
-  ) => {
-    const response = await api.get('/publico/clientes/horarios-disponiveis', {
+  ): Promise<HorarioDisponivel[]> => {
+    const response = await api.get<HorarioDisponivel[]>('/publico/clientes/horarios-disponiveis', {
       params: { unidadeId, servicoId, dataInicio, dataFim },
     })
-    return response.data as any[]
+    return response.data
   },
 
   criarAgendamento: async (payload: any) => {
