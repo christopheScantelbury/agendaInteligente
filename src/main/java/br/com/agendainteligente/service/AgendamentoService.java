@@ -190,13 +190,27 @@ public class AgendamentoService {
         if (auth == null || !auth.isAuthenticated()) {
             throw new BusinessException("Usuário não autenticado");
         }
-        
+
         String email = auth.getName();
-        Usuario usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
-        
+        Usuario usuario = usuarioRepository.findByEmail(email).orElse(null);
+
+        // Cliente sem Usuario associado (ex.: guest checkout — #131/#135):
+        // auth.getName() é o email do cliente, mas não há registro em `usuarios`.
+        // Trata como perfil CLIENTE buscando direto em `clientes`.
+        if (usuario == null) {
+            Cliente meuCliente = clienteRepository.findByEmail(email)
+                    .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+            if (!meuCliente.getId().equals(clienteId)) {
+                throw new BusinessException("Você só pode criar agendamentos para si mesmo");
+            }
+            if (meuCliente.getUnidade() == null || !meuCliente.getUnidade().getId().equals(unidadeId)) {
+                throw new BusinessException("Você não tem permissão para agendar nesta unidade");
+            }
+            return;
+        }
+
         Usuario.PerfilUsuario perfil = usuario.getPerfil();
-        
+
         switch (perfil) {
             case ADMIN:
             case ADMINISTRADOR:
@@ -247,7 +261,17 @@ public class AgendamentoService {
         }
         Usuario usuario = usuarioRepository.findByEmail(auth.getName()).orElse(null);
         if (usuario == null) {
-            return Set.of();
+            // Cliente sem Usuario (guest checkout #131/#135) — busca direto em `clientes`
+            return clienteRepository.findByEmail(auth.getName())
+                    .map(c -> {
+                        Set<Long> ids = new java.util.HashSet<>();
+                        if (c.getUnidade() != null) ids.add(c.getUnidade().getId());
+                        if (c.getUnidades() != null) {
+                            c.getUnidades().stream().map(Unidade::getId).forEach(ids::add);
+                        }
+                        return ids;
+                    })
+                    .orElse(Set.of());
         }
         switch (usuario.getPerfil()) {
             case ADMIN:

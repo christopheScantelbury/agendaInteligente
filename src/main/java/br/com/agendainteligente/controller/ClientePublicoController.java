@@ -2,6 +2,7 @@ package br.com.agendainteligente.controller;
 
 import br.com.agendainteligente.domain.entity.Agendamento;
 import br.com.agendainteligente.domain.entity.Cliente;
+import br.com.agendainteligente.domain.entity.Unidade;
 import br.com.agendainteligente.domain.enums.StatusAgendamento;
 import br.com.agendainteligente.dto.AgendamentoDTO;
 import br.com.agendainteligente.dto.AgendarComoVisitanteDTO;
@@ -28,7 +29,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -131,6 +135,16 @@ public class ClientePublicoController {
                     .orElseThrow(() -> new BusinessException("Falha ao criar cliente visitante"));
         }
 
+        // Garante que o cliente tem a unidade do agendamento como unidade principal.
+        // No guest checkout o auto-cadastro não recebe unidadeId — sem isso, o
+        // AgendamentoService rejeita com "Cliente não pertence a uma unidade que você pode acessar".
+        if (cliente.getUnidade() == null) {
+            Unidade unidadeAgendamento = unidadeRepository.findById(dto.getUnidadeId())
+                    .orElseThrow(() -> new BusinessException("Unidade não encontrada"));
+            cliente.setUnidade(unidadeAgendamento);
+            cliente = clienteRepository.save(cliente);
+        }
+
         // Cria agendamento
         AgendamentoDTO ag = new AgendamentoDTO();
         ag.setClienteId(cliente.getId());
@@ -139,7 +153,28 @@ public class ClientePublicoController {
         ag.setDataHoraInicio(dto.getDataHoraInicio());
         ag.setFormaPagamentoPreferida(dto.getFormaPagamentoPreferida());
         ag.setServicos(dto.getServicos());
-        AgendamentoDTO agCriado = agendamentoService.criar(ag);
+
+        // AgendamentoService.criar() valida permissão via SecurityContext. Em chamada
+        // pública (guest) o contexto é anonymousUser → "Usuário não encontrado".
+        // Populamos um contexto temporário como CLIENTE com o email do próprio cliente.
+        // O service trata cliente-sem-Usuario via fallback em clienteRepository.findByEmail().
+        SecurityContext previous = SecurityContextHolder.getContext();
+        try {
+            SecurityContext fresh = SecurityContextHolder.createEmptyContext();
+            UsernamePasswordAuthenticationToken guestAuth = new UsernamePasswordAuthenticationToken(
+                    cliente.getEmail(),
+                    null,
+                    java.util.List.of(new SimpleGrantedAuthority("ROLE_CLIENTE"))
+            );
+            fresh.setAuthentication(guestAuth);
+            SecurityContextHolder.setContext(fresh);
+
+            AgendamentoDTO agCriadoTemp = agendamentoService.criar(ag);
+            ag = agCriadoTemp;
+        } finally {
+            SecurityContextHolder.setContext(previous);
+        }
+        AgendamentoDTO agCriado = ag;
 
         // Push notification de confirmação (best-effort, async).
         pushNotificationService.enviarParaCliente(

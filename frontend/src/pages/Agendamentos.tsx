@@ -316,7 +316,7 @@ export default function Agendamentos() {
   const perfilNorm = perfil.toUpperCase()
   const isAdmin = perfilNorm === 'ADMIN' || perfilNorm === 'ADMINISTRADOR'
   const isCliente = perfilNorm === 'CLIENTE'
-  const exibirFiltroProfissional = perfilNorm === 'GERENTE'
+  const exibirFiltroProfissional = isAdmin || perfilNorm === 'GERENTE'
 
   const abrirModalCliente = (origem: 'create' | 'edit', nomeInicial = '') => {
     setOrigemModalCliente(origem)
@@ -807,7 +807,7 @@ export default function Agendamentos() {
       if (!usuario?.usuarioId) return Promise.resolve(null)
       return usuarioService.buscarPorId(usuario.usuarioId)
     },
-    enabled: !!usuario?.usuarioId && perfilNorm !== 'ADMIN',
+    enabled: !!usuario?.usuarioId && !isAdmin,
   })
 
   const clientesFiltrados = useMemo(() => {
@@ -847,7 +847,7 @@ export default function Agendamentos() {
   const unidadesFiltradas = useMemo(() => {
     // O backend já filtra por empresa/unidade, então podemos usar todas as unidades retornadas
     // Mas mantemos o filtro no frontend como segurança adicional
-    if (perfilNorm === 'ADMIN') {
+    if (isAdmin) {
       return todasUnidades
     }
     // Para GERENTE, usar todas as unidades retornadas pelo backend (já filtradas por empresa)
@@ -894,7 +894,7 @@ export default function Agendamentos() {
   })
 
   const atendentesFiltrados = useMemo(() => {
-    if (perfilNorm === 'ADMIN' || perfilNorm === 'GERENTE') {
+    if (isAdmin || perfilNorm === 'GERENTE') {
       return todosAtendentes
     }
     if ((perfilNorm === 'PROFISSIONAL' || perfilNorm === 'ATENDENTE') && usuario?.usuarioId) {
@@ -1151,7 +1151,7 @@ export default function Agendamentos() {
   })
 
   const editAtendentesFiltrados = useMemo(() => {
-    if (perfilNorm === 'ADMIN' || perfilNorm === 'GERENTE') {
+    if (isAdmin || perfilNorm === 'GERENTE') {
       return editAtendentes
     }
     if ((perfilNorm === 'PROFISSIONAL' || perfilNorm === 'ATENDENTE') && usuario?.usuarioId) {
@@ -2638,7 +2638,7 @@ export default function Agendamentos() {
           bodyClassName="overflow-y-auto px-6 pt-6 pb-0"
           headerContent={
             <div className="flex w-full items-center justify-center gap-4">
-              {podeEditarAgendamentos && (perfilNorm === 'ADMIN' || perfilNorm === 'GERENTE' || perfilNorm === 'PROFISSIONAL' || perfilNorm === 'ATENDENTE' || isCliente) && (
+              {podeEditarAgendamentos && (isAdmin || perfilNorm === 'GERENTE' || perfilNorm === 'PROFISSIONAL' || perfilNorm === 'ATENDENTE' || isCliente) && (
                 <>
                   <Button
                     variant="ghost"
@@ -2958,7 +2958,7 @@ export default function Agendamentos() {
               <div className="border-t border-slate-200 px-4 py-3 sm:px-5">
                 <div className="space-y-2">
                   {podeEditarAgendamentos &&
-                    (perfilNorm === 'ADMIN' ||
+                    (isAdmin ||
                       perfilNorm === 'GERENTE' ||
                       perfilNorm === 'PROFISSIONAL' ||
                       perfilNorm === 'ATENDENTE' ||
