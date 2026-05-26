@@ -146,8 +146,14 @@ public class AtendenteService {
         }
         switch (usuarioLogado.getPerfil()) {
             case ADMIN:
-            case ADMINISTRADOR:
+                // Admin global vê todas as unidades do sistema.
                 return new java.util.HashSet<>(unidadeRepository.findAllIds());
+            case ADMINISTRADOR:
+                // Tenant isolation: SOMENTE unidades do próprio admin_unico_id.
+                // NUNCA agrupar com ADMIN — ver feedback-isolamento-administrador.md
+                return unidadeRepository.findByAdminUnicoId(usuarioLogado.getId()).stream()
+                        .map(Unidade::getId)
+                        .collect(Collectors.toSet());
             case GERENTE:
                 if (usuarioLogado.getUnidades() == null || usuarioLogado.getUnidades().isEmpty()) {
                     return Set.of();
