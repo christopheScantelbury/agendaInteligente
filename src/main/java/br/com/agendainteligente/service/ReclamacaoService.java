@@ -50,8 +50,13 @@ public class ReclamacaoService {
         }
         switch (usuario.getPerfil()) {
             case ADMIN:
-            case ADMINISTRADOR:
                 return unidadeRepository.findAll().stream().map(Unidade::getId).collect(Collectors.toSet());
+            case ADMINISTRADOR:
+                // CRÍTICO (#125): ADMINISTRADOR só vê reclamações das unidades do próprio tenant
+                Long admIdRec = usuario.getAdminUnicoId() != null ? usuario.getAdminUnicoId() : usuario.getId();
+                return unidadeRepository.findByAdminUnicoId(admIdRec).stream()
+                        .map(Unidade::getId)
+                        .collect(Collectors.toSet());
             case GERENTE:
                 if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
                     return Set.of();

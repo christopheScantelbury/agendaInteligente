@@ -101,9 +101,22 @@ public class AgendamentoService {
 
         switch (perfil) {
             case ADMIN:
-            case ADMINISTRADOR:
-                log.debug("ADMIN/ADMINISTRADOR: listando todos os agendamentos");
+                log.debug("ADMIN global: listando todos os agendamentos");
                 agendamentos = agendamentoRepository.findAllWithServicos();
+                break;
+
+            case ADMINISTRADOR:
+                // CRÍTICO (#125): ADMINISTRADOR NÃO pode ver agendamentos de outros tenants.
+                // Filtra pelas unidades vinculadas ao seu adminUnicoId (o próprio id do usuário).
+                log.debug("ADMINISTRADOR: listando agendamentos das unidades do próprio tenant");
+                Long adminId = usuario.getAdminUnicoId() != null ? usuario.getAdminUnicoId() : usuario.getId();
+                List<Unidade> unidadesDoTenant = unidadeRepository.findByAdminUnicoId(adminId);
+                if (unidadesDoTenant.isEmpty()) {
+                    log.warn("ADMINISTRADOR {} sem unidades vinculadas (adminUnicoId={})", email, adminId);
+                    return new ArrayList<>();
+                }
+                Set<Long> unidadesAdmIds = unidadesDoTenant.stream().map(Unidade::getId).collect(Collectors.toSet());
+                agendamentos = agendamentoRepository.findByUnidadeIdInWithServicos(unidadesAdmIds);
                 break;
 
             case GERENTE:

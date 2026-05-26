@@ -96,9 +96,19 @@ public class ClienteService {
 
         switch (perfil) {
             case ADMIN:
-            case ADMINISTRADOR:
-                log.debug("ADMIN/ADMINISTRADOR: listando todos os clientes");
+                log.debug("ADMIN global: listando todos os clientes");
                 return clienteRepository.findAll();
+
+            case ADMINISTRADOR:
+                // CRÍTICO (#125): ADMINISTRADOR só vê clientes das unidades do próprio tenant
+                Long admIdCli = usuarioLogado.getAdminUnicoId() != null ? usuarioLogado.getAdminUnicoId() : usuarioLogado.getId();
+                List<Unidade> unidadesAdmCli = unidadeRepository.findByAdminUnicoId(admIdCli);
+                if (unidadesAdmCli.isEmpty()) {
+                    log.warn("ADMINISTRADOR {} sem unidades (adminUnicoId={})", email, admIdCli);
+                    return List.of();
+                }
+                Set<Long> unidadesAdmCliIds = unidadesAdmCli.stream().map(Unidade::getId).collect(Collectors.toSet());
+                return clienteRepository.findByUnidadeIdIn(unidadesAdmCliIds);
 
             case GERENTE:
                 log.debug("GERENTE: listando clientes apenas das unidades vinculadas ao gerente");
