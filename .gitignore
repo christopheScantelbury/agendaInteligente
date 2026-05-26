@@ -70,3 +70,7 @@ mobile/web-build/
 
 # Backups locais do Postgres
 /backups/
+
+# Vercel CLI artifacts
+frontend/.vercel/output/
+frontend/.vercel/README.txt
