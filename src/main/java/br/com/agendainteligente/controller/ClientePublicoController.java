@@ -10,14 +10,17 @@ import br.com.agendainteligente.dto.ClienteLoginDTO;
 import br.com.agendainteligente.dto.ClienteTokenDTO;
 import br.com.agendainteligente.dto.HorarioDisponivelDTO;
 import br.com.agendainteligente.exception.BusinessException;
+import br.com.agendainteligente.domain.entity.PushToken;
 import br.com.agendainteligente.repository.AgendamentoRepository;
 import br.com.agendainteligente.repository.ClienteRepository;
+import br.com.agendainteligente.repository.PushTokenRepository;
 import br.com.agendainteligente.repository.ServicoRepository;
 import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.service.AgendamentoService;
 import br.com.agendainteligente.service.ClienteAuthService;
 import br.com.agendainteligente.service.ClienteService;
 import br.com.agendainteligente.service.HorarioDisponivelService;
+import br.com.agendainteligente.service.PushNotificationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -48,6 +51,8 @@ public class ClientePublicoController {
     private final AgendamentoRepository agendamentoRepository;
     private final UnidadeRepository unidadeRepository;
     private final ServicoRepository servicoRepository;
+    private final PushTokenRepository pushTokenRepository;
+    private final PushNotificationService pushNotificationService;
     private final PasswordEncoder passwordEncoder;
 
     @PostMapping("/cadastro")
@@ -134,7 +139,15 @@ public class ClientePublicoController {
         ag.setDataHoraInicio(dto.getDataHoraInicio());
         ag.setFormaPagamentoPreferida(dto.getFormaPagamentoPreferida());
         ag.setServicos(dto.getServicos());
-        agendamentoService.criar(ag);
+        AgendamentoDTO agCriado = agendamentoService.criar(ag);
+
+        // Push notification de confirmação (best-effort, async).
+        pushNotificationService.enviarParaCliente(
+                cliente.getId(),
+                "Agendamento confirmado",
+                "Seu horário foi reservado. Veja detalhes no app.",
+                java.util.Map.of("agendamentoId", agCriado.getId(), "tipo", "AGENDAMENTO_CRIADO")
+        );
 
         // Gera token JWT temporário pro cliente acompanhar
         ClienteLoginDTO loginPayload = new ClienteLoginDTO();
@@ -216,17 +229,26 @@ public class ClientePublicoController {
     public ResponseEntity<AgendamentoDTO> criarAgendamento(@Valid @RequestBody AgendamentoDTO agendamentoDTO) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String clienteEmailOuCpf = auth.getName();
-        
+
         // Buscar cliente autenticado
         Cliente cliente = clienteRepository.findByEmail(clienteEmailOuCpf)
                 .orElseGet(() -> clienteRepository.findByCpfCnpj(clienteEmailOuCpf)
                         .orElseThrow(() -> new BusinessException("Cliente não encontrado")));
-        
+
         // Garantir que o agendamento seja do cliente autenticado
         agendamentoDTO.setClienteId(cliente.getId());
-        
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(agendamentoService.criar(agendamentoDTO));
+
+        AgendamentoDTO criado = agendamentoService.criar(agendamentoDTO);
+
+        // Push notification de confirmação (best-effort, async).
+        pushNotificationService.enviarParaCliente(
+                cliente.getId(),
+                "Agendamento confirmado",
+                "Seu horário foi reservado. Veja detalhes no app.",
+                java.util.Map.of("agendamentoId", criado.getId(), "tipo", "AGENDAMENTO_CRIADO")
+        );
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(criado);
     }
 
     @GetMapping("/meus-agendamentos")
@@ -277,6 +299,29 @@ public class ClientePublicoController {
         }
         
         agendamentoService.cancelar(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Registra/atualiza token de push notification do dispositivo do cliente.
+     * Chamado pelo app mobile no boot após o cliente conceder permissão.
+     */
+    @PostMapping("/push-token")
+    @Operation(summary = "Registra Expo push token do dispositivo (cliente autenticado)")
+    public ResponseEntity<Void> registrarPushToken(@RequestBody java.util.Map<String, String> body) {
+        Cliente cliente = obterClienteAutenticado();
+        String token = body.get("token");
+        if (token == null || token.isBlank()) {
+            throw new BusinessException("Token é obrigatório");
+        }
+        // Idempotente: atualiza cliente_id se token já existe (caso o user troque de conta no mesmo device)
+        PushToken pt = pushTokenRepository.findByToken(token).orElseGet(PushToken::new);
+        pt.setToken(token);
+        pt.setClienteId(cliente.getId());
+        pt.setPlataforma(body.getOrDefault("plataforma", null));
+        pt.setDeviceInfo(body.getOrDefault("deviceInfo", null));
+        pt.setAtivo(true);
+        pushTokenRepository.save(pt);
         return ResponseEntity.noContent().build();
     }
 

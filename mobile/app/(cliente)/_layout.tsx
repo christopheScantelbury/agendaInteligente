@@ -2,23 +2,29 @@ import { Stack, useRouter, useSegments } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { View, ActivityIndicator } from 'react-native'
 import { clienteAuthService } from '../../src/services/clienteAuthService'
+import { usePushNotifications } from '../../src/hooks/usePushNotifications'
 import { colors } from '../../src/theme'
 
 const ROTAS_PUBLICAS = new Set(['login', 'cadastro'])
 
 export default function ClienteLayout() {
   const [verificando, setVerificando] = useState(true)
+  const [autenticado, setAutenticado] = useState(false)
   const router = useRouter()
   const segments = useSegments()
+
+  // Push notifications — registra token quando cliente autenticado
+  usePushNotifications(autenticado)
 
   useEffect(() => {
     void verificarAuth()
   }, [segments.join('/')])
 
   async function verificarAuth() {
-    const autenticado = await clienteAuthService.isAuthenticated()
+    const auth = await clienteAuthService.isAuthenticated()
+    setAutenticado(auth)
     const rotaAtual = segments[segments.length - 1] ?? ''
-    if (!autenticado && !ROTAS_PUBLICAS.has(rotaAtual)) {
+    if (!auth && !ROTAS_PUBLICAS.has(rotaAtual)) {
       router.replace('/(cliente)/login')
     }
     setVerificando(false)
