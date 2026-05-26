@@ -62,7 +62,7 @@ public class PlataformaController {
      * Métricas agregadas da plataforma. Apenas counts; sem PII.
      */
     @GetMapping("/metricas")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') and !hasAuthority('ROLE_ADMINISTRADOR')")
     public ResponseEntity<Map<String, Object>> metricasPlataforma() {
         LocalDateTime inicioDoMes = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
 
@@ -98,7 +98,7 @@ public class PlataformaController {
      * Para escalas maiores, migrar para query nativa com agregações.
      */
     @GetMapping("/empresas")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') and !hasAuthority('ROLE_ADMINISTRADOR')")
     public ResponseEntity<List<Map<String, Object>>> listarEmpresasComMetricas() {
         LocalDateTime inicioDoMes = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
         List<Empresa> empresas = empresaRepository.findAll();
@@ -149,7 +149,7 @@ public class PlataformaController {
      * Registra início e fim em audit_log com motivo obrigatório.
      */
     @PostMapping("/empresas/{empresaId}/assumir-sessao")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') and !hasAuthority('ROLE_ADMINISTRADOR')")
     public ResponseEntity<Map<String, Object>> assumirSessao(
             @PathVariable Long empresaId,
             @RequestBody Map<String, String> body
@@ -222,7 +222,7 @@ public class PlataformaController {
      * Listagem paginada do audit log. #95.
      */
     @GetMapping("/audit-log")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') and !hasAuthority('ROLE_ADMINISTRADOR')")
     public ResponseEntity<Page<AuditLog>> auditLog(
             @RequestParam(required = false) String tipoAcao,
             @RequestParam(required = false) Long autorId,
