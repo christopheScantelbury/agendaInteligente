@@ -36,6 +36,15 @@ spring:
       write-dates-as-timestamps: false
     time-zone: America/Sao_Paulo
 
+  mvc:
+    # Faz Spring lançar NoHandlerFoundException pra paths não mapeados
+    # (sem isso, GlobalExceptionHandler nunca pega 404 e cai no handler genérico → 500)
+    throw-exception-if-no-handler-found: true
+
+  web:
+    resources:
+      add-mappings: false
+
 
 server:
   port: 8080

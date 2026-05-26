@@ -293,10 +293,19 @@ public class AgendamentoService {
         
         switch (perfil) {
             case ADMIN:
-            case ADMINISTRADOR:
-                // ADMIN/ADMINISTRADOR pode visualizar qualquer agendamento
+                // ADMIN global pode visualizar qualquer agendamento
                 return;
-                
+
+            case ADMINISTRADOR:
+                // CRÍTICO (reteste #3): ADMINISTRADOR só pode ver agendamentos do próprio tenant
+                Long admIdAg = usuario.getAdminUnicoId() != null ? usuario.getAdminUnicoId() : usuario.getId();
+                Set<Long> unidadesAdmAg = unidadeRepository.findByAdminUnicoId(admIdAg)
+                        .stream().map(Unidade::getId).collect(Collectors.toSet());
+                if (agendamento.getUnidade() == null || !unidadesAdmAg.contains(agendamento.getUnidade().getId())) {
+                    throw new ResourceNotFoundException("Agendamento não encontrado com id: " + agendamento.getId());
+                }
+                return;
+
             case GERENTE:
                 if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
                     throw new BusinessException("Gerente não está vinculado a uma unidade");

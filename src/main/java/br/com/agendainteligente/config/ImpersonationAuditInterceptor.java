@@ -14,22 +14,23 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Registra no audit_log toda mutação (POST/PUT/PATCH/DELETE) feita com
+ * Registra no audit_log TODA request (GET/POST/PUT/PATCH/DELETE) feita com
  * token de impersonação (claim "imp_by" no JWT). Resolve BUG-06.
  *
- * GETs não são auditados para evitar inflar a tabela; mutações cobrem
- * o caso crítico (alguém impersonando alterar dados de outro tenant).
+ * Por exigência do spec, GETs também são auditados — qualquer leitura de
+ * dados em modo impersonado precisa ser rastreável.
  */
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class ImpersonationAuditInterceptor implements HandlerInterceptor {
 
-    private static final Set<String> METODOS_MUTACAO = Set.of("POST", "PUT", "PATCH", "DELETE");
     private static final Set<String> PATHS_IGNORAR = Set.of(
             "/api/auth/login",
-            "/api/plataforma/empresas",   // próprio assumir-sessao já registra
-            "/api/plataforma/encerrar-sessao"
+            "/api/plataforma/empresas/", // próprio assumir-sessao já registra
+            "/api/plataforma/encerrar-sessao",
+            "/api/plataforma/audit-log",  // não auditar leituras do próprio log
+            "/actuator"
     );
 
     private final JwtTokenProvider jwtTokenProvider;
@@ -37,8 +38,6 @@ public class ImpersonationAuditInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        if (!METODOS_MUTACAO.contains(request.getMethod())) return true;
-
         String uri = request.getRequestURI();
         for (String prefix : PATHS_IGNORAR) {
             if (uri.startsWith(prefix)) return true;
@@ -51,7 +50,7 @@ public class ImpersonationAuditInterceptor implements HandlerInterceptor {
             Long impBy = jwtTokenProvider.getImpersonatedByFromToken(token);
             if (impBy == null) return true;
 
-            // Mutação feita em modo impersonado — registra
+            // Request feita em modo impersonado — audita
             Map<String, Object> meta = new LinkedHashMap<>();
             meta.put("metodo", request.getMethod());
             meta.put("uri", uri);
