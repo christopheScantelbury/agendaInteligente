@@ -19,7 +19,10 @@ export default function PerfilCliente() {
     setShowLogoutConfirm(false)
     queryClient.clear()
     clientePublicoService.logout()
-    setTimeout(() => navigate('/cliente/login'), 100)
+    // Força re-mount do App pra re-avaliar guards (mesmo motivo do logout admin/profissional)
+    setTimeout(() => {
+      window.location.href = '/cliente/login'
+    }, 100)
   }
 
   function handleRefazerTour() {

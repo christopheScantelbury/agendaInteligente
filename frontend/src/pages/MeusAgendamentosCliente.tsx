@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Plus, LogOut } from 'lucide-react'
 import { clientePublicoService } from '../services/clientePublicoService'
 import { useNotification } from '../contexts/NotificationContext'
 import { useConfirm } from '../hooks/useConfirm'
@@ -171,28 +172,33 @@ export default function MeusAgendamentosCliente() {
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <div className="bg-white shadow rounded-lg p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Meus Agendamentos</h1>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-bold text-gray-900 truncate">Meus Agendamentos</h1>
               {cliente && (
-                <p className="text-sm text-gray-600 mt-1">Olá, {cliente.nome}</p>
+                <p className="text-sm text-gray-600 mt-1 truncate">Olá, {cliente.nome}</p>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 shrink-0">
               <button
                 onClick={() => navigate('/cliente/agendar')}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-sm transition text-sm font-medium"
               >
-                Novo Agendamento
+                <Plus className="w-4 h-4" />
+                <span>Novo</span>
               </button>
               <button
                 onClick={() => {
                   clientePublicoService.logout()
-                  navigate('/cliente/login')
+                  // window.location.href força re-mount pra re-avaliar guards
+                  window.location.href = '/cliente/login'
                 }}
-                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                className="inline-flex items-center justify-center gap-2 px-3 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 hover:text-gray-800 transition text-sm font-medium"
+                aria-label="Sair"
+                title="Sair"
               >
-                Sair
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Sair</span>
               </button>
             </div>
           </div>

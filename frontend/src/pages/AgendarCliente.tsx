@@ -12,10 +12,13 @@ import {
   Search,
   Sparkles,
 } from 'lucide-react'
-import { clientePublicoService, HorarioDisponivel } from '../services/clientePublicoService'
+import {
+  clientePublicoService,
+  HorarioDisponivel,
+  UnidadePublica as Unidade,
+  ServicoPublico as Servico,
+} from '../services/clientePublicoService'
 import { Events, track } from '../lib/analytics'
-import { unidadeService, Unidade } from '../services/unidadeService'
-import { servicoService, Servico } from '../services/servicoService'
 import { inteligenciaService, HorarioPopular } from '../services/inteligenciaService'
 import { useNotification } from '../contexts/NotificationContext'
 import DateSlotPicker from '../components/DateSlotPicker'
@@ -88,19 +91,35 @@ export default function AgendarCliente() {
 
   async function carregarDados() {
     try {
-      const [unidadesData, servicosData] = await Promise.all([
-        unidadeService.listar(),
-        servicoService.listar(),
-      ])
+      const unidadesData = await clientePublicoService.listarUnidades()
       setUnidades(unidadesData)
-      setServicos(servicosData)
       if (unidadesData.length === 1) {
         setSelectedUnidade(unidadesData[0])
       }
     } catch {
-      showNotification('error', 'Erro ao carregar dados')
+      showNotification('error', 'Erro ao carregar unidades')
     }
   }
+
+  // Quando muda a unidade, busca serviços daquela unidade (endpoint público)
+  useEffect(() => {
+    if (!selectedUnidade) {
+      setServicos([])
+      return
+    }
+    let cancelled = false
+    clientePublicoService
+      .listarServicos(selectedUnidade.id)
+      .then((data) => {
+        if (!cancelled) setServicos(data)
+      })
+      .catch(() => {
+        if (!cancelled) showNotification('error', 'Erro ao carregar serviços')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [selectedUnidade?.id])
 
   async function buscarHorarios(date: Date) {
     if (!selectedUnidade || !selectedServico) return
@@ -214,19 +233,13 @@ export default function AgendarCliente() {
 
   const servicosFiltrados = useMemo(() => {
     const termo = busca.trim().toLowerCase()
-    let lista = servicos
-    if (selectedUnidade && unidades.length > 1) {
-      lista = lista.filter((s) => !s.unidadeId || s.unidadeId === selectedUnidade.id)
-    }
-    if (termo) {
-      lista = lista.filter(
-        (s) =>
-          s.nome.toLowerCase().includes(termo) ||
-          (s.descricao?.toLowerCase().includes(termo) ?? false)
-      )
-    }
-    return lista
-  }, [servicos, selectedUnidade, unidades.length, busca])
+    if (!termo) return servicos
+    return servicos.filter(
+      (s) =>
+        s.nome.toLowerCase().includes(termo) ||
+        (s.descricao?.toLowerCase().includes(termo) ?? false)
+    )
+  }, [servicos, busca])
 
   function handleBack() {
     if (step === 1) {
@@ -421,11 +434,13 @@ function Step1Servico({
                     <p className="text-xs text-gray-500 line-clamp-1">{s.descricao}</p>
                   )}
                   <div className="flex items-center gap-3 mt-1 text-xs">
-                    <span className="text-gray-600 flex items-center gap-1">
-                      <Clock className="h-3 w-3" /> {s.duracaoMinutos} min
-                    </span>
+                    {s.duracaoMinutos != null && (
+                      <span className="text-gray-600 flex items-center gap-1">
+                        <Clock className="h-3 w-3" /> {s.duracaoMinutos} min
+                      </span>
+                    )}
                     <span className="font-semibold text-green-700">
-                      R$ {s.valor.toFixed(2)}
+                      R$ {(s.valor ?? 0).toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -598,14 +613,18 @@ function Step3Confirmar({
       )}
 
       <section className="bg-white border border-gray-200 rounded-2xl divide-y divide-gray-100">
-        <Row label="Serviço" value={servico.nome} sub={`${servico.duracaoMinutos} min`} />
+        <Row
+          label="Serviço"
+          value={servico.nome}
+          sub={servico.duracaoMinutos ? `${servico.duracaoMinutos} min` : undefined}
+        />
         <Row
           label="Data e hora"
           value={format(parseISO(slot.dataHoraInicio), "EEEE, dd 'de' MMM 'às' HH:mm", { locale: ptBR })}
         />
         {slot.atendenteNome && <Row label="Profissional" value={slot.atendenteNome} />}
         <Row label="Local" value={unidade.nome} sub={unidade.endereco ?? undefined} />
-        <Row label="Valor" value={`R$ ${servico.valor.toFixed(2)}`} bold />
+        <Row label="Valor" value={`R$ ${(servico.valor ?? 0).toFixed(2)}`} bold />
       </section>
 
       <section aria-labelledby="pagamento-titulo">

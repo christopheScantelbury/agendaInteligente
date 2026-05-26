@@ -26,7 +26,12 @@ export default function PerfilProfissional() {
     setShowLogoutConfirm(false)
     queryClient.clear()
     authService.logout()
-    setTimeout(() => navigate('/login'), 100)
+    // window.location.href força re-mount do App pra re-avaliar guards e
+    // descartar componentes lazy-loaded cacheados (HojeProfissional etc).
+    // navigate() deixa o componente da rota anterior renderizar em branco.
+    setTimeout(() => {
+      window.location.href = '/login'
+    }, 100)
   }
 
   function handleRefazerTour() {

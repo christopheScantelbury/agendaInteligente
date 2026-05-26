@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -17,16 +17,6 @@ import { atendenteService } from '../../services/atendenteService'
 import { agendamentoService, Agendamento } from '../../services/agendamentoService'
 import AcoesAgendamentoSheet from '../../components/profissional/AcoesAgendamentoSheet'
 import OnboardingProfissional from '../../components/profissional/OnboardingProfissional'
-
-const HORA_INICIO = 6
-const HORA_FIM = 22
-const ALTURA_HORA = 64 // px
-
-interface CardPosicao {
-  agendamento: Agendamento
-  topPx: number
-  alturaPx: number
-}
 
 function statusInfo(status?: string, dataHoraInicio?: string) {
   const agora = new Date()
@@ -62,8 +52,17 @@ function iniciaisCliente(nome?: string): string {
 
 export default function HojeProfissional() {
   const usuario = authService.getUsuario()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const dataParam = searchParams.get('data')
+
+  // Helpers para navegar entre datas mantendo URL como source of truth
+  function irParaData(d: Date) {
+    if (isSameDay(d, new Date())) {
+      setSearchParams({}, { replace: true })
+    } else {
+      setSearchParams({ data: format(d, 'yyyy-MM-dd') }, { replace: true })
+    }
+  }
   const [dataSelecionada, setDataSelecionada] = useState<Date>(() => {
     if (dataParam) {
       const [y, m, d] = dataParam.split('-').map(Number)
@@ -72,14 +71,16 @@ export default function HojeProfissional() {
     return startOfDay(new Date())
   })
   const [agendamentoSelecionado, setAgendamentoSelecionado] = useState<Agendamento | null>(null)
-  const timelineRef = useRef<HTMLDivElement | null>(null)
-  const [nowOffset, setNowOffset] = useState<number | null>(null)
+  const [agora, setAgora] = useState<Date>(() => new Date())
 
-  // Reage a mudança do parâmetro "data" na URL (ex.: vindo da agenda 7 dias)
+  // Reage a mudança do parâmetro "data" na URL (ex.: vindo da agenda 7 dias).
+  // Quando não há param (ex.: clique na tab "Hoje" da BottomNav) volta pra hoje.
   useEffect(() => {
     if (dataParam) {
       const [y, m, d] = dataParam.split('-').map(Number)
       if (y && m && d) setDataSelecionada(startOfDay(new Date(y, m - 1, d)))
+    } else {
+      setDataSelecionada(startOfDay(new Date()))
     }
   }, [dataParam])
 
@@ -121,49 +122,19 @@ export default function HojeProfissional() {
     return { qtd: ativos.length, faturamento }
   }, [agendamentosDoDia])
 
-  // Posicionar cards na timeline
-  const cards: CardPosicao[] = useMemo(() => {
-    return agendamentosDoDia.map((a) => {
-      const inicio = parseISO(a.dataHoraInicio)
-      const fim = a.dataHoraFim ? parseISO(a.dataHoraFim) : new Date(inicio.getTime() + 60 * 60 * 1000)
-      const minutosDoInicio = inicio.getHours() * 60 + inicio.getMinutes() - HORA_INICIO * 60
-      const duracao = Math.max(15, differenceInMinutes(fim, inicio))
-      return {
-        agendamento: a,
-        topPx: (minutosDoInicio / 60) * ALTURA_HORA,
-        alturaPx: Math.max(40, (duracao / 60) * ALTURA_HORA - 4),
-      }
-    })
-  }, [agendamentosDoDia])
-
-  // Calcular posição da linha "agora" se estamos no dia selecionado
+  // Atualiza "agora" a cada minuto pra reposicionar o separador "agora"
   useEffect(() => {
-    function atualizarAgora() {
-      const agora = new Date()
-      if (!isSameDay(agora, dataSelecionada)) {
-        setNowOffset(null)
-        return
-      }
-      const minutos = agora.getHours() * 60 + agora.getMinutes() - HORA_INICIO * 60
-      if (minutos < 0 || minutos > (HORA_FIM - HORA_INICIO) * 60) {
-        setNowOffset(null)
-        return
-      }
-      setNowOffset((minutos / 60) * ALTURA_HORA)
-    }
-    atualizarAgora()
-    const t = window.setInterval(atualizarAgora, 60_000)
+    const t = window.setInterval(() => setAgora(new Date()), 60_000)
     return () => window.clearInterval(t)
-  }, [dataSelecionada])
+  }, [])
 
-  // Auto-scroll pra linha "agora" ao carregar
-  useEffect(() => {
-    if (nowOffset != null && timelineRef.current) {
-      timelineRef.current.scrollTo({ top: Math.max(0, nowOffset - 160), behavior: 'smooth' })
-    }
-  }, [nowOffset])
+  const mostrarSeparadorAgora = isSameDay(agora, dataSelecionada)
 
-  const horas = Array.from({ length: HORA_FIM - HORA_INICIO + 1 }, (_, i) => HORA_INICIO + i)
+  // Calcula índice onde inserir o separador "agora" na lista (antes do primeiro futuro)
+  const indiceAgora = useMemo(() => {
+    if (!mostrarSeparadorAgora) return -1
+    return agendamentosDoDia.findIndex((a) => parseISO(a.dataHoraInicio).getTime() > agora.getTime())
+  }, [agendamentosDoDia, agora, mostrarSeparadorAgora])
 
   return (
     <div className="max-w-md mx-auto">
@@ -174,7 +145,7 @@ export default function HojeProfissional() {
         <div className="flex items-center justify-between mb-2">
           <button
             type="button"
-            onClick={() => setDataSelecionada((d) => subDays(d, 1))}
+            onClick={() => irParaData(subDays(dataSelecionada, 1))}
             aria-label="Dia anterior"
             className="p-2 -ml-2 rounded-full hover:bg-gray-100 text-gray-600"
           >
@@ -190,7 +161,7 @@ export default function HojeProfissional() {
           </div>
           <button
             type="button"
-            onClick={() => setDataSelecionada((d) => addDays(d, 1))}
+            onClick={() => irParaData(addDays(dataSelecionada, 1))}
             aria-label="Próximo dia"
             className="p-2 -mr-2 rounded-full hover:bg-gray-100 text-gray-600"
           >
@@ -202,7 +173,7 @@ export default function HojeProfissional() {
           <div className="text-center mb-2">
             <button
               type="button"
-              onClick={() => setDataSelecionada(startOfDay(new Date()))}
+              onClick={() => irParaData(new Date())}
               className="text-xs font-semibold text-violet-600 hover:text-violet-700"
             >
               Voltar para hoje
@@ -230,68 +201,37 @@ export default function HojeProfissional() {
         </div>
       </header>
 
-      {/* Timeline */}
+      {/* Lista de atendimentos do dia */}
       <div
-        ref={timelineRef}
         data-tour="timeline"
-        className="relative overflow-y-auto"
-        style={{ maxHeight: 'calc(100vh - 280px)' }}
+        className="overflow-y-auto pb-24"
+        style={{ maxHeight: 'calc(100vh - 220px)' }}
       >
         {semAtendente ? (
           <SemAtendenteState />
         ) : errorAgendamentos ? (
           <ErrorState />
         ) : isLoading ? (
-          <TimelineSkeleton />
+          <ListaSkeleton />
         ) : agendamentosDoDia.length === 0 ? (
           <EmptyState />
         ) : (
-          <div className="relative px-4 py-2">
-            {/* Linhas das horas */}
-            <div className="absolute inset-0 px-4 py-2 pointer-events-none">
-              {horas.map((h, idx) => (
-                <div
-                  key={h}
-                  className="flex items-start"
-                  style={{ position: 'absolute', top: idx * ALTURA_HORA, left: 16, right: 16 }}
-                >
-                  <span className="text-[10px] font-medium text-gray-400 -mt-1.5 w-10">
-                    {String(h).padStart(2, '0')}:00
-                  </span>
-                  <div className="flex-1 border-t border-dashed border-gray-200 mt-0.5" />
-                </div>
-              ))}
-            </div>
-
-            {/* Linha agora */}
-            {nowOffset != null && (
-              <div
-                className="absolute left-4 right-4 pointer-events-none z-10"
-                style={{ top: nowOffset + 8 }}
-              >
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-violet-600 rounded-full" />
-                  <div className="flex-1 h-0.5 bg-violet-600" />
-                </div>
-              </div>
-            )}
-
-            {/* Container relativo para os cards */}
-            <div
-              className="relative ml-12"
-              style={{ height: (HORA_FIM - HORA_INICIO + 1) * ALTURA_HORA }}
-            >
-              {cards.map(({ agendamento, topPx, alturaPx }) => (
+          <ul className="px-4 py-3 space-y-2">
+            {agendamentosDoDia.map((agendamento, idx) => (
+              <li key={agendamento.id}>
+                {idx === indiceAgora && <SeparadorAgora agora={agora} />}
                 <AgendamentoCard
-                  key={agendamento.id}
                   agendamento={agendamento}
-                  topPx={topPx}
-                  alturaPx={alturaPx}
                   onClick={() => setAgendamentoSelecionado(agendamento)}
                 />
-              ))}
-            </div>
-          </div>
+              </li>
+            ))}
+            {mostrarSeparadorAgora && indiceAgora === -1 && agendamentosDoDia.length > 0 && (
+              <li>
+                <SeparadorAgora agora={agora} />
+              </li>
+            )}
+          </ul>
         )}
       </div>
 
@@ -305,17 +245,15 @@ export default function HojeProfissional() {
 
 function AgendamentoCard({
   agendamento,
-  topPx,
-  alturaPx,
   onClick,
 }: {
   agendamento: Agendamento
-  topPx: number
-  alturaPx: number
   onClick: () => void
 }) {
   const status = statusInfo(agendamento.status, agendamento.dataHoraInicio)
   const inicio = parseISO(agendamento.dataHoraInicio)
+  const fim = agendamento.dataHoraFim ? parseISO(agendamento.dataHoraFim) : null
+  const duracaoMin = fim ? Math.max(0, differenceInMinutes(fim, inicio)) : null
   const clienteNome = agendamento.cliente?.nome ?? 'Cliente'
   const servicos = agendamento.servicos
     ?.map((s: any) => s.servico?.nome ?? s.descricao)
@@ -326,24 +264,33 @@ function AgendamentoCard({
     <button
       type="button"
       onClick={onClick}
-      style={{ top: topPx, height: alturaPx }}
-      className="absolute left-0 right-0 text-left bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-violet-300 transition overflow-hidden flex"
+      className="w-full text-left bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-violet-300 active:scale-[0.99] transition overflow-hidden flex"
     >
-      <div className={`w-1 ${status.bar}`} />
-      <div className="flex-1 px-3 py-2 min-w-0 flex items-center gap-2">
-        <div className="w-8 h-8 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+      {/* Coluna de horário */}
+      <div className="flex flex-col items-center justify-center bg-slate-50 px-3 py-3 w-16 flex-shrink-0 border-r border-gray-100">
+        <span className="text-base font-bold text-slate-900 leading-tight">
+          {format(inicio, 'HH:mm')}
+        </span>
+        {duracaoMin != null && duracaoMin > 0 && (
+          <span className="text-[10px] text-gray-500 mt-0.5">{duracaoMin} min</span>
+        )}
+      </div>
+
+      {/* Faixa de status */}
+      <div className={`w-1 ${status.bar} flex-shrink-0`} />
+
+      {/* Conteúdo */}
+      <div className="flex-1 px-3 py-3 min-w-0 flex items-center gap-2.5">
+        <div className="w-9 h-9 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
           {iniciaisCliente(clienteNome)}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <span className="text-xs font-bold text-slate-900">
-              {format(inicio, 'HH:mm')}
-            </span>
-            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${status.tag}`}>
+          <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+            <p className="text-sm font-semibold text-slate-900 truncate">{clienteNome}</p>
+            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${status.tag} whitespace-nowrap`}>
               {status.label}
             </span>
           </div>
-          <p className="text-sm font-semibold text-slate-900 truncate">{clienteNome}</p>
           {servicos && <p className="text-xs text-gray-500 truncate">{servicos}</p>}
         </div>
       </div>
@@ -351,11 +298,23 @@ function AgendamentoCard({
   )
 }
 
-function TimelineSkeleton() {
+function SeparadorAgora({ agora }: { agora: Date }) {
   return (
-    <div className="px-4 py-4 space-y-3">
+    <div className="flex items-center gap-2 my-2 px-1">
+      <div className="w-2 h-2 bg-violet-600 rounded-full" />
+      <div className="flex-1 h-px bg-violet-200" />
+      <span className="text-[10px] font-semibold text-violet-600 uppercase tracking-wider">
+        Agora · {format(agora, 'HH:mm')}
+      </span>
+    </div>
+  )
+}
+
+function ListaSkeleton() {
+  return (
+    <div className="px-4 py-4 space-y-2">
       {[...Array(5)].map((_, i) => (
-        <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />
+        <div key={i} className="h-20 bg-gray-100 rounded-xl animate-pulse" />
       ))}
     </div>
   )

@@ -163,6 +163,18 @@ export default function LoginCliente() {
           >
             Agendar sem criar conta
           </Link>
+
+          <div className="mt-6 pt-5 border-t border-slate-100 text-center">
+            <p className="text-xs text-slate-500">
+              É atendente ou gerente?{' '}
+              <Link
+                to="/login"
+                className="font-semibold text-violet-600 hover:text-violet-700"
+              >
+                Entre por aqui
+              </Link>
+            </p>
+          </div>
         </div>
 
         <p className="text-center text-xs text-slate-400 mt-4">© 2026 AgendaInteligente</p>

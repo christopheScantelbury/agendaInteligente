@@ -14,6 +14,27 @@ export interface ClienteTokenResponse {
   email?: string
 }
 
+export interface UnidadePublica {
+  id: number
+  nome: string
+  descricao?: string
+  endereco?: string
+  bairro?: string
+  cidade?: string
+  uf?: string
+  telefone?: string
+  empresaNome?: string
+  empresaCategoria?: string
+}
+
+export interface ServicoPublico {
+  id: number
+  nome: string
+  descricao?: string
+  valor?: number
+  duracaoMinutos?: number
+}
+
 export interface HorarioDisponivel {
   dataHoraInicio: string
   dataHoraFim: string
@@ -75,6 +96,16 @@ export const clientePublicoService = {
 
   isAuthenticated: (): boolean => {
     return !!localStorage.getItem('clienteToken')
+  },
+
+  listarUnidades: async (): Promise<UnidadePublica[]> => {
+    const response = await api.get<UnidadePublica[]>('/publico/clientes/unidades')
+    return response.data
+  },
+
+  listarServicos: async (unidadeId: number): Promise<ServicoPublico[]> => {
+    const response = await api.get<ServicoPublico[]>(`/publico/clientes/unidades/${unidadeId}/servicos`)
+    return response.data
   },
 
   buscarHorariosDisponiveis: async (

@@ -119,7 +119,10 @@ export default function InstallPrompt() {
   // Mostrar prompt iOS
   if (showIOSPrompt && isIOS) {
     return (
-      <div className="fixed bottom-4 left-4 right-4 z-50 md:left-auto md:right-4 md:w-96 animate-in slide-in-from-bottom-5">
+      <div
+        className="fixed left-4 right-4 z-50 md:left-auto md:right-4 md:w-96 animate-in slide-in-from-bottom-5"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
+      >
         <div className="bg-white rounded-lg shadow-2xl border border-gray-200 p-4">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-3">
@@ -173,7 +176,10 @@ export default function InstallPrompt() {
   // Mostrar prompt Android/Chrome
   if (deferredPrompt) {
     return (
-      <div className="fixed bottom-4 left-4 right-4 z-50 md:left-auto md:right-4 md:w-96 animate-in slide-in-from-bottom-5">
+      <div
+        className="fixed left-4 right-4 z-50 md:left-auto md:right-4 md:w-96 animate-in slide-in-from-bottom-5"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
+      >
         <div className="bg-white rounded-lg shadow-2xl border border-gray-200 p-4">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-3">

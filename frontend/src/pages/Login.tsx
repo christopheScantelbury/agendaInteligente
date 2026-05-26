@@ -148,6 +148,18 @@ export default function Login() {
               Cadastre-se grátis
             </Link>
           </p>
+
+          <div className="mt-6 pt-5 border-t border-slate-100 text-center">
+            <p className="text-xs text-slate-500">
+              É cliente?{' '}
+              <Link
+                to="/cliente/login"
+                className="font-semibold text-violet-600 hover:text-violet-700"
+              >
+                Entre por aqui
+              </Link>
+            </p>
+          </div>
         </div>
 
         {/* Footer note */}
