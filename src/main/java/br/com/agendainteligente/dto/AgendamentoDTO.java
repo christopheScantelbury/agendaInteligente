@@ -33,7 +33,10 @@ public class AgendamentoDTO {
     private LocalDateTime dataHoraFim;
     
     private String observacoes;
-    
+
+    /** Forma de pagamento preferida pelo cliente (PIX | CARTAO | NO_LOCAL | DINHEIRO | BOLETO). */
+    private String formaPagamentoPreferida;
+
     private BigDecimal valorTotal;
     
     private StatusAgendamento status;

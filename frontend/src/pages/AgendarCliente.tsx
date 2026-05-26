@@ -146,7 +146,7 @@ export default function AgendarCliente() {
         unidadeId: selectedUnidade.id!,
         atendenteId: selectedSlot.atendenteId,
         dataHoraInicio: selectedSlot.dataHoraInicio,
-        observacoes: `Forma de pagamento preferida: ${formaPagamento}`,
+        formaPagamentoPreferida: formaPagamento,
         servicos: [
           {
             servicoId: selectedServico.id!,

@@ -26,6 +26,7 @@ export interface Agendamento {
   dataHoraInicio: string
   dataHoraFim?: string
   observacoes?: string
+  formaPagamentoPreferida?: string
   valorTotal?: number
   valorFinal?: number
   status?: string

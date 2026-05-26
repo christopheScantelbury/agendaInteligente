@@ -47,6 +47,14 @@ public class Agendamento {
     @Column(length = 500)
     private String observacoes;
 
+    /**
+     * Forma de pagamento preferida indicada pelo CLIENTE no momento do agendamento.
+     * Diferente de Pagamento.tipoPagamento (efetivado pelo profissional ao finalizar).
+     * Valores: PIX, CARTAO, NO_LOCAL, DINHEIRO, BOLETO.
+     */
+    @Column(name = "forma_pagamento_preferida", length = 20)
+    private String formaPagamentoPreferida;
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal valorTotal; // Soma dos serviços
 
