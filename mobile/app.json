@@ -4,35 +4,57 @@
     "slug": "agenda-inteligente",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
     "splash": {
-      "backgroundColor": "#ffffff"
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#7C3AED"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.agendainteligente.app"
+      "bundleIdentifier": "com.agendainteligente.app",
+      "buildNumber": "1"
     },
     "android": {
+      "package": "com.agendainteligente.app",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#7C3AED"
       },
-      "package": "com.agendainteligente.app"
+      "permissions": [
+        "NOTIFICATIONS"
+      ]
     },
     "web": {
       "bundler": "metro"
     },
     "scheme": "agendainteligente",
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#7C3AED",
+          "sounds": []
+        }
+      ]
     ],
     "extra": {
-      "apiUrl": "https://agendainteligente-production.up.railway.app/api"
+      "apiUrl": "https://agendainteligente-production.up.railway.app/api",
+      "eas": {
+        "projectId": "00000000-0000-0000-0000-000000000000"
+      }
     },
     "expo-router": {
       "root": "./app"
-    }
+    },
+    "owner": "scantelburydevs"
   }
 }
