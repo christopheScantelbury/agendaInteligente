@@ -158,9 +158,7 @@ export default function EmpresasPlataforma() {
                   <EmpresaRow
                     key={e.id}
                     empresa={e}
-                    onAssumirSessao={() =>
-                      showNotification('warning', '🚧 Assumir sessão chega em #94 (backend). Por enquanto, peça acesso temporário ao ADMINISTRADOR da empresa.', 6000)
-                    }
+                    onAssumirSessao={() => setConfirmacao(e)}
                   />
                 ))
               )}

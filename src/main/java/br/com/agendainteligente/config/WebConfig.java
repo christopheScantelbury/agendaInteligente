@@ -1,13 +1,18 @@
 package br.com.agendainteligente.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.lang.NonNull;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
+@RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
+
+    private final ImpersonationAuditInterceptor impersonationAuditInterceptor;
 
     @Value("${cors.allowed-origins:http://localhost:5173,http://localhost:3000,http://localhost:80,https://agendainteligente-aleefhenriiques-projects.vercel.app,https://agenda-inteligente-app.vercel.app}")
     private String allowedOrigins;
@@ -21,6 +26,13 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedHeaders("*")
                 .allowCredentials(true)
                 .maxAge(3600);
+    }
+
+    @Override
+    public void addInterceptors(@NonNull InterceptorRegistry registry) {
+        // Audita mutações feitas com token de impersonação (BUG-06 / #94)
+        registry.addInterceptor(impersonationAuditInterceptor)
+                .addPathPatterns("/api/**");
     }
 }
 
