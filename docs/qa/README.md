@@ -9,6 +9,7 @@ Cada arquivo abaixo é um prompt independente para o agente de QA. Cole em uma s
 | 3 — Gerente / Dashboard | [sprint-3-gerente.md](sprint-3-gerente.md) | #96, #97, #98, #99, #100 |
 | 4 — Admin / Plataforma | [sprint-4-admin.md](sprint-4-admin.md) | #92, #93 (parcial; #94/#95 follow-up) |
 | 5 — Polimento (FAB + PostHog + Lazy) | [sprint-5-polimento.md](sprint-5-polimento.md) | #101, #102, #103 |
+| 6 — Backend Hardening & Conversão | [sprint-6-backend.md](sprint-6-backend.md) | #85, #86, #94, #95 |
 
 ## Sprint 0 — Discovery
 Não tem QA funcional. Entregáveis são documentos:
