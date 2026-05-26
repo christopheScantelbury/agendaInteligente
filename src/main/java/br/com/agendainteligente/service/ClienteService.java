@@ -57,6 +57,34 @@ public class ClienteService {
     }
 
     /**
+     * Retorna a primeira unidade vinculada ao usuário logado (staff). Retorna Optional.empty()
+     * em duas situações:
+     * - Não autenticado (auto-cadastro público anônimo)
+     * - Usuário autenticado é CLIENTE (não deve "herdar" unidade ao criar outro cliente)
+     * Usado pelo {@link #criar(ClienteDTO)} como fallback quando unidadeId não vem no body.
+     */
+    private java.util.Optional<Unidade> inferirUnidadeDoContexto() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            return java.util.Optional.empty();
+        }
+        Usuario u = usuarioRepository.findByEmail(auth.getName()).orElse(null);
+        if (u == null || u.getPerfil() == Usuario.PerfilUsuario.CLIENTE) {
+            return java.util.Optional.empty();
+        }
+        // ADMINISTRADOR: primeira unidade própria
+        if (u.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR) {
+            return unidadeRepository.findByAdminUnicoId(u.getId()).stream()
+                    .filter(Unidade::getAtivo).findFirst();
+        }
+        // GERENTE/PROFISSIONAL: primeira unidade vinculada
+        if (u.getUnidades() != null && !u.getUnidades().isEmpty()) {
+            return u.getUnidades().stream().filter(Unidade::getAtivo).findFirst();
+        }
+        return java.util.Optional.empty();
+    }
+
+    /**
      * Retorna o cliente associado ao usuário logado (por email).
      * Usado quando o perfil é CLIENTE, para pre-selecionar o próprio cliente na tela de agendamentos.
      */
@@ -232,7 +260,7 @@ public class ClienteService {
         }
         
         Cliente cliente = clienteMapper.toEntity(clienteDTO);
-        
+
         // Unidade principal — opcional no auto-cadastro público; cliente escolhe no 1º agendamento.
         if (clienteDTO.getUnidadeId() != null) {
             Unidade unidade = unidadeRepository.findById(clienteDTO.getUnidadeId())
@@ -241,8 +269,13 @@ public class ClienteService {
                 throw new BusinessException("Unidade não está ativa");
             }
             cliente.setUnidade(unidade);
+        } else {
+            // Fallback: se criador é staff autenticado (não CLIENTE auto-cadastro), inferir
+            // unidade do contexto. Evita órfão quando POST direto via API/integração não
+            // envia unidadeId mas o usuário logado tem unidade vinculada.
+            inferirUnidadeDoContexto().ifPresent(cliente::setUnidade);
         }
-        // Se unidadeId é null, cliente é criado sem unidade principal (BUG-01 #104).
+        // Se ainda assim ficar null, cliente é criado sem unidade principal (BUG-01 #104).
         
         // Associar unidades adicionais ao cliente (além da principal)
         if (clienteDTO.getUnidadesIds() != null && !clienteDTO.getUnidadesIds().isEmpty()) {
