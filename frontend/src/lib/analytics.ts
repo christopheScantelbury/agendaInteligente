@@ -6,13 +6,17 @@ import posthog from 'posthog-js'
  */
 
 let initialized = false
+let noKeyLogged = false
 
 export function initAnalytics(): void {
   if (initialized) return
   const key = import.meta.env.VITE_POSTHOG_KEY
   if (!key) {
-    if (import.meta.env.DEV) {
-      console.info('[analytics] PostHog desabilitado (sem VITE_POSTHOG_KEY).')
+    // Loga apenas UMA vez em DEV e somente se debug analytics estiver habilitado.
+    // Em prod nada aparece. Em DEV padrão também nada — só polui se quiser.
+    if (import.meta.env.DEV && !noKeyLogged && localStorage.getItem('debug-analytics') === '1') {
+      console.info('[analytics] PostHog desabilitado (sem VITE_POSTHOG_KEY). Habilite com localStorage debug-analytics=1.')
+      noKeyLogged = true
     }
     return
   }

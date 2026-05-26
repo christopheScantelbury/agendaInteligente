@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
+import { useChartReady } from '../hooks/useChartReady'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line,
@@ -160,15 +161,7 @@ export default function Relatorios() {
         ) : faturamentoChart.length === 0 ? (
           <p className="text-center text-gray-400 py-12">Nenhum dado disponível</p>
         ) : (
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={faturamentoChart} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
-              <YAxis tickFormatter={v => moneyFmt.format(v)} tick={{ fontSize: 11 }} width={80} />
-              <Tooltip formatter={(value: unknown) => moneyFmt.format(Number(value))} labelStyle={{ fontWeight: 600 }} />
-              <Bar dataKey="faturamento" fill="#7c3aed" radius={[6, 6, 0, 0]} name="Faturamento" />
-            </BarChart>
-          </ResponsiveContainer>
+          <ChartContainerBar data={faturamentoChart} />
         )}
       </div>
 
@@ -222,18 +215,48 @@ export default function Relatorios() {
           ) : retornoChart.length === 0 ? (
             <p className="text-center text-gray-400 py-12">Nenhum dado disponível</p>
           ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={retornoChart} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
-                <YAxis tickFormatter={v => `${v}%`} domain={[0, 100]} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v: unknown) => `${Number(v)}%`} labelStyle={{ fontWeight: 600 }} />
-                <Line type="monotone" dataKey="taxa" stroke="#7c3aed" strokeWidth={2.5} dot={{ r: 4, fill: '#7c3aed' }} name="Taxa de retorno" />
-              </LineChart>
-            </ResponsiveContainer>
+            <ChartContainerLine data={retornoChart} />
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function ChartContainerBar({ data }: { data: { mes: string; faturamento: number; agendamentos: number }[] }) {
+  const { containerRef, ready } = useChartReady<HTMLDivElement>()
+  return (
+    <div ref={containerRef} style={{ width: '100%', height: 240 }}>
+      {ready && (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+            <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
+            <YAxis tickFormatter={v => moneyFmt.format(v)} tick={{ fontSize: 11 }} width={80} />
+            <Tooltip formatter={(value: unknown) => moneyFmt.format(Number(value))} labelStyle={{ fontWeight: 600 }} />
+            <Bar dataKey="faturamento" fill="#7c3aed" radius={[6, 6, 0, 0]} name="Faturamento" />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  )
+}
+
+function ChartContainerLine({ data }: { data: { mes: string; taxa: number; clientes: number; retorno: number }[] }) {
+  const { containerRef, ready } = useChartReady<HTMLDivElement>()
+  return (
+    <div ref={containerRef} style={{ width: '100%', height: 220 }}>
+      {ready && (
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+            <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
+            <YAxis tickFormatter={v => `${v}%`} domain={[0, 100]} tick={{ fontSize: 11 }} />
+            <Tooltip formatter={(v: unknown) => `${Number(v)}%`} labelStyle={{ fontWeight: 600 }} />
+            <Line type="monotone" dataKey="taxa" stroke="#7c3aed" strokeWidth={2.5} dot={{ r: 4, fill: '#7c3aed' }} name="Taxa de retorno" />
+          </LineChart>
+        </ResponsiveContainer>
+      )}
     </div>
   )
 }

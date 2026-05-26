@@ -10,6 +10,7 @@ import { authService } from '../../services/authService'
 import FormField from '../../components/FormField'
 import Button from '../../components/Button'
 import { baixarArquivo } from '../../utils/downloadFile'
+import { useChartReady } from '../../hooks/useChartReady'
 
 const formatMoeda = (v: number) =>
   (v ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -36,6 +37,7 @@ export default function ResumoFinanceiro() {
   const [ano, setAno] = useState(new Date().getFullYear())
   const [inicio, setInicio] = useState(inicioDoMes())
   const [fim, setFim] = useState(fimDoMes())
+  const { containerRef: chartRef, ready: chartReady } = useChartReady<HTMLDivElement>()
 
   const { data: dashboard } = useQuery({
     queryKey: ['relatorio-financeiro-dashboard', ano],
@@ -133,17 +135,21 @@ export default function ResumoFinanceiro() {
 
               <div className="bg-white rounded-lg shadow p-4">
                 <h3 className="text-sm font-semibold text-gray-800 mb-3">Receita × Despesa por mês</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={chartReceitaDespesa}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="mes" />
-                    <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip formatter={(v) => formatMoeda(Number(v))} />
-                    <Legend />
-                    <Bar dataKey="Receita" fill="#10B981" />
-                    <Bar dataKey="Despesa" fill="#EF4444" />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div ref={chartRef} style={{ width: '100%', height: 300 }}>
+                  {chartReady && (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartReceitaDespesa}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="mes" />
+                        <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                        <Tooltip formatter={(v) => formatMoeda(Number(v))} />
+                        <Legend />
+                        <Bar dataKey="Receita" fill="#10B981" />
+                        <Bar dataKey="Despesa" fill="#EF4444" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

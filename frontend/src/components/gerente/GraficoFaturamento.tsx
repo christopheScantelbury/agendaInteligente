@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useChartReady } from '../../hooks/useChartReady'
 import {
   LineChart,
   Line,
@@ -29,20 +30,9 @@ function formatBRL(valor: number): string {
 
 export default function GraficoFaturamento() {
   const [periodo, setPeriodo] = useState<Periodo>(30)
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  const [chartReady, setChartReady] = useState(false)
-
-  // Aguarda o container ser medido antes de renderizar o ResponsiveContainer.
-  // Evita o warning "width(-1) and height(-1) of chart" do recharts.
-  useEffect(() => {
-    if (!containerRef.current) return
-    const ro = new ResizeObserver((entries) => {
-      const w = entries[0]?.contentRect.width ?? 0
-      if (w > 0) setChartReady(true)
-    })
-    ro.observe(containerRef.current)
-    return () => ro.disconnect()
-  }, [])
+  // Hook compartilhado — aguarda container ser medido antes de renderizar Recharts.
+  // Evita warning "The width(0) and height(0) of chart should be greater than 0".
+  const { containerRef, ready: chartReady } = useChartReady<HTMLDivElement>()
 
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard', 'gerente', 'faturamento-diario', periodo],
