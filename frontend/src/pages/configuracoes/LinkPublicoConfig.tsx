@@ -29,7 +29,16 @@ export default function LinkPublicoConfig() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['configuracoes', 'link-publico'],
     queryFn: () => linkPublicoService.buscar(),
+    retry: false,
   })
+
+  // Log explícito pra ficar fácil debug no console se a query falhar
+  useEffect(() => {
+    if (error) {
+      // eslint-disable-next-line no-console
+      console.error('[LinkPublicoConfig] erro ao buscar link-publico:', error)
+    }
+  }, [error])
 
   const [slugDraft, setSlugDraft] = useState('')
   const [copiado, setCopiado] = useState(false)
@@ -113,7 +122,19 @@ export default function LinkPublicoConfig() {
       ) : error ? (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
           <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-red-900">Não foi possível carregar. Recarregue a página.</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-red-900">Não foi possível carregar.</p>
+            <p className="text-xs text-red-700 mt-1 break-words">
+              {(error as any)?.response?.data?.message ?? (error as any)?.message ?? 'Erro desconhecido. Recarregue a página em alguns instantes.'}
+            </p>
+          </div>
+        </div>
+      ) : !data ? (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-amber-900">
+            Resposta vazia do servidor. Tente recarregar.
+          </p>
         </div>
       ) : (
         <>

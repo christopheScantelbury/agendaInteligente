@@ -47,20 +47,19 @@ export default function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false) // Mobile toggle
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
-  // Buscar perfil do usuário para verificar permissões granulares (endpoint que qualquer usuário autenticado pode chamar)
-  const { data: perfilUsuario } = useQuery({
+  // Buscar perfil do usuário para verificar permissões granulares
+  const { data: perfilUsuario, isLoading: carregandoPerfil } = useQuery({
     queryKey: ['perfil', 'meu'],
     queryFn: () => perfilService.buscarMeuPerfil(),
     enabled: !!usuario,
+    staleTime: 5 * 60 * 1000, // cache 5min — evita refetch ao trocar de rota
   })
 
   // Função para verificar permissão de menu (respeita configuração do perfil)
+  // SEGURANÇA: enquanto o perfil não carrega, esconde TODOS os menus (default deny)
+  // pra evitar "flash" mostrando itens que o usuário não tem permissão.
   const temPermissaoMenu = (menuPath: string): boolean => {
-    if (!perfilUsuario) {
-      // Enquanto perfil não carrega: não mostrar Início; outros menus mantêm fallback
-      if (menuPath === '/') return false
-      return true
-    }
+    if (!perfilUsuario) return false
     const permissao = perfilUsuario.permissoesGranulares?.[menuPath]
     return permissao === 'EDITAR' || permissao === 'VISUALIZAR'
   }
@@ -277,7 +276,14 @@ export default function Layout({ children }: LayoutProps) {
 
         {/* Navigation Items */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-          {navItems.map((item) => {
+          {carregandoPerfil && navItems.length === 0 ? (
+            // Skeleton: evita sidebar vazia/piscando enquanto o perfil carrega
+            <div className="space-y-2" aria-busy="true" aria-label="Carregando menus">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="h-9 bg-gray-100 rounded-lg animate-pulse" />
+              ))}
+            </div>
+          ) : navItems.map((item) => {
             const active = isActive(item.path, item.paths)
             const isNotificacoes = item.path === '/notificacoes'
             return (
