@@ -17,4 +17,8 @@ public interface EmpresaRepository extends JpaRepository<Empresa, Long> {
     boolean existsByCnpj(String cnpj);
 
     List<Empresa> findByAdminUnicoId(Long adminUnicoId);
+
+    Optional<Empresa> findBySlugPublico(String slugPublico);
+
+    boolean existsBySlugPublico(String slugPublico);
 }

@@ -14,6 +14,7 @@ import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.domain.entity.PushToken;
 import br.com.agendainteligente.repository.AgendamentoRepository;
 import br.com.agendainteligente.repository.ClienteRepository;
+import br.com.agendainteligente.repository.EmpresaRepository;
 import br.com.agendainteligente.repository.PushTokenRepository;
 import br.com.agendainteligente.repository.ServicoRepository;
 import br.com.agendainteligente.repository.UnidadeRepository;
@@ -55,6 +56,7 @@ public class ClientePublicoController {
     private final AgendamentoRepository agendamentoRepository;
     private final UnidadeRepository unidadeRepository;
     private final ServicoRepository servicoRepository;
+    private final EmpresaRepository empresaRepository;
     private final PushTokenRepository pushTokenRepository;
     private final PushNotificationService pushNotificationService;
     private final PasswordEncoder passwordEncoder;
@@ -367,5 +369,41 @@ public class ClientePublicoController {
         return clienteRepository.findByEmail(clienteEmailOuCpf)
                 .orElseGet(() -> clienteRepository.findByCpfCnpj(clienteEmailOuCpf)
                         .orElseThrow(() -> new BusinessException("Cliente não encontrado")));
+    }
+
+    @GetMapping("/empresas/{slug}")
+    @Operation(summary = "Resolver slug público da empresa para landing/agendamento (sem auth)")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ResponseEntity<java.util.Map<String, Object>> resolverSlugEmpresa(@PathVariable String slug) {
+        br.com.agendainteligente.domain.entity.Empresa empresa = empresaRepository.findBySlugPublico(slug)
+                .filter(e -> Boolean.TRUE.equals(e.getAtivo()))
+                .orElseThrow(() -> new br.com.agendainteligente.exception.ResourceNotFoundException("Página não encontrada"));
+
+        java.util.Map<String, Object> body = new java.util.LinkedHashMap<>();
+        body.put("empresaId", empresa.getId());
+        body.put("nome", empresa.getNome());
+        body.put("categoria", empresa.getCategoria() != null ? empresa.getCategoria().name() : null);
+        body.put("logo", empresa.getLogo());
+        body.put("corApp", empresa.getCorApp());
+        body.put("cidade", empresa.getCidade());
+        body.put("uf", empresa.getUf());
+
+        // Unidades ativas da empresa
+        java.util.List<java.util.Map<String, Object>> unidades = empresa.getUnidades() == null
+                ? java.util.List.of()
+                : empresa.getUnidades().stream()
+                    .filter(u -> Boolean.TRUE.equals(u.getAtivo()))
+                    .map(u -> {
+                        java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+                        m.put("id", u.getId());
+                        m.put("nome", u.getNome());
+                        m.put("endereco", u.getEndereco());
+                        m.put("bairro", u.getBairro());
+                        m.put("cidade", u.getCidade());
+                        return m;
+                    })
+                    .collect(Collectors.toList());
+        body.put("unidades", unidades);
+        return ResponseEntity.ok(body);
     }
 }

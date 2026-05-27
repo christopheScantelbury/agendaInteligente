@@ -5,6 +5,7 @@ import br.com.agendainteligente.domain.entity.Unidade;
 import br.com.agendainteligente.domain.entity.Usuario;
 import br.com.agendainteligente.repository.AgendamentoRepository;
 import br.com.agendainteligente.repository.AtendenteRepository;
+import br.com.agendainteligente.repository.EmpresaRepository;
 import br.com.agendainteligente.repository.ServicoRepository;
 import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.repository.UsuarioRepository;
@@ -49,6 +50,7 @@ public class DashboardGerenteController {
     private final ServicoRepository servicoRepository;
     private final UsuarioRepository usuarioRepository;
     private final ConviteAcessoRepository conviteAcessoRepository;
+    private final EmpresaRepository empresaRepository;
     private final SecurityHelper securityHelper;
 
     @GetMapping("/kpis")
@@ -200,7 +202,11 @@ public class DashboardGerenteController {
         // Heurística: tem horários se atendente está ativo (proxy simples)
         boolean temHorarios = atendenteRepository.findByUnidadeIdIn(unidadeIds).stream()
                 .anyMatch(at -> Boolean.TRUE.equals(at.getAtivo()));
-        boolean personalizouPublico = false; // sem campo dedicado; mantém false até criar
+        // Personalizou link público se a empresa do usuário tem slug_publico setado.
+        boolean personalizouPublico = empresaRepository.findByAdminUnicoId(adminId).stream()
+                .findFirst()
+                .map(e -> e.getSlugPublico() != null && !e.getSlugPublico().isBlank())
+                .orElse(false);
         boolean configurouFiscal = false;
         boolean convidouEquipe = !conviteAcessoRepository.findByCriadoPorIdOrderByDataCriacaoDesc(usuario.getId()).isEmpty();
 
@@ -208,7 +214,7 @@ public class DashboardGerenteController {
         tarefas.add(tarefa("servico", "Cadastrar primeiro serviço", "/servicos", temServico));
         tarefas.add(tarefa("profissional", "Cadastrar primeiro profissional", "/profissionais", temProfissional));
         tarefas.add(tarefa("horarios", "Definir horários de funcionamento", "/configuracoes", temHorarios));
-        tarefas.add(tarefa("publico", "Personalizar link público", "/configuracoes", personalizouPublico));
+        tarefas.add(tarefa("publico", "Personalizar link público", "/configuracoes/link-publico", personalizouPublico));
         tarefas.add(tarefa("fiscal", "Configurar emissão de NFS-e (opcional)", "/configuracoes", configurouFiscal));
         tarefas.add(tarefa("equipe", "Convidar atendentes para a equipe", "/convites-acesso", convidouEquipe));
 

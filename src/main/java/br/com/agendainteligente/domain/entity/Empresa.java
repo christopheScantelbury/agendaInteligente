@@ -73,6 +73,10 @@ public class Empresa {
     @Column(name = "admin_unico_id")
     private Long adminUnicoId;
 
+    /** Slug público da empresa (usado em /e/{slug}). Único quando preenchido, opcional. */
+    @Column(name = "slug_publico", length = 60, unique = true)
+    private String slugPublico;
+
     @Column(name = "data_expiracao_acesso")
     private java.time.LocalDate dataExpiracaoAcesso;
 

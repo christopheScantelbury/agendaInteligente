@@ -65,6 +65,8 @@ const DashboardGerente = lazy(() => import('./pages/gerente/DashboardGerente'))
 const HojeProfissional = lazy(() => import('./pages/profissional/HojeProfissional'))
 const AgendaProfissional = lazy(() => import('./pages/profissional/AgendaProfissional'))
 const PerfilProfissional = lazy(() => import('./pages/profissional/PerfilProfissional'))
+const LinkPublicoConfig = lazy(() => import('./pages/configuracoes/LinkPublicoConfig'))
+const EmpresaPublica = lazy(() => import('./pages/publico/EmpresaPublica'))
 
 function PageLoader() {
   return (
@@ -318,6 +320,19 @@ function App() {
                     : <Navigate to="/login" replace />
                 }
               />
+
+              {/* Configuração do link público da empresa (gerente/admin) */}
+              <Route
+                path="/configuracoes/link-publico"
+                element={
+                  authService.isAuthenticated() && ['GERENTE','ADMIN','ADMINISTRADOR'].includes((authService.getUsuario()?.perfil ?? '').toUpperCase())
+                    ? <Layout><LinkPublicoConfig /></Layout>
+                    : <Navigate to="/login" replace />
+                }
+              />
+
+              {/* Landing pública por slug — /e/{slug} */}
+              <Route path="/e/:slug" element={<EmpresaPublica />} />
 
               {/* Rotas administrativas */}
               <Route
