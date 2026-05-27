@@ -66,6 +66,7 @@ const HojeProfissional = lazy(() => import('./pages/profissional/HojeProfissiona
 const AgendaProfissional = lazy(() => import('./pages/profissional/AgendaProfissional'))
 const PerfilProfissional = lazy(() => import('./pages/profissional/PerfilProfissional'))
 const LinkPublicoConfig = lazy(() => import('./pages/configuracoes/LinkPublicoConfig'))
+const NfseConfig = lazy(() => import('./pages/configuracoes/NfseConfig'))
 const EmpresaPublica = lazy(() => import('./pages/publico/EmpresaPublica'))
 
 function PageLoader() {
@@ -327,6 +328,16 @@ function App() {
                 element={
                   authService.isAuthenticated() && ['GERENTE','ADMIN','ADMINISTRADOR'].includes((authService.getUsuario()?.perfil ?? '').toUpperCase())
                     ? <Layout><LinkPublicoConfig /></Layout>
+                    : <Navigate to="/login" replace />
+                }
+              />
+
+              {/* Configuração NFS-e (gerente/admin) */}
+              <Route
+                path="/configuracoes/nfse"
+                element={
+                  authService.isAuthenticated() && ['GERENTE','ADMIN','ADMINISTRADOR'].includes((authService.getUsuario()?.perfil ?? '').toUpperCase())
+                    ? <Layout><NfseConfig /></Layout>
                     : <Navigate to="/login" replace />
                 }
               />

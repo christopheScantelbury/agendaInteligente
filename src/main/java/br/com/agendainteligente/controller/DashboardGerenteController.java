@@ -197,25 +197,33 @@ public class DashboardGerenteController {
         List<Long> unidadeIds = unidadeIdsDoUsuario(usuario);
         Long adminId = usuario.getAdminUnicoId() != null ? usuario.getAdminUnicoId() : usuario.getId();
 
+        // Carrega unidades uma vez pra reuso (detecções de horários e NFS-e)
+        java.util.List<br.com.agendainteligente.domain.entity.Unidade> unidadesEmpresa =
+                unidadeIds.isEmpty()
+                        ? java.util.List.of()
+                        : unidadeRepository.findAllById(unidadeIds);
+
         boolean temServico = !servicoRepository.findByAdminUnicoId(adminId).isEmpty();
         boolean temProfissional = !atendenteRepository.findByUnidadeIdIn(unidadeIds).isEmpty();
-        // Heurística: tem horários se atendente está ativo (proxy simples)
-        boolean temHorarios = atendenteRepository.findByUnidadeIdIn(unidadeIds).stream()
-                .anyMatch(at -> Boolean.TRUE.equals(at.getAtivo()));
+        // Horários de funcionamento setados em pelo menos uma unidade
+        boolean temHorarios = unidadesEmpresa.stream()
+                .anyMatch(u -> u.getHorarioAbertura() != null && u.getHorarioFechamento() != null);
         // Personalizou link público se a empresa do usuário tem slug_publico setado.
         boolean personalizouPublico = empresaRepository.findByAdminUnicoId(adminId).stream()
                 .findFirst()
                 .map(e -> e.getSlugPublico() != null && !e.getSlugPublico().isBlank())
                 .orElse(false);
-        boolean configurouFiscal = false;
+        // Configurou NFS-e se alguma unidade tem inscrição municipal preenchida
+        boolean configurouFiscal = unidadesEmpresa.stream()
+                .anyMatch(u -> u.getInscricaoMunicipal() != null && !u.getInscricaoMunicipal().isBlank());
         boolean convidouEquipe = !conviteAcessoRepository.findByCriadoPorIdOrderByDataCriacaoDesc(usuario.getId()).isEmpty();
 
         List<Map<String, Object>> tarefas = new ArrayList<>();
         tarefas.add(tarefa("servico", "Cadastrar primeiro serviço", "/servicos", temServico));
         tarefas.add(tarefa("profissional", "Cadastrar primeiro profissional", "/profissionais", temProfissional));
-        tarefas.add(tarefa("horarios", "Definir horários de funcionamento", "/configuracoes", temHorarios));
+        tarefas.add(tarefa("horarios", "Definir horários de funcionamento", "/unidades", temHorarios));
         tarefas.add(tarefa("publico", "Personalizar link público", "/configuracoes/link-publico", personalizouPublico));
-        tarefas.add(tarefa("fiscal", "Configurar emissão de NFS-e (opcional)", "/configuracoes", configurouFiscal));
+        tarefas.add(tarefa("fiscal", "Configurar emissão de NFS-e (opcional)", "/configuracoes/nfse", configurouFiscal));
         tarefas.add(tarefa("equipe", "Convidar atendentes para a equipe", "/convites-acesso", convidouEquipe));
 
         long concluidas = tarefas.stream().filter(t -> Boolean.TRUE.equals(t.get("concluida"))).count();
