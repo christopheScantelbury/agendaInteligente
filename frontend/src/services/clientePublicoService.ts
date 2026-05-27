@@ -1,5 +1,6 @@
 import api from './api'
 import { Events, resetAnalytics, track } from '../lib/analytics'
+import { isJwtExpired } from '../utils/jwt'
 
 export interface ClienteLoginRequest {
   emailOuCpf: string
@@ -95,7 +96,14 @@ export const clientePublicoService = {
   },
 
   isAuthenticated: (): boolean => {
-    return !!localStorage.getItem('clienteToken')
+    const token = localStorage.getItem('clienteToken')
+    if (!token) return false
+    if (isJwtExpired(token)) {
+      localStorage.removeItem('clienteToken')
+      localStorage.removeItem('cliente')
+      return false
+    }
+    return true
   },
 
   listarUnidades: async (): Promise<UnidadePublica[]> => {

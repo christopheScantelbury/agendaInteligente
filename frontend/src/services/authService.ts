@@ -1,5 +1,6 @@
 import api from './api'
 import { Events, resetAnalytics, track } from '../lib/analytics'
+import { isJwtExpired } from '../utils/jwt'
 
 export interface LoginRequest {
   email: string
@@ -57,7 +58,15 @@ export const authService = {
   },
 
   isAuthenticated: (): boolean => {
-    return !!localStorage.getItem('token')
+    const token = localStorage.getItem('token')
+    if (!token) return false
+    if (isJwtExpired(token)) {
+      // Token expirado — limpa storage para forçar re-login limpo
+      localStorage.removeItem('token')
+      localStorage.removeItem('usuario')
+      return false
+    }
+    return true
   },
 
   /** Compara perfil ignorando maiúsculas (backend pode retornar "Cliente" ou "CLIENTE"). */

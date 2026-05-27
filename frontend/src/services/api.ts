@@ -52,9 +52,25 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('usuario')
-      window.location.href = '/login'
+      // Detecta se request usou clienteToken vs token admin/staff
+      // para limpar o storage correto e redirecionar pra tela certa.
+      const usouClienteToken = !!localStorage.getItem('clienteToken')
+      const naRotaCliente = window.location.pathname.startsWith('/cliente')
+
+      if (usouClienteToken && naRotaCliente) {
+        localStorage.removeItem('clienteToken')
+        localStorage.removeItem('cliente')
+        // Evita loop se já estiver na tela de login
+        if (!window.location.pathname.startsWith('/cliente/login')) {
+          window.location.href = '/cliente/login?sessao=expirada'
+        }
+      } else {
+        localStorage.removeItem('token')
+        localStorage.removeItem('usuario')
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login?sessao=expirada'
+        }
+      }
     }
 
     if (import.meta.env.DEV) {

@@ -95,6 +95,14 @@ function DashboardOrAgendamentos() {
     return <Navigate to="/agendamentos" replace />
   }
 
+  // Perfis com home dedicada — não devem ver o admin Dashboard mesmo no root /
+  if (authService.isPerfilProfissional()) {
+    return <Navigate to="/profissional/hoje" replace />
+  }
+  if (authService.isPerfilGerente()) {
+    return <Navigate to="/gerente/dashboard" replace />
+  }
+
   if (isLoading || !perfil) {
     return <div className="flex justify-center items-center min-h-[200px]">Carregando...</div>
   }

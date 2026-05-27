@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { authService } from '../services/authService'
 import { Events, identify, track } from '../lib/analytics'
 import { Eye, EyeOff } from 'lucide-react'
@@ -20,11 +20,18 @@ function LogoMark({ size = 36 }: { size?: number }) {
 }
 
 export default function Login() {
+  const [searchParams] = useSearchParams()
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [erro, setErro] = useState('')
   const [loading, setLoading] = useState(false)
   const [mostrarSenha, setMostrarSenha] = useState(false)
+
+  useEffect(() => {
+    if (searchParams.get('sessao') === 'expirada') {
+      setErro('Sua sessão expirou. Faça login novamente para continuar.')
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
