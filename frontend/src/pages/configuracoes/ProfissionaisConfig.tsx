@@ -2,6 +2,8 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { UserRound, Loader2, ExternalLink, Mail, Plus, Briefcase } from 'lucide-react'
 import { atendenteService } from '../../services/atendenteService'
+import ConfigPageHeader from '../../components/configuracoes/ConfigPageHeader'
+import ProximaEtapaCard from '../../components/configuracoes/ProximaEtapaCard'
 
 export default function ProfissionaisConfig() {
   const navigate = useNavigate()
@@ -15,6 +17,7 @@ export default function ProfissionaisConfig() {
 
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
+      <ConfigPageHeader />
       <header>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <UserRound className="h-6 w-6 text-violet-600" />
@@ -132,6 +135,8 @@ export default function ProfissionaisConfig() {
           </ul>
         )}
       </section>
+
+      <ProximaEtapaCard tarefaAtualId="profissional" />
     </div>
   )
 }

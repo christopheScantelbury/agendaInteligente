@@ -5,6 +5,8 @@ import { Briefcase, Plus, Clock, Loader2, AlertCircle, Check, ExternalLink } fro
 import { servicoService, Servico } from '../../services/servicoService'
 import { unidadeService } from '../../services/unidadeService'
 import { useNotification } from '../../contexts/NotificationContext'
+import ConfigPageHeader from '../../components/configuracoes/ConfigPageHeader'
+import ProximaEtapaCard from '../../components/configuracoes/ProximaEtapaCard'
 
 const moneyFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -37,6 +39,7 @@ export default function ServicosConfig() {
     unidadeId: null,
   })
   const [erros, setErros] = useState<string[]>([])
+  const [salvou, setSalvou] = useState(false)
 
   // Auto-seleciona unidade quando só tem 1
   useEffect(() => {
@@ -63,6 +66,7 @@ export default function ServicosConfig() {
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'gerente', 'checklist'] })
       setForm((f) => ({ ...f, nome: '', valor: '' }))
       setErros([])
+      setSalvou(true)
       showNotification('success', 'Serviço criado!')
     },
     onError: (err: any) => {
@@ -94,6 +98,7 @@ export default function ServicosConfig() {
 
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
+      <ConfigPageHeader />
       <header>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <Briefcase className="h-6 w-6 text-violet-600" />
@@ -258,6 +263,8 @@ export default function ServicosConfig() {
           </ul>
         )}
       </section>
+
+      {salvou && <ProximaEtapaCard tarefaAtualId="servico" />}
     </div>
   )
 }

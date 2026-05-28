@@ -14,6 +14,8 @@ import {
 } from 'lucide-react'
 import { conviteService } from '../../services/conviteService'
 import { useNotification } from '../../contexts/NotificationContext'
+import ConfigPageHeader from '../../components/configuracoes/ConfigPageHeader'
+import ProximaEtapaCard from '../../components/configuracoes/ProximaEtapaCard'
 
 const HOJE = new Date()
 function emDias(dias: number): string {
@@ -38,6 +40,7 @@ export default function EquipeConfig() {
   })
 
   const [tokenCopiado, setTokenCopiado] = useState<number | null>(null)
+  const [criou, setCriou] = useState(false)
   const [form, setForm] = useState({
     maxUnidades: '1',
     diasExpiracaoLink: '7',
@@ -54,6 +57,7 @@ export default function EquipeConfig() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['configuracoes', 'convites-acesso'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'gerente', 'checklist'] })
+      setCriou(true)
       showNotification('success', 'Convite criado! Compartilhe o link com a pessoa.')
     },
     onError: (err: any) => {
@@ -77,6 +81,7 @@ export default function EquipeConfig() {
 
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
+      <ConfigPageHeader />
       <header>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <Users className="h-6 w-6 text-violet-600" />
@@ -255,6 +260,8 @@ export default function EquipeConfig() {
         </button>{' '}
         — lá você vincula às unidades, define comissão e serviços que pode prestar.
       </div>
+
+      {criou && <ProximaEtapaCard tarefaAtualId="equipe" />}
     </div>
   )
 }

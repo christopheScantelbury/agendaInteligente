@@ -2,6 +2,8 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, Building2, CheckCircle2, AlertCircle, FileText, ExternalLink, Loader2 } from 'lucide-react'
 import { unidadeService } from '../../services/unidadeService'
+import ConfigPageHeader from '../../components/configuracoes/ConfigPageHeader'
+import ProximaEtapaCard from '../../components/configuracoes/ProximaEtapaCard'
 
 export default function NfseConfig() {
   const navigate = useNavigate()
@@ -16,6 +18,7 @@ export default function NfseConfig() {
 
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
+      <ConfigPageHeader />
       <header>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <FileText className="h-6 w-6 text-violet-600" />
@@ -123,6 +126,8 @@ export default function NfseConfig() {
               checklist será marcada como concluída automaticamente.
             </div>
           )}
+
+          <ProximaEtapaCard tarefaAtualId="fiscal" />
         </>
       )}
     </div>

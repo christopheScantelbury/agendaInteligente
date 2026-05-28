@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link2, Copy, Check, ExternalLink, Trash2, AlertCircle, Loader2, QrCode } from 'lucide-react'
 import { linkPublicoService } from '../../services/linkPublicoService'
 import { useNotification } from '../../contexts/NotificationContext'
+import ConfigPageHeader from '../../components/configuracoes/ConfigPageHeader'
+import ProximaEtapaCard from '../../components/configuracoes/ProximaEtapaCard'
 
 const SLUG_REGEX = /^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])?$/
 const SLUG_MIN = 3
@@ -43,6 +45,7 @@ export default function LinkPublicoConfig() {
   const [slugDraft, setSlugDraft] = useState('')
   const [copiado, setCopiado] = useState(false)
   const [mostrarQR, setMostrarQR] = useState(false)
+  const [salvou, setSalvou] = useState(false)
 
   useEffect(() => {
     if (data?.slug) setSlugDraft(data.slug)
@@ -70,6 +73,7 @@ export default function LinkPublicoConfig() {
     onSuccess: (res) => {
       queryClient.setQueryData(['configuracoes', 'link-publico'], res)
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'gerente', 'checklist'] })
+      setSalvou(true)
       showNotification('success', 'Link público atualizado!')
     },
     onError: (err: any) => {
@@ -104,6 +108,7 @@ export default function LinkPublicoConfig() {
 
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
+      <ConfigPageHeader />
       <header>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <Link2 className="h-6 w-6 text-violet-600" />
@@ -280,6 +285,8 @@ export default function LinkPublicoConfig() {
               <code className="mx-1 px-1.5 py-0.5 bg-white rounded font-mono text-slate-700">clinica-renascer</code>.
             </p>
           </div>
+
+          {salvou && <ProximaEtapaCard tarefaAtualId="publico" />}
         </>
       )}
     </div>

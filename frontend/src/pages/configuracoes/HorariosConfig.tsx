@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Clock, Loader2, AlertCircle, Check, Copy } from 'lucide-react'
 import { horariosConfigService } from '../../services/horariosConfigService'
 import { useNotification } from '../../contexts/NotificationContext'
+import ConfigPageHeader from '../../components/configuracoes/ConfigPageHeader'
+import ProximaEtapaCard from '../../components/configuracoes/ProximaEtapaCard'
 
 /** Normaliza HH:mm:ss → HH:mm (input type=time só aceita HH:mm) */
 function paraInputTime(v: string | null): string {
@@ -27,6 +29,7 @@ export default function HorariosConfig() {
 
   // Estado local por unidade — { [unidadeId]: { abertura, fechamento, dirty } }
   const [linhas, setLinhas] = useState<Record<number, LinhaState>>({})
+  const [salvouAlgo, setSalvouAlgo] = useState(false)
 
   useEffect(() => {
     if (unidades.length === 0) return
@@ -58,6 +61,7 @@ export default function HorariosConfig() {
           dirty: false,
         },
       }))
+      setSalvouAlgo(true)
       showNotification('success', 'Horários atualizados!')
     },
     onError: (err: any) => {
@@ -98,6 +102,7 @@ export default function HorariosConfig() {
 
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
+      <ConfigPageHeader />
       <header>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <Clock className="h-6 w-6 text-violet-600" />
@@ -241,6 +246,8 @@ export default function HorariosConfig() {
             💡 Deixe os dois campos vazios para indicar que a unidade está fechada o dia todo
             (cliente verá "horários indisponíveis" ao tentar agendar).
           </div>
+
+          {salvouAlgo && <ProximaEtapaCard tarefaAtualId="horarios" />}
         </>
       )}
     </div>
