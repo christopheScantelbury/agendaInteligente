@@ -27,8 +27,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     setNotifications((prev) => [...prev, notification])
 
-    // Scroll para o topo quando houver nova notificação
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    // NÃO fazer scroll aqui — o NotificationContainer é position:fixed top-0
+    // (toast flutuante), então o usuário já vê o toast independente do scroll.
+    // Forçar scrollTo(0) atrapalha fluxos como auto-fill de CEP no meio do form.
 
     // Remover automaticamente após a duração especificada
     if (duration > 0) {

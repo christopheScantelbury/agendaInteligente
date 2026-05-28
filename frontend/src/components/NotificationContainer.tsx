@@ -1,16 +1,12 @@
 import { useNotification } from '../contexts/NotificationContext'
 import { X, CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react'
-import { useEffect, useRef } from 'react'
 
 export default function NotificationContainer() {
   const { notifications, removeNotification } = useNotification()
-  const containerRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (notifications.length > 0 && containerRef.current && document.body.style.overflow !== 'hidden') {
-      containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
-  }, [notifications.length])
+  // Container é position:fixed top-0 (toast flutuante), não precisa de scroll.
+  // scrollIntoView aqui forçava scroll-to-top toda vez que uma notificação
+  // aparecia — quebrava UX em fluxos como auto-fill de CEP.
 
   if (notifications.length === 0) return null
 
@@ -46,7 +42,6 @@ export default function NotificationContainer() {
 
   return (
     <div
-      ref={containerRef}
       className="fixed top-0 left-0 right-0 z-[99999] px-4 pt-4 pointer-events-none"
       style={{ position: 'fixed', zIndex: 99999 }}
     >
