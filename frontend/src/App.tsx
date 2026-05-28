@@ -67,6 +67,7 @@ const AgendaProfissional = lazy(() => import('./pages/profissional/AgendaProfiss
 const PerfilProfissional = lazy(() => import('./pages/profissional/PerfilProfissional'))
 const LinkPublicoConfig = lazy(() => import('./pages/configuracoes/LinkPublicoConfig'))
 const NfseConfig = lazy(() => import('./pages/configuracoes/NfseConfig'))
+const HorariosConfig = lazy(() => import('./pages/configuracoes/HorariosConfig'))
 const EmpresaPublica = lazy(() => import('./pages/publico/EmpresaPublica'))
 
 function PageLoader() {
@@ -338,6 +339,16 @@ function App() {
                 element={
                   authService.isAuthenticated() && ['GERENTE','ADMIN','ADMINISTRADOR'].includes((authService.getUsuario()?.perfil ?? '').toUpperCase())
                     ? <Layout><NfseConfig /></Layout>
+                    : <Navigate to="/login" replace />
+                }
+              />
+
+              {/* Configuração de horários de funcionamento (gerente/admin) */}
+              <Route
+                path="/configuracoes/horarios"
+                element={
+                  authService.isAuthenticated() && ['GERENTE','ADMIN','ADMINISTRADOR'].includes((authService.getUsuario()?.perfil ?? '').toUpperCase())
+                    ? <Layout><HorariosConfig /></Layout>
                     : <Navigate to="/login" replace />
                 }
               />
