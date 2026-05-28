@@ -588,6 +588,37 @@ export default function Configuracoes() {
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
               Endereço
             </p>
+
+            {/* CEP em destaque no topo — buscamos automaticamente */}
+            <div className="bg-violet-50 border border-violet-100 rounded-xl p-3 sm:p-4 mb-3">
+              <Label htmlFor="cep">
+                <span className="inline-flex items-center gap-1.5">
+                  CEP <span className="text-violet-600 font-semibold">· busca automática</span>
+                </span>
+              </Label>
+              <div className="relative max-w-xs">
+                <Input
+                  id="cep"
+                  type="text"
+                  inputMode="numeric"
+                  value={empresaForm.cep || ''}
+                  onChange={(e) => handleCepChange(e.target.value)}
+                  maxLength={9}
+                  placeholder="00000-000"
+                  className={buscandoCep ? 'pr-10' : ''}
+                />
+                {buscandoCep && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <Loader2 className="h-4 w-4 animate-spin text-violet-500" />
+                  </div>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1.5">
+                Digite o CEP — preenchemos logradouro, bairro, cidade e UF automaticamente.
+              </p>
+            </div>
+
+            {/* Demais campos do endereço */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="sm:col-span-2">
                 <Label htmlFor="endereco">Logradouro</Label>
@@ -596,6 +627,7 @@ export default function Configuracoes() {
                   type="text"
                   value={empresaForm.endereco || ''}
                   onChange={(e) => setEmpresaForm((p) => ({ ...p, endereco: e.target.value }))}
+                  placeholder="Rua, avenida…"
                 />
               </div>
               <div>
@@ -605,9 +637,10 @@ export default function Configuracoes() {
                   type="text"
                   value={empresaForm.numero || ''}
                   onChange={(e) => setEmpresaForm((p) => ({ ...p, numero: e.target.value }))}
+                  placeholder="123"
                 />
               </div>
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-3">
                 <Label htmlFor="bairro">Bairro</Label>
                 <Input
                   id="bairro"
@@ -615,28 +648,6 @@ export default function Configuracoes() {
                   value={empresaForm.bairro || ''}
                   onChange={(e) => setEmpresaForm((p) => ({ ...p, bairro: e.target.value }))}
                 />
-              </div>
-              <div>
-                <Label htmlFor="cep">CEP</Label>
-                <div className="relative">
-                  <Input
-                    id="cep"
-                    type="text"
-                    value={empresaForm.cep || ''}
-                    onChange={(e) => handleCepChange(e.target.value)}
-                    maxLength={9}
-                    placeholder="00000-000"
-                    className={buscandoCep ? 'pr-10' : ''}
-                  />
-                  {buscandoCep && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <Loader2 className="h-4 w-4 animate-spin text-violet-500" />
-                    </div>
-                  )}
-                </div>
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Preenchemos o endereço automaticamente.
-                </p>
               </div>
               <div className="sm:col-span-2">
                 <Label htmlFor="cidade">Cidade</Label>
