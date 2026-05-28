@@ -27,7 +27,7 @@ import java.util.Map;
  * Resolução pública (sem auth) também mora aqui via {@code /publico/empresas/{slug}}.
  */
 @RestController
-@RequestMapping("/configuracoes/link-publico")
+@RequestMapping("/api/configuracoes/link-publico")
 @RequiredArgsConstructor
 @Tag(name = "Link Público", description = "Slug público da empresa")
 public class LinkPublicoController {

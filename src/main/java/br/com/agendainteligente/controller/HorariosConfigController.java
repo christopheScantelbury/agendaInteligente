@@ -27,7 +27,7 @@ import java.util.Map;
  * campos da unidade.
  */
 @RestController
-@RequestMapping("/configuracoes/horarios")
+@RequestMapping("/api/configuracoes/horarios")
 @RequiredArgsConstructor
 @Tag(name = "Horários de funcionamento", description = "Horários por unidade")
 public class HorariosConfigController {
