@@ -67,6 +67,7 @@ const AgendaProfissional = lazy(() => import('./pages/profissional/AgendaProfiss
 const PerfilProfissional = lazy(() => import('./pages/profissional/PerfilProfissional'))
 const LinkPublicoConfig = lazy(() => import('./pages/configuracoes/LinkPublicoConfig'))
 const NfseConfig = lazy(() => import('./pages/configuracoes/NfseConfig'))
+const NfseEditarUnidade = lazy(() => import('./pages/configuracoes/NfseEditarUnidade'))
 const HorariosConfig = lazy(() => import('./pages/configuracoes/HorariosConfig'))
 const ServicosConfig = lazy(() => import('./pages/configuracoes/ServicosConfig'))
 const ProfissionaisConfig = lazy(() => import('./pages/configuracoes/ProfissionaisConfig'))
@@ -345,12 +346,22 @@ function App() {
                 }
               />
 
-              {/* Configuração NFS-e (gerente/admin) */}
+              {/* Configuração NFS-e — lista (gerente/admin) */}
               <Route
                 path="/configuracoes/nfse"
                 element={
                   authService.isAuthenticated() && ['GERENTE','ADMIN','ADMINISTRADOR'].includes((authService.getUsuario()?.perfil ?? '').toUpperCase())
                     ? <Layout><NfseConfig /></Layout>
+                    : <Navigate to="/login" replace />
+                }
+              />
+
+              {/* Configuração NFS-e — editor fiscal por unidade */}
+              <Route
+                path="/configuracoes/nfse/editar/:unidadeId"
+                element={
+                  authService.isAuthenticated() && ['GERENTE','ADMIN','ADMINISTRADOR'].includes((authService.getUsuario()?.perfil ?? '').toUpperCase())
+                    ? <Layout><NfseEditarUnidade /></Layout>
                     : <Navigate to="/login" replace />
                 }
               />

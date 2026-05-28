@@ -13,6 +13,8 @@ export interface EnderecoViaCEP {
   cidade: string
   uf: string
   complemento?: string
+  /** Código IBGE do município (necessário para NFS-e Nacional). */
+  ibge?: string
 }
 
 function limparCep(raw: string): string {
@@ -43,6 +45,7 @@ export async function buscarEnderecoPorCep(
       cidade: data.localidade ?? '',
       uf: data.uf ?? '',
       complemento: data.complemento ?? undefined,
+      ibge: data.ibge ?? undefined,
     }
   } catch (err: any) {
     // AbortError quando query foi cancelada por nova digitação
