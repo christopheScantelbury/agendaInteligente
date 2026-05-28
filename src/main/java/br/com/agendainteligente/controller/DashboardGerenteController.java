@@ -213,9 +213,12 @@ public class DashboardGerenteController {
                 .findFirst()
                 .map(e -> e.getSlugPublico() != null && !e.getSlugPublico().isBlank())
                 .orElse(false);
-        // Configurou NFS-e se alguma unidade tem inscrição municipal preenchida
+        // Configurou NFS-e se alguma unidade tem CNPJ + inscrição municipal + razão social
+        // (mínimo viável pra emitir nota — outros campos validados na própria tela)
         boolean configurouFiscal = unidadesEmpresa.stream()
-                .anyMatch(u -> u.getInscricaoMunicipal() != null && !u.getInscricaoMunicipal().isBlank());
+                .anyMatch(u -> u.getCnpj() != null && !u.getCnpj().isBlank()
+                        && u.getInscricaoMunicipal() != null && !u.getInscricaoMunicipal().isBlank()
+                        && u.getRazaoSocial() != null && !u.getRazaoSocial().isBlank());
         boolean convidouEquipe = !conviteAcessoRepository.findByCriadoPorIdOrderByDataCriacaoDesc(usuario.getId()).isEmpty();
 
         List<Map<String, Object>> tarefas = new ArrayList<>();
