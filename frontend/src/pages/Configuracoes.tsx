@@ -1,14 +1,108 @@
 import { useMemo, useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import FormField from '../components/FormField'
-import Button from '../components/Button'
+import {
+  Settings,
+  User as UserIcon,
+  Lock,
+  Building2,
+  Check,
+  Loader2,
+  Upload,
+  Trash2,
+  AlertCircle,
+  Link2,
+  Clock,
+  FileText,
+  Users as UsersIcon,
+  Briefcase,
+  ChevronRight,
+  Palette,
+} from 'lucide-react'
 import { authService } from '../services/authService'
 import { usuarioService, Usuario } from '../services/usuarioService'
 import { empresaService, Empresa } from '../services/empresaService'
 import { useNotification } from '../contexts/NotificationContext'
 import { maskPhone, maskCEP, maskCNPJ, maskEmail } from '../utils/masks'
+import ConfigPageHeader from '../components/configuracoes/ConfigPageHeader'
 
+// ─── Componentes inline pra manter o padrão visual do sistema ─────────────────
+function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      {...props}
+      className={`w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition disabled:bg-slate-50 disabled:text-slate-400 ${props.className ?? ''}`}
+    />
+  )
+}
+
+function Label({
+  htmlFor,
+  children,
+  required,
+}: {
+  htmlFor?: string
+  children: React.ReactNode
+  required?: boolean
+}) {
+  return (
+    <label htmlFor={htmlFor} className="block text-xs font-medium text-slate-700 mb-1.5">
+      {children} {required && <span className="text-red-500">*</span>}
+    </label>
+  )
+}
+
+function SubmitButton({
+  loading,
+  children,
+  disabled,
+}: {
+  loading?: boolean
+  disabled?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="submit"
+      disabled={loading || disabled}
+      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-sm font-semibold transition shadow-sm"
+    >
+      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+      {children}
+    </button>
+  )
+}
+
+function SectionCard({
+  icon: Icon,
+  title,
+  description,
+  children,
+}: {
+  icon: typeof Settings
+  title: string
+  description?: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 space-y-4">
+      <header className="flex items-start gap-3">
+        <div className="h-10 w-10 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
+          <Icon className="h-5 w-5 text-violet-600" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+          {description && <p className="text-xs text-slate-500 mt-0.5">{description}</p>}
+        </div>
+      </header>
+      <div>{children}</div>
+    </section>
+  )
+}
+
+// ─── Página ───────────────────────────────────────────────────────────────────
 export default function Configuracoes() {
+  const navigate = useNavigate()
   const { showNotification } = useNotification()
   const queryClient = useQueryClient()
   const usuarioToken = authService.getUsuario()
@@ -39,7 +133,7 @@ export default function Configuracoes() {
     uf: '',
     ativo: true,
     logo: undefined,
-    corApp: '#2563EB',
+    corApp: '#7C3AED',
   })
   const [empresaId, setEmpresaId] = useState<number | undefined>(undefined)
   const [logoPreview, setLogoPreview] = useState<string | undefined>(undefined)
@@ -74,7 +168,7 @@ export default function Configuracoes() {
     setEmpresaForm({
       ...empresa,
       ativo: empresa.ativo ?? true,
-      corApp: empresa.corApp || '#2563EB',
+      corApp: empresa.corApp || '#7C3AED',
     })
     setLogoPreview(empresa.logo)
   }, [empresas])
@@ -83,7 +177,7 @@ export default function Configuracoes() {
     mutationFn: (payload: Usuario) => usuarioService.atualizar(payload.id!, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['usuario', usuarioToken?.usuarioId] })
-      showNotification('success', 'Dados da conta atualizados com sucesso.')
+      showNotification('success', 'Dados da conta atualizados!')
     },
     onError: (error: any) => {
       showNotification('error', error.response?.data?.message || 'Erro ao atualizar dados da conta.')
@@ -111,7 +205,7 @@ export default function Configuracoes() {
     onSuccess: (empresa) => {
       setEmpresaId(empresa.id)
       queryClient.invalidateQueries({ queryKey: ['empresas'] })
-      showNotification('success', 'Dados da empresa salvos com sucesso.')
+      showNotification('success', 'Dados da empresa salvos!')
     },
     onError: (error: any) => {
       showNotification('error', error.response?.data?.message || 'Erro ao salvar dados da empresa.')
@@ -120,7 +214,10 @@ export default function Configuracoes() {
 
   const loading = loadingUsuario || loadingEmpresas
 
-  const podeSalvarConta = useMemo(() => !!conta.id && !!conta.nome && !!conta.email, [conta.id, conta.nome, conta.email])
+  const podeSalvarConta = useMemo(
+    () => !!conta.id && !!conta.nome && !!conta.email,
+    [conta.id, conta.nome, conta.email]
+  )
 
   const handleSalvarConta = (e: React.FormEvent) => {
     e.preventDefault()
@@ -164,6 +261,10 @@ export default function Configuracoes() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    if (file.size > 2 * 1024 * 1024) {
+      showNotification('error', 'Imagem muito grande (máximo 2 MB).')
+      return
+    }
     const reader = new FileReader()
     reader.onloadend = () => {
       const base64 = reader.result as string
@@ -173,232 +274,444 @@ export default function Configuracoes() {
     reader.readAsDataURL(file)
   }
 
+  const removerLogo = () => {
+    setLogoPreview(undefined)
+    setEmpresaForm((prev) => ({ ...prev, logo: undefined }))
+  }
+
   if (!isAdminUnico) {
     return (
-      <div className="text-center py-8">
-        <p className="text-red-600 font-semibold">Acesso negado</p>
-        <p className="text-gray-600 mt-2">Esta tela é exclusiva para perfil ADMINISTRADOR.</p>
+      <div className="max-w-2xl mx-auto p-4 sm:p-6">
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-6 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-red-900">Acesso restrito</p>
+            <p className="text-xs text-red-700 mt-1">
+              Esta tela é exclusiva para o perfil ADMINISTRADOR.
+            </p>
+          </div>
+        </div>
       </div>
     )
   }
 
-  if (loading) return <div className="text-center py-8">Carregando...</div>
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto p-4 sm:p-6">
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 flex items-center gap-2 text-slate-500">
+          <Loader2 className="h-4 w-4 animate-spin" /> Carregando configurações…
+        </div>
+      </div>
+    )
+  }
+
+  // Outras configurações disponíveis em telas dedicadas
+  const atalhos = [
+    {
+      titulo: 'Horários de funcionamento',
+      descricao: 'Defina os horários em que cada unidade atende.',
+      path: '/configuracoes/horarios',
+      icon: Clock,
+    },
+    {
+      titulo: 'Link público da empresa',
+      descricao: 'Personalize a URL pública para divulgar.',
+      path: '/configuracoes/link-publico',
+      icon: Link2,
+    },
+    {
+      titulo: 'Emissão de NFS-e',
+      descricao: 'Configure inscrição municipal por unidade.',
+      path: '/configuracoes/nfse',
+      icon: FileText,
+    },
+    {
+      titulo: 'Serviços',
+      descricao: 'Cadastre o catálogo de serviços oferecidos.',
+      path: '/configuracoes/servicos',
+      icon: Briefcase,
+    },
+    {
+      titulo: 'Profissionais',
+      descricao: 'Gerencie os profissionais da equipe.',
+      path: '/configuracoes/profissionais',
+      icon: UserIcon,
+    },
+    {
+      titulo: 'Equipe e convites',
+      descricao: 'Convide novos profissionais por link.',
+      path: '/configuracoes/equipe',
+      icon: UsersIcon,
+    },
+  ]
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Configurações</h1>
+    <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
+      <ConfigPageHeader />
+      <header>
+        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <Settings className="h-6 w-6 text-violet-600" />
+          Configurações
+        </h1>
+        <p className="text-sm text-slate-600 mt-1">
+          Gerencie sua conta, senha e os dados da empresa.
+        </p>
+      </header>
 
-      <section className="bg-white rounded-lg shadow p-6 space-y-6">
-        <h2 className="text-xl font-semibold text-gray-900">1. Conta</h2>
-        <form className="space-y-4" onSubmit={handleSalvarConta}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Nome" required>
-              <input
+      {/* ── Conta ──────────────────────────────────────────────────────────── */}
+      <SectionCard
+        icon={UserIcon}
+        title="Conta"
+        description="Suas informações pessoais como administrador."
+      >
+        <form className="space-y-3" onSubmit={handleSalvarConta}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="nome" required>Nome</Label>
+              <Input
+                id="nome"
                 type="text"
                 required
                 value={conta.nome || ''}
-                onChange={(e) => setConta((prev) => ({ ...prev, nome: e.target.value }))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+                onChange={(e) => setConta((p) => ({ ...p, nome: e.target.value }))}
               />
-            </FormField>
-            <FormField label="Email" required>
-              <input
+            </div>
+            <div>
+              <Label htmlFor="email" required>Email</Label>
+              <Input
+                id="email"
                 type="email"
                 required
                 value={conta.email || ''}
-                onChange={(e) => setConta((prev) => ({ ...prev, email: maskEmail(e.target.value) }))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+                onChange={(e) => setConta((p) => ({ ...p, email: maskEmail(e.target.value) }))}
               />
-            </FormField>
-            <FormField label="Área de atuação">
-              <input
+            </div>
+            <div>
+              <Label htmlFor="areaAtuacao">Área de atuação</Label>
+              <Input
+                id="areaAtuacao"
                 type="text"
                 value={conta.areaAtuacao || ''}
-                onChange={(e) => setConta((prev) => ({ ...prev, areaAtuacao: e.target.value }))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+                onChange={(e) => setConta((p) => ({ ...p, areaAtuacao: e.target.value }))}
+                placeholder="Ex.: Salão de beleza, Clínica estética"
               />
-            </FormField>
-            <FormField label="Telefone">
-              <input
+            </div>
+            <div>
+              <Label htmlFor="telefone">Telefone</Label>
+              <Input
+                id="telefone"
                 type="text"
                 value={conta.telefone || ''}
-                onChange={(e) => setConta((prev) => ({ ...prev, telefone: maskPhone(e.target.value) }))}
+                onChange={(e) => setConta((p) => ({ ...p, telefone: maskPhone(e.target.value) }))}
                 maxLength={15}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+                placeholder="(11) 99999-9999"
               />
-            </FormField>
-          </div>
-          <Button type="submit" disabled={!podeSalvarConta || salvarContaMutation.isPending}>
-            {salvarContaMutation.isPending ? 'Salvando...' : 'Salvar Dados da Conta'}
-          </Button>
-        </form>
-
-        <form className="space-y-4 border-t pt-6" onSubmit={handleAlterarSenha}>
-          <h3 className="text-lg font-medium text-gray-900">Alterar senha</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <FormField label="Senha atual" required>
-                <input
-                  type="password"
-                  required
-                  value={senhaAtual}
-                  onChange={(e) => setSenhaAtual(e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
-                />
-              </FormField>
             </div>
-            <FormField label="Nova senha" required>
-              <input
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <SubmitButton
+              loading={salvarContaMutation.isPending}
+              disabled={!podeSalvarConta}
+            >
+              Salvar dados da conta
+            </SubmitButton>
+          </div>
+        </form>
+      </SectionCard>
+
+      {/* ── Senha ──────────────────────────────────────────────────────────── */}
+      <SectionCard
+        icon={Lock}
+        title="Alterar senha"
+        description="Use uma senha forte com no mínimo 6 caracteres."
+      >
+        <form className="space-y-3" onSubmit={handleAlterarSenha}>
+          <div>
+            <Label htmlFor="senhaAtual" required>Senha atual</Label>
+            <Input
+              id="senhaAtual"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={senhaAtual}
+              onChange={(e) => setSenhaAtual(e.target.value)}
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="senha" required>Nova senha</Label>
+              <Input
+                id="senha"
                 type="password"
+                autoComplete="new-password"
                 required
+                minLength={6}
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
-            </FormField>
-            <FormField label="Confirmar nova senha" required>
-              <input
+            </div>
+            <div>
+              <Label htmlFor="confirmarSenha" required>Confirmar nova senha</Label>
+              <Input
+                id="confirmarSenha"
                 type="password"
+                autoComplete="new-password"
                 required
                 value={confirmarSenha}
                 onChange={(e) => setConfirmarSenha(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
-            </FormField>
+            </div>
           </div>
-          <Button type="submit" disabled={alterarSenhaMutation.isPending}>
-            {alterarSenhaMutation.isPending ? 'Alterando...' : 'Alterar Senha'}
-          </Button>
+          {senha && confirmarSenha && senha !== confirmarSenha && (
+            <p className="text-xs text-red-600">As senhas não coincidem.</p>
+          )}
+          <div className="flex justify-end pt-2">
+            <SubmitButton loading={alterarSenhaMutation.isPending}>
+              Alterar senha
+            </SubmitButton>
+          </div>
         </form>
-      </section>
+      </SectionCard>
 
-      <section className="bg-white rounded-lg shadow p-6 space-y-6">
-        <h2 className="text-xl font-semibold text-gray-900">2. Empresa</h2>
-        <form className="space-y-4" onSubmit={handleSalvarEmpresa}>
-          <FormField label="Nome da Empresa" required>
-            <input
+      {/* ── Empresa ────────────────────────────────────────────────────────── */}
+      <SectionCard
+        icon={Building2}
+        title="Empresa"
+        description="Dados cadastrais da sua empresa."
+      >
+        <form className="space-y-3" onSubmit={handleSalvarEmpresa}>
+          <div>
+            <Label htmlFor="empresaNome" required>Nome fantasia</Label>
+            <Input
+              id="empresaNome"
               type="text"
               required
               value={empresaForm.nome || ''}
-              onChange={(e) => setEmpresaForm((prev) => ({ ...prev, nome: e.target.value }))}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+              onChange={(e) => setEmpresaForm((p) => ({ ...p, nome: e.target.value }))}
             />
-          </FormField>
+          </div>
 
-          <FormField label="Razão Social">
-            <input
+          <div>
+            <Label htmlFor="razaoSocial">Razão social</Label>
+            <Input
+              id="razaoSocial"
               type="text"
               value={empresaForm.razaoSocial || ''}
-              onChange={(e) => setEmpresaForm((prev) => ({ ...prev, razaoSocial: e.target.value }))}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+              onChange={(e) => setEmpresaForm((p) => ({ ...p, razaoSocial: e.target.value }))}
             />
-          </FormField>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="CNPJ">
-              <input
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="cnpj">CNPJ</Label>
+              <Input
+                id="cnpj"
                 type="text"
                 value={empresaForm.cnpj || ''}
-                onChange={(e) => setEmpresaForm((prev) => ({ ...prev, cnpj: maskCNPJ(e.target.value) }))}
+                onChange={(e) => setEmpresaForm((p) => ({ ...p, cnpj: maskCNPJ(e.target.value) }))}
                 maxLength={18}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+                placeholder="00.000.000/0000-00"
               />
-            </FormField>
-            <FormField label="Telefone">
-              <input
+            </div>
+            <div>
+              <Label htmlFor="empresaTelefone">Telefone</Label>
+              <Input
+                id="empresaTelefone"
                 type="text"
                 value={empresaForm.telefone || ''}
-                onChange={(e) => setEmpresaForm((prev) => ({ ...prev, telefone: maskPhone(e.target.value) }))}
+                onChange={(e) => setEmpresaForm((p) => ({ ...p, telefone: maskPhone(e.target.value) }))}
                 maxLength={15}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+                placeholder="(11) 99999-9999"
               />
-            </FormField>
+            </div>
           </div>
 
-          <FormField label="Email">
-            <input
+          <div>
+            <Label htmlFor="empresaEmail">Email</Label>
+            <Input
+              id="empresaEmail"
               type="email"
               value={empresaForm.email || ''}
-              onChange={(e) => setEmpresaForm((prev) => ({ ...prev, email: maskEmail(e.target.value) }))}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+              onChange={(e) => setEmpresaForm((p) => ({ ...p, email: maskEmail(e.target.value) }))}
             />
-          </FormField>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Endereço">
-              <input
-                type="text"
-                value={empresaForm.endereco || ''}
-                onChange={(e) => setEmpresaForm((prev) => ({ ...prev, endereco: e.target.value }))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
-              />
-            </FormField>
-            <FormField label="Número">
-              <input
-                type="text"
-                value={empresaForm.numero || ''}
-                onChange={(e) => setEmpresaForm((prev) => ({ ...prev, numero: e.target.value }))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
-              />
-            </FormField>
-            <FormField label="Bairro">
-              <input
-                type="text"
-                value={empresaForm.bairro || ''}
-                onChange={(e) => setEmpresaForm((prev) => ({ ...prev, bairro: e.target.value }))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
-              />
-            </FormField>
-            <FormField label="CEP">
-              <input
-                type="text"
-                value={empresaForm.cep || ''}
-                onChange={(e) => setEmpresaForm((prev) => ({ ...prev, cep: maskCEP(e.target.value) }))}
-                maxLength={9}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
-              />
-            </FormField>
-            <FormField label="Cidade">
-              <input
-                type="text"
-                value={empresaForm.cidade || ''}
-                onChange={(e) => setEmpresaForm((prev) => ({ ...prev, cidade: e.target.value }))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
-              />
-            </FormField>
-            <FormField label="UF">
-              <input
-                type="text"
-                value={empresaForm.uf || ''}
-                onChange={(e) => setEmpresaForm((prev) => ({ ...prev, uf: e.target.value.toUpperCase().slice(0, 2) }))}
-                maxLength={2}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
-              />
-            </FormField>
           </div>
 
-          <FormField label="Logo">
-            <div className="space-y-2">
-              <input type="file" accept="image/*" onChange={handleImageChange} />
-              {logoPreview && (
-                <img src={logoPreview} alt="Logo da empresa" className="h-16 w-16 object-contain rounded border border-gray-200" />
-              )}
+          {/* Endereço */}
+          <div className="pt-2">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              Endereço
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-2">
+                <Label htmlFor="endereco">Logradouro</Label>
+                <Input
+                  id="endereco"
+                  type="text"
+                  value={empresaForm.endereco || ''}
+                  onChange={(e) => setEmpresaForm((p) => ({ ...p, endereco: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="numero">Número</Label>
+                <Input
+                  id="numero"
+                  type="text"
+                  value={empresaForm.numero || ''}
+                  onChange={(e) => setEmpresaForm((p) => ({ ...p, numero: e.target.value }))}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <Label htmlFor="bairro">Bairro</Label>
+                <Input
+                  id="bairro"
+                  type="text"
+                  value={empresaForm.bairro || ''}
+                  onChange={(e) => setEmpresaForm((p) => ({ ...p, bairro: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="cep">CEP</Label>
+                <Input
+                  id="cep"
+                  type="text"
+                  value={empresaForm.cep || ''}
+                  onChange={(e) => setEmpresaForm((p) => ({ ...p, cep: maskCEP(e.target.value) }))}
+                  maxLength={9}
+                  placeholder="00000-000"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <Label htmlFor="cidade">Cidade</Label>
+                <Input
+                  id="cidade"
+                  type="text"
+                  value={empresaForm.cidade || ''}
+                  onChange={(e) => setEmpresaForm((p) => ({ ...p, cidade: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="uf">UF</Label>
+                <Input
+                  id="uf"
+                  type="text"
+                  value={empresaForm.uf || ''}
+                  onChange={(e) =>
+                    setEmpresaForm((p) => ({ ...p, uf: e.target.value.toUpperCase().slice(0, 2) }))
+                  }
+                  maxLength={2}
+                  placeholder="SP"
+                />
+              </div>
             </div>
-          </FormField>
+          </div>
 
-          <FormField label="Cor do App">
-            <input
-              type="color"
-              value={empresaForm.corApp || '#2563EB'}
-              onChange={(e) => setEmpresaForm((prev) => ({ ...prev, corApp: e.target.value }))}
-              className="h-10 w-24 rounded border border-gray-300 p-1"
-            />
-          </FormField>
+          {/* Identidade visual */}
+          <div className="pt-2">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              Identidade visual
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-4">
+              <div>
+                <Label>Logo da empresa</Label>
+                <div className="flex items-center gap-3">
+                  {logoPreview ? (
+                    <img
+                      src={logoPreview}
+                      alt="Logo"
+                      className="h-16 w-16 rounded-xl object-contain border border-slate-200 bg-white"
+                    />
+                  ) : (
+                    <div className="h-16 w-16 rounded-xl border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center text-slate-300">
+                      <Upload className="h-6 w-6" />
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 cursor-pointer transition">
+                      <Upload className="h-3.5 w-3.5" />
+                      {logoPreview ? 'Trocar imagem' : 'Enviar imagem'}
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                        onChange={handleImageChange}
+                        className="hidden"
+                      />
+                    </label>
+                    {logoPreview && (
+                      <button
+                        type="button"
+                        onClick={removerLogo}
+                        className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        Remover
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1.5">
+                  PNG, JPG ou SVG até 2 MB.
+                </p>
+              </div>
 
-          <Button type="submit" disabled={salvarEmpresaMutation.isPending}>
-            {salvarEmpresaMutation.isPending ? 'Salvando...' : 'Salvar Dados da Empresa'}
-          </Button>
+              <div>
+                <Label htmlFor="corApp">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Palette className="h-3.5 w-3.5" /> Cor da marca
+                  </span>
+                </Label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="corApp"
+                    type="color"
+                    value={empresaForm.corApp || '#7C3AED'}
+                    onChange={(e) => setEmpresaForm((p) => ({ ...p, corApp: e.target.value }))}
+                    className="h-10 w-12 rounded-lg border border-slate-200 cursor-pointer p-0.5 bg-white"
+                  />
+                  <code className="text-xs font-mono text-slate-600">
+                    {empresaForm.corApp ?? '#7C3AED'}
+                  </code>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <SubmitButton loading={salvarEmpresaMutation.isPending}>
+              Salvar dados da empresa
+            </SubmitButton>
+          </div>
         </form>
+      </SectionCard>
+
+      {/* ── Atalhos para outras configurações ──────────────────────────────── */}
+      <section>
+        <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-3 px-1">
+          Outras configurações
+        </h2>
+        <ul className="bg-white border border-gray-200 rounded-2xl divide-y divide-gray-100 overflow-hidden">
+          {atalhos.map((a) => {
+            const Icon = a.icon
+            return (
+              <li key={a.path}>
+                <button
+                  type="button"
+                  onClick={() => navigate(a.path)}
+                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-50 transition text-left"
+                >
+                  <div className="h-9 w-9 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center flex-shrink-0">
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-900">{a.titulo}</p>
+                    <p className="text-xs text-slate-500 truncate">{a.descricao}</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                </button>
+              </li>
+            )
+          })}
+        </ul>
       </section>
     </div>
   )

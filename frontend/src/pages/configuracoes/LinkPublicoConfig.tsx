@@ -222,8 +222,8 @@ export default function LinkPublicoConfig() {
               Endereço público
             </label>
             <div className="flex items-stretch rounded-xl border border-slate-300 bg-white overflow-hidden focus-within:border-violet-400 focus-within:ring-2 focus-within:ring-violet-100 transition">
-              <span className="flex items-center pl-3 pr-1 text-sm text-slate-400 select-none whitespace-nowrap">
-                {baseUrlPublica().replace(/^https?:\/\//, '')}/e/
+              <span className="flex items-center px-3 text-sm text-slate-500 select-none bg-slate-50 border-r border-slate-200 font-mono">
+                /e/
               </span>
               <input
                 id="slug-input"
@@ -231,13 +231,20 @@ export default function LinkPublicoConfig() {
                 value={slugDraft}
                 onChange={(e) => setSlugDraft(e.target.value)}
                 placeholder="minha-empresa"
-                className="flex-1 min-w-0 px-1 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none"
+                className="flex-1 min-w-0 px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none"
                 autoCapitalize="off"
                 autoCorrect="off"
                 spellCheck={false}
                 maxLength={SLUG_MAX}
               />
             </div>
+            {/* URL completa em linha separada (cabe em qualquer tamanho de tela) */}
+            <p className="text-xs text-slate-500 mt-1.5 break-all">
+              URL completa:{' '}
+              <span className="font-mono text-slate-700">
+                {baseUrlPublica()}/e/{slugNormalizado || 'seu-link'}
+              </span>
+            </p>
 
             {/* Feedback de validação */}
             <div className="min-h-[20px] mt-2">
