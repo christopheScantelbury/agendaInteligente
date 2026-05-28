@@ -1,0 +1,260 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  Users,
+  Plus,
+  Copy,
+  Check,
+  Loader2,
+  AlertCircle,
+  Clock,
+  ExternalLink,
+  Mail,
+} from 'lucide-react'
+import { conviteService } from '../../services/conviteService'
+import { useNotification } from '../../contexts/NotificationContext'
+
+const HOJE = new Date()
+function emDias(dias: number): string {
+  const d = new Date(HOJE)
+  d.setDate(d.getDate() + dias)
+  return d.toISOString().slice(0, 10)
+}
+
+function formatarData(iso: string | null): string {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('pt-BR')
+}
+
+export default function EquipeConfig() {
+  const navigate = useNavigate()
+  const { showNotification } = useNotification()
+  const queryClient = useQueryClient()
+
+  const { data: convites = [], isLoading, error } = useQuery({
+    queryKey: ['configuracoes', 'convites-acesso'],
+    queryFn: () => conviteService.listarConvitesAcesso(),
+  })
+
+  const [tokenCopiado, setTokenCopiado] = useState<number | null>(null)
+  const [form, setForm] = useState({
+    maxUnidades: '1',
+    diasExpiracaoLink: '7',
+    diasExpiracaoAcesso: '365',
+  })
+
+  const criarMutation = useMutation({
+    mutationFn: () =>
+      conviteService.criarConviteAcesso({
+        maxUnidades: parseInt(form.maxUnidades, 10) || 1,
+        dataExpiracaoLink: emDias(parseInt(form.diasExpiracaoLink, 10) || 7),
+        dataExpiracaoAcesso: emDias(parseInt(form.diasExpiracaoAcesso, 10) || 365),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['configuracoes', 'convites-acesso'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'gerente', 'checklist'] })
+      showNotification('success', 'Convite criado! Compartilhe o link com a pessoa.')
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message ?? 'Não foi possível criar o convite.'
+      showNotification('error', msg)
+    },
+  })
+
+  const copiar = async (id: number, link: string) => {
+    try {
+      await navigator.clipboard.writeText(link)
+      setTokenCopiado(id)
+      setTimeout(() => setTokenCopiado(null), 2000)
+    } catch {
+      showNotification('error', 'Não foi possível copiar')
+    }
+  }
+
+  const ativosNaoUsados = convites.filter((c: any) => !c.usadoEm)
+  const usados = convites.filter((c: any) => c.usadoEm)
+
+  return (
+    <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
+      <header>
+        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <Users className="h-6 w-6 text-violet-600" />
+          Equipe
+        </h1>
+        <p className="text-sm text-slate-600 mt-1">
+          Convide atendentes e profissionais para acessarem o sistema. Cada convite gera um
+          link único que a pessoa usa para se cadastrar.
+        </p>
+      </header>
+
+      {/* Form de criação */}
+      <section className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6">
+        <h2 className="text-base font-semibold text-slate-900 mb-3 flex items-center gap-1.5">
+          <Plus className="h-4 w-4 text-violet-600" /> Criar convite de acesso
+        </h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+          <div>
+            <label htmlFor="maxUnidades" className="block text-xs font-medium text-slate-700 mb-1.5">
+              Máx. unidades
+            </label>
+            <input
+              id="maxUnidades"
+              type="number"
+              min="1"
+              max="10"
+              value={form.maxUnidades}
+              onChange={(e) => setForm({ ...form, maxUnidades: e.target.value })}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+            />
+          </div>
+          <div>
+            <label htmlFor="diasLink" className="block text-xs font-medium text-slate-700 mb-1.5">
+              Link expira em (dias)
+            </label>
+            <input
+              id="diasLink"
+              type="number"
+              min="1"
+              max="30"
+              value={form.diasExpiracaoLink}
+              onChange={(e) => setForm({ ...form, diasExpiracaoLink: e.target.value })}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+            />
+          </div>
+          <div>
+            <label htmlFor="diasAcesso" className="block text-xs font-medium text-slate-700 mb-1.5">
+              Acesso válido (dias)
+            </label>
+            <input
+              id="diasAcesso"
+              type="number"
+              min="30"
+              max="3650"
+              value={form.diasExpiracaoAcesso}
+              onChange={(e) => setForm({ ...form, diasExpiracaoAcesso: e.target.value })}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+            />
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => criarMutation.mutate()}
+          disabled={criarMutation.isPending}
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-sm font-semibold transition shadow-sm"
+        >
+          {criarMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+          <Mail className="h-4 w-4" />
+          Gerar link de convite
+        </button>
+      </section>
+
+      {/* Convites ativos */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-semibold text-slate-700">
+            Convites ativos {ativosNaoUsados.length > 0 && <span className="text-slate-400">· {ativosNaoUsados.length}</span>}
+          </h2>
+          <button
+            type="button"
+            onClick={() => navigate('/convites-acesso')}
+            className="text-xs font-medium text-violet-700 hover:text-violet-900 inline-flex items-center gap-1"
+          >
+            Ver todos <ExternalLink className="h-3 w-3" />
+          </button>
+        </div>
+
+        {isLoading ? (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 flex items-center gap-2 text-slate-500">
+            <Loader2 className="h-4 w-4 animate-spin" /> Carregando…
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-900">Não foi possível carregar os convites.</p>
+          </div>
+        ) : ativosNaoUsados.length === 0 ? (
+          <div className="bg-white border border-dashed border-gray-300 rounded-2xl p-8 text-center">
+            <Mail className="h-10 w-10 text-slate-300 mx-auto mb-2" />
+            <p className="text-sm text-slate-500">Nenhum convite ativo no momento.</p>
+            <p className="text-xs text-slate-400 mt-1">Crie um acima e compartilhe o link.</p>
+          </div>
+        ) : (
+          <ul className="space-y-2">
+            {ativosNaoUsados.slice(0, 5).map((c: any) => (
+              <li
+                key={c.id}
+                className="bg-white border border-gray-200 rounded-xl p-3 flex items-center gap-2"
+              >
+                <code className="flex-1 text-xs text-slate-700 font-mono truncate">{c.link}</code>
+                <span className="text-[10px] text-slate-500 whitespace-nowrap flex items-center gap-0.5">
+                  <Clock className="h-3 w-3" /> {formatarData(c.dataExpiracaoLink)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => copiar(c.id, c.link)}
+                  className="flex-shrink-0 p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition"
+                  aria-label="Copiar link"
+                  title={tokenCopiado === c.id ? 'Copiado!' : 'Copiar link'}
+                >
+                  {tokenCopiado === c.id ? (
+                    <Check className="h-4 w-4 text-emerald-600" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </button>
+              </li>
+            ))}
+            {ativosNaoUsados.length > 5 && (
+              <li className="text-center text-xs text-slate-500 py-2">
+                + {ativosNaoUsados.length - 5} convites ativos.{' '}
+                <button
+                  onClick={() => navigate('/convites-acesso')}
+                  className="text-violet-700 font-medium hover:underline"
+                >
+                  Ver todos
+                </button>
+              </li>
+            )}
+          </ul>
+        )}
+      </section>
+
+      {/* Convites já usados */}
+      {usados.length > 0 && (
+        <section>
+          <h2 className="text-sm font-semibold text-slate-500 mb-2">
+            Já utilizados · {usados.length}
+          </h2>
+          <ul className="space-y-1.5">
+            {usados.slice(0, 3).map((c: any) => (
+              <li
+                key={c.id}
+                className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex items-center gap-2 text-xs"
+              >
+                <Check className="h-3.5 w-3.5 text-emerald-600 flex-shrink-0" />
+                <span className="text-slate-500 truncate flex-1">
+                  Usado em {formatarData(c.usadoEm)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Dica final */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs text-slate-600">
+        💡 Após a pessoa se cadastrar pelo link, ela aparece em{' '}
+        <button
+          onClick={() => navigate('/profissionais')}
+          className="text-violet-700 font-medium hover:underline"
+        >
+          Profissionais
+        </button>{' '}
+        — lá você vincula às unidades, define comissão e serviços que pode prestar.
+      </div>
+    </div>
+  )
+}

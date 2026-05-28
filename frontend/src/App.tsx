@@ -68,6 +68,9 @@ const PerfilProfissional = lazy(() => import('./pages/profissional/PerfilProfiss
 const LinkPublicoConfig = lazy(() => import('./pages/configuracoes/LinkPublicoConfig'))
 const NfseConfig = lazy(() => import('./pages/configuracoes/NfseConfig'))
 const HorariosConfig = lazy(() => import('./pages/configuracoes/HorariosConfig'))
+const ServicosConfig = lazy(() => import('./pages/configuracoes/ServicosConfig'))
+const ProfissionaisConfig = lazy(() => import('./pages/configuracoes/ProfissionaisConfig'))
+const EquipeConfig = lazy(() => import('./pages/configuracoes/EquipeConfig'))
 const EmpresaPublica = lazy(() => import('./pages/publico/EmpresaPublica'))
 
 function PageLoader() {
@@ -349,6 +352,36 @@ function App() {
                 element={
                   authService.isAuthenticated() && ['GERENTE','ADMIN','ADMINISTRADOR'].includes((authService.getUsuario()?.perfil ?? '').toUpperCase())
                     ? <Layout><HorariosConfig /></Layout>
+                    : <Navigate to="/login" replace />
+                }
+              />
+
+              {/* Quick-start de serviços (porta de entrada do checklist) */}
+              <Route
+                path="/configuracoes/servicos"
+                element={
+                  authService.isAuthenticated() && ['GERENTE','ADMIN','ADMINISTRADOR'].includes((authService.getUsuario()?.perfil ?? '').toUpperCase())
+                    ? <Layout><ServicosConfig /></Layout>
+                    : <Navigate to="/login" replace />
+                }
+              />
+
+              {/* Quick-start de profissionais */}
+              <Route
+                path="/configuracoes/profissionais"
+                element={
+                  authService.isAuthenticated() && ['GERENTE','ADMIN','ADMINISTRADOR'].includes((authService.getUsuario()?.perfil ?? '').toUpperCase())
+                    ? <Layout><ProfissionaisConfig /></Layout>
+                    : <Navigate to="/login" replace />
+                }
+              />
+
+              {/* Equipe — convites de acesso (porta de entrada do checklist) */}
+              <Route
+                path="/configuracoes/equipe"
+                element={
+                  authService.isAuthenticated() && ['GERENTE','ADMIN','ADMINISTRADOR'].includes((authService.getUsuario()?.perfil ?? '').toUpperCase())
+                    ? <Layout><EquipeConfig /></Layout>
                     : <Navigate to="/login" replace />
                 }
               />

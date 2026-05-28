@@ -219,12 +219,12 @@ public class DashboardGerenteController {
         boolean convidouEquipe = !conviteAcessoRepository.findByCriadoPorIdOrderByDataCriacaoDesc(usuario.getId()).isEmpty();
 
         List<Map<String, Object>> tarefas = new ArrayList<>();
-        tarefas.add(tarefa("servico", "Cadastrar primeiro serviço", "/servicos", temServico));
-        tarefas.add(tarefa("profissional", "Cadastrar primeiro profissional", "/profissionais", temProfissional));
+        tarefas.add(tarefa("servico", "Cadastrar primeiro serviço", "/configuracoes/servicos", temServico));
+        tarefas.add(tarefa("profissional", "Cadastrar primeiro profissional", "/configuracoes/profissionais", temProfissional));
         tarefas.add(tarefa("horarios", "Definir horários de funcionamento", "/configuracoes/horarios", temHorarios));
         tarefas.add(tarefa("publico", "Personalizar link público", "/configuracoes/link-publico", personalizouPublico));
         tarefas.add(tarefa("fiscal", "Configurar emissão de NFS-e (opcional)", "/configuracoes/nfse", configurouFiscal));
-        tarefas.add(tarefa("equipe", "Convidar atendentes para a equipe", "/convites-acesso", convidouEquipe));
+        tarefas.add(tarefa("equipe", "Convidar atendentes para a equipe", "/configuracoes/equipe", convidouEquipe));
 
         long concluidas = tarefas.stream().filter(t -> Boolean.TRUE.equals(t.get("concluida"))).count();
         Map<String, Object> response = new LinkedHashMap<>();
