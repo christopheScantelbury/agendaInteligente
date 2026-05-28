@@ -24,6 +24,7 @@ import { usuarioService, Usuario } from '../services/usuarioService'
 import { empresaService, Empresa } from '../services/empresaService'
 import { useNotification } from '../contexts/NotificationContext'
 import { maskPhone, maskCEP, maskCNPJ, maskEmail } from '../utils/masks'
+import { buscarEnderecoPorCep } from '../utils/viaCep'
 import ConfigPageHeader from '../components/configuracoes/ConfigPageHeader'
 
 // ─── Componentes inline pra manter o padrão visual do sistema ─────────────────
@@ -137,6 +138,7 @@ export default function Configuracoes() {
   })
   const [empresaId, setEmpresaId] = useState<number | undefined>(undefined)
   const [logoPreview, setLogoPreview] = useState<string | undefined>(undefined)
+  const [buscandoCep, setBuscandoCep] = useState(false)
 
   const { data: usuarioAtual, isLoading: loadingUsuario } = useQuery({
     queryKey: ['usuario', usuarioToken?.usuarioId],
@@ -277,6 +279,50 @@ export default function Configuracoes() {
   const removerLogo = () => {
     setLogoPreview(undefined)
     setEmpresaForm((prev) => ({ ...prev, logo: undefined }))
+  }
+
+  // ViaCEP — auto-preenche endereço quando CEP completo. Cancela request anterior.
+  const cepAbortRef = (function () {
+    // Closure-style ref pra evitar useRef e manter o componente conciso
+    let ctrl: AbortController | null = null
+    return {
+      get: () => ctrl,
+      set: (c: AbortController | null) => {
+        ctrl = c
+      },
+    }
+  })()
+
+  const handleCepChange = async (raw: string) => {
+    const masked = maskCEP(raw)
+    setEmpresaForm((p) => ({ ...p, cep: masked }))
+    const digits = masked.replace(/\D/g, '')
+    if (digits.length !== 8) return
+
+    // Cancela busca anterior se ainda em vôo
+    cepAbortRef.get()?.abort()
+    const ctrl = new AbortController()
+    cepAbortRef.set(ctrl)
+
+    setBuscandoCep(true)
+    try {
+      const end = await buscarEnderecoPorCep(digits, ctrl.signal)
+      if (!end) {
+        showNotification('error', 'CEP não encontrado. Preencha o endereço manualmente.')
+        return
+      }
+      // Só preenche campos VAZIOS pra não sobrescrever edição do user
+      setEmpresaForm((p) => ({
+        ...p,
+        endereco: p.endereco?.trim() ? p.endereco : end.logradouro,
+        bairro: p.bairro?.trim() ? p.bairro : end.bairro,
+        cidade: p.cidade?.trim() ? p.cidade : end.cidade,
+        uf: p.uf?.trim() ? p.uf : end.uf,
+      }))
+      showNotification('success', 'Endereço preenchido automaticamente.')
+    } finally {
+      setBuscandoCep(false)
+    }
   }
 
   if (!isAdminUnico) {
@@ -572,14 +618,25 @@ export default function Configuracoes() {
               </div>
               <div>
                 <Label htmlFor="cep">CEP</Label>
-                <Input
-                  id="cep"
-                  type="text"
-                  value={empresaForm.cep || ''}
-                  onChange={(e) => setEmpresaForm((p) => ({ ...p, cep: maskCEP(e.target.value) }))}
-                  maxLength={9}
-                  placeholder="00000-000"
-                />
+                <div className="relative">
+                  <Input
+                    id="cep"
+                    type="text"
+                    value={empresaForm.cep || ''}
+                    onChange={(e) => handleCepChange(e.target.value)}
+                    maxLength={9}
+                    placeholder="00000-000"
+                    className={buscandoCep ? 'pr-10' : ''}
+                  />
+                  {buscandoCep && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <Loader2 className="h-4 w-4 animate-spin text-violet-500" />
+                    </div>
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Preenchemos o endereço automaticamente.
+                </p>
               </div>
               <div className="sm:col-span-2">
                 <Label htmlFor="cidade">Cidade</Label>

@@ -248,6 +248,7 @@ public class DashboardGerenteController {
      */
     @GetMapping("/equipe")
     @PreAuthorize("hasAnyRole('ADMIN','ADMINISTRADOR','GERENTE')")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<List<Map<String, Object>>> equipe() {
         List<Long> unidadeIds = unidadeIdsDoUsuario(securityHelper.usuarioAtual());
         LocalDate hoje = LocalDate.now();
@@ -317,6 +318,7 @@ public class DashboardGerenteController {
      */
     @GetMapping("/proximos")
     @PreAuthorize("hasAnyRole('ADMIN','ADMINISTRADOR','GERENTE')")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<List<Map<String, Object>>> proximos() {
         List<Long> unidadeIds = unidadeIdsDoUsuario(securityHelper.usuarioAtual());
         LocalDateTime agora = LocalDateTime.now();
