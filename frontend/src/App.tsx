@@ -86,6 +86,10 @@ function NavigateToAfterLogin() {
   if (authService.isPerfilCliente()) return <Navigate to="/cliente" replace />
   if (authService.isPerfilProfissional()) return <Navigate to="/profissional/hoje" replace />
   if (authService.isPerfilGerente()) return <Navigate to="/gerente/dashboard" replace />
+  // ADMINISTRADOR (dono do tenant) também usa o dashboard de gerente (KPIs + checklist).
+  // ADMIN global vai pra raiz e cai no admin dashboard.
+  const perfilNorm = (authService.getUsuario()?.perfil ?? '').toUpperCase()
+  if (perfilNorm === 'ADMINISTRADOR') return <Navigate to="/gerente/dashboard" replace />
   return <Navigate to="/" replace />
 }
 
@@ -107,6 +111,11 @@ function DashboardOrAgendamentos() {
     return <Navigate to="/profissional/hoje" replace />
   }
   if (authService.isPerfilGerente()) {
+    return <Navigate to="/gerente/dashboard" replace />
+  }
+  // ADMINISTRADOR (dono do tenant) usa o dashboard de gerente (KPIs + checklist
+  // do negócio). Só ADMIN global continua no admin Dashboard antigo.
+  if ((usuario?.perfil ?? '').toUpperCase() === 'ADMINISTRADOR') {
     return <Navigate to="/gerente/dashboard" replace />
   }
 
