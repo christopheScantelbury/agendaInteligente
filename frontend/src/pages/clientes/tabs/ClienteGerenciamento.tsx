@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Edit, Trash2, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react'
+import { Plus, Edit, Trash2, ChevronLeft, ChevronRight, ArrowUpDown, UserPlus } from 'lucide-react'
 import { clienteService } from '../../../services/clienteService'
 import { authService } from '../../../services/authService'
 import { perfilService } from '../../../services/perfilService'
@@ -98,22 +98,29 @@ export default function ClienteGerenciamento({ searchTerm }: Props) {
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <select
             value={filterAtivo}
             onChange={(e) => setFilterAtivo(e.target.value)}
-            className="bg-white text-slate-900 border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+            className="bg-white text-slate-900 border border-slate-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
           >
             <option value="">Todos os status</option>
             <option value="true">Ativos</option>
             <option value="false">Inativos</option>
           </select>
+          <button
+            onClick={() => setSortAsc((v) => !v)}
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition"
+            title={`Ordenar por nome (${sortAsc ? 'A-Z' : 'Z-A'})`}
+          >
+            Nome <ArrowUpDown className="h-3 w-3" />
+          </button>
           <span className="text-slate-500 text-sm">{clientesFiltrados.length} cliente{clientesFiltrados.length !== 1 ? 's' : ''}</span>
         </div>
         {podeEditarClientes && (
           <button
             onClick={() => navigate('/clientes/novo')}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-sm rounded-lg transition-colors"
+            className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all bg-violet-600 text-white hover:bg-violet-700 shadow-sm shadow-violet-200 px-4 py-2 text-sm"
           >
             <Plus className="h-4 w-4" />
             Novo {dict.rotuloCliente}
@@ -121,115 +128,123 @@ export default function ClienteGerenciamento({ searchTerm }: Props) {
         )}
       </div>
 
-      {/* Table */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-        {clientesFiltrados.length === 0 ? (
-          <div className="text-center py-12 text-slate-400">
-            {searchTerm || filterAtivo !== ''
-              ? 'Nenhum cliente encontrado com os filtros aplicados'
-              : 'Nenhum cliente cadastrado.'}
+      {/* Cards */}
+      {clientesFiltrados.length === 0 ? (
+        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
+          <div className="mx-auto h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mb-3">
+            <UserPlus className="h-5 w-5" />
           </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="text-left px-4 py-3 text-slate-500 font-semibold">
-                      <button
-                        onClick={() => setSortAsc((v) => !v)}
-                        className="flex items-center gap-1 hover:text-slate-900 transition-colors"
-                      >
-                        Nome <ArrowUpDown className="h-3 w-3" />
-                      </button>
-                    </th>
-                    <th className="text-left px-4 py-3 text-slate-500 font-semibold">Telefone</th>
-                    <th className="text-left px-4 py-3 text-slate-500 font-semibold hidden lg:table-cell">Endereço</th>
-                    <th className="text-left px-4 py-3 text-slate-500 font-semibold hidden md:table-cell">Data Nasc.</th>
-                    <th className="text-left px-4 py-3 text-slate-500 font-semibold hidden sm:table-cell">Status</th>
-                    {podeEditarClientes && (
-                      <th className="text-right px-4 py-3 text-slate-500 font-semibold">Ações</th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {clientesPaginados.map((cliente) => (
-                    <tr key={cliente.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-3">
+          <p className="text-sm text-slate-600">
+            {searchTerm || filterAtivo !== ''
+              ? 'Nenhum cliente encontrado com os filtros aplicados.'
+              : 'Nenhum cliente cadastrado ainda.'}
+          </p>
+        </div>
+      ) : (
+        <>
+          <ul className="space-y-2">
+            {clientesPaginados.map((cliente) => {
+              const ativo = cliente.ativo ?? true
+              const inicial = (cliente.nome || '?').charAt(0).toUpperCase()
+              return (
+                <li
+                  key={cliente.id}
+                  className="bg-white border border-slate-200 rounded-2xl p-4 hover:shadow-sm transition"
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Avatar */}
+                    <button
+                      onClick={() => setQuickModalId(cliente.id!)}
+                      className="h-10 w-10 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-sm font-bold flex-shrink-0 hover:bg-violet-200 transition"
+                      title="Ver detalhes"
+                    >
+                      {inicial}
+                    </button>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <button
-                          className="text-violet-700 hover:text-violet-900 font-medium text-left"
                           onClick={() => setQuickModalId(cliente.id!)}
+                          className="text-sm font-semibold text-slate-900 truncate hover:text-violet-700 text-left"
                         >
                           {cliente.nome}
                         </button>
-                      </td>
-                      <td className="px-4 py-3 text-slate-600">{cliente.telefone || '—'}</td>
-                      <td className="px-4 py-3 text-slate-600 hidden lg:table-cell">{cliente.endereco || '—'}</td>
-                      <td className="px-4 py-3 text-slate-600 hidden md:table-cell">
-                        {formatDate(cliente.dataNascimento)}
-                      </td>
-                      <td className="px-4 py-3 hidden sm:table-cell">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${
-                          (cliente.ativo ?? true)
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : 'bg-slate-100 text-slate-500 border-slate-200'
-                        }`}>
-                          {(cliente.ativo ?? true) ? 'Ativo' : 'Inativo'}
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                            ativo
+                              ? 'bg-emerald-50 text-emerald-700'
+                              : 'bg-slate-100 text-slate-500'
+                          }`}
+                        >
+                          {ativo ? 'Ativo' : 'Inativo'}
                         </span>
-                      </td>
-                      {podeEditarClientes && (
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex justify-end gap-2">
-                            <button
-                              onClick={() => navigate(`/clientes/${cliente.id}/editar`)}
-                              className="text-violet-600 hover:text-violet-800 transition-colors"
-                              aria-label="Editar"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => setConfirmDelete({ isOpen: true, id: cliente.id! })}
-                              className="text-red-500 hover:text-red-700 transition-colors"
-                              aria-label="Excluir"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
+                      </div>
+                      {cliente.telefone && (
+                        <p className="text-xs text-slate-500 truncate mt-0.5">{cliente.telefone}</p>
                       )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-400 mt-1 flex-wrap">
+                        {cliente.endereco && <span className="truncate max-w-[200px]">{cliente.endereco}</span>}
+                        {cliente.endereco && cliente.dataNascimento && <span>·</span>}
+                        {cliente.dataNascimento && <span>Nasc. {formatDate(cliente.dataNascimento)}</span>}
+                      </div>
+                    </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
-                <span className="text-slate-500 text-sm">
-                  Página {page + 1} de {totalPages}
-                </span>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => setPage((p) => Math.max(0, p - 1))}
-                    disabled={page === 0}
-                    className="p-1.5 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                    disabled={page === totalPages - 1}
-                    className="p-1.5 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
+                    {/* Ações */}
+                    {podeEditarClientes && (
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => navigate(`/clientes/${cliente.id}/editar`)}
+                          className="p-2 rounded-lg text-slate-500 hover:bg-violet-50 hover:text-violet-700 transition"
+                          aria-label="Editar cliente"
+                          title="Editar"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => setConfirmDelete({ isOpen: true, id: cliente.id! })}
+                          className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition"
+                          aria-label="Excluir cliente"
+                          title="Excluir"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs text-slate-500">
+                Página {page + 1} de {totalPages}
+              </span>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  aria-label="Página anterior"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={page === totalPages - 1}
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  aria-label="Próxima página"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
               </div>
-            )}
-          </>
-        )}
-      </div>
+            </div>
+          )}
+        </>
+      )}
 
       <ConfirmDialog
         isOpen={confirmDelete.isOpen}

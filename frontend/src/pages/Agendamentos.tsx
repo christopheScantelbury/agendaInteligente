@@ -66,10 +66,10 @@ interface ServicoFinalizacaoLinha {
 }
 
 const inputBaseClass =
-  'block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm transition focus:border-violet-500 focus:outline-none focus:ring-4 focus:ring-blue-100'
+  'block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm transition focus:border-violet-500 focus:outline-none focus:ring-4 focus:ring-violet-100'
 
 const inputWithIconClass =
-  'block w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-sm text-slate-900 shadow-sm transition focus:border-violet-500 focus:outline-none focus:ring-4 focus:ring-blue-100'
+  'block w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-sm text-slate-900 shadow-sm transition focus:border-violet-500 focus:outline-none focus:ring-4 focus:ring-violet-100'
 
 const lineInputClass =
   'block w-full border-0 border-b border-slate-300 bg-transparent px-0 pb-1.5 pt-1 text-sm text-slate-900 transition focus:border-violet-500 focus:outline-none focus:ring-0'
@@ -2011,6 +2011,15 @@ export default function Agendamentos() {
 
   return (
     <div className="w-full min-w-0 max-w-full overflow-x-hidden px-2 sm:px-0">
+      <header className="mb-4 px-1 sm:px-2">
+        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <CalendarDays className="h-6 w-6 text-violet-600" />
+          Agendamentos
+        </h1>
+        <p className="text-sm text-slate-500 mt-0.5">
+          Calendário, linha do tempo e gestão dos atendimentos.
+        </p>
+      </header>
       <div className="space-y-3">
         <div className="rounded-[28px] border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-2 shadow-sm sm:p-2.5 lg:p-3">
           <div className="mb-1.5 flex flex-col gap-1.5 px-1 sm:px-1.5 lg:flex-row lg:items-center lg:justify-between">
@@ -2089,7 +2098,7 @@ export default function Agendamentos() {
                   }}
                   variant="primary"
                   aria-label="Novo agendamento"
-                  className="flex h-10 w-full items-center justify-center gap-2 rounded-2xl border border-blue-400/20 bg-gradient-to-r from-blue-600 to-cyan-500 px-4 text-sm font-semibold text-white shadow-[0_14px_34px_-20px_rgba(37,99,235,0.9)] hover:from-blue-700 hover:to-cyan-600 sm:w-auto"
+                  className="w-full h-10 sm:w-auto"
                 >
                   <Plus className="h-4 w-4" strokeWidth={2.5} />
                   Novo agendamento
@@ -2610,7 +2619,7 @@ export default function Agendamentos() {
                   onClick={handleCriarAgendamento}
                   disabled={createMutation.isPending || profissionaisDisponiveis.length === 0}
                   isLoading={createMutation.isPending}
-                  className="rounded-xl bg-blue-600 px-5 py-2 hover:bg-blue-700"
+                  className="px-5 py-2"
                 >
                   Salvar
                 </Button>
@@ -2858,7 +2867,7 @@ export default function Agendamentos() {
                         }}
                         className={`flex w-full items-center justify-between rounded-lg px-2 py-2 text-left transition ${
                           agendamentoDetalhes.id
-                            ? 'hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-200'
+                            ? 'hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-violet-200'
                             : 'cursor-default'
                         }`}
                       >
@@ -2910,7 +2919,7 @@ export default function Agendamentos() {
                         <button
                           type="button"
                           onClick={() => abrirModalAjustePagamento(agendamentoDetalhes)}
-                          className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                          className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-violet-200"
                         >
                           <div className="min-w-0 flex items-center gap-4">
                             <div className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-blue-600 text-white">
@@ -3195,7 +3204,7 @@ export default function Agendamentos() {
                     prev ? { ...prev, devolveuSinal: e.target.checked } : prev
                   )
                 }
-                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-violet-500"
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
               />
               <div>
                 <p className="text-sm font-medium text-slate-800">Devolução do sinal?</p>
@@ -3748,7 +3757,7 @@ export default function Agendamentos() {
                   onClick={handleSalvarEdicao}
                   disabled={updateMutation.isPending}
                   isLoading={updateMutation.isPending}
-                  className="rounded-xl bg-blue-600 px-5 py-2 hover:bg-blue-700"
+                  className="px-5 py-2"
                 >
                   Salvar
                 </Button>
@@ -3848,7 +3857,7 @@ export default function Agendamentos() {
                 onClick={confirmarAjustePagamento}
                 disabled={ajustarPagamentoMutation.isPending}
                 isLoading={ajustarPagamentoMutation.isPending}
-                className="rounded-xl bg-blue-600 px-3.5 py-1.5 text-sm font-semibold hover:bg-blue-700"
+                className="px-3.5 py-1.5"
               >
                 Salvar
               </Button>
@@ -4004,7 +4013,7 @@ export default function Agendamentos() {
                 onClick={confirmarAgendamento}
                 disabled={confirmarMutation.isPending}
                 isLoading={confirmarMutation.isPending}
-                className="rounded-xl bg-blue-600 px-3.5 py-1.5 text-sm font-semibold hover:bg-blue-700"
+                className="px-3.5 py-1.5"
               >
                 Confirmar
               </Button>
@@ -4249,7 +4258,7 @@ function ClienteForm({
   })
 
   const inputClassName =
-    'mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 shadow-sm focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-blue-200'
+    'mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 shadow-sm focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-200'
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -4335,7 +4344,7 @@ function ClienteForm({
           <button
             type="button"
             onClick={() => setMostrarMaisCampos((prev) => !prev)}
-            className="text-sm font-medium text-blue-600 underline underline-offset-2 transition hover:text-blue-700"
+            className="text-sm font-medium text-violet-600 underline underline-offset-2 transition hover:text-violet-700"
           >
             {mostrarMaisCampos ? 'Menos campos' : 'Mais campos'}
           </button>
@@ -4437,7 +4446,7 @@ function ServicoForm({
   }
 
   const inputClassName =
-    'mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 shadow-sm focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-blue-200'
+    'mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 shadow-sm focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-200'
 
   return (
     <form onSubmit={handleSubmit} className="-m-6 flex max-h-[78vh] flex-col">

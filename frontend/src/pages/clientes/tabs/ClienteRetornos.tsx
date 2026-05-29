@@ -114,65 +114,64 @@ export default function ClienteRetornos() {
         </div>
       </div>
 
-      {/* Table */}
+      {/* Cards */}
       {!servicoId ? (
-        <div className="text-center py-12 text-slate-400">
+        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-600">
           Selecione um serviço para ver os retornos previstos.
         </div>
       ) : isLoading || isFetching ? (
         <div className="text-center py-8 text-slate-400">Carregando...</div>
       ) : retornos.length === 0 ? (
-        <div className="text-center py-12 text-slate-400">
+        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-600">
           Nenhum retorno previsto para os filtros selecionados.
         </div>
       ) : (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="text-left px-4 py-3 text-slate-500 font-semibold">Nome</th>
-                  <th className="text-left px-4 py-3 text-slate-500 font-semibold">Retorno</th>
-                  <th className="text-left px-4 py-3 text-slate-500 font-semibold">Dias p/ retorno</th>
-                  <th className="text-left px-4 py-3 text-slate-500 font-semibold hidden sm:table-cell">Último atend.</th>
-                  <th className="text-left px-4 py-3 text-slate-500 font-semibold hidden md:table-cell">Nº atend.</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {retornos.map((r) => (
-                  <tr key={r.clienteId} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3">
-                      <button
-                        className="text-violet-700 hover:text-violet-900 font-medium text-left"
-                        onClick={() => setQuickModalId(r.clienteId)}
-                      >
-                        {r.clienteNome}
-                      </button>
+        <>
+          <ul className="space-y-2">
+            {retornos.map((r) => {
+              const inicial = (r.clienteNome || '?').charAt(0).toUpperCase()
+              return (
+                <li
+                  key={r.clienteId}
+                  className="bg-white border border-slate-200 rounded-2xl p-4 hover:shadow-sm transition"
+                >
+                  <div className="flex items-start gap-3">
+                    <button
+                      onClick={() => setQuickModalId(r.clienteId)}
+                      className="h-10 w-10 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-sm font-bold flex-shrink-0 hover:bg-violet-200 transition"
+                    >
+                      {inicial}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          onClick={() => setQuickModalId(r.clienteId)}
+                          className="text-sm font-semibold text-slate-900 truncate hover:text-violet-700 text-left"
+                        >
+                          {r.clienteNome}
+                        </button>
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${getDiasBadge(r.diasParaRetorno)}`}>
+                          {getDiasLabel(r.diasParaRetorno)}
+                        </span>
+                      </div>
                       {r.clienteTelefone && (
-                        <div className="text-slate-400 text-xs">{r.clienteTelefone}</div>
+                        <p className="text-xs text-slate-500 mt-0.5">{r.clienteTelefone}</p>
                       )}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{formatDate(r.dataRetorno)}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getDiasBadge(r.diasParaRetorno)}`}>
-                        {getDiasLabel(r.diasParaRetorno)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 hidden sm:table-cell">
-                      {formatDate(r.ultimoAtendimento)}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 hidden md:table-cell">
-                      {r.totalAtendimentos}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="px-4 py-2 border-t border-slate-200 bg-slate-50 text-sm text-slate-500">
+                      <p className="text-xs text-slate-500 mt-1">
+                        Retorno: <span className="font-semibold text-slate-700">{formatDate(r.dataRetorno)}</span>
+                        {' · '}último: {formatDate(r.ultimoAtendimento)}
+                        {' · '}{r.totalAtendimentos} atend.
+                      </p>
+                    </div>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+          <p className="text-xs text-slate-500 text-center">
             {retornos.length} cliente{retornos.length !== 1 ? 's' : ''} — ordenado por urgência
-          </div>
-        </div>
+          </p>
+        </>
       )}
 
       <ClienteQuickModal clienteId={quickModalId} onClose={() => setQuickModalId(null)} />

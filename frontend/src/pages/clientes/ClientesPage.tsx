@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search } from 'lucide-react'
+import { Search, Users } from 'lucide-react'
 import { useCategoria } from '../../hooks/useCategoria'
 import ClienteGerenciamento from './tabs/ClienteGerenciamento'
 import ClienteRetornos from './tabs/ClienteRetornos'
@@ -21,10 +21,18 @@ export default function ClientesPage() {
   const [searchTerm, setSearchTerm] = useState('')
 
   return (
-    <div className="w-full space-y-4">
-      {/* Page header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{dict.rotuloClientePlural}</h1>
+    <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
+      {/* Header */}
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Users className="h-6 w-6 text-violet-600" />
+            {dict.rotuloClientePlural}
+          </h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Cadastro, retornos e clientes inativos.
+          </p>
+        </div>
         {activeTab === 'gerenciamento' && (
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
@@ -33,11 +41,11 @@ export default function ClientesPage() {
               placeholder="Buscar por nome ou telefone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white text-slate-900 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+              className="w-full bg-white text-slate-900 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
             />
           </div>
         )}
-      </div>
+      </header>
 
       {/* Tabs */}
       <div className="border-b border-slate-200">

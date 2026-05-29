@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Trash2, Eye, ClipboardList } from 'lucide-react'
+import { Plus, Trash2, Eye, ClipboardList, FileText } from 'lucide-react'
 import { anamneseService } from '../../services/anamneseService'
 import { useNotification } from '../../contexts/NotificationContext'
 import ConfirmDialog from '../../components/ConfirmDialog'
@@ -46,122 +46,110 @@ export default function AnamneseListPage() {
   }
 
   return (
-    <div className="w-full">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Anamneses</h1>
+    <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
+      {/* Header */}
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <FileText className="h-6 w-6 text-violet-600" />
+            Anamneses
+          </h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Fichas clínicas dos seus clientes.
+          </p>
+        </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="secondary" onClick={() => navigate('/anamneses/templates')}>
-            <ClipboardList className="h-5 w-5 mr-2" />
-            Gerenciar Templates
+            <ClipboardList className="h-4 w-4" />
+            Templates
           </Button>
           <Button onClick={() => navigate('/anamneses/nova')}>
-            <Plus className="h-5 w-5 mr-2" />
+            <Plus className="h-4 w-4" />
             Nova Ficha
           </Button>
         </div>
-      </div>
+      </header>
 
-      <div className="mb-4">
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Buscar por nome de cliente..."
-          className="block w-full sm:w-80 rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 text-sm"
-        />
-      </div>
+      {/* Busca */}
+      <input
+        type="text"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        placeholder="Buscar por nome de cliente..."
+        className="block w-full rounded-xl border border-slate-200 px-3 py-2 text-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+      />
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        {filtered.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">
-              {searchTerm ? 'Nenhuma ficha encontrada com os filtros aplicados' : 'Nenhuma ficha encontrada'}
-            </p>
+      {/* Lista como cards */}
+      {filtered.length === 0 ? (
+        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
+          <div className="mx-auto h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mb-3">
+            <FileText className="h-5 w-5" />
           </div>
-        ) : (
-          <>
-            <div className="hidden sm:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serviço</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Template</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filtered.map((a) => (
-                    <tr key={a.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{a.clienteNome}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{a.servicoNome || '—'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{a.templateNome || '—'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {a.data ? new Date(a.data + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => navigate(`/anamneses/${a.id}`)}
-                            className="text-violet-700 hover:text-violet-900"
-                            aria-label="Ver ficha"
-                          >
-                            <Eye className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={() => setConfirmDelete({ isOpen: true, id: a.id })}
-                            className="text-red-600 hover:text-red-800"
-                            aria-label="Excluir ficha"
-                          >
-                            <Trash2 className="h-5 w-5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <p className="text-sm text-slate-600">
+            {searchTerm ? 'Nenhuma ficha encontrada com os filtros aplicados.' : 'Nenhuma ficha cadastrada ainda.'}
+          </p>
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {filtered.map((a) => {
+            const inicial = (a.clienteNome || '?').charAt(0).toUpperCase()
+            return (
+              <li
+                key={a.id}
+                className="bg-white border border-slate-200 rounded-2xl p-4 hover:shadow-sm transition"
+              >
+                <div className="flex items-start gap-3">
+                  {/* Avatar cliente */}
+                  <div className="h-10 w-10 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                    {inicial}
+                  </div>
 
-            {/* Mobile list */}
-            <ul className="sm:hidden divide-y divide-gray-200">
-              {filtered.map((a) => (
-                <li key={a.id} className="px-4 py-4">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-gray-900">{a.clienteNome}</p>
-                      {a.servicoNome && <p className="text-xs text-gray-500">{a.servicoNome}</p>}
-                      {a.templateNome && <p className="text-xs text-gray-400">{a.templateNome}</p>}
-                      <p className="text-xs text-gray-500">
-                        {a.data ? new Date(a.data + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
-                      </p>
-                    </div>
-                    <div className="flex gap-2 ml-4">
-                      <button
-                        onClick={() => navigate(`/anamneses/${a.id}`)}
-                        className="text-violet-700 hover:text-violet-900"
-                      >
-                        <Eye className="h-5 w-5" />
-                      </button>
-                      <button
-                        onClick={() => setConfirmDelete({ isOpen: true, id: a.id })}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <Trash2 className="h-5 w-5" />
-                      </button>
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-900 truncate">{a.clienteNome}</p>
+                    {a.servicoNome && (
+                      <p className="text-xs text-slate-500 truncate mt-0.5">{a.servicoNome}</p>
+                    )}
+                    <div className="flex items-center gap-2 text-xs text-slate-400 mt-1 flex-wrap">
+                      {a.templateNome && <span>{a.templateNome}</span>}
+                      {a.templateNome && a.data && <span>·</span>}
+                      {a.data && (
+                        <span>{new Date(a.data + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
+                      )}
                     </div>
                   </div>
-                </li>
-              ))}
-            </ul>
 
-            <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 text-sm text-gray-600">
-              Mostrando {filtered.length} de {anamneses.length} ficha{anamneses.length !== 1 ? 's' : ''}
-            </div>
-          </>
-        )}
-      </div>
+                  {/* Ações */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button
+                      onClick={() => navigate(`/anamneses/${a.id}`)}
+                      className="p-2 rounded-lg text-slate-500 hover:bg-violet-50 hover:text-violet-700 transition"
+                      aria-label="Ver ficha"
+                      title="Visualizar"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelete({ isOpen: true, id: a.id })}
+                      className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition"
+                      aria-label="Excluir ficha"
+                      title="Excluir"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      {filtered.length > 0 && (
+        <p className="text-xs text-slate-500 text-center">
+          Mostrando {filtered.length} de {anamneses.length} ficha{anamneses.length !== 1 ? 's' : ''}
+        </p>
+      )}
 
       <ConfirmDialog
         isOpen={confirmDelete.isOpen}

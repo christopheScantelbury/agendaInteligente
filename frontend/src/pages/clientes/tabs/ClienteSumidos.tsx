@@ -76,53 +76,54 @@ export default function ClienteSumidos() {
         </div>
       )}
 
-      {/* Table */}
+      {/* Cards */}
       {isLoading || isFetching ? (
         <div className="text-center py-8 text-slate-400">Carregando...</div>
       ) : sumidos.length === 0 ? (
-        <div className="text-center py-12 text-slate-400">
+        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-600">
           Nenhum cliente sumido com os filtros selecionados.
         </div>
       ) : (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="text-left px-4 py-3 text-slate-500 font-semibold">Nome</th>
-                  <th className="text-left px-4 py-3 text-slate-500 font-semibold">Último atendimento</th>
-                  <th className="text-left px-4 py-3 text-slate-500 font-semibold hidden sm:table-cell">Nº atend.</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {sumidos.map((s) => (
-                  <tr key={s.clienteId} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3">
+        <ul className="space-y-2">
+          {sumidos.map((s) => {
+            const inicial = (s.clienteNome || '?').charAt(0).toUpperCase()
+            return (
+              <li
+                key={s.clienteId}
+                className="bg-white border border-slate-200 rounded-2xl p-4 hover:shadow-sm transition"
+              >
+                <div className="flex items-start gap-3">
+                  <button
+                    onClick={() => setQuickModalId(s.clienteId)}
+                    className="h-10 w-10 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center text-sm font-bold flex-shrink-0 hover:bg-orange-200 transition"
+                  >
+                    {inicial}
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <button
-                        className="text-violet-700 hover:text-violet-900 font-medium text-left"
                         onClick={() => setQuickModalId(s.clienteId)}
+                        className="text-sm font-semibold text-slate-900 truncate hover:text-violet-700 text-left"
                       >
                         {s.clienteNome}
                       </button>
-                      {s.clienteTelefone && (
-                        <div className="text-slate-400 text-xs">{s.clienteTelefone}</div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      <div>{formatDate(s.ultimoAtendimento)}</div>
-                      <div className="text-orange-600 text-xs">
-                        há {s.diasSemRetorno} dia{s.diasSemRetorno !== 1 ? 's' : ''}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 hidden sm:table-cell">
-                      {s.totalAtendimentos}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                      <span className="inline-flex items-center rounded-full bg-orange-50 text-orange-700 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+                        há {s.diasSemRetorno}d
+                      </span>
+                    </div>
+                    {s.clienteTelefone && (
+                      <p className="text-xs text-slate-500 mt-0.5">{s.clienteTelefone}</p>
+                    )}
+                    <p className="text-xs text-slate-500 mt-1">
+                      Último: <span className="font-semibold text-slate-700">{formatDate(s.ultimoAtendimento)}</span>
+                      {' · '}{s.totalAtendimentos} atend.
+                    </p>
+                  </div>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
       )}
 
       <ClienteQuickModal clienteId={quickModalId} onClose={() => setQuickModalId(null)} />

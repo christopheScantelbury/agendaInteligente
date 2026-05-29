@@ -6,7 +6,7 @@ import { atendenteService } from '../services/atendenteService'
 import { authService } from '../services/authService'
 import { perfilService } from '../services/perfilService'
 import { podeEditar } from '../utils/permissions'
-import { Plus, Trash2, Edit, Sparkles } from 'lucide-react'
+import { Plus, Trash2, Edit, Sparkles, Scissors } from 'lucide-react'
 import { useState, useMemo, useEffect } from 'react'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
@@ -101,9 +101,18 @@ export default function Servicos() {
   }
 
   return (
-    <div className="w-full">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{dict.rotuloServicoPlural}</h1>
+    <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
+      {/* Header */}
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Scissors className="h-6 w-6 text-violet-600" />
+            {dict.rotuloServicoPlural}
+          </h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Cadastre e gerencie os {dict.rotuloServicoPlural.toLowerCase()} oferecidos.
+          </p>
+        </div>
         {podeEditarServicos && (
           <Button
             onClick={() => {
@@ -111,11 +120,11 @@ export default function Servicos() {
               setShowModal(true)
             }}
           >
-            <Plus className="h-5 w-5 mr-2" />
+            <Plus className="h-4 w-4" />
             Novo {dict.rotuloServico}
           </Button>
         )}
-      </div>
+      </header>
 
       {/* Barra de Filtros */}
       <FilterBar
@@ -135,75 +144,96 @@ export default function Servicos() {
         ]}
       />
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        {servicosFiltrados.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">
-              {searchTerm || Object.values(filters).some(v => v !== '' && v !== undefined)
-                ? 'Nenhum serviço encontrado com os filtros aplicados'
-                : 'Nenhum serviço cadastrado'}
-            </p>
+      {/* Lista de serviços como cards */}
+      {servicosFiltrados.length === 0 ? (
+        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
+          <div className="mx-auto h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mb-3">
+            <Scissors className="h-5 w-5" />
           </div>
-        ) : (
-          <ul className="divide-y divide-gray-200">
-            {servicosFiltrados.map((servico) => (
-            <li key={servico.id} className="px-6 py-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{servico.nome}</p>
-                  {servico.descricao && (
-                    <p className="text-sm text-gray-500">{servico.descricao}</p>
-                  )}
-                  <p className="text-sm text-gray-500">
-                    Valor: R$ {servico.valor.toFixed(2)} | Duração: {servico.duracaoMinutos} min
-                    {servico.unidadeId && (
-                      <> | Unidade: {getNomeUnidade(servico.unidadeId)}</>
-                    )}
-                  </p>
-                  <div className="flex gap-2 mt-1">
+          <p className="text-sm text-slate-600">
+            {searchTerm || Object.values(filters).some(v => v !== '' && v !== undefined)
+              ? 'Nenhum serviço encontrado com os filtros aplicados.'
+              : 'Nenhum serviço cadastrado ainda.'}
+          </p>
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {servicosFiltrados.map((servico) => (
+            <li
+              key={servico.id}
+              className="bg-white border border-slate-200 rounded-2xl p-4 hover:shadow-sm transition"
+            >
+              <div className="flex items-start gap-3">
+                {/* Ícone */}
+                <div className="h-10 w-10 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center flex-shrink-0">
+                  <Scissors className="h-5 w-5" />
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold text-slate-900 truncate">{servico.nome}</p>
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
                         servico.ativo
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
+                          ? 'bg-emerald-50 text-emerald-700'
+                          : 'bg-slate-100 text-slate-500'
                       }`}
                     >
                       {servico.ativo ? 'Ativo' : 'Inativo'}
                     </span>
                   </div>
+                  {servico.descricao && (
+                    <p className="text-xs text-slate-500 truncate mt-0.5">{servico.descricao}</p>
+                  )}
+                  <p className="text-xs text-slate-500 mt-1">
+                    <span className="font-semibold text-slate-700">
+                      R$ {servico.valor.toFixed(2).replace('.', ',')}
+                    </span>
+                    {' · '}
+                    {servico.duracaoMinutos} min
+                    {servico.unidadeId ? (
+                      <> · {getNomeUnidade(servico.unidadeId)}</>
+                    ) : null}
+                  </p>
                 </div>
+
+                {/* Ações */}
                 {podeEditarServicos && (
-                  <div className="flex space-x-2">
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     <button
                       onClick={() => {
                         setEditingServico(servico)
                         setShowModal(true)
                       }}
-                      className="text-violet-700 hover:text-violet-900 transition-colors"
+                      className="p-2 rounded-lg text-slate-500 hover:bg-violet-50 hover:text-violet-700 transition"
                       aria-label="Editar serviço"
+                      title="Editar"
                     >
-                      <Edit className="h-5 w-5" />
+                      <Edit className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(servico.id)}
-                      className="text-red-600 hover:text-red-800 transition-colors"
+                      className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition"
                       aria-label="Excluir serviço"
+                      title="Excluir"
                     >
-                      <Trash2 className="h-5 w-5" />
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 )}
               </div>
             </li>
-            ))}
-          </ul>
-        )}
-        {servicosFiltrados.length > 0 && (
-          <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 text-sm text-gray-600">
-            Mostrando {servicosFiltrados.length} de {servicos.length} serviço{servicos.length !== 1 ? 's' : ''}
-          </div>
-        )}
-      </div>
+          ))}
+        </ul>
+      )}
+
+      {/* Rodapé com contagem */}
+      {servicosFiltrados.length > 0 && (
+        <p className="text-xs text-slate-500 text-center">
+          Mostrando {servicosFiltrados.length} de {servicos.length} {dict.rotuloServicoPlural.toLowerCase()}
+        </p>
+      )}
 
       <Modal
         isOpen={showModal}
