@@ -63,7 +63,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
         message={cliente?.nome ? `Até logo, ${cliente.nome.split(' ')[0]}. Deseja mesmo sair?` : 'Deseja mesmo sair?'}
         confirmText="Sair"
         cancelText="Cancelar"
-        variant="danger"
+        variant="warning"
         onConfirm={confirmLogout}
         onCancel={() => setShowLogoutConfirm(false)}
       />

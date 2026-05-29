@@ -93,7 +93,7 @@ export default function PerfilCliente() {
         message={cliente?.nome ? `Até logo, ${cliente.nome.split(' ')[0]}. Deseja mesmo sair?` : 'Deseja mesmo sair?'}
         confirmText="Sair"
         cancelText="Cancelar"
-        variant="danger"
+        variant="warning"
         onConfirm={handleSair}
         onCancel={() => setShowLogoutConfirm(false)}
       />
