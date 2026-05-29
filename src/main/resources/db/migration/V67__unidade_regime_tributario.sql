@@ -1,0 +1,13 @@
+-- Único campo fiscal que faltava em unidades para emissão de NFS-e Nacional.
+-- razao_social e inscricao_estadual JÁ EXISTEM (criadas em migration antiga não rastreada).
+-- Por isso V65/V66 falharam: ALTER tentava criar colunas existentes.
+--
+-- Confirmado em 29/05/2026 via query direta no Postgres do Railway:
+-- razao_social (character varying), inscricao_estadual (character varying) presentes.
+-- regime_tributario NÃO presente.
+--
+-- IF NOT EXISTS por segurança caso esta migration rode em ambientes onde
+-- a coluna já tenha sido adicionada por algum outro caminho.
+--
+-- regime_tributario alimenta o XML de RPS: MEI, SIMPLES_NACIONAL, LUCRO_PRESUMIDO, LUCRO_REAL.
+ALTER TABLE unidades ADD COLUMN IF NOT EXISTS regime_tributario VARCHAR(30);
