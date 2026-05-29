@@ -18,15 +18,27 @@ import ConfigPageHeader from '../../components/configuracoes/ConfigPageHeader'
 import ProximaEtapaCard from '../../components/configuracoes/ProximaEtapaCard'
 
 const HOJE = new Date()
-/** Backend espera LocalDateTime (ISO-8601 com hora). Usar 23:59:59 do dia final
- * pra link/acesso valerem o dia inteiro. */
-function emDias(dias: number): string {
+const pad = (n: number) => n.toString().padStart(2, '0')
+
+/** Calcula a data daqui a N dias, em horário local (sem UTC drift). */
+function dataEmDias(dias: number): Date {
   const d = new Date(HOJE)
   d.setDate(d.getDate() + dias)
-  // YYYY-MM-DDTHH:mm:ss (sem timezone — Spring Boot parseia direto pra LocalDateTime)
+  return d
+}
+
+/** Backend `dataExpiracaoLink` é LocalDateTime → "YYYY-MM-DDTHH:mm:ss" (sem TZ).
+ * 23:59:59 pra link valer o dia inteiro. */
+function emDiasDateTime(dias: number): string {
+  const d = dataEmDias(dias)
   d.setHours(23, 59, 59, 0)
-  const pad = (n: number) => n.toString().padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
+
+/** Backend `dataExpiracaoAcesso` é LocalDate → "YYYY-MM-DD". */
+function emDiasDate(dias: number): string {
+  const d = dataEmDias(dias)
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
 function formatarData(iso: string | null): string {
@@ -56,8 +68,8 @@ export default function EquipeConfig() {
     mutationFn: () =>
       conviteService.criarConviteAcesso({
         maxUnidades: parseInt(form.maxUnidades, 10) || 1,
-        dataExpiracaoLink: emDias(parseInt(form.diasExpiracaoLink, 10) || 7),
-        dataExpiracaoAcesso: emDias(parseInt(form.diasExpiracaoAcesso, 10) || 365),
+        dataExpiracaoLink: emDiasDateTime(parseInt(form.diasExpiracaoLink, 10) || 7),
+        dataExpiracaoAcesso: emDiasDate(parseInt(form.diasExpiracaoAcesso, 10) || 365),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['configuracoes', 'convites-acesso'] })
