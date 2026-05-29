@@ -25,6 +25,7 @@ import Login from './pages/Login'
 import Cadastro from './pages/Cadastro'
 import LoginCliente from './pages/LoginCliente'
 import CadastroCliente from './pages/CadastroCliente'
+import CadastroPorConvite from './pages/CadastroPorConvite'
 import Landing from './pages/Landing'
 import RecuperarSenha from './pages/RecuperarSenha'
 import RedefinirSenha from './pages/RedefinirSenha'
@@ -182,6 +183,11 @@ function App() {
                 path="/cliente/cadastro"
                 element={clientePublicoService.isAuthenticated() ? <Navigate to="/cliente" /> : <CadastroCliente />}
               />
+
+              {/* Cadastro via convite — quem clica no link recebido por email/whatsapp.
+                  Suporta dois aliases ("gerente" e "atendente") pra robustez. */}
+              <Route path="/cadastro-gerente" element={<CadastroPorConvite />} />
+              <Route path="/cadastro-atendente" element={<CadastroPorConvite />} />
               <Route
                 path="/cliente"
                 element={
