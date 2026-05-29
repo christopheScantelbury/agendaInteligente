@@ -7,7 +7,7 @@ import { atendenteService, Atendente } from '../services/atendenteService'
 import { servicoService, Servico } from '../services/servicoService'
 import { authService } from '../services/authService'
 import { podeEditar } from '../utils/permissions'
-import { Plus, Trash2, Edit, Eye, EyeOff, Stethoscope, Lock } from 'lucide-react'
+import { Plus, Trash2, Edit, Eye, EyeOff, Stethoscope, Lock, UserCircle2 } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { matchSearch } from '../utils/normalize'
 import Modal from '../components/Modal'
@@ -184,9 +184,17 @@ export default function Usuarios() {
   }
 
   return (
-    <div className="w-full">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Usuários</h1>
+    <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <UserCircle2 className="h-6 w-6 text-violet-600" />
+            Usuários
+          </h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Logins do sistema, perfis e unidades de acesso.
+          </p>
+        </div>
         {podeEditarUsuarios && (
           <Button
             onClick={() => {
@@ -194,11 +202,11 @@ export default function Usuarios() {
               setShowModal(true)
             }}
           >
-            <Plus className="h-5 w-5 mr-2" />
+            <Plus className="h-4 w-4" />
             Novo Usuário
           </Button>
         )}
-      </div>
+      </header>
 
       {/* Barra de Filtros */}
       <FilterBar
@@ -226,88 +234,103 @@ export default function Usuarios() {
         ]}
       />
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        {usuariosFiltrados.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">
-              {searchTerm || Object.values(filters).some(v => v !== '' && v !== undefined)
-                ? 'Nenhum usuário encontrado com os filtros aplicados'
-                : 'Nenhum usuário cadastrado'}
-            </p>
+      {usuariosFiltrados.length === 0 ? (
+        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
+          <div className="mx-auto h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mb-3">
+            <UserCircle2 className="h-5 w-5" />
           </div>
-        ) : (
-          <ul className="divide-y divide-gray-200">
-            {usuariosFiltrados.map((usuario) => (
-            <li key={usuario.id} className="px-6 py-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{usuario.nome}</p>
-                  <p className="text-sm text-gray-500">Email: {usuario.email}</p>
-                  <p className="text-sm text-gray-500">
-                    Perfil: <span className="font-medium">
-                      {perfis.find((p) => p.id === usuario.perfilId)?.nome ?? usuario.perfil ?? '—'}
-                    </span>
-                  </p>
-                  {usuario.nomesUnidades && usuario.nomesUnidades.length > 0 && (
-                    <p className="text-sm text-gray-500">
-                      Unidades: {usuario.nomesUnidades.join(', ')}
-                    </p>
-                  )}
-                  {!usuario.nomesUnidades && usuario.nomeUnidade && (
-                    <p className="text-sm text-gray-500">Unidade: {usuario.nomeUnidade}</p>
-                  )}
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${usuario.ativo
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
-                      }`}
-                  >
-                    {usuario.ativo ? 'Ativo' : 'Inativo'}
-                  </span>
-                </div>
-                <div className="flex space-x-2">
-                  {isAdmin && (
-                    <button
-                      onClick={() => setSenhaModal({ open: true, usuario })}
-                      className="text-amber-600 hover:text-amber-800 transition-colors"
-                      aria-label="Alterar senha"
-                    >
-                      <Lock className="h-5 w-5" />
-                    </button>
-                  )}
-                  {podeEditarUsuarios && (
-                    <>
-                      <button
-                        onClick={() => {
-                          setEditingUsuario(usuario)
-                          setShowModal(true)
-                        }}
-                        className="text-violet-700 hover:text-violet-900 transition-colors"
-                        aria-label="Editar usuário"
+          <p className="text-sm text-slate-600">
+            {searchTerm || Object.values(filters).some(v => v !== '' && v !== undefined)
+              ? 'Nenhum usuário encontrado com os filtros aplicados.'
+              : 'Nenhum usuário cadastrado ainda.'}
+          </p>
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {usuariosFiltrados.map((usuario) => {
+            const ativo = usuario.ativo ?? true
+            const inicial = (usuario.nome || '?').charAt(0).toUpperCase()
+            const nomePerfil = perfis.find((p) => p.id === usuario.perfilId)?.nome ?? usuario.perfil ?? null
+            const unidadesTexto = usuario.nomesUnidades && usuario.nomesUnidades.length > 0
+              ? usuario.nomesUnidades.join(', ')
+              : usuario.nomeUnidade ?? null
+            return (
+              <li
+                key={usuario.id}
+                className="bg-white border border-slate-200 rounded-2xl p-4 hover:shadow-sm transition"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="h-10 w-10 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                    {inicial}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-slate-900 truncate">{usuario.nome}</p>
+                      {nomePerfil && (
+                        <span className="inline-flex items-center rounded-full bg-violet-50 text-violet-700 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+                          {nomePerfil}
+                        </span>
+                      )}
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                          ativo ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                        }`}
                       >
-                        <Edit className="h-5 w-5" />
-                      </button>
+                        {ativo ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 truncate mt-0.5">{usuario.email}</p>
+                    {unidadesTexto && (
+                      <p className="text-xs text-slate-400 truncate mt-1">{unidadesTexto}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {isAdmin && (
                       <button
-                        onClick={() => handleDelete(usuario.id!)}
-                        className="text-red-600 hover:text-red-800 transition-colors"
-                        aria-label="Excluir usuário"
+                        onClick={() => setSenhaModal({ open: true, usuario })}
+                        className="p-2 rounded-lg text-slate-500 hover:bg-amber-50 hover:text-amber-700 transition"
+                        aria-label="Alterar senha"
+                        title="Alterar senha"
                       >
-                        <Trash2 className="h-5 w-5" />
+                        <Lock className="h-4 w-4" />
                       </button>
-                    </>
-                  )}
+                    )}
+                    {podeEditarUsuarios && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setEditingUsuario(usuario)
+                            setShowModal(true)
+                          }}
+                          className="p-2 rounded-lg text-slate-500 hover:bg-violet-50 hover:text-violet-700 transition"
+                          aria-label="Editar usuário"
+                          title="Editar"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(usuario.id!)}
+                          className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition"
+                          aria-label="Excluir usuário"
+                          title="Excluir"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </li>
-            ))}
-          </ul>
-        )}
-        {usuariosFiltrados.length > 0 && (
-          <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 text-sm text-gray-600">
-            Mostrando {usuariosFiltrados.length} de {usuarios.length} usuário{usuarios.length !== 1 ? 's' : ''}
-          </div>
-        )}
-      </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      {usuariosFiltrados.length > 0 && (
+        <p className="text-xs text-slate-500 text-center">
+          Mostrando {usuariosFiltrados.length} de {usuarios.length} usuário{usuarios.length !== 1 ? 's' : ''}
+        </p>
+      )}
 
       <Modal
         isOpen={showModal}
@@ -744,7 +767,7 @@ function UsuarioForm({
       {perfilAtendente && (
         <div className="border-t pt-4 space-y-4">
           <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-            <Stethoscope className="h-4 w-4 text-blue-600" />
+            <Stethoscope className="h-4 w-4 text-violet-600" />
             Dados do atendente / profissional
           </h3>
           <p className="text-xs text-gray-500">

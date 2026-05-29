@@ -5,7 +5,7 @@ import { atendenteService } from '../services/atendenteService'
 import { authService } from '../services/authService'
 import { perfilService } from '../services/perfilService'
 import { podeEditar } from '../utils/permissions'
-import { Plus, Trash2, Edit, Clock, UserCog, ExternalLink } from 'lucide-react'
+import { Plus, Trash2, Edit, Clock, UserCog, ExternalLink, Building2, Phone } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import Modal from '../components/Modal'
@@ -99,9 +99,17 @@ export default function Unidades() {
   }
 
   return (
-    <div className="w-full">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Unidades</h1>
+    <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Building2 className="h-6 w-6 text-violet-600" />
+            Unidades
+          </h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Endereços e horários de funcionamento da empresa.
+          </p>
+        </div>
         {podeEditarUnidades && (
           <Button
             onClick={() => {
@@ -109,11 +117,11 @@ export default function Unidades() {
               setShowModal(true)
             }}
           >
-            <Plus className="h-5 w-5 mr-2" />
+            <Plus className="h-4 w-4" />
             Nova Unidade
           </Button>
         )}
-      </div>
+      </header>
 
       {/* Barra de Filtros */}
       <FilterBar
@@ -146,74 +154,97 @@ export default function Unidades() {
         ]}
       />
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        {unidadesFiltradas.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">
-              {searchTerm || Object.values(filters).some(v => v !== '' && v !== undefined)
-                ? 'Nenhuma unidade encontrada com os filtros aplicados'
-                : 'Nenhuma unidade cadastrada'}
-            </p>
+      {unidadesFiltradas.length === 0 ? (
+        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
+          <div className="mx-auto h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mb-3">
+            <Building2 className="h-5 w-5" />
           </div>
-        ) : (
-          <ul className="divide-y divide-gray-200">
-            {unidadesFiltradas.map((unidade) => (
-            <li key={unidade.id} className="px-6 py-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{unidade.nome}</p>
-
-                  {unidade.endereco && (
-                    <p className="text-sm text-gray-500">
-                      {unidade.endereco}
-                      {unidade.numero && `, ${unidade.numero}`}
-                      {unidade.bairro && ` - ${unidade.bairro}`}
-                    </p>
+          <p className="text-sm text-slate-600">
+            {searchTerm || Object.values(filters).some(v => v !== '' && v !== undefined)
+              ? 'Nenhuma unidade encontrada com os filtros aplicados.'
+              : 'Nenhuma unidade cadastrada ainda.'}
+          </p>
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {unidadesFiltradas.map((unidade) => {
+            const ativo = unidade.ativo ?? true
+            const endereco = [unidade.endereco, unidade.numero && unidade.endereco ? `, ${unidade.numero}` : '', unidade.bairro ? ` - ${unidade.bairro}` : '']
+              .filter(Boolean)
+              .join('')
+            return (
+              <li
+                key={unidade.id}
+                className="bg-white border border-slate-200 rounded-2xl p-4 hover:shadow-sm transition"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="h-10 w-10 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center flex-shrink-0">
+                    <Building2 className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-slate-900 truncate">{unidade.nome}</p>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                          ativo ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                        }`}
+                      >
+                        {ativo ? 'Ativa' : 'Inativa'}
+                      </span>
+                    </div>
+                    {endereco && (
+                      <p className="text-xs text-slate-500 truncate mt-0.5">{endereco}</p>
+                    )}
+                    <div className="flex items-center gap-3 text-xs text-slate-500 mt-1 flex-wrap">
+                      {unidade.telefone && (
+                        <span className="inline-flex items-center gap-1">
+                          <Phone className="h-3 w-3" />
+                          {unidade.telefone}
+                        </span>
+                      )}
+                      {(unidade.horarioAbertura || unidade.horarioFechamento) && (
+                        <span className="inline-flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {unidade.horarioAbertura?.slice(0, 5)} – {unidade.horarioFechamento?.slice(0, 5)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {podeEditarUnidades && (
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => {
+                          setEditingUnidade(unidade)
+                          setShowModal(true)
+                        }}
+                        className="p-2 rounded-lg text-slate-500 hover:bg-violet-50 hover:text-violet-700 transition"
+                        aria-label="Editar unidade"
+                        title="Editar"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(unidade.id!)}
+                        className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition"
+                        aria-label="Excluir unidade"
+                        title="Excluir"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   )}
-                  <div className="flex gap-4 mt-1">
-                    {unidade.telefone && (
-                      <p className="text-sm text-gray-500">Tel: {unidade.telefone}</p>
-                    )}
-                    {(unidade.horarioAbertura || unidade.horarioFechamento) && (
-                      <p className="text-sm text-gray-500 flex items-center">
-                        <Clock className="h-3 w-3 mr-1" />
-                        {unidade.horarioAbertura?.slice(0, 5)} - {unidade.horarioFechamento?.slice(0, 5)}
-                      </p>
-                    )}
-                  </div>
                 </div>
-                {podeEditarUnidades && (
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => {
-                        setEditingUnidade(unidade)
-                        setShowModal(true)
-                      }}
-                      className="text-violet-700 hover:text-violet-900 transition-colors"
-                      aria-label="Editar unidade"
-                    >
-                      <Edit className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(unidade.id!)}
-                      className="text-red-600 hover:text-red-800 transition-colors"
-                      aria-label="Excluir unidade"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </li>
-            ))}
-          </ul>
-        )}
-        {unidadesFiltradas.length > 0 && (
-          <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 text-sm text-gray-600">
-            Mostrando {unidadesFiltradas.length} de {unidades.length} unidade{unidades.length !== 1 ? 's' : ''}
-          </div>
-        )}
-      </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      {unidadesFiltradas.length > 0 && (
+        <p className="text-xs text-slate-500 text-center">
+          Mostrando {unidadesFiltradas.length} de {unidades.length} unidade{unidades.length !== 1 ? 's' : ''}
+        </p>
+      )}
 
       <Modal
         isOpen={showModal}

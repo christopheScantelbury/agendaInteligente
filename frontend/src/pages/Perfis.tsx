@@ -86,9 +86,17 @@ export default function Perfis() {
   }
 
   return (
-    <div className="w-full">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Perfis e Permissões</h1>
+    <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Shield className="h-6 w-6 text-violet-600" />
+            Perfis e Permissões
+          </h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Controle de acesso por tela para cada tipo de usuário.
+          </p>
+        </div>
         {podeEditarPerfis && (
           <Button
             onClick={() => {
@@ -96,77 +104,100 @@ export default function Perfis() {
               setShowModal(true)
             }}
           >
-            <Plus className="h-5 w-5 mr-2" />
+            <Plus className="h-4 w-4" />
             Novo Perfil
           </Button>
         )}
-      </div>
+      </header>
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul className="divide-y divide-gray-200">
-          {perfis.map((perfil) => (
-            <li key={perfil.id} className="px-6 py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {perfil.sistema ? (
-                    <Lock className="h-5 w-5 text-gray-400" />
-                  ) : (
-                    <Shield className="h-5 w-5 text-blue-500" />
-                  )}
-                  <div>
+      {perfis.length === 0 ? (
+        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
+          <div className="mx-auto h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mb-3">
+            <Shield className="h-5 w-5" />
+          </div>
+          <p className="text-sm text-slate-600">Nenhum perfil cadastrado ainda.</p>
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {perfis.map((perfil) => {
+            const totalMenus = contarMenusPermitidos(perfil)
+            return (
+              <li
+                key={perfil.id}
+                className="bg-white border border-slate-200 rounded-2xl p-4 hover:shadow-sm transition"
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    perfil.sistema
+                      ? 'bg-slate-100 text-slate-500'
+                      : 'bg-violet-100 text-violet-700'
+                  }`}>
+                    {perfil.sistema ? <Lock className="h-5 w-5" /> : <Shield className="h-5 w-5" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-medium text-gray-900">{perfil.nome}</p>
+                      <p className="text-sm font-semibold text-slate-900 truncate">{perfil.nome}</p>
                       {perfil.sistema && (
-                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">Sistema</span>
+                        <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+                          Sistema
+                        </span>
                       )}
                       {perfil.atendente && (
-                        <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-1 rounded">Profissional/Secretaria</span>
+                        <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+                          Profissional/Secretaria
+                        </span>
                       )}
                       {perfil.cliente && (
-                        <span className="text-xs bg-sky-100 text-sky-800 px-2 py-1 rounded">Cliente</span>
+                        <span className="inline-flex items-center rounded-full bg-sky-50 text-sky-700 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+                          Cliente
+                        </span>
                       )}
                       {perfil.gerente && (
-                        <span className="text-xs bg-violet-100 text-violet-800 px-2 py-1 rounded">Gerente</span>
+                        <span className="inline-flex items-center rounded-full bg-violet-50 text-violet-700 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+                          Gerente
+                        </span>
                       )}
                     </div>
                     {perfil.descricao && (
-                      <p className="text-sm text-gray-500">{perfil.descricao}</p>
+                      <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{perfil.descricao}</p>
                     )}
-                    {contarMenusPermitidos(perfil) > 0 && (
-                      <p className="text-xs text-gray-400 mt-1">
-                        {contarMenusPermitidos(perfil)} menu(s) permitido(s)
+                    {totalMenus > 0 && (
+                      <p className="text-xs text-slate-400 mt-1">
+                        {totalMenus} menu{totalMenus > 1 ? 's' : ''} permitido{totalMenus > 1 ? 's' : ''}
                       </p>
                     )}
                   </div>
-                </div>
-                    {podeEditarPerfis && (
-                      <div className="flex space-x-2">
+                  {podeEditarPerfis && (
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => {
+                          setEditingPerfil(perfil)
+                          setShowModal(true)
+                        }}
+                        className="p-2 rounded-lg text-slate-500 hover:bg-violet-50 hover:text-violet-700 transition"
+                        aria-label="Editar perfil"
+                        title="Editar"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      {!perfil.sistema && (
                         <button
-                          onClick={() => {
-                            setEditingPerfil(perfil)
-                            setShowModal(true)
-                          }}
-                          className="text-violet-700 hover:text-violet-900 transition-colors"
-                          aria-label="Editar perfil"
+                          onClick={() => handleDelete(perfil.id!)}
+                          className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition"
+                          aria-label="Excluir perfil"
+                          title="Excluir"
                         >
-                          <Edit className="h-5 w-5" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
-                        {!perfil.sistema && (
-                          <button
-                            onClick={() => handleDelete(perfil.id!)}
-                            className="text-red-600 hover:text-red-800 transition-colors"
-                            aria-label="Excluir perfil"
-                          >
-                            <Trash2 className="h-5 w-5" />
-                          </button>
-                        )}
-                      </div>
-                    )}
-              </div>
-            </li>
-          ))}
+                      )}
+                    </div>
+                  )}
+                </div>
+              </li>
+            )
+          })}
         </ul>
-      </div>
+      )}
 
       <Modal
         isOpen={showModal}
@@ -471,8 +502,8 @@ function PerfilForm({
           </Button>
         </div>
         {perfil?.sistema && (
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-sm text-blue-800">
+          <div className="mt-4 p-3 bg-violet-50 border border-violet-200 rounded-md">
+            <p className="text-sm text-violet-800">
               <strong>Perfil do sistema:</strong> Apenas as permissões de menu podem ser editadas. Nome e descrição são fixos.
             </p>
           </div>
