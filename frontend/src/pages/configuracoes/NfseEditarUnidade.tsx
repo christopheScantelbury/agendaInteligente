@@ -169,12 +169,14 @@ export default function NfseEditarUnidade() {
         showNotification('error', 'CEP não encontrado.')
         return
       }
+      // Sempre sobrescreve quando ViaCEP retorna sucesso — user trocou o CEP,
+      // quer o endereço novo. Mantém só quando ViaCEP devolve campo vazio.
       setForm((p) => ({
         ...p,
-        endereco: p.endereco?.trim() ? p.endereco : end.logradouro,
-        bairro: p.bairro?.trim() ? p.bairro : end.bairro,
-        cidade: p.cidade?.trim() ? p.cidade : end.cidade,
-        uf: p.uf?.trim() ? p.uf : end.uf,
+        endereco: end.logradouro || p.endereco,
+        bairro: end.bairro || p.bairro,
+        cidade: end.cidade || p.cidade,
+        uf: end.uf || p.uf,
         municipioIbge: end.ibge ?? p.municipioIbge,
       }))
       showNotification('success', 'Endereço preenchido (incluindo código IBGE).')

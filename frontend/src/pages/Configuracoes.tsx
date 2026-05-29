@@ -311,13 +311,15 @@ export default function Configuracoes() {
         showNotification('error', 'CEP não encontrado. Preencha o endereço manualmente.')
         return
       }
-      // Só preenche campos VAZIOS pra não sobrescrever edição do user
+      // Sempre sobrescreve quando ViaCEP retorna sucesso — se o user trocou o CEP,
+      // ele quer o endereço novo. Mantém campos só quando o ViaCEP devolve vazio
+      // (ex.: CEPs antigos que não têm logradouro associado).
       setEmpresaForm((p) => ({
         ...p,
-        endereco: p.endereco?.trim() ? p.endereco : end.logradouro,
-        bairro: p.bairro?.trim() ? p.bairro : end.bairro,
-        cidade: p.cidade?.trim() ? p.cidade : end.cidade,
-        uf: p.uf?.trim() ? p.uf : end.uf,
+        endereco: end.logradouro || p.endereco,
+        bairro: end.bairro || p.bairro,
+        cidade: end.cidade || p.cidade,
+        uf: end.uf || p.uf,
       }))
       showNotification('success', 'Endereço preenchido automaticamente.')
     } finally {
