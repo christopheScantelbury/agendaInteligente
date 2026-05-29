@@ -124,7 +124,6 @@ export default function NfseEditarUnidade() {
     notafacilAtivo: false,
   })
   const [buscandoCep, setBuscandoCep] = useState(false)
-  const [mostrarApiKey, setMostrarApiKey] = useState(false)
   const [certFile, setCertFile] = useState<File | null>(null)
   const [certSenha, setCertSenha] = useState('')
   const [mostrarCertSenha, setMostrarCertSenha] = useState(false)
@@ -674,48 +673,29 @@ export default function NfseEditarUnidade() {
             </div>
           </SectionCard>
 
-          {/* ── Integração NotaFácil ─────────────────────────────────────── */}
+          {/* ── Emissão automática ──────────────────────────────────────── */}
           <SectionCard
             icon={Settings2}
-            title="Integração NotaFácil (Nota MEI Gateway)"
-            description="Credenciais para emissão automática via gateway."
+            title="Emissão automática"
+            description="Quando ativado, emitimos a NFS-e automaticamente ao concluir um atendimento."
           >
-            <div className="space-y-3">
-              <div>
-                <Label htmlFor="notafacilApiKey">
-                  API Key
-                  {data?.notafacilApiKeyConfigurada && (
-                    <span className="ml-2 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded uppercase tracking-wider">
-                      Configurada
-                    </span>
-                  )}
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="notafacilApiKey"
-                    type={mostrarApiKey ? 'text' : 'password'}
-                    value={form.notafacilApiKey ?? ''}
-                    onChange={(e) => setForm((p) => ({ ...p, notafacilApiKey: e.target.value }))}
-                    placeholder={
-                      data?.notafacilApiKeyConfigurada
-                        ? 'Deixe em branco para manter a atual'
-                        : 'sk_live_… ou sk_test_…'
-                    }
-                    className="pr-10"
-                    autoComplete="off"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setMostrarApiKey((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
-                    aria-label={mostrarApiKey ? 'Esconder' : 'Mostrar'}
-                  >
-                    {mostrarApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+            <div className="space-y-4">
+              {/* Badge de parceria */}
+              <div className="bg-violet-50 border border-violet-200 rounded-xl p-3 sm:p-4 flex items-start gap-3">
+                <div className="h-8 w-8 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0">
+                  <ShieldCheck className="h-4 w-4 text-violet-700" />
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Obtenha em <a href="https://notameigateway.com.br" target="_blank" rel="noreferrer" className="text-violet-600 hover:underline">notameigateway.com.br</a>.
-                </p>
+                <div className="text-xs text-slate-700">
+                  <p className="font-semibold text-violet-900">
+                    Integração ativa via parceria ScantelburyDevs
+                  </p>
+                  <p className="mt-0.5 text-slate-600">
+                    Agenda Inteligente e <a href="https://notameigateway.com.br" target="_blank" rel="noreferrer" className="text-violet-700 hover:underline">Nota MEI Gateway</a> são
+                    parceiros — você não precisa gerar nem inserir chave de API. Basta
+                    ativar a emissão abaixo e seus atendimentos viram NFS-e
+                    automaticamente.
+                  </p>
+                </div>
               </div>
 
               <label className="flex items-start gap-2.5 cursor-pointer">
@@ -728,7 +708,8 @@ export default function NfseEditarUnidade() {
                 <div className="text-sm">
                   <p className="font-medium text-slate-900">Emissão automática ativada</p>
                   <p className="text-xs text-slate-500">
-                    Ao concluir um atendimento, emitimos a NFS-e automaticamente via NotaFácil.
+                    Ao concluir um atendimento, emitimos a NFS-e automaticamente.
+                    Requer todos os dados fiscais + certificado A1 vigente acima.
                   </p>
                 </div>
               </label>

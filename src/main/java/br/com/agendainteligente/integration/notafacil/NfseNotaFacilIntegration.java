@@ -39,6 +39,15 @@ public class NfseNotaFacilIntegration implements NfseIntegration {
     @Value("${notafacil.webhook-base-url:https://agenda-backend-production-cc5e.up.railway.app}")
     private String webhookBaseUrl;
 
+    /**
+     * API key MASTER da parceria ScantelburyDevs entre Agenda Inteligente e
+     * Nota MEI Gateway. Usada quando a unidade não tem chave própria configurada
+     * (caso padrão — todos os tenants usam a parceria; chave por-unidade só
+     * existe pra integrações antigas/legacy). Vem da env NOTAFACIL_PARTNER_API_KEY.
+     */
+    @Value("${notafacil.partner-api-key:}")
+    private String partnerApiKey;
+
     // Código NBS padrão para "Outros serviços" — unidade pode sobrescrever futuramente
     private static final String CODIGO_NBS_PADRAO = "01.01.01.10";
     private static final double ALIQUOTA_ISS_PADRAO = 2.0;
@@ -48,8 +57,15 @@ public class NfseNotaFacilIntegration implements NfseIntegration {
         Unidade unidade = agendamento.getUnidade();
         Cliente cliente = agendamento.getCliente();
 
-        if (unidade.getNotafacilApiKey() == null || unidade.getNotafacilApiKey().isBlank()) {
-            throw new NotaFacilException("Unidade '" + unidade.getNome() + "' não tem API key NotaFácil configurada", null);
+        // Resolução da API key — prioriza chave por-unidade (legacy/override),
+        // cai pra chave master da parceria (caso padrão).
+        String apiKey = (unidade.getNotafacilApiKey() != null && !unidade.getNotafacilApiKey().isBlank())
+                ? unidade.getNotafacilApiKey()
+                : partnerApiKey;
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new NotaFacilException(
+                    "API key NotaFácil não disponível — configure NOTAFACIL_PARTNER_API_KEY no ambiente ou chave por-unidade",
+                    null);
         }
 
         String discriminacao = montarDiscriminacao(agendamento);
@@ -68,7 +84,7 @@ public class NfseNotaFacilIntegration implements NfseIntegration {
                 .webhookUrl(webhookUrl)
                 .build();
 
-        var response = notaFacilClient.emitirNfse(unidade.getNotafacilApiKey(), request);
+        var response = notaFacilClient.emitirNfse(apiKey, request);
 
         log.info("NFS-e enviada para NotaFácil — nota_id: {}, status: {}", response.getNotaId(), response.getStatus());
 
