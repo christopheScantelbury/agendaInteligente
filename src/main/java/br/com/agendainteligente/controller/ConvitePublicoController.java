@@ -32,6 +32,15 @@ public class ConvitePublicoController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/acesso/{token}/finalizar-atendente")
+    @Operation(summary = "Finalizar cadastro de atendente (vinculado à empresa do convidador)")
+    public ResponseEntity<Void> finalizarCadastroAtendente(
+            @PathVariable String token,
+            @Valid @RequestBody FinalizarCadastroAtendenteDTO dto) {
+        conviteService.finalizarCadastroAtendente(token, dto);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/cliente/{token}")
     @Operation(summary = "Informações do link de cadastro cliente")
     public ResponseEntity<ConviteClienteInfoDTO> infoConviteCliente(@PathVariable String token) {

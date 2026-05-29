@@ -3,6 +3,7 @@ package br.com.agendainteligente.service;
 import br.com.agendainteligente.domain.entity.ConviteAcesso;
 import br.com.agendainteligente.domain.entity.ConviteCliente;
 import br.com.agendainteligente.domain.entity.Empresa;
+import br.com.agendainteligente.domain.entity.Atendente;
 import br.com.agendainteligente.domain.entity.Gerente;
 import br.com.agendainteligente.domain.entity.Unidade;
 import br.com.agendainteligente.domain.entity.Usuario;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +44,7 @@ public class ConviteService {
     private final EmpresaRepository empresaRepository;
     private final UnidadeRepository unidadeRepository;
     private final GerenteRepository gerenteRepository;
+    private final AtendenteRepository atendenteRepository;
     private final ClienteRepository clienteRepository;
     private final PasswordEncoder passwordEncoder;
     private final PerfilService perfilService;
@@ -99,7 +102,12 @@ public class ConviteService {
                 .criadoPor(criador)
                 .build();
         convite = conviteAcessoRepository.save(convite);
-        String link = urlBase + "/cadastro-gerente?token=" + token;
+        // ADMIN global → onboarding de nova empresa (fluxo /cadastro-gerente).
+        // GERENTE/ADMINISTRADOR → convida atendente da empresa atual (/cadastro-atendente).
+        boolean criadorEhAdminGlobal = criador.getPerfil() == Usuario.PerfilUsuario.ADMIN
+                && criador.getAdminUnicoId() == null;
+        String rota = criadorEhAdminGlobal ? "/cadastro-gerente" : "/cadastro-atendente";
+        String link = urlBase + rota + "?token=" + token;
         return ConviteAcessoRespostaDTO.builder()
                 .id(convite.getId())
                 .token(convite.getToken())
@@ -143,13 +151,52 @@ public class ConviteService {
                     .mensagemErro("Este link expirou.")
                     .build();
         }
-        return ConviteAcessoInfoDTO.builder()
+        // Determina tipo do convite + popula info da empresa do criador (pra ATENDENTE)
+        Usuario criador = c.getCriadoPor();
+        boolean criadorEhAdminGlobal = criador != null
+                && criador.getPerfil() == Usuario.PerfilUsuario.ADMIN
+                && criador.getAdminUnicoId() == null;
+        String tipo = criadorEhAdminGlobal ? "GERENTE" : "ATENDENTE";
+
+        ConviteAcessoInfoDTO.ConviteAcessoInfoDTOBuilder builder = ConviteAcessoInfoDTO.builder()
                 .token(token)
                 .maxUnidades(c.getMaxUnidades())
                 .dataExpiracaoLink(c.getDataExpiracaoLink())
                 .dataExpiracaoAcesso(c.getDataExpiracaoAcesso())
                 .valido(true)
-                .build();
+                .tipoDestinatario(tipo);
+
+        if ("ATENDENTE".equals(tipo) && criador != null) {
+            List<Unidade> unidadesCriador = unidadesDoUsuario(criador);
+            if (!unidadesCriador.isEmpty()) {
+                Empresa empresa = unidadesCriador.get(0).getEmpresa();
+                builder.empresaNome(empresa != null ? empresa.getNome() : null);
+                builder.unidadesDisponiveis(unidadesCriador.stream()
+                        .map(u -> ConviteAcessoInfoDTO.UnidadeOpcaoDTO.builder()
+                                .id(u.getId())
+                                .nome(u.getNome())
+                                .build())
+                        .collect(Collectors.toList()));
+            }
+        }
+        return builder.build();
+    }
+
+    /**
+     * Resolve as unidades visíveis para um usuário (criador de convite).
+     * ADMINISTRADOR/GERENTE veem unidades vinculadas via Usuario.unidades; se vazio,
+     * caímos pra empresa.unidades via empresaRepository.findByAdminUnicoId.
+     */
+    private List<Unidade> unidadesDoUsuario(Usuario usuario) {
+        if (usuario.getUnidades() != null && !usuario.getUnidades().isEmpty()) {
+            return usuario.getUnidades().stream()
+                    .filter(u -> Boolean.TRUE.equals(u.getAtivo()))
+                    .collect(Collectors.toList());
+        }
+        Long adminId = usuario.getAdminUnicoId() != null ? usuario.getAdminUnicoId() : usuario.getId();
+        return unidadeRepository.findByAdminUnicoId(adminId).stream()
+                .filter(u -> Boolean.TRUE.equals(u.getAtivo()))
+                .collect(Collectors.toList());
     }
 
     @Transactional
@@ -212,6 +259,78 @@ public class ConviteService {
         convite.setUsadoEm(LocalDateTime.now());
         conviteAcessoRepository.save(convite);
         log.info("Cadastro gerente finalizado via convite. Empresa: {}, Usuario: {}", empresa.getNome(), usuario.getEmail());
+    }
+
+    /**
+     * Finaliza cadastro quando o convite foi criado por GERENTE/ADMINISTRADOR.
+     * Cria Usuario com perfil PROFISSIONAL + Atendente, ambos vinculados às
+     * unidades da empresa do convidador (sem criar empresa nova).
+     */
+    @Transactional
+    public void finalizarCadastroAtendente(String token, FinalizarCadastroAtendenteDTO dto) {
+        ConviteAcesso convite = conviteAcessoRepository.findByToken(token)
+                .orElseThrow(() -> new BusinessException("Link inválido ou inexistente."));
+        if (convite.isUsado()) {
+            throw new BusinessException("Este link já foi utilizado.");
+        }
+        if (convite.isLinkExpirado()) {
+            throw new BusinessException("Este link expirou.");
+        }
+        if (convite.getCriadoPor() == null) {
+            throw new BusinessException("Convite sem criador — não dá pra resolver a empresa.");
+        }
+        if (usuarioRepository.existsByEmail(dto.getEmail())) {
+            throw new BusinessException("Já existe um usuário cadastrado com este e-mail.");
+        }
+
+        // Resolve unidades visíveis ao criador e filtra pelas selecionadas no cadastro
+        List<Unidade> unidadesCriador = unidadesDoUsuario(convite.getCriadoPor());
+        if (unidadesCriador.isEmpty()) {
+            throw new BusinessException("O convidador não tem unidades vinculadas. Peça um novo link.");
+        }
+        java.util.Set<Long> idsPermitidos = unidadesCriador.stream()
+                .map(Unidade::getId)
+                .collect(Collectors.toSet());
+        List<Unidade> unidadesEscolhidas = dto.getUnidadesIds().stream()
+                .filter(idsPermitidos::contains)
+                .map(id -> unidadesCriador.stream().filter(u -> u.getId().equals(id)).findFirst().orElse(null))
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toList());
+        if (unidadesEscolhidas.isEmpty()) {
+            throw new BusinessException("Selecione pelo menos uma unidade válida.");
+        }
+
+        // adminUnicoId herdado: aponta pro tenant root (ADMINISTRADOR dono da empresa)
+        Long adminUnicoIdHerdado = convite.getCriadoPor().getAdminUnicoId() != null
+                ? convite.getCriadoPor().getAdminUnicoId()
+                : convite.getCriadoPor().getId();
+
+        Usuario usuario = Usuario.builder()
+                .nome(dto.getNome().trim())
+                .email(dto.getEmail().trim().toLowerCase())
+                .senha(passwordEncoder.encode(dto.getSenha()))
+                .telefone(dto.getTelefone() != null ? dto.getTelefone().trim() : null)
+                .ativo(true)
+                .perfilSistema(Usuario.PerfilUsuario.PROFISSIONAL)
+                .perfil(null)
+                .adminUnicoId(adminUnicoIdHerdado)
+                .unidades(unidadesEscolhidas)
+                .build();
+        usuario = usuarioRepository.save(usuario);
+
+        Atendente atendente = Atendente.builder()
+                .usuario(usuario)
+                .unidade(unidadesEscolhidas.get(0))
+                .cpf(dto.getCpf().replaceAll("\\D", ""))
+                .telefone(dto.getTelefone() != null ? dto.getTelefone().trim() : null)
+                .ativo(true)
+                .build();
+        atendenteRepository.save(atendente);
+
+        convite.setUsadoEm(LocalDateTime.now());
+        conviteAcessoRepository.save(convite);
+        log.info("Cadastro de atendente finalizado via convite. Convidador: {}, Atendente: {}, Unidades: {}",
+                convite.getCriadoPor().getEmail(), usuario.getEmail(), unidadesEscolhidas.size());
     }
 
     @Transactional
@@ -364,11 +483,13 @@ public class ConviteService {
             throw new BusinessException("Sem permissão para listar links de acesso. Verifique o perfil em Perfis e Permissões.");
         }
         Usuario admin = obterUsuarioLogado();
+        boolean adminEhGlobal = admin.getPerfil() == Usuario.PerfilUsuario.ADMIN && admin.getAdminUnicoId() == null;
+        String rota = adminEhGlobal ? "/cadastro-gerente" : "/cadastro-atendente";
         return conviteAcessoRepository.findByCriadoPorIdOrderByDataCriacaoDesc(admin.getId()).stream()
                 .map(c -> ConviteAcessoRespostaDTO.builder()
                         .id(c.getId())
                         .token(c.getToken())
-                        .link(urlBase + "/cadastro-gerente?token=" + c.getToken())
+                        .link(urlBase + rota + "?token=" + c.getToken())
                         .maxUnidades(c.getMaxUnidades())
                         .dataExpiracaoLink(c.getDataExpiracaoLink())
                         .dataExpiracaoAcesso(c.getDataExpiracaoAcesso())

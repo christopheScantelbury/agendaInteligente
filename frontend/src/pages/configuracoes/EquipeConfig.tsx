@@ -268,14 +268,14 @@ export default function EquipeConfig() {
 
       {/* Dica final */}
       <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs text-slate-600">
-        💡 Após a pessoa se cadastrar pelo link, ela aparece em{' '}
+        💡 A pessoa se cadastra como <strong>profissional da sua empresa</strong> e escolhe
+        em quais unidades vai atender. Depois você consegue ajustar comissão e serviços em{' '}
         <button
           onClick={() => navigate('/profissionais')}
           className="text-violet-700 font-medium hover:underline"
         >
           Profissionais
-        </button>{' '}
-        — lá você vincula às unidades, define comissão e serviços que pode prestar.
+        </button>.
       </div>
 
       {criou && <ProximaEtapaCard tarefaAtualId="equipe" />}
