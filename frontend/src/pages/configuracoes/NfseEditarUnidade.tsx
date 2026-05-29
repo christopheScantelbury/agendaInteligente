@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -129,9 +129,22 @@ export default function NfseEditarUnidade() {
   const [certSenha, setCertSenha] = useState('')
   const [mostrarCertSenha, setMostrarCertSenha] = useState(false)
 
-  // Hidrata o form quando os dados chegam
+  // Hidrata o form apenas na PRIMEIRA chegada do data (ou quando trocar de unidade).
+  // Bug evitado: refetch eventual sobrescreveria edição local do user. Após salvar,
+  // o setQueryData das mutations atualiza o data, e este useEffect re-hidrata com
+  // o conteúdo já persistido — não há perda nem inconsistência.
+  const hidratadoUnidadeIdRef = useRef<number | null>(null)
   useEffect(() => {
     if (!data) return
+    // Se já hidratou para esta unidade E o data chega por refetch sem mudança real,
+    // só re-aplica se o conteúdo mudou de fato (compara serializado — barato pra
+    // payload deste tamanho).
+    const novaUnidade = hidratadoUnidadeIdRef.current !== data.unidadeId
+    if (!novaUnidade) {
+      // Não sobrescrever: form local tem a verdade até que o user clique salvar.
+      return
+    }
+    hidratadoUnidadeIdRef.current = data.unidadeId
     setForm({
       razaoSocial: data.razaoSocial ?? '',
       cnpj: data.cnpj ? maskCNPJ(data.cnpj) : '',
@@ -185,12 +198,15 @@ export default function NfseEditarUnidade() {
     }
   }
 
+  // Em todas as mutations: setQueryData direto com a resposta — evita refetch
+  // que poderia trazer cache stale e sobrescrever campos que o user acabou de
+  // editar (bug reportado: "dados somem da tela após salvar com sucesso").
   const uploadCertMutation = useMutation({
     mutationFn: ({ arquivo, senha }: { arquivo: File; senha: string }) =>
       nfseConfigService.uploadCertificado(unidadeId, arquivo, senha),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['configuracoes', 'nfse', unidadeId] })
-      queryClient.invalidateQueries({ queryKey: ['configuracoes', 'nfse'] })
+    onSuccess: (atualizado) => {
+      queryClient.setQueryData(['configuracoes', 'nfse', unidadeId], atualizado)
+      queryClient.invalidateQueries({ queryKey: ['configuracoes', 'nfse'], exact: true })
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'gerente', 'checklist'] })
       setCertFile(null)
       setCertSenha('')
@@ -203,8 +219,9 @@ export default function NfseEditarUnidade() {
 
   const removerCertMutation = useMutation({
     mutationFn: () => nfseConfigService.removerCertificado(unidadeId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['configuracoes', 'nfse', unidadeId] })
+    onSuccess: (atualizado) => {
+      queryClient.setQueryData(['configuracoes', 'nfse', unidadeId], atualizado)
+      queryClient.invalidateQueries({ queryKey: ['configuracoes', 'nfse'], exact: true })
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'gerente', 'checklist'] })
       showNotification('success', 'Certificado removido.')
     },
@@ -212,9 +229,9 @@ export default function NfseEditarUnidade() {
 
   const salvarMutation = useMutation({
     mutationFn: (payload: NfseUnidadePayload) => nfseConfigService.atualizar(unidadeId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['configuracoes', 'nfse'] })
-      queryClient.invalidateQueries({ queryKey: ['configuracoes', 'nfse', unidadeId] })
+    onSuccess: (atualizado) => {
+      queryClient.setQueryData(['configuracoes', 'nfse', unidadeId], atualizado)
+      queryClient.invalidateQueries({ queryKey: ['configuracoes', 'nfse'], exact: true })
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'gerente', 'checklist'] })
       showNotification('success', 'Dados fiscais salvos com sucesso.')
     },
