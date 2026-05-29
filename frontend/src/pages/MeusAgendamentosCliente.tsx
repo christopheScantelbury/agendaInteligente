@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, LogOut } from 'lucide-react'
+import { Plus, LogOut, CalendarCheck2 } from 'lucide-react'
 import { clientePublicoService } from '../services/clientePublicoService'
 import { useNotification } from '../contexts/NotificationContext'
 import { useConfirm } from '../hooks/useConfirm'
@@ -113,36 +113,38 @@ export default function MeusAgendamentosCliente() {
   const renderAgendamentoCard = (agendamento: any, mostrarAcaoCancelar: boolean) => (
     <div
       key={agendamento.id}
-      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition"
+      className="bg-white border border-slate-200 rounded-2xl p-4 hover:shadow-sm transition"
     >
-      <div className="flex justify-between items-start">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
+      <div className="flex justify-between items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             <span
-              className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
+              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${getStatusColor(
                 agendamento.status
               )}`}
             >
               {getStatusLabel(agendamento.status)}
             </span>
           </div>
-          <div className="text-sm text-gray-600 space-y-1">
+          <div className="text-sm text-slate-600 space-y-1">
             <div>
-              <strong>Data/Hora:</strong> {formatarDataHora(agendamento.dataHoraInicio)}
+              <span className="text-slate-500">Data/Hora:</span>{' '}
+              <span className="font-semibold text-slate-900">{formatarDataHora(agendamento.dataHoraInicio)}</span>
             </div>
             {agendamento.unidade && (
               <div>
-                <strong>Unidade:</strong> {agendamento.unidade.nome}
+                <span className="text-slate-500">Unidade:</span> {agendamento.unidade.nome}
               </div>
             )}
             {agendamento.atendente && (
               <div>
-                <strong>Atendente:</strong> {agendamento.atendente.usuario?.nome || agendamento.atendente.nome}
+                <span className="text-slate-500">Atendente:</span>{' '}
+                {agendamento.atendente.usuario?.nome || agendamento.atendente.nome}
               </div>
             )}
             {agendamento.servicos && agendamento.servicos.length > 0 && (
               <div>
-                <strong>Serviços:</strong>{' '}
+                <span className="text-slate-500">Serviços:</span>{' '}
                 {agendamento.servicos
                   .map((s: any) => s.servico?.nome || s.descricao)
                   .join(', ')}
@@ -150,7 +152,10 @@ export default function MeusAgendamentosCliente() {
             )}
             {agendamento.valorTotal && (
               <div>
-                <strong>Valor:</strong> R$ {Number(agendamento.valorTotal).toFixed(2)}
+                <span className="text-slate-500">Valor:</span>{' '}
+                <span className="font-semibold text-slate-900">
+                  R$ {Number(agendamento.valorTotal).toFixed(2).replace('.', ',')}
+                </span>
               </div>
             )}
           </div>
@@ -159,7 +164,7 @@ export default function MeusAgendamentosCliente() {
           <button
             onClick={() => cancelarAgendamento(agendamento.id)}
             disabled={loading}
-            className="ml-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 text-sm"
+            className="px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-xl hover:bg-red-100 disabled:opacity-50 text-xs font-semibold whitespace-nowrap"
           >
             Cancelar
           </button>
@@ -169,80 +174,89 @@ export default function MeusAgendamentosCliente() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white shadow rounded-lg p-6">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-            <div className="min-w-0">
-              <h1 className="text-2xl font-bold text-gray-900 truncate">Meus Agendamentos</h1>
-              {cliente && (
-                <p className="text-sm text-gray-600 mt-1 truncate">Olá, {cliente.nome}</p>
-              )}
-            </div>
-            <div className="flex gap-2 shrink-0">
-              <button
-                onClick={() => navigate('/cliente/agendar')}
-                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-sm transition text-sm font-medium"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Novo</span>
-              </button>
-              <button
-                onClick={() => {
-                  clientePublicoService.logout()
-                  // window.location.href força re-mount pra re-avaliar guards
-                  window.location.href = '/cliente/login'
-                }}
-                className="inline-flex items-center justify-center gap-2 px-3 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 hover:text-gray-800 transition text-sm font-medium"
-                aria-label="Sair"
-                title="Sair"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Sair</span>
-              </button>
-            </div>
-          </div>
-
-          {loading && semDados ? (
-            <div className="text-center py-8">Carregando...</div>
-          ) : semDados ? (
-            <div className="text-center py-8 text-gray-500">
-              Você não possui agendamentos.
-              <br />
-              <button
-                onClick={() => navigate('/cliente/agendar')}
-                className="mt-4 text-indigo-600 hover:text-indigo-500"
-              >
-                Fazer um agendamento
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-8">
-              <section className="space-y-3">
-                <h2 className="text-lg font-semibold text-gray-900">Agendamentos ativos</h2>
-                {agendamentos.length === 0 ? (
-                  <p className="text-sm text-gray-500">Você não possui agendamentos ativos.</p>
-                ) : (
-                  <div className="space-y-4">
-                    {agendamentos.map((agendamento) => renderAgendamentoCard(agendamento, true))}
-                  </div>
-                )}
-              </section>
-
-              <section className="space-y-3 border-t border-gray-100 pt-6">
-                <h2 className="text-lg font-semibold text-gray-900">Histórico de cancelamentos</h2>
-                {cancelamentos.length === 0 ? (
-                  <p className="text-sm text-gray-500">Nenhum cancelamento registrado.</p>
-                ) : (
-                  <div className="space-y-4">
-                    {cancelamentos.map((agendamento) => renderAgendamentoCard(agendamento, false))}
-                  </div>
-                )}
-              </section>
-            </div>
+    <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <CalendarCheck2 className="h-6 w-6 text-violet-600" />
+            Meus Agendamentos
+          </h1>
+          {cliente && (
+            <p className="text-sm text-slate-500 mt-0.5 truncate">Olá, {cliente.nome}</p>
           )}
         </div>
-      </div>
+        <div className="flex gap-2 shrink-0">
+          <button
+            onClick={() => navigate('/cliente/agendar')}
+            className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all bg-violet-600 text-white hover:bg-violet-700 shadow-sm shadow-violet-200 px-4 py-2 text-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Novo
+          </button>
+          <button
+            onClick={() => {
+              clientePublicoService.logout()
+              window.location.href = '/cliente/login'
+            }}
+            className="inline-flex items-center justify-center gap-2 px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 hover:text-slate-800 transition text-sm font-medium"
+            aria-label="Sair"
+            title="Sair"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">Sair</span>
+          </button>
+        </div>
+      </header>
+
+      {loading && semDados ? (
+        <div className="text-center py-8 text-slate-400">Carregando...</div>
+      ) : semDados ? (
+        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
+          <div className="mx-auto h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mb-3">
+            <CalendarCheck2 className="h-5 w-5" />
+          </div>
+          <p className="text-sm text-slate-600">Você não possui agendamentos ainda.</p>
+          <button
+            onClick={() => navigate('/cliente/agendar')}
+            className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-violet-700 hover:text-violet-900"
+          >
+            <Plus className="h-4 w-4" />
+            Fazer um agendamento
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
+              Agendamentos ativos
+            </h2>
+            {agendamentos.length === 0 ? (
+              <p className="text-sm text-slate-500">Você não possui agendamentos ativos.</p>
+            ) : (
+              <ul className="space-y-2">
+                {agendamentos.map((agendamento) => (
+                  <li key={agendamento.id}>{renderAgendamentoCard(agendamento, true)}</li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="space-y-3 border-t border-slate-100 pt-6">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
+              Histórico de cancelamentos
+            </h2>
+            {cancelamentos.length === 0 ? (
+              <p className="text-sm text-slate-500">Nenhum cancelamento registrado.</p>
+            ) : (
+              <ul className="space-y-2">
+                {cancelamentos.map((agendamento) => (
+                  <li key={agendamento.id}>{renderAgendamentoCard(agendamento, false)}</li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      )}
       {ConfirmComponent}
     </div>
   )
