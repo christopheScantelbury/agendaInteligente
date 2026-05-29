@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowRight, Building2, CheckCircle2, AlertCircle, FileText, ExternalLink, Loader2 } from 'lucide-react'
-import { unidadeService } from '../../services/unidadeService'
+import { ArrowRight, Building2, CheckCircle2, AlertCircle, FileText, Loader2, Settings2 } from 'lucide-react'
+import { nfseConfigService } from '../../services/nfseConfigService'
 import ConfigPageHeader from '../../components/configuracoes/ConfigPageHeader'
 import ProximaEtapaCard from '../../components/configuracoes/ProximaEtapaCard'
 
@@ -9,12 +9,12 @@ export default function NfseConfig() {
   const navigate = useNavigate()
 
   const { data: unidades = [], isLoading, error } = useQuery({
-    queryKey: ['configuracoes', 'nfse', 'unidades'],
-    queryFn: () => unidadeService.listar(),
+    queryKey: ['configuracoes', 'nfse'],
+    queryFn: () => nfseConfigService.listar(),
   })
 
-  const configuradas = unidades.filter((u: any) => u.inscricaoMunicipal && u.inscricaoMunicipal.trim() !== '')
-  const pendentes = unidades.filter((u: any) => !u.inscricaoMunicipal || u.inscricaoMunicipal.trim() === '')
+  const configuradas = unidades.filter((u) => u.configurada)
+  const pendentes = unidades.filter((u) => !u.configurada)
 
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
@@ -87,10 +87,10 @@ export default function NfseConfig() {
               Suas unidades
             </h2>
             <ul className="divide-y divide-gray-100">
-              {unidades.map((u: any) => {
-                const ok = !!(u.inscricaoMunicipal && u.inscricaoMunicipal.trim())
+              {unidades.map((u) => {
+                const ok = u.configurada
                 return (
-                  <li key={u.id} className="px-4 sm:px-5 py-3 flex items-center gap-3">
+                  <li key={u.unidadeId} className="px-4 sm:px-5 py-3 flex items-center gap-3">
                     <div
                       className={`h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 ${
                         ok ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'
@@ -102,16 +102,22 @@ export default function NfseConfig() {
                       <p className="text-sm font-semibold text-slate-900 truncate">{u.nome}</p>
                       <p className="text-xs text-slate-500 truncate">
                         {ok
-                          ? `Inscrição: ${u.inscricaoMunicipal}`
-                          : 'Inscrição municipal não cadastrada'}
+                          ? `CNPJ ${u.cnpj} · Inscr. ${u.inscricaoMunicipal}`
+                          : 'Dados fiscais incompletos'}
                       </p>
                     </div>
+                    {u.notafacilAtivo && (
+                      <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded uppercase tracking-wider">
+                        Auto
+                      </span>
+                    )}
                     <button
                       type="button"
-                      onClick={() => navigate(`/unidades`)}
-                      className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition"
+                      onClick={() => navigate(`/configuracoes/nfse/editar/${u.unidadeId}`)}
+                      className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold transition"
                     >
-                      Editar <ExternalLink className="h-3 w-3" />
+                      <Settings2 className="h-3 w-3" />
+                      Configurar
                     </button>
                   </li>
                 )
