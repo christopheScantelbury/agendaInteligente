@@ -4,6 +4,8 @@ import br.com.agendainteligente.domain.entity.Empresa;
 import br.com.agendainteligente.domain.entity.Unidade;
 import br.com.agendainteligente.domain.entity.Usuario;
 import br.com.agendainteligente.exception.BusinessException;
+import br.com.agendainteligente.integration.notafacil.NotaFacilClient;
+import br.com.agendainteligente.integration.notafacil.NotaFacilException;
 import br.com.agendainteligente.repository.EmpresaRepository;
 import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.security.SecurityHelper;
@@ -52,6 +54,7 @@ public class NfseConfigController {
     private final EmpresaRepository empresaRepository;
     private final UnidadeRepository unidadeRepository;
     private final SecurityHelper securityHelper;
+    private final NotaFacilClient notaFacilClient;
 
     @GetMapping
     @Operation(summary = "Lista unidades com status fiscal (resumo)")
@@ -121,6 +124,40 @@ public class NfseConfigController {
         }
         if (req.notafacilAtivo() != null) {
             unidade.setNotafacilAtivo(req.notafacilAtivo());
+        }
+
+        // Auto-provisionamento da parceria: se admin ativou emissão automática E a
+        // unidade ainda não tem api_key (nunca foi registrada no gateway), chamamos
+        // POST /v1/auth/register pra criar a conta no Nota MEI Gateway e armazenar
+        // a chave. Requer CNPJ + razão social + email + IBGE preenchidos.
+        if (Boolean.TRUE.equals(unidade.getNotafacilAtivo())
+                && (unidade.getNotafacilApiKey() == null || unidade.getNotafacilApiKey().isBlank())
+                && preenchido(unidade.getCnpj())
+                && preenchido(unidade.getRazaoSocial())
+                && preenchido(unidade.getEmail())
+                && preenchido(unidade.getMunicipioIbge())) {
+            try {
+                NotaFacilClient.RegisterResponse resp = notaFacilClient.registerMei(
+                        NotaFacilClient.RegisterRequest.builder()
+                                .cnpj(unidade.getCnpj())
+                                .razaoSocial(unidade.getRazaoSocial())
+                                .email(unidade.getEmail())
+                                .municipioIbge(unidade.getMunicipioIbge())
+                                .produto("gateway")
+                                .build()
+                );
+                unidade.setNotafacilApiKey(resp.getApiKey());
+            } catch (NotaFacilException e) {
+                // Não bloqueia o save dos dados fiscais — só desativa a emissão
+                // e retorna mensagem clara. Admin pode tentar de novo depois.
+                unidade.setNotafacilAtivo(false);
+                unidadeRepository.save(unidade);
+                throw new BusinessException(
+                        "Dados fiscais salvos, mas não foi possível ativar emissão automática: "
+                                + e.getMessage()
+                                + ". Tente ativar de novo após validar CNPJ/email."
+                );
+            }
         }
 
         unidadeRepository.save(unidade);

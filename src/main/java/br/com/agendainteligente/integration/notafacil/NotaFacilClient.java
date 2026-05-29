@@ -96,6 +96,37 @@ public class NotaFacilClient {
         }
     }
 
+    /**
+     * Provisiona uma nova conta no Nota MEI Gateway via POST /v1/auth/register
+     * (público, não precisa Bearer). Retorna a api_key gerada — guardar
+     * imediatamente, o gateway não exibe de novo.
+     *
+     * Lado do parceiro (Nota MEI Gateway): valida CNPJ + check-digit + se é MEI
+     * via Receita Federal (com Redis cache). Email duplicado retorna 409.
+     */
+    public RegisterResponse registerMei(RegisterRequest request) {
+        log.info("Provisionando conta no Nota MEI Gateway — CNPJ: {}", request.getCnpj());
+        try {
+            return restClient.post()
+                    .uri("/v1/auth/register")
+                    .body(request)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, (req, resp) -> {
+                        int code = resp.getStatusCode().value();
+                        String body = readBodySafely(resp);
+                        throw new NotaFacilException(
+                                "Erro ao registrar no gateway (" + code + "): " + body);
+                    })
+                    .body(RegisterResponse.class);
+        } catch (NotaFacilException e) {
+            log.error("Falha ao registrar conta NotaFácil: {}", e.getMessage());
+            throw e;
+        } catch (RestClientException e) {
+            log.error("Erro de rede ao registrar NotaFácil: {}", e.getMessage());
+            throw new NotaFacilException("Erro de comunicação ao registrar no gateway: " + e.getMessage(), e);
+        }
+    }
+
     /** Lê o body da resposta de erro sem lançar exceção (Content-Type pode estar ausente). */
     private static String readBodySafely(org.springframework.http.client.ClientHttpResponse resp) {
         try (var is = resp.getBody()) {
@@ -161,5 +192,44 @@ public class NotaFacilClient {
         private String pdfUrl;
         private String xmlUrl;
         private String erroDescricao;
+    }
+
+    @lombok.Data
+    @lombok.Builder
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    public static class RegisterRequest {
+        @com.fasterxml.jackson.annotation.JsonProperty("cnpj")
+        private String cnpj;
+
+        @com.fasterxml.jackson.annotation.JsonProperty("razao_social")
+        private String razaoSocial;
+
+        @com.fasterxml.jackson.annotation.JsonProperty("email")
+        private String email;
+
+        @com.fasterxml.jackson.annotation.JsonProperty("municipio_ibge")
+        private String municipioIbge;
+
+        /** "gateway" (padrão) ou "mei" — define o produto/billing do lado do gateway. */
+        @com.fasterxml.jackson.annotation.JsonProperty("produto")
+        private String produto;
+    }
+
+    @lombok.Data
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    public static class RegisterResponse {
+        @com.fasterxml.jackson.annotation.JsonProperty("mei_id")
+        private String meiId;
+
+        @com.fasterxml.jackson.annotation.JsonProperty("api_key")
+        private String apiKey;
+
+        @com.fasterxml.jackson.annotation.JsonProperty("plano")
+        private String plano;
+
+        @com.fasterxml.jackson.annotation.JsonProperty("message")
+        private String message;
     }
 }
