@@ -18,10 +18,15 @@ import ConfigPageHeader from '../../components/configuracoes/ConfigPageHeader'
 import ProximaEtapaCard from '../../components/configuracoes/ProximaEtapaCard'
 
 const HOJE = new Date()
+/** Backend espera LocalDateTime (ISO-8601 com hora). Usar 23:59:59 do dia final
+ * pra link/acesso valerem o dia inteiro. */
 function emDias(dias: number): string {
   const d = new Date(HOJE)
   d.setDate(d.getDate() + dias)
-  return d.toISOString().slice(0, 10)
+  // YYYY-MM-DDTHH:mm:ss (sem timezone — Spring Boot parseia direto pra LocalDateTime)
+  d.setHours(23, 59, 59, 0)
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
 function formatarData(iso: string | null): string {
