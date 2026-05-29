@@ -77,6 +77,25 @@ public class Unidade {
     @Column(name = "regime_tributario", length = 30)
     private String regimeTributario;
 
+    // ── Certificado Digital A1 (assinatura XML da NFS-e) ────────────────────
+    @Column(name = "certificado_pfx_base64", columnDefinition = "TEXT")
+    private String certificadoPfxBase64;
+
+    @Column(name = "certificado_senha", length = 500)
+    private String certificadoSenha;
+
+    @Column(name = "certificado_cn", length = 200)
+    private String certificadoCn;
+
+    @Column(name = "certificado_valido_de")
+    private java.time.LocalDate certificadoValidoDe;
+
+    @Column(name = "certificado_valido_ate")
+    private java.time.LocalDate certificadoValidoAte;
+
+    @Column(name = "certificado_data_upload")
+    private LocalDateTime certificadoDataUpload;
+
     @Column(name = "admin_unico_id")
     private Long adminUnicoId;
 

@@ -9,6 +9,16 @@ export interface NfseUnidadeResumo {
   notafacilAtivo: boolean
 }
 
+export interface NfseCertificado {
+  configurado: boolean
+  cn?: string | null
+  validoDe?: string | null
+  validoAte?: string | null
+  dataUpload?: string | null
+  expirado?: boolean
+  diasAteVencer?: number
+}
+
 export interface NfseUnidadeDados {
   unidadeId: number
   nome: string
@@ -28,6 +38,7 @@ export interface NfseUnidadeDados {
   telefone: string | null
   notafacilApiKeyConfigurada: boolean
   notafacilAtivo: boolean
+  certificado: NfseCertificado
 }
 
 export interface NfseUnidadePayload {
@@ -63,6 +74,23 @@ export const nfseConfigService = {
 
   atualizar: async (unidadeId: number, payload: NfseUnidadePayload): Promise<NfseUnidadeDados> => {
     const { data } = await api.put<NfseUnidadeDados>(`/configuracoes/nfse/${unidadeId}`, payload)
+    return data
+  },
+
+  uploadCertificado: async (unidadeId: number, arquivo: File, senha: string): Promise<NfseUnidadeDados> => {
+    const form = new FormData()
+    form.append('arquivo', arquivo)
+    form.append('senha', senha)
+    const { data } = await api.post<NfseUnidadeDados>(
+      `/configuracoes/nfse/${unidadeId}/certificado`,
+      form,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    )
+    return data
+  },
+
+  removerCertificado: async (unidadeId: number): Promise<NfseUnidadeDados> => {
+    const { data } = await api.delete<NfseUnidadeDados>(`/configuracoes/nfse/${unidadeId}/certificado`)
     return data
   },
 }

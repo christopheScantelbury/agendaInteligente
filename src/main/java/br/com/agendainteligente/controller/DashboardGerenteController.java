@@ -223,6 +223,10 @@ public class DashboardGerenteController {
                     if (u.getRegimeTributario() == null || u.getRegimeTributario().isBlank()) return false;
                     boolean isMei = "MEI".equals(u.getRegimeTributario());
                     if (!isMei && (u.getInscricaoMunicipal() == null || u.getInscricaoMunicipal().isBlank())) return false;
+                    // Certificado A1 obrigatório em todos os regimes
+                    if (u.getCertificadoPfxBase64() == null || u.getCertificadoPfxBase64().isBlank()) return false;
+                    if (u.getCertificadoValidoAte() == null
+                            || u.getCertificadoValidoAte().isBefore(java.time.LocalDate.now())) return false;
                     return true;
                 });
         boolean convidouEquipe = !conviteAcessoRepository.findByCriadoPorIdOrderByDataCriacaoDesc(usuario.getId()).isEmpty();
