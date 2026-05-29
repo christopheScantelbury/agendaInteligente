@@ -67,16 +67,6 @@ public class Unidade {
     @Column(name = "inscricao_municipal", length = 20)
     private String inscricaoMunicipal;
 
-    @Column(name = "razao_social", length = 200)
-    private String razaoSocial;
-
-    @Column(name = "inscricao_estadual", length = 20)
-    private String inscricaoEstadual;
-
-    /** MEI, SIMPLES_NACIONAL, LUCRO_PRESUMIDO, LUCRO_REAL */
-    @Column(name = "regime_tributario", length = 30)
-    private String regimeTributario;
-
     @Column(name = "admin_unico_id")
     private Long adminUnicoId;
 

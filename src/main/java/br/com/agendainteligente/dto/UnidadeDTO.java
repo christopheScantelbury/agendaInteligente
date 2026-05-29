@@ -32,7 +32,6 @@ public class UnidadeDTO {
     private String cnpj;
     private String inscricaoMunicipal;
     private String inscricaoEstadual;
-    private String regimeTributario;
     private String complemento;
 
     private java.time.LocalTime horarioAbertura;
