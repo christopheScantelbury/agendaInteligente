@@ -155,9 +155,15 @@ export default function Atendentes() {
   }
 
   return (
-    <div className="w-full">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{dict.rotuloAtendentePlural}</h1>
+    <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
+      {/* Header */}
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">{dict.rotuloAtendentePlural}</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Gerencie sua equipe de profissionais.
+          </p>
+        </div>
         {podeEditarProfissionais && (
           <Button
             onClick={() => {
@@ -166,11 +172,11 @@ export default function Atendentes() {
               setShowModal(true)
             }}
           >
-            <Plus className="h-5 w-5 mr-2" />
+            <Plus className="h-4 w-4" />
             Novo {dict.rotuloAtendente}
           </Button>
         )}
-      </div>
+      </header>
 
       {/* Barra de Filtros */}
       <FilterBar
@@ -190,93 +196,111 @@ export default function Atendentes() {
         ]}
       />
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        {atendentesFiltrados.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">
-              {searchTerm || Object.values(filters).some(v => v !== '' && v !== undefined)
-                ? 'Nenhum profissional encontrado com os filtros aplicados'
-                : 'Nenhum profissional cadastrado'}
-            </p>
+      {/* Lista de profissionais como cards */}
+      {atendentesFiltrados.length === 0 ? (
+        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
+          <div className="mx-auto h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mb-3">
+            <Plus className="h-5 w-5" />
           </div>
-        ) : (
-          <div>
-            <div className="hidden sm:grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wide">
-              <div className="col-span-4">Nome</div>
-              <div className="col-span-4">Email</div>
-              <div className="col-span-2">Comissão</div>
-              <div className="col-span-1">Ativo</div>
-              {podeEditarProfissionais && <div className="col-span-1 text-right">Ações</div>}
-            </div>
-          <ul className="divide-y divide-gray-200">
-            {atendentesFiltrados.map((atendente) => (
-            <li key={atendente.itemKey} className="px-6 py-4">
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4 items-center">
-                <div className="sm:col-span-4 text-sm font-medium text-gray-900 truncate">
-                  {atendente.nomeUsuario || 'Profissional'}
-                  {atendente.tipoRegistro === 'ADMINISTRADOR' && (
-                    <span className="ml-2 inline-flex items-center rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-800">
-                      Administrador
-                    </span>
+          <p className="text-sm text-slate-600">
+            {searchTerm || Object.values(filters).some(v => v !== '' && v !== undefined)
+              ? 'Nenhum profissional encontrado com os filtros aplicados.'
+              : 'Nenhum profissional cadastrado ainda.'}
+          </p>
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {atendentesFiltrados.map((atendente) => {
+            const isAdmin = atendente.tipoRegistro === 'ADMINISTRADOR'
+            const nome = atendente.nomeUsuario || 'Profissional'
+            const email = atendente.emailUsuario || emailPorUsuarioId.get(atendente.usuarioId)
+            const inicial = nome.charAt(0).toUpperCase()
+            const comissaoNum = atendente.percentualComissao != null
+              ? (typeof atendente.percentualComissao === 'number'
+                  ? atendente.percentualComissao
+                  : parseFloat(String(atendente.percentualComissao)))
+              : 0
+            return (
+              <li
+                key={atendente.itemKey}
+                className="bg-white border border-slate-200 rounded-2xl p-4 hover:shadow-sm transition"
+              >
+                <div className="flex items-start gap-3">
+                  {/* Avatar */}
+                  <div className="h-10 w-10 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                    {inicial}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-slate-900 truncate">{nome}</p>
+                      {isAdmin && (
+                        <span className="inline-flex items-center rounded-full bg-violet-50 text-violet-700 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+                          Administrador
+                        </span>
+                      )}
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                          atendente.ativo
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : 'bg-slate-100 text-slate-500'
+                        }`}
+                      >
+                        {atendente.ativo ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </div>
+                    {email && (
+                      <p className="text-xs text-slate-500 truncate mt-0.5">{email}</p>
+                    )}
+                    {!isAdmin && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        Comissão:{' '}
+                        <span className="font-semibold text-slate-700">
+                          {comissaoNum.toFixed(2).replace('.', ',')}%
+                        </span>
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Ações */}
+                  {podeEditarProfissionais && !isAdmin && (
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => {
+                          setEditingAtendente(atendente)
+                          setShowModal(true)
+                        }}
+                        className="p-2 rounded-lg text-slate-500 hover:bg-violet-50 hover:text-violet-700 transition"
+                        aria-label="Editar profissional"
+                        title="Editar"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(atendente.id!)}
+                        className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition"
+                        aria-label="Excluir profissional"
+                        title="Excluir"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   )}
                 </div>
-                <div className="sm:col-span-4 text-sm text-gray-600 truncate">
-                  {atendente.emailUsuario || emailPorUsuarioId.get(atendente.usuarioId) || '—'}
-                </div>
-                <div className="sm:col-span-2 text-sm text-gray-700">
-                  {atendente.tipoRegistro === 'ADMINISTRADOR'
-                    ? '—'
-                    : (atendente.percentualComissao !== undefined && atendente.percentualComissao !== null)
-                    ? `${typeof atendente.percentualComissao === 'number'
-                        ? atendente.percentualComissao.toFixed(2)
-                        : parseFloat(String(atendente.percentualComissao)).toFixed(2)}%`
-                    : '0.00%'}
-                </div>
-                <div className="sm:col-span-1">
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${atendente.ativo
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                      }`}
-                  >
-                    {atendente.ativo ? 'Sim' : 'Não'}
-                  </span>
-                </div>
-                {podeEditarProfissionais && atendente.tipoRegistro !== 'ADMINISTRADOR' && (
-                  <div className="sm:col-span-1 flex items-center justify-start sm:justify-end gap-2">
-                    <button
-                      onClick={() => {
-                        setEditingAtendente(atendente)
-                        setShowModal(true)
-                      }}
-                      className="inline-flex items-center justify-center rounded-md border border-blue-200 bg-blue-50 p-2 text-blue-700 hover:bg-blue-100 transition-colors"
-                      aria-label="Editar profissional"
-                      title="Editar"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(atendente.id!)}
-                      className="inline-flex items-center justify-center rounded-md border border-red-200 bg-red-50 p-2 text-red-700 hover:bg-red-100 transition-colors"
-                      aria-label="Excluir profissional"
-                      title="Excluir"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </li>
-            ))}
-          </ul>
-          </div>
-        )}
-        {atendentesFiltrados.length > 0 && (
-          <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 text-sm text-gray-600">
-            Mostrando {atendentesFiltrados.length} de {profissionaisNaTela.length} {profissionaisNaTela.length !== 1 ? 'profissionais' : 'profissional'}
-          </div>
-        )}
-      </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      {/* Rodapé com contagem */}
+      {atendentesFiltrados.length > 0 && (
+        <p className="text-xs text-slate-500 text-center">
+          Mostrando {atendentesFiltrados.length} de {profissionaisNaTela.length}{' '}
+          {profissionaisNaTela.length !== 1 ? 'profissionais' : 'profissional'}
+        </p>
+      )}
 
       {podeEditarProfissionais && (
         <Modal
