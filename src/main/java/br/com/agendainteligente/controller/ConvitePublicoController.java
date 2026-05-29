@@ -23,8 +23,17 @@ public class ConvitePublicoController {
         return ResponseEntity.ok(conviteService.obterInfoConviteAcesso(token));
     }
 
-    @PostMapping("/acesso/{token}/finalizar")
-    @Operation(summary = "Finalizar cadastro do gerente (empresa + unidade(s) + usuário)")
+    @PostMapping("/acesso/{token}/finalizar-administrador")
+    @Operation(summary = "Finalizar cadastro de ADMINISTRADOR (cria empresa nova — convite do ADMIN global)")
+    public ResponseEntity<Void> finalizarCadastroAdministrador(
+            @PathVariable String token,
+            @Valid @RequestBody FinalizarCadastroAdministradorDTO dto) {
+        conviteService.finalizarCadastroAdministrador(token, dto);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/acesso/{token}/finalizar-gerente")
+    @Operation(summary = "Finalizar cadastro de GERENTE (vinculado à empresa do ADMINISTRADOR que convidou)")
     public ResponseEntity<Void> finalizarCadastroGerente(
             @PathVariable String token,
             @Valid @RequestBody FinalizarCadastroGerenteDTO dto) {
@@ -33,7 +42,7 @@ public class ConvitePublicoController {
     }
 
     @PostMapping("/acesso/{token}/finalizar-atendente")
-    @Operation(summary = "Finalizar cadastro de atendente (vinculado à empresa do convidador)")
+    @Operation(summary = "Finalizar cadastro de PROFISSIONAL (vinculado à empresa do convidador)")
     public ResponseEntity<Void> finalizarCadastroAtendente(
             @PathVariable String token,
             @Valid @RequestBody FinalizarCadastroAtendenteDTO dto) {

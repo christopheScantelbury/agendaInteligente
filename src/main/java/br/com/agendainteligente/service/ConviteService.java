@@ -102,11 +102,11 @@ public class ConviteService {
                 .criadoPor(criador)
                 .build();
         convite = conviteAcessoRepository.save(convite);
-        // ADMIN global → onboarding de nova empresa (fluxo /cadastro-gerente).
-        // GERENTE/ADMINISTRADOR → convida atendente da empresa atual (/cadastro-atendente).
-        boolean criadorEhAdminGlobal = criador.getPerfil() == Usuario.PerfilUsuario.ADMIN
-                && criador.getAdminUnicoId() == null;
-        String rota = criadorEhAdminGlobal ? "/cadastro-gerente" : "/cadastro-atendente";
+        // Rota do link depende de QUEM criou (e o que vai ser criado pelo destinatário):
+        // - ADMIN global         → /cadastro-administrador (nova empresa + plano)
+        // - ADMINISTRADOR        → /cadastro-gerente (vincula à empresa do criador)
+        // - GERENTE / outros     → /cadastro-atendente (vira PROFISSIONAL na empresa)
+        String rota = rotaCadastroDoConvidador(criador);
         String link = urlBase + rota + "?token=" + token;
         return ConviteAcessoRespostaDTO.builder()
                 .id(convite.getId())
@@ -151,12 +151,22 @@ public class ConviteService {
                     .mensagemErro("Este link expirou.")
                     .build();
         }
-        // Determina tipo do convite + popula info da empresa do criador (pra ATENDENTE)
+        // Determina tipo do convite baseado no perfil do criador:
+        // - ADMIN global (sem adminUnicoId) → ADMINISTRADOR (nova empresa + plano)
+        // - ADMINISTRADOR (dono de tenant)  → GERENTE (na empresa dele)
+        // - GERENTE / outros                → ATENDENTE (vira PROFISSIONAL na empresa)
         Usuario criador = c.getCriadoPor();
-        boolean criadorEhAdminGlobal = criador != null
-                && criador.getPerfil() == Usuario.PerfilUsuario.ADMIN
-                && criador.getAdminUnicoId() == null;
-        String tipo = criadorEhAdminGlobal ? "GERENTE" : "ATENDENTE";
+        String tipo;
+        if (criador == null) {
+            tipo = "ATENDENTE"; // fallback safe
+        } else if (criador.getPerfil() == Usuario.PerfilUsuario.ADMIN
+                && criador.getAdminUnicoId() == null) {
+            tipo = "ADMINISTRADOR";
+        } else if (criador.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR) {
+            tipo = "GERENTE";
+        } else {
+            tipo = "ATENDENTE";
+        }
 
         ConviteAcessoInfoDTO.ConviteAcessoInfoDTOBuilder builder = ConviteAcessoInfoDTO.builder()
                 .token(token)
@@ -166,7 +176,9 @@ public class ConviteService {
                 .valido(true)
                 .tipoDestinatario(tipo);
 
-        if ("ATENDENTE".equals(tipo) && criador != null) {
+        // Popula unidades disponíveis pra GERENTE e ATENDENTE (que vinculam à empresa
+        // existente). ADMINISTRADOR vai criar empresa nova — não precisa.
+        if (("GERENTE".equals(tipo) || "ATENDENTE".equals(tipo)) && criador != null) {
             List<Unidade> unidadesCriador = unidadesDoUsuario(criador);
             if (!unidadesCriador.isEmpty()) {
                 Empresa empresa = unidadesCriador.get(0).getEmpresa();
@@ -180,6 +192,19 @@ public class ConviteService {
             }
         }
         return builder.build();
+    }
+
+    /** Define a rota de cadastro do convite com base no perfil do criador. */
+    private String rotaCadastroDoConvidador(Usuario criador) {
+        if (criador == null) return "/cadastro-atendente";
+        if (criador.getPerfil() == Usuario.PerfilUsuario.ADMIN
+                && criador.getAdminUnicoId() == null) {
+            return "/cadastro-administrador";
+        }
+        if (criador.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR) {
+            return "/cadastro-gerente";
+        }
+        return "/cadastro-atendente";
     }
 
     /**
@@ -200,7 +225,7 @@ public class ConviteService {
     }
 
     @Transactional
-    public void finalizarCadastroGerente(String token, FinalizarCadastroGerenteDTO dto) {
+    public void finalizarCadastroAdministrador(String token, FinalizarCadastroAdministradorDTO dto) {
         ConviteAcesso convite = conviteAcessoRepository.findByToken(token)
                 .orElseThrow(() -> new BusinessException("Link inválido ou inexistente."));
         if (convite.isUsado()) {
@@ -242,11 +267,24 @@ public class ConviteService {
                 .email(dto.getEmail().trim().toLowerCase())
                 .senha(passwordEncoder.encode(dto.getSenha()))
                 .ativo(true)
-                .perfilSistema(Usuario.PerfilUsuario.GERENTE)
+                // Promovido a ADMINISTRADOR (dono do novo tenant) — era GERENTE,
+                // mas o convite do ADMIN global cria de fato um administrador.
+                .perfilSistema(Usuario.PerfilUsuario.ADMINISTRADOR)
                 .perfil(null)
                 .unidades(unidades)
                 .build();
         usuario = usuarioRepository.save(usuario);
+
+        // adminUnicoId aponta pra si mesmo — esse é o tenant root
+        final Long tenantRootId = usuario.getId();
+        usuario.setAdminUnicoId(tenantRootId);
+        // Empresa também passa a ser do tenant
+        empresa.setAdminUnicoId(tenantRootId);
+        // E todas as unidades criadas herdam o mesmo tenant
+        unidades.forEach(u -> u.setAdminUnicoId(tenantRootId));
+        usuarioRepository.save(usuario);
+        empresaRepository.save(empresa);
+        unidades.forEach(unidadeRepository::save);
 
         Gerente gerente = Gerente.builder()
                 .usuario(usuario)
@@ -256,9 +294,82 @@ public class ConviteService {
                 .build();
         gerenteRepository.save(gerente);
 
+        if (dto.getPlanoId() != null) {
+            log.info("planoId={} recebido no cadastro de ADMINISTRADOR — TODO #139: aplicar plano", dto.getPlanoId());
+        }
+
         convite.setUsadoEm(LocalDateTime.now());
         conviteAcessoRepository.save(convite);
-        log.info("Cadastro gerente finalizado via convite. Empresa: {}, Usuario: {}", empresa.getNome(), usuario.getEmail());
+        log.info("Cadastro ADMINISTRADOR finalizado via convite. Empresa: {}, Usuario: {}", empresa.getNome(), usuario.getEmail());
+    }
+
+    /**
+     * Finaliza cadastro quando o convite foi criado por um ADMINISTRADOR (dono do tenant).
+     * Cria Usuario com perfilSistema=GERENTE + Gerente, vinculados às unidades da empresa
+     * do convidador. Não cria empresa nova.
+     */
+    @Transactional
+    public void finalizarCadastroGerente(String token, FinalizarCadastroGerenteDTO dto) {
+        ConviteAcesso convite = conviteAcessoRepository.findByToken(token)
+                .orElseThrow(() -> new BusinessException("Link inválido ou inexistente."));
+        if (convite.isUsado()) {
+            throw new BusinessException("Este link já foi utilizado.");
+        }
+        if (convite.isLinkExpirado()) {
+            throw new BusinessException("Este link expirou.");
+        }
+        if (convite.getCriadoPor() == null) {
+            throw new BusinessException("Convite sem criador — não dá pra resolver a empresa.");
+        }
+        if (usuarioRepository.existsByEmail(dto.getEmail())) {
+            throw new BusinessException("Já existe um usuário cadastrado com este e-mail.");
+        }
+
+        List<Unidade> unidadesCriador = unidadesDoUsuario(convite.getCriadoPor());
+        if (unidadesCriador.isEmpty()) {
+            throw new BusinessException("O convidador não tem unidades vinculadas. Peça um novo link.");
+        }
+        java.util.Set<Long> idsPermitidos = unidadesCriador.stream()
+                .map(Unidade::getId)
+                .collect(Collectors.toSet());
+        List<Unidade> unidadesEscolhidas = dto.getUnidadesIds().stream()
+                .filter(idsPermitidos::contains)
+                .map(id -> unidadesCriador.stream().filter(u -> u.getId().equals(id)).findFirst().orElse(null))
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toList());
+        if (unidadesEscolhidas.isEmpty()) {
+            throw new BusinessException("Selecione pelo menos uma unidade válida.");
+        }
+
+        Long adminUnicoIdHerdado = convite.getCriadoPor().getAdminUnicoId() != null
+                ? convite.getCriadoPor().getAdminUnicoId()
+                : convite.getCriadoPor().getId();
+
+        Usuario usuario = Usuario.builder()
+                .nome(dto.getNome().trim())
+                .email(dto.getEmail().trim().toLowerCase())
+                .senha(passwordEncoder.encode(dto.getSenha()))
+                .telefone(dto.getTelefone() != null ? dto.getTelefone().trim() : null)
+                .ativo(true)
+                .perfilSistema(Usuario.PerfilUsuario.GERENTE)
+                .perfil(null)
+                .adminUnicoId(adminUnicoIdHerdado)
+                .unidades(unidadesEscolhidas)
+                .build();
+        usuario = usuarioRepository.save(usuario);
+
+        Gerente gerente = Gerente.builder()
+                .usuario(usuario)
+                .unidade(unidadesEscolhidas.get(0))
+                .cpf(dto.getCpf().replaceAll("\\D", ""))
+                .ativo(true)
+                .build();
+        gerenteRepository.save(gerente);
+
+        convite.setUsadoEm(LocalDateTime.now());
+        conviteAcessoRepository.save(convite);
+        log.info("Cadastro de GERENTE finalizado via convite. Convidador: {}, Gerente: {}, Unidades: {}",
+                convite.getCriadoPor().getEmail(), usuario.getEmail(), unidadesEscolhidas.size());
     }
 
     /**
@@ -483,8 +594,7 @@ public class ConviteService {
             throw new BusinessException("Sem permissão para listar links de acesso. Verifique o perfil em Perfis e Permissões.");
         }
         Usuario admin = obterUsuarioLogado();
-        boolean adminEhGlobal = admin.getPerfil() == Usuario.PerfilUsuario.ADMIN && admin.getAdminUnicoId() == null;
-        String rota = adminEhGlobal ? "/cadastro-gerente" : "/cadastro-atendente";
+        String rota = rotaCadastroDoConvidador(admin);
         return conviteAcessoRepository.findByCriadoPorIdOrderByDataCriacaoDesc(admin.getId()).stream()
                 .map(c -> ConviteAcessoRespostaDTO.builder()
                         .id(c.getId())

@@ -2,7 +2,7 @@ package br.com.agendainteligente.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,6 +11,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
+/**
+ * Cadastro finalizado quando o convite foi criado pelo ADMINISTRADOR (dono do tenant).
+ * Cria um GERENTE vinculado à empresa existente do convidador — não cria empresa nova.
+ */
 @Data
 @Builder
 @NoArgsConstructor
@@ -30,10 +34,13 @@ public class FinalizarCadastroGerenteDTO {
     private String senha;
 
     @NotBlank
-    @Size(min = 2, max = 200)
-    private String nomeEmpresa;
+    @Size(min = 11, max = 14)
+    private String cpf;
 
-    @NotNull
-    @Size(min = 1, max = 100)
-    private List<UnidadeMinimaDTO> unidades;
+    @Size(max = 20)
+    private String telefone;
+
+    /** Unidades da empresa do convidador onde o gerente vai atuar. */
+    @NotEmpty
+    private List<Long> unidadesIds;
 }

@@ -12,7 +12,7 @@ import br.com.agendainteligente.dto.ConviteAcessoRespostaDTO;
 import br.com.agendainteligente.dto.ConviteClienteCriarDTO;
 import br.com.agendainteligente.dto.ConviteClienteInfoDTO;
 import br.com.agendainteligente.dto.ConviteClienteRespostaDTO;
-import br.com.agendainteligente.dto.FinalizarCadastroGerenteDTO;
+import br.com.agendainteligente.dto.FinalizarCadastroAdministradorDTO;
 import br.com.agendainteligente.dto.UnidadeMinimaDTO;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.repository.ClienteRepository;
@@ -191,17 +191,17 @@ class ConviteServiceTest {
         assertEquals(2, info.getMaxUnidades());
     }
 
-    // ── finalizarCadastroGerente ─────────────────────────────────────────────
+    // ── finalizarCadastroAdministrador ─────────────────────────────────────────────
 
     @Test
-    void finalizarCadastroGerente_tokenInvalido_lanca() {
+    void finalizarCadastroAdministrador_tokenInvalido_lanca() {
         when(conviteAcessoRepository.findByToken("xxx")).thenReturn(Optional.empty());
         assertThrows(BusinessException.class, () ->
-                service.finalizarCadastroGerente("xxx", new FinalizarCadastroGerenteDTO()));
+                service.finalizarCadastroAdministrador("xxx", new FinalizarCadastroAdministradorDTO()));
     }
 
     @Test
-    void finalizarCadastroGerente_unidadesAcimaDoLimite_lanca() {
+    void finalizarCadastroAdministrador_unidadesAcimaDoLimite_lanca() {
         ConviteAcesso convite = ConviteAcesso.builder()
                 .token("tok").maxUnidades(1)
                 .dataExpiracaoLink(LocalDateTime.now().plusDays(7))
@@ -209,7 +209,7 @@ class ConviteServiceTest {
                 .build();
         when(conviteAcessoRepository.findByToken("tok")).thenReturn(Optional.of(convite));
 
-        FinalizarCadastroGerenteDTO dto = new FinalizarCadastroGerenteDTO();
+        FinalizarCadastroAdministradorDTO dto = new FinalizarCadastroAdministradorDTO();
         dto.setNome("Fulano");
         dto.setEmail("f@x.com");
         dto.setSenha("123456");
@@ -220,12 +220,12 @@ class ConviteServiceTest {
         ));
 
         BusinessException ex = assertThrows(BusinessException.class, () ->
-                service.finalizarCadastroGerente("tok", dto));
+                service.finalizarCadastroAdministrador("tok", dto));
         assertTrue(ex.getMessage().contains("excede"));
     }
 
     @Test
-    void finalizarCadastroGerente_emailDuplicado_lanca() {
+    void finalizarCadastroAdministrador_emailDuplicado_lanca() {
         ConviteAcesso convite = ConviteAcesso.builder()
                 .token("tok").maxUnidades(2)
                 .dataExpiracaoLink(LocalDateTime.now().plusDays(7))
@@ -234,17 +234,17 @@ class ConviteServiceTest {
         when(conviteAcessoRepository.findByToken("tok")).thenReturn(Optional.of(convite));
         when(usuarioRepository.existsByEmail("dup@x.com")).thenReturn(true);
 
-        FinalizarCadastroGerenteDTO dto = new FinalizarCadastroGerenteDTO();
+        FinalizarCadastroAdministradorDTO dto = new FinalizarCadastroAdministradorDTO();
         dto.setNome("Fulano"); dto.setEmail("dup@x.com"); dto.setSenha("123456");
         dto.setNomeEmpresa("X");
         dto.setUnidades(List.of(UnidadeMinimaDTO.builder().nome("U1").build()));
 
-        assertThrows(BusinessException.class, () -> service.finalizarCadastroGerente("tok", dto));
+        assertThrows(BusinessException.class, () -> service.finalizarCadastroAdministrador("tok", dto));
         verify(empresaRepository, never()).save(any());
     }
 
     @Test
-    void finalizarCadastroGerente_sucesso_criaEmpresaUnidadesUsuarioEGerente() {
+    void finalizarCadastroAdministrador_sucesso_criaEmpresaUnidadesUsuarioEGerente() {
         ConviteAcesso convite = ConviteAcesso.builder()
                 .token("tok").maxUnidades(2)
                 .dataExpiracaoLink(LocalDateTime.now().plusDays(7))
@@ -265,12 +265,12 @@ class ConviteServiceTest {
         when(passwordEncoder.encode("123456")).thenReturn("hashed");
         when(usuarioRepository.save(any(Usuario.class))).thenAnswer(i -> i.getArgument(0));
 
-        FinalizarCadastroGerenteDTO dto = new FinalizarCadastroGerenteDTO();
+        FinalizarCadastroAdministradorDTO dto = new FinalizarCadastroAdministradorDTO();
         dto.setNome("Fulano"); dto.setEmail("new@x.com"); dto.setSenha("123456");
         dto.setNomeEmpresa("Empresa X");
         dto.setUnidades(List.of(UnidadeMinimaDTO.builder().nome("U1").build()));
 
-        service.finalizarCadastroGerente("tok", dto);
+        service.finalizarCadastroAdministrador("tok", dto);
 
         verify(empresaRepository).save(argThat(e -> "Empresa X".equals(e.getNome())));
         verify(unidadeRepository).save(any(Unidade.class));

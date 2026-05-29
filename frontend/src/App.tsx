@@ -185,7 +185,8 @@ function App() {
               />
 
               {/* Cadastro via convite — quem clica no link recebido por email/whatsapp.
-                  Suporta dois aliases ("gerente" e "atendente") pra robustez. */}
+                  Mesmo componente serve aos 3 fluxos via tipoDestinatario do backend. */}
+              <Route path="/cadastro-administrador" element={<CadastroPorConvite />} />
               <Route path="/cadastro-gerente" element={<CadastroPorConvite />} />
               <Route path="/cadastro-atendente" element={<CadastroPorConvite />} />
               <Route

@@ -17,8 +17,12 @@ interface ConviteInfo {
   dataExpiracaoAcesso: string
   valido: boolean
   mensagemErro: string | null
-  /** "ATENDENTE" (convite de gerente/administrador) ou "GERENTE" (admin global). */
-  tipoDestinatario?: 'ATENDENTE' | 'GERENTE'
+  /**
+   * ADMINISTRADOR (admin global criou — cria nova empresa)
+   * GERENTE       (administrador criou — vincula à empresa dele)
+   * ATENDENTE     (gerente/administrador criou — vira PROFISSIONAL)
+   */
+  tipoDestinatario?: 'ADMINISTRADOR' | 'GERENTE' | 'ATENDENTE'
   empresaNome?: string | null
   unidadesDisponiveis?: UnidadeOpcao[]
 }
@@ -88,10 +92,11 @@ export default function CadastroPorConvite() {
 
   const finalizarMutation = useMutation({
     mutationFn: async (payload: any) => {
-      // Rota muda conforme o tipo do convite
-      const path = info?.tipoDestinatario === 'ATENDENTE'
-        ? `/publico/convites/acesso/${token}/finalizar-atendente`
-        : `/publico/convites/acesso/${token}/finalizar`
+      const t = info?.tipoDestinatario
+      const path =
+        t === 'ADMINISTRADOR' ? `/publico/convites/acesso/${token}/finalizar-administrador`
+        : t === 'GERENTE'     ? `/publico/convites/acesso/${token}/finalizar-gerente`
+        :                       `/publico/convites/acesso/${token}/finalizar-atendente`
       await api.post(path, payload)
     },
     onSuccess: () => {
@@ -104,7 +109,14 @@ export default function CadastroPorConvite() {
     },
   })
 
-  const isAtendente = info?.tipoDestinatario === 'ATENDENTE'
+  const tipo = info?.tipoDestinatario
+  const isAdministrador = tipo === 'ADMINISTRADOR'
+  // Tanto GERENTE quanto ATENDENTE usam a UI de "vincular a unidades existentes"
+  const vinculaUnidadesExistentes = tipo === 'GERENTE' || tipo === 'ATENDENTE'
+  const tituloPapel =
+    tipo === 'ADMINISTRADOR' ? 'administrador da empresa'
+    : tipo === 'GERENTE'     ? 'gerente da equipe'
+    :                          'profissional da equipe'
 
   // Ao receber info válida, garante que unidades respeita maxUnidades
   useEffect(() => {
@@ -122,7 +134,7 @@ export default function CadastroPorConvite() {
     if (form.senha.length < 6) erros.push('Senha precisa ter no mínimo 6 caracteres.')
     if (form.senha !== form.confirmarSenha) erros.push('As senhas não coincidem.')
 
-    if (isAtendente) {
+    if (vinculaUnidadesExistentes) {
       const cpfLimpo = form.cpf.replace(/\D/g, '')
       if (cpfLimpo.length !== 11) erros.push('CPF inválido (11 dígitos).')
       if (form.unidadesIds.length === 0) erros.push('Selecione pelo menos uma unidade.')
@@ -138,7 +150,7 @@ export default function CadastroPorConvite() {
     }
     setErros([])
 
-    if (isAtendente) {
+    if (vinculaUnidadesExistentes) {
       finalizarMutation.mutate({
         nome: form.nome.trim(),
         email: form.email.trim().toLowerCase(),
@@ -155,6 +167,7 @@ export default function CadastroPorConvite() {
         senha: form.senha,
         nomeEmpresa: form.nomeEmpresa.trim(),
         unidades: unidadesValidas.map((u) => ({ nome: u.nome.trim() })),
+        // planoId: TODO #139 — campo aceito pelo backend mas ignorado por ora
       })
     }
   }
@@ -243,17 +256,25 @@ export default function CadastroPorConvite() {
         {/* Hero */}
         <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 sm:p-5 mb-6">
           <p className="text-sm font-semibold text-violet-900">
-            🎉 Você foi convidado para a equipe!
+            🎉 Você foi convidado!
           </p>
           <p className="text-xs text-violet-700 mt-1">
-            {isAtendente
-              ? <>Complete o cadastro abaixo para acessar como <strong>profissional</strong>
-                  {info?.empresaNome ? <> da <strong>{info.empresaNome}</strong></> : null}.
-                </>
-              : <>Complete o cadastro abaixo para acessar o sistema. Você poderá criar até{' '}
-                  <strong>{info?.maxUnidades ?? 1}</strong> unidade{(info?.maxUnidades ?? 1) > 1 ? 's' : ''}.
-                </>
-            }
+            {isAdministrador && (
+              <>Você vai ser cadastrado como <strong>administrador</strong> da sua nova
+                empresa na plataforma. Poderá criar até{' '}
+                <strong>{info?.maxUnidades ?? 1}</strong> unidade{(info?.maxUnidades ?? 1) > 1 ? 's' : ''} abaixo.
+              </>
+            )}
+            {tipo === 'GERENTE' && (
+              <>Complete o cadastro pra acessar como <strong>gerente</strong>
+                {info?.empresaNome ? <> da <strong>{info.empresaNome}</strong></> : null}.
+              </>
+            )}
+            {tipo === 'ATENDENTE' && (
+              <>Complete o cadastro pra acessar como <strong>profissional</strong>
+                {info?.empresaNome ? <> da <strong>{info.empresaNome}</strong></> : null}.
+              </>
+            )}
           </p>
         </div>
 
@@ -261,9 +282,7 @@ export default function CadastroPorConvite() {
         <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-6 sm:p-8">
           <h1 className="text-xl font-bold text-slate-900 mb-1">Criar sua conta</h1>
           <p className="text-sm text-slate-500 mb-5">
-            {isAtendente
-              ? 'Preencha seus dados para acessar a agenda como profissional.'
-              : 'Você será cadastrado como gerente da empresa que vai criar abaixo.'}
+            Você será cadastrado como <strong>{tituloPapel}</strong>.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -348,8 +367,8 @@ export default function CadastroPorConvite() {
               </div>
             </section>
 
-            {isAtendente ? (
-              /* ─── Fluxo ATENDENTE: CPF, telefone, escolher unidades existentes ─── */
+            {vinculaUnidadesExistentes ? (
+              /* ─── Fluxo GERENTE/ATENDENTE: CPF, telefone, escolher unidades existentes ─── */
               <section className="pt-4 border-t border-slate-100">
                 <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2.5">
                   Onde você vai atuar
@@ -428,11 +447,15 @@ export default function CadastroPorConvite() {
                 </div>
               </section>
             ) : (
-              /* ─── Fluxo GERENTE (admin global): cria empresa nova ─── */
+              /* ─── Fluxo ADMINISTRADOR (admin global convida): cria empresa nova ─── */
               <section className="pt-4 border-t border-slate-100">
                 <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2.5">
                   Sua empresa
                 </h2>
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3 text-xs text-amber-900">
+                  📋 <strong>Plano da empresa</strong> — definido pelo time da plataforma após o cadastro.
+                  Você receberá um email com os detalhes do plano e ativação.
+                </div>
                 <div className="space-y-3">
                   <div>
                     <label htmlFor="nomeEmpresa" className="block text-xs font-semibold text-slate-700 mb-1.5">
