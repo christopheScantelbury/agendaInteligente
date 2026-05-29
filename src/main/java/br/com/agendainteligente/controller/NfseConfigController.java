@@ -148,9 +148,13 @@ public class NfseConfigController {
     }
 
     private Map<String, Object> toResumo(Unidade u) {
+        // MEI emite via NFS-e Nacional (gov.br) — não precisa de Inscrição Municipal.
+        // Demais regimes ainda exigem IM (NFS-e municipal padrão ABRASF).
+        boolean isMei = "MEI".equals(u.getRegimeTributario());
         boolean fiscalOk = preenchido(u.getCnpj())
-                && preenchido(u.getInscricaoMunicipal())
-                && preenchido(u.getRazaoSocial());
+                && preenchido(u.getRazaoSocial())
+                && preenchido(u.getRegimeTributario())
+                && (isMei || preenchido(u.getInscricaoMunicipal()));
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("unidadeId", u.getId());
         m.put("nome", u.getNome());

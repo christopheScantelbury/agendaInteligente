@@ -200,12 +200,18 @@ export default function NfseEditarUnidade() {
     })
   }
 
+  // MEI emite via NFS-e Nacional (gov.br/nfse) — não precisa Inscrição Municipal.
+  // Demais regimes (Simples/Presumido/Real) ainda exigem IM da prefeitura.
+  const isMei = form.regimeTributario === 'MEI'
+
   // Cálculo de "pronto pra emitir" — visualiza o que falta
   const camposObrigatorios = [
     { label: 'Razão social', ok: !!form.razaoSocial?.trim() },
     { label: 'CNPJ', ok: !!form.cnpj && form.cnpj.replace(/\D/g, '').length === 14 },
-    { label: 'Inscrição municipal', ok: !!form.inscricaoMunicipal?.trim() },
     { label: 'Regime tributário', ok: !!form.regimeTributario },
+    ...(isMei
+      ? []
+      : [{ label: 'Inscrição municipal', ok: !!form.inscricaoMunicipal?.trim() }]),
     { label: 'Endereço completo', ok: !!(form.endereco && form.numero && form.bairro && form.cep && form.cidade && form.uf) },
     { label: 'Código IBGE do município', ok: !!form.municipioIbge?.trim() && form.municipioIbge.length === 7 },
   ]
@@ -328,14 +334,26 @@ export default function NfseEditarUnidade() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor="inscricaoMunicipal" required>Inscrição municipal</Label>
+                  <Label htmlFor="inscricaoMunicipal" required={!isMei}>
+                    Inscrição municipal
+                    {isMei && (
+                      <span className="ml-1 text-[10px] font-semibold text-emerald-700">
+                        · opcional para MEI
+                      </span>
+                    )}
+                  </Label>
                   <Input
                     id="inscricaoMunicipal"
                     type="text"
                     value={form.inscricaoMunicipal ?? ''}
                     onChange={(e) => setForm((p) => ({ ...p, inscricaoMunicipal: e.target.value }))}
-                    placeholder="Obtido na prefeitura"
+                    placeholder={isMei ? 'Deixe em branco se não tem' : 'Obtido na prefeitura'}
                   />
+                  {isMei && (
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      MEI emite pelo portal nacional <code className="font-mono">nfse.gov.br</code> — não precisa de IM.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="inscricaoEstadual">Inscrição estadual</Label>

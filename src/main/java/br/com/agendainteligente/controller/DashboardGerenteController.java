@@ -213,12 +213,18 @@ public class DashboardGerenteController {
                 .findFirst()
                 .map(e -> e.getSlugPublico() != null && !e.getSlugPublico().isBlank())
                 .orElse(false);
-        // Configurou NFS-e se alguma unidade tem CNPJ + inscrição municipal + razão social
-        // (mínimo viável pra emitir nota — outros campos validados na própria tela)
+        // Configurou NFS-e se alguma unidade tem CNPJ + razão social + regime tributário.
+        // Inscrição municipal é OPCIONAL pra MEI (emite via NFS-e Nacional/gov.br) —
+        // pra demais regimes, ainda é obrigatória.
         boolean configurouFiscal = unidadesEmpresa.stream()
-                .anyMatch(u -> u.getCnpj() != null && !u.getCnpj().isBlank()
-                        && u.getInscricaoMunicipal() != null && !u.getInscricaoMunicipal().isBlank()
-                        && u.getRazaoSocial() != null && !u.getRazaoSocial().isBlank());
+                .anyMatch(u -> {
+                    if (u.getCnpj() == null || u.getCnpj().isBlank()) return false;
+                    if (u.getRazaoSocial() == null || u.getRazaoSocial().isBlank()) return false;
+                    if (u.getRegimeTributario() == null || u.getRegimeTributario().isBlank()) return false;
+                    boolean isMei = "MEI".equals(u.getRegimeTributario());
+                    if (!isMei && (u.getInscricaoMunicipal() == null || u.getInscricaoMunicipal().isBlank())) return false;
+                    return true;
+                });
         boolean convidouEquipe = !conviteAcessoRepository.findByCriadoPorIdOrderByDataCriacaoDesc(usuario.getId()).isEmpty();
 
         List<Map<String, Object>> tarefas = new ArrayList<>();
