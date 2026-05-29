@@ -66,10 +66,10 @@ interface ServicoFinalizacaoLinha {
 }
 
 const inputBaseClass =
-  'block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100'
+  'block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm transition focus:border-violet-500 focus:outline-none focus:ring-4 focus:ring-blue-100'
 
 const inputWithIconClass =
-  'block w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-sm text-slate-900 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100'
+  'block w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-sm text-slate-900 shadow-sm transition focus:border-violet-500 focus:outline-none focus:ring-4 focus:ring-blue-100'
 
 const lineInputClass =
   'block w-full border-0 border-b border-slate-300 bg-transparent px-0 pb-1.5 pt-1 text-sm text-slate-900 transition focus:border-violet-500 focus:outline-none focus:ring-0'
@@ -3195,7 +3195,7 @@ export default function Agendamentos() {
                     prev ? { ...prev, devolveuSinal: e.target.checked } : prev
                   )
                 }
-                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-violet-500"
               />
               <div>
                 <p className="text-sm font-medium text-slate-800">Devolução do sinal?</p>
@@ -3778,7 +3778,7 @@ export default function Agendamentos() {
                       prev ? { ...prev, dataPagamento: e.target.value } : prev
                     )
                   }
-                  className="block w-full border-0 border-b border-slate-300 bg-transparent px-0 pb-1.5 pt-1 text-sm text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-0"
+                  className="block w-full border-0 border-b border-slate-300 bg-transparent px-0 pb-1.5 pt-1 text-sm text-slate-900 transition focus:border-violet-500 focus:outline-none focus:ring-0"
                 />
               </div>
 
@@ -3791,7 +3791,7 @@ export default function Agendamentos() {
                       prev ? { ...prev, formaPagamento: e.target.value as FormaPagamentoSinal } : prev
                     )
                   }
-                  className="block w-full border-0 border-b border-slate-300 bg-transparent px-0 pb-1.5 pt-1 text-sm text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-0"
+                  className="block w-full border-0 border-b border-slate-300 bg-transparent px-0 pb-1.5 pt-1 text-sm text-slate-900 transition focus:border-violet-500 focus:outline-none focus:ring-0"
                 >
                   <option value="PIX">Pix</option>
                   <option value="DINHEIRO">Dinheiro</option>
@@ -3815,7 +3815,7 @@ export default function Agendamentos() {
                         : prev
                     )
                   }
-                  className="block w-full border-0 border-b border-slate-300 bg-transparent px-0 pb-1.5 pt-1 text-sm text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-0"
+                  className="block w-full border-0 border-b border-slate-300 bg-transparent px-0 pb-1.5 pt-1 text-sm text-slate-900 transition focus:border-violet-500 focus:outline-none focus:ring-0"
                 />
               </div>
 
@@ -3918,7 +3918,7 @@ export default function Agendamentos() {
                           prev ? { ...prev, dataPagamento: e.target.value } : prev
                         )
                       }
-                      className="block w-full border-0 border-b border-slate-300 bg-transparent px-0 pb-1.5 pt-1 text-sm text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-0"
+                      className="block w-full border-0 border-b border-slate-300 bg-transparent px-0 pb-1.5 pt-1 text-sm text-slate-900 transition focus:border-violet-500 focus:outline-none focus:ring-0"
                     />
                   </div>
 
@@ -3931,7 +3931,7 @@ export default function Agendamentos() {
                           prev ? { ...prev, formaPagamento: e.target.value as FormaPagamentoSinal } : prev
                         )
                       }
-                      className="block w-full border-0 border-b border-slate-300 bg-transparent px-0 pb-1.5 pt-1 text-sm text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-0"
+                      className="block w-full border-0 border-b border-slate-300 bg-transparent px-0 pb-1.5 pt-1 text-sm text-slate-900 transition focus:border-violet-500 focus:outline-none focus:ring-0"
                     >
                       <option value="PIX">Pix</option>
                       <option value="DINHEIRO">Dinheiro</option>
@@ -3964,7 +3964,7 @@ export default function Agendamentos() {
                       className={`block w-full border-0 border-b bg-transparent px-0 pb-1.5 pt-1 text-sm text-slate-900 transition focus:outline-none focus:ring-0 ${
                         valorSinalInvalido
                           ? 'border-red-300 focus:border-red-400'
-                          : 'border-slate-300 focus:border-blue-500'
+                          : 'border-slate-300 focus:border-violet-500'
                       }`}
                     />
                     {valorSinalInvalido && (
@@ -4161,7 +4161,7 @@ export default function Agendamentos() {
                       formaPagamento: e.target.value as FormaPagamentoSinal,
                     })
                   }
-                  className="block w-full border-0 border-b border-slate-300 bg-transparent px-0 pb-1.5 pt-1 text-sm text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-0"
+                  className="block w-full border-0 border-b border-slate-300 bg-transparent px-0 pb-1.5 pt-1 text-sm text-slate-900 transition focus:border-violet-500 focus:outline-none focus:ring-0"
                 >
                   <option value="PIX">Pix</option>
                   <option value="DINHEIRO">Dinheiro</option>
@@ -4249,7 +4249,7 @@ function ClienteForm({
   })
 
   const inputClassName =
-    'mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200'
+    'mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 shadow-sm focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-blue-200'
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -4437,7 +4437,7 @@ function ServicoForm({
   }
 
   const inputClassName =
-    'mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200'
+    'mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 shadow-sm focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-blue-200'
 
   return (
     <form onSubmit={handleSubmit} className="-m-6 flex max-h-[78vh] flex-col">

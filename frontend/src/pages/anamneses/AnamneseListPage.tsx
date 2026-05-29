@@ -67,7 +67,7 @@ export default function AnamneseListPage() {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Buscar por nome de cliente..."
-          className="block w-full sm:w-80 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+          className="block w-full sm:w-80 rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 text-sm"
         />
       </div>
 
@@ -104,7 +104,7 @@ export default function AnamneseListPage() {
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() => navigate(`/anamneses/${a.id}`)}
-                            className="text-blue-600 hover:text-blue-800"
+                            className="text-violet-700 hover:text-violet-900"
                             aria-label="Ver ficha"
                           >
                             <Eye className="h-5 w-5" />
@@ -140,7 +140,7 @@ export default function AnamneseListPage() {
                     <div className="flex gap-2 ml-4">
                       <button
                         onClick={() => navigate(`/anamneses/${a.id}`)}
-                        className="text-blue-600 hover:text-blue-800"
+                        className="text-violet-700 hover:text-violet-900"
                       >
                         <Eye className="h-5 w-5" />
                       </button>

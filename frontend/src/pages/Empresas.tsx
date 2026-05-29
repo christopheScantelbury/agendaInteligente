@@ -118,7 +118,7 @@ export default function Empresas() {
                         setEditingEmpresa(empresa)
                         setShowModal(true)
                       }}
-                      className="text-blue-600 hover:text-blue-800 transition-colors"
+                      className="text-violet-700 hover:text-violet-900 transition-colors"
                       aria-label="Editar empresa"
                     >
                       <Edit className="h-5 w-5" />
@@ -273,7 +273,7 @@ function EmpresaForm({
             required
             value={formData.nome}
             onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
           />
         </FormField>
 
@@ -282,7 +282,7 @@ function EmpresaForm({
             type="text"
             value={formData.razaoSocial || ''}
             onChange={(e) => setFormData({ ...formData, razaoSocial: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
           />
         </FormField>
 
@@ -294,7 +294,7 @@ function EmpresaForm({
               onChange={(e) => setFormData({ ...formData, cnpj: maskCNPJ(e.target.value) })}
               maxLength={18}
               placeholder="00.000.000/0000-00"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
           <FormField label="Telefone">
@@ -304,7 +304,7 @@ function EmpresaForm({
               onChange={(e) => setFormData({ ...formData, telefone: maskPhone(e.target.value) })}
               maxLength={15}
               placeholder="(00) 00000-0000"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
         </div>
@@ -315,7 +315,7 @@ function EmpresaForm({
             value={formData.email || ''}
             onChange={(e) => setFormData({ ...formData, email: maskEmail(e.target.value) })}
             placeholder="exemplo@email.com"
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
           />
         </FormField>
 
@@ -326,7 +326,7 @@ function EmpresaForm({
             onChange={(e) => setFormData({ ...formData, cep: maskCEP(e.target.value) })}
             maxLength={9}
             placeholder="00000-000"
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
           />
         </FormField>
 
@@ -335,7 +335,7 @@ function EmpresaForm({
             type="text"
             value={formData.endereco || ''}
             onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
           />
         </FormField>
 
@@ -345,7 +345,7 @@ function EmpresaForm({
               type="text"
               value={formData.numero || ''}
               onChange={(e) => setFormData({ ...formData, numero: e.target.value.replace(/\D/g, '') })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
           <FormField label="Bairro">
@@ -353,7 +353,7 @@ function EmpresaForm({
               type="text"
               value={formData.bairro || ''}
               onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
           <FormField label="UF">
@@ -362,7 +362,7 @@ function EmpresaForm({
               maxLength={2}
               value={formData.uf || ''}
               onChange={(e) => setFormData({ ...formData, uf: e.target.value.toUpperCase() })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
         </div>
@@ -372,7 +372,7 @@ function EmpresaForm({
             type="text"
             value={formData.cidade || ''}
             onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
           />
         </FormField>
 
@@ -417,7 +417,7 @@ function EmpresaForm({
                 }}
                 placeholder="#2563EB"
                 maxLength={7}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </div>
           </FormField>

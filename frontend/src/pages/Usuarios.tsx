@@ -282,7 +282,7 @@ export default function Usuarios() {
                           setEditingUsuario(usuario)
                           setShowModal(true)
                         }}
-                        className="text-blue-600 hover:text-blue-800 transition-colors"
+                        className="text-violet-700 hover:text-violet-900 transition-colors"
                         aria-label="Editar usuário"
                       >
                         <Edit className="h-5 w-5" />
@@ -363,7 +363,7 @@ export default function Usuarios() {
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNovaSenhaInput(e.target.value)}
                   placeholder="Digite a nova senha"
                   autoComplete="new-password"
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 sm:text-sm"
                 />
               </FormField>
               <div className="flex justify-end gap-2 pt-2">
@@ -617,7 +617,7 @@ function UsuarioForm({
           required
           value={formData.nome}
           onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
         />
       </FormField>
 
@@ -628,7 +628,7 @@ function UsuarioForm({
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: maskEmail(e.target.value) })}
           placeholder="exemplo@email.com"
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
         />
       </FormField>
 
@@ -639,7 +639,7 @@ function UsuarioForm({
             required={!usuario}
             value={formData.senha || ''}
             onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
           />
           <button
             type="button"
@@ -676,7 +676,7 @@ function UsuarioForm({
               }),
             })
           }}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
         >
           <option value="">Selecione um perfil</option>
           {perfis
@@ -726,7 +726,7 @@ function UsuarioForm({
                             : currentIds.filter(id => id !== unidadeId)
                           setFormData({ ...formData, unidadesIds: newIds })
                         }}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
                       />
                       <span className="flex-1 text-sm text-gray-900">{unidade.nome}</span>
                     </label>
@@ -758,7 +758,7 @@ function UsuarioForm({
               onChange={(e) => setFormData({ ...formData, atendenteCpf: maskCPF(e.target.value) })}
               placeholder="000.000.000-00"
               maxLength={14}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
           <FormField label="Telefone">
@@ -768,7 +768,7 @@ function UsuarioForm({
               onChange={(e) => setFormData({ ...formData, atendenteTelefone: maskPhone(e.target.value) })}
               placeholder="(00) 00000-0000"
               maxLength={15}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
           <FormField label="Percentual de comissão (%)">
@@ -785,7 +785,7 @@ function UsuarioForm({
                 })
               }
               placeholder="0"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
           <FormField label="Serviços que este atendente presta">
@@ -794,7 +794,7 @@ function UsuarioForm({
               value={filtroServicos}
               onChange={(e) => setFiltroServicos(e.target.value)}
               placeholder="Buscar serviço por nome ou descrição..."
-              className="mt-1 mb-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+              className="mt-1 mb-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 text-sm"
             />
             <div className="mt-1 max-h-44 overflow-y-auto border border-gray-300 rounded-md p-3 space-y-2 bg-gray-50">
               {servicosAtivos.length === 0 ? (
@@ -817,7 +817,7 @@ function UsuarioForm({
                           : ids.filter((id) => id !== s.id)
                         setFormData({ ...formData, atendenteServicosIds: newIds })
                       }}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
                     />
                     <span className="text-sm text-gray-900">
                       {s.nome}
@@ -839,7 +839,7 @@ function UsuarioForm({
             type="checkbox"
             checked={formData.ativo}
             onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
-            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
           />
           <span className="ml-2 text-sm text-gray-700">Ativo</span>
         </label>

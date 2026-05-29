@@ -264,7 +264,7 @@ export default function ClienteFormPage() {
               required
               value={formData.nome}
               onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </div>
 
@@ -282,7 +282,7 @@ export default function ClienteFormPage() {
                 }}
                 maxLength={18}
                 placeholder="000.000.000-00 ou 00.000.000/0000-00"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </div>
 
@@ -293,7 +293,7 @@ export default function ClienteFormPage() {
                 value={formData.rg || ''}
                 onChange={(e) => setFormData({ ...formData, rg: e.target.value })}
                 placeholder="Documento de identidade"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </div>
           </div>
@@ -306,7 +306,7 @@ export default function ClienteFormPage() {
                 value={formData.email || ''}
                 onChange={(e) => setFormData({ ...formData, email: maskEmail(e.target.value) })}
                 placeholder="email@exemplo.com"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </div>
 
@@ -318,7 +318,7 @@ export default function ClienteFormPage() {
                 onChange={(e) => setFormData({ ...formData, telefone: maskPhone(e.target.value) })}
                 maxLength={15}
                 placeholder="(00) 00000-0000"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </div>
           </div>
@@ -330,7 +330,7 @@ export default function ClienteFormPage() {
               value={formData.dataNascimento || ''}
               onChange={(e) => setFormData({ ...formData, dataNascimento: e.target.value })}
               max={new Date().toISOString().split('T')[0]}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </div>
         </section>
@@ -347,7 +347,7 @@ export default function ClienteFormPage() {
                 onChange={(e) => setFormData({ ...formData, cep: maskCEP(e.target.value) })}
                 placeholder="00000-000"
                 maxLength={9}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </div>
             <div className="md:col-span-2">
@@ -357,7 +357,7 @@ export default function ClienteFormPage() {
                 value={formData.endereco || ''}
                 onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
                 placeholder="Rua, avenida..."
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </div>
           </div>
@@ -370,7 +370,7 @@ export default function ClienteFormPage() {
                 value={formData.numero || ''}
                 onChange={(e) => setFormData({ ...formData, numero: e.target.value.replace(/\D/g, '') })}
                 placeholder="123"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </div>
             <div className="md:col-span-2">
@@ -380,7 +380,7 @@ export default function ClienteFormPage() {
                 value={formData.complemento || ''}
                 onChange={(e) => setFormData({ ...formData, complemento: e.target.value })}
                 placeholder="Apartamento, bloco..."
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </div>
           </div>
@@ -393,7 +393,7 @@ export default function ClienteFormPage() {
                 value={formData.bairro || ''}
                 onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
                 placeholder="Bairro"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </div>
             <div className="md:col-span-2">
@@ -403,7 +403,7 @@ export default function ClienteFormPage() {
                 value={formData.cidade || ''}
                 onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
                 placeholder="Cidade"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </div>
           </div>
@@ -416,7 +416,7 @@ export default function ClienteFormPage() {
               onChange={(e) => setFormData({ ...formData, uf: e.target.value.toUpperCase().slice(0, 2) })}
               placeholder="UF"
               maxLength={2}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </div>
         </section>
@@ -456,7 +456,7 @@ export default function ClienteFormPage() {
                           })
                         }
                       }}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
                     />
                     <span className="ml-3 text-sm text-gray-700">
                       {unidade.nome}
@@ -492,7 +492,7 @@ export default function ClienteFormPage() {
               type="checkbox"
               checked={formData.ativo ?? true}
               onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
             />
             <span className="ml-2 text-sm font-medium text-gray-700">Cliente ativo</span>
           </label>
@@ -513,7 +513,7 @@ export default function ClienteFormPage() {
                     setAgendamentoServicosIds([])
                   }
                 }}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                className="rounded border-gray-300 text-violet-600 focus:ring-violet-500 w-4 h-4"
               />
               <span className="flex items-center gap-2 text-sm font-medium text-gray-700">
                 <CalendarPlus className="w-5 h-5 text-blue-600" />
@@ -544,7 +544,7 @@ export default function ClienteFormPage() {
                         setAgendamentoUnidadeId(e.target.value ? Number(e.target.value) : '')
                         setAgendamentoAtendenteId('')
                       }}
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 text-sm"
                     >
                       <option value="">Selecione</option>
                       {unidades.map((u) => (
@@ -563,7 +563,7 @@ export default function ClienteFormPage() {
                     value={agendamentoAtendenteId}
                     onChange={(e) => setAgendamentoAtendenteId(e.target.value ? Number(e.target.value) : '')}
                     disabled={!agendamentoUnidadeId}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm disabled:bg-gray-100"
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 text-sm disabled:bg-gray-100"
                   >
                     <option value="">Selecione</option>
                     {atendentesAgendamento.map((a) => (
@@ -589,7 +589,7 @@ export default function ClienteFormPage() {
                               setAgendamentoServicosIds((prev) => prev.filter((itemId) => itemId !== s.id))
                             }
                           }}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
                         />
                         <span className="text-sm">
                           {s.nome}
@@ -607,7 +607,7 @@ export default function ClienteFormPage() {
                     value={agendamentoDataHoraInicio}
                     onChange={(e) => setAgendamentoDataHoraInicio(e.target.value)}
                     min={new Date().toISOString().slice(0, 16)}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 text-sm"
                   />
                 </div>
 

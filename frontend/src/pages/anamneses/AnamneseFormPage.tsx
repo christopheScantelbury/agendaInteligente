@@ -226,7 +226,7 @@ export default function AnamneseFormPage() {
   }
 
   const fieldClass =
-    'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm'
+    'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 text-sm'
   const sectionClass =
     'space-y-4 bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6'
   const sectionTitleClass = 'text-lg font-semibold text-gray-900 border-b border-gray-100 pb-2 mb-4'
@@ -513,7 +513,7 @@ export default function AnamneseFormPage() {
                 checked={form.usoImagem === true}
                 onChange={() => setForm({ ...form, usoImagem: true })}
                 disabled={isView}
-                className="text-blue-600 focus:ring-blue-500"
+                className="text-blue-600 focus:ring-violet-500"
               />
               <span className="text-sm text-gray-700">Autoriza uso de imagem</span>
             </label>
@@ -524,7 +524,7 @@ export default function AnamneseFormPage() {
                 checked={form.usoImagem === false}
                 onChange={() => setForm({ ...form, usoImagem: false })}
                 disabled={isView}
-                className="text-blue-600 focus:ring-blue-500"
+                className="text-blue-600 focus:ring-violet-500"
               />
               <span className="text-sm text-gray-700">Não autoriza</span>
             </label>

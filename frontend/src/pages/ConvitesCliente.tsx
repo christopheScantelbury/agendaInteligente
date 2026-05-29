@@ -155,7 +155,7 @@ export default function ConvitesCliente() {
             <select
               value={form.unidadeId || ''}
               onChange={(e) => setForm({ ...form, unidadeId: parseInt(e.target.value, 10) })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             >
               <option value="">Selecione</option>
               {unidades.map((u) => (
@@ -170,7 +170,7 @@ export default function ConvitesCliente() {
               type="datetime-local"
               value={form.dataExpiracao}
               onChange={(e) => setForm({ ...form, dataExpiracao: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
           <div className="flex justify-end gap-2 pt-4">

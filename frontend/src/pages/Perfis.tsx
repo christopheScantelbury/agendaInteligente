@@ -146,7 +146,7 @@ export default function Perfis() {
                             setEditingPerfil(perfil)
                             setShowModal(true)
                           }}
-                          className="text-blue-600 hover:text-blue-800 transition-colors"
+                          className="text-violet-700 hover:text-violet-900 transition-colors"
                           aria-label="Editar perfil"
                         >
                           <Edit className="h-5 w-5" />
@@ -318,7 +318,7 @@ function PerfilForm({
             onChange={(e) => setFormData({ ...formData, nome: e.target.value.toUpperCase() })}
             placeholder="Ex: VENDEDOR, SUPERVISOR"
             disabled={perfil?.sistema || false}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
         </FormField>
 
@@ -329,7 +329,7 @@ function PerfilForm({
             rows={3}
             placeholder="Descreva as responsabilidades deste perfil..."
             disabled={perfil?.sistema || false}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
         </FormField>
 
@@ -342,7 +342,7 @@ function PerfilForm({
                 checked={formData.atendente ?? false}
                 onChange={(e) => setFormData({ ...formData, atendente: e.target.checked })}
                 disabled={perfil?.sistema || false}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+                className="rounded border-gray-300 text-violet-600 focus:ring-violet-500 disabled:opacity-50"
               />
               <span className="text-sm text-gray-700">Secretaria / Profissional</span>
             </label>
@@ -352,7 +352,7 @@ function PerfilForm({
                 checked={formData.cliente ?? false}
                 onChange={(e) => setFormData({ ...formData, cliente: e.target.checked })}
                 disabled={perfil?.sistema || false}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+                className="rounded border-gray-300 text-violet-600 focus:ring-violet-500 disabled:opacity-50"
               />
               <span className="text-sm text-gray-700">Cliente</span>
             </label>
@@ -362,7 +362,7 @@ function PerfilForm({
                 checked={formData.gerente ?? false}
                 onChange={(e) => setFormData({ ...formData, gerente: e.target.checked })}
                 disabled={perfil?.sistema || false}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+                className="rounded border-gray-300 text-violet-600 focus:ring-violet-500 disabled:opacity-50"
               />
               <span className="text-sm text-gray-700">Gerente</span>
             </label>

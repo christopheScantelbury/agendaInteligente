@@ -151,7 +151,7 @@ export default function ConvitesAcesso() {
               max={100}
               value={form.maxUnidades}
               onChange={(e) => setForm({ ...form, maxUnidades: parseInt(e.target.value, 10) || 1 })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
           <FormField label="Link válido até" required>
@@ -159,7 +159,7 @@ export default function ConvitesAcesso() {
               type="datetime-local"
               value={form.dataExpiracaoLink}
               onChange={(e) => setForm({ ...form, dataExpiracaoLink: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
           <FormField label="Acesso ao sistema válido até" required>
@@ -167,7 +167,7 @@ export default function ConvitesAcesso() {
               type="date"
               value={form.dataExpiracaoAcesso}
               onChange={(e) => setForm({ ...form, dataExpiracaoAcesso: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
           <div className="flex justify-end gap-2 pt-4">

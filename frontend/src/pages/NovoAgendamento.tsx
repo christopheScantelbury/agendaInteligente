@@ -185,7 +185,7 @@ export default function NovoAgendamento() {
                 onChange={(e) =>
                   setFormData({ ...formData, clienteId: parseInt(e.target.value) })
                 }
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               >
                 <option value="">Selecione um cliente</option>
                 {clientes.map((cliente) => (
@@ -204,7 +204,7 @@ export default function NovoAgendamento() {
               value={formData.unidadeId || ''}
               onChange={(e) => handleUnidadeChange(parseInt(e.target.value))}
               disabled={isCliente && unidades.length <= 1}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-50"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 disabled:bg-gray-50"
             >
               <option value="">Selecione uma unidade</option>
               {unidades.map((unidade) => (
@@ -224,7 +224,7 @@ export default function NovoAgendamento() {
                 setFormData({ ...formData, atendenteId: parseInt(e.target.value) })
               }
               disabled={!formData.unidadeId}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 disabled:bg-gray-100"
             >
               <option value="">Selecione um atendente</option>
               {atendentes.map((atendente) => (
@@ -248,7 +248,7 @@ export default function NovoAgendamento() {
                   value={filtroServicos}
                   onChange={(e) => setFiltroServicos(e.target.value)}
                   placeholder="Buscar serviço por nome ou descrição..."
-                  className="mt-1 mb-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                  className="mt-1 mb-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 text-sm"
                 />
                 <div className="mt-1 space-y-2 max-h-60 overflow-y-auto border border-gray-300 rounded-md p-3">
                   {servicos.length === 0 ? (
@@ -262,7 +262,7 @@ export default function NovoAgendamento() {
                           type="checkbox"
                           checked={servicosSelecionados.includes(servico.id)}
                           onChange={() => handleServicoToggle(servico.id)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
                         />
                         <span className="flex-1">
                           <span className="font-medium">{servico.nome}</span>
@@ -290,7 +290,7 @@ export default function NovoAgendamento() {
               required
               value={formData.dataHoraInicio}
               onChange={(e) => setFormData({ ...formData, dataHoraInicio: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </div>
 
@@ -299,7 +299,7 @@ export default function NovoAgendamento() {
             <select
               value={formData.formaPagamentoPreferida ?? ''}
               onChange={(e) => setFormData({ ...formData, formaPagamentoPreferida: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             >
               <option value="">A combinar</option>
               <option value="PIX">PIX</option>
@@ -316,7 +316,7 @@ export default function NovoAgendamento() {
               value={formData.observacoes || ''}
               onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
               rows={4}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </div>
 

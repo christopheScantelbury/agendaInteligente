@@ -594,7 +594,7 @@ function AtendenteForm({
             required
             value={formData.unidadeId}
             onChange={(e) => setFormData({ ...formData, unidadeId: parseInt(e.target.value) })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
           >
             <option value="0">Selecione uma unidade</option>
             {unidades.map((unidade) => (
@@ -616,7 +616,7 @@ function AtendenteForm({
                 required
                 value={usuarioNovo.nome}
                 onChange={(e) => setUsuarioNovo((prev) => ({ ...prev, nome: e.target.value }))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </FormField>
           </div>
@@ -627,7 +627,7 @@ function AtendenteForm({
               required
               value={usuarioNovo.email}
               onChange={(e) => setUsuarioNovo((prev) => ({ ...prev, email: maskEmail(e.target.value) }))}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
 
@@ -636,7 +636,7 @@ function AtendenteForm({
               required
               value={usuarioNovo.perfilId ?? ''}
               onChange={(e) => setUsuarioNovo((prev) => ({ ...prev, perfilId: e.target.value ? Number(e.target.value) : undefined }))}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             >
               <option value="">Selecione um perfil</option>
               {perfisDisponiveis.map((perfil) => (
@@ -654,7 +654,7 @@ function AtendenteForm({
                 required={!atendente?.id}
                 value={usuarioNovo.senha}
                 onChange={(e) => setUsuarioNovo((prev) => ({ ...prev, senha: e.target.value }))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </FormField>
           </div>
@@ -677,7 +677,7 @@ function AtendenteForm({
               }}
               maxLength={18}
               placeholder="000.000.000-00 ou 00.000.000/0000-00"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
 
@@ -688,7 +688,7 @@ function AtendenteForm({
               onChange={(e) => setFormData({ ...formData, telefone: maskPhone(e.target.value) })}
               maxLength={15}
               placeholder="(00) 00000-0000"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
 
@@ -714,7 +714,7 @@ function AtendenteForm({
                     })
                   }
                 }}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
                 placeholder="0.00"
               />
               <p className="mt-1 text-xs text-gray-500">Percentual de comissão sobre os serviços prestados (0.00 a 100.00). Deixe vazio para 0%.</p>
@@ -766,7 +766,7 @@ function AtendenteForm({
             type="checkbox"
             checked={formData.ativo}
             onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
-            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
           />
           <span className="ml-2 text-sm text-gray-700">Ativo</span>
         </label>

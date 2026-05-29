@@ -179,7 +179,7 @@ export default function Servicos() {
                         setEditingServico(servico)
                         setShowModal(true)
                       }}
-                      className="text-blue-600 hover:text-blue-800 transition-colors"
+                      className="text-violet-700 hover:text-violet-900 transition-colors"
                       aria-label="Editar serviço"
                     >
                       <Edit className="h-5 w-5" />
@@ -436,7 +436,7 @@ function ServicoForm({
           required
           value={formData.unidadeId || ''}
           onChange={(e) => setFormData({ ...formData, unidadeId: parseInt(e.target.value) })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
           disabled={unidadesDisponiveis.length === 1}
         >
           <option value="">Selecione uma unidade</option>
@@ -460,7 +460,7 @@ function ServicoForm({
             required
             value={formData.valor}
             onChange={(e) => setFormData({ ...formData, valor: parseFloat(e.target.value) || 0 })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
           />
         </FormField>
 
@@ -473,7 +473,7 @@ function ServicoForm({
             onChange={(e) =>
               setFormData({ ...formData, duracaoMinutos: parseInt(e.target.value) || 30 })
             }
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
           />
         </FormField>
       </div>
@@ -484,7 +484,7 @@ function ServicoForm({
             type="checkbox"
             checked={formData.ativo}
             onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
-            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
           />
           <span className="ml-2 text-sm text-gray-700">Ativo</span>
         </label>

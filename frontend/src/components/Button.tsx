@@ -9,17 +9,19 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses = {
-  primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
-  secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500',
+  // Padronizado pra paleta violet do sistema (era azul).
+  primary: 'bg-violet-600 text-white hover:bg-violet-700 focus:ring-violet-500 shadow-sm shadow-violet-200',
+  secondary: 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 focus:ring-slate-300',
   danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
-  ghost: 'bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500',
-  success: 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500',
+  ghost: 'bg-transparent text-slate-700 hover:bg-slate-100 focus:ring-slate-300',
+  success: 'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500',
 }
 
 const sizeClasses = {
+  // rounded-xl pra alinhar com os cards/inputs do padrão novo
   sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2 text-base',
-  lg: 'px-6 py-3 text-lg',
+  md: 'px-4 py-2 text-sm',
+  lg: 'px-6 py-3 text-base',
 }
 
 export default function Button({
@@ -32,7 +34,7 @@ export default function Button({
   ...props
 }: ButtonProps) {
   const baseClasses =
-    'inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed'
+    'inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed'
 
   return (
     <button

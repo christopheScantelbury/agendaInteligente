@@ -59,7 +59,7 @@ export default function Reclamacoes() {
             <select
               value={formData.unidadeId || ''}
               onChange={(e) => setFormData({ ...formData, unidadeId: e.target.value ? Number(e.target.value) : undefined })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             >
               <option value="">Selecione uma unidade (opcional)</option>
               {unidades.map((unidade) => (
@@ -76,7 +76,7 @@ export default function Reclamacoes() {
               onChange={(e) => setFormData({ ...formData, mensagem: e.target.value })}
               rows={8}
               placeholder="Descreva sua reclamação aqui. Seja específico e detalhado para que possamos melhorar nossos serviços."
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
             <p className="mt-2 text-sm text-gray-500">
               Sua reclamação será enviada de forma anônima. Nenhuma informação pessoal será coletada.

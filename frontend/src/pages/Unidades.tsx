@@ -189,7 +189,7 @@ export default function Unidades() {
                         setEditingUnidade(unidade)
                         setShowModal(true)
                       }}
-                      className="text-blue-600 hover:text-blue-800 transition-colors"
+                      className="text-violet-700 hover:text-violet-900 transition-colors"
                       aria-label="Editar unidade"
                     >
                       <Edit className="h-5 w-5" />
@@ -339,7 +339,7 @@ function UnidadeForm({
               required
               value={formData.nome}
               onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
 
@@ -349,7 +349,7 @@ function UnidadeForm({
                 type="time"
                 value={formData.horarioAbertura || ''}
                 onChange={(e) => setFormData({ ...formData, horarioAbertura: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </FormField>
             <FormField label="Fechamento">
@@ -357,7 +357,7 @@ function UnidadeForm({
                 type="time"
                 value={formData.horarioFechamento || ''}
                 onChange={(e) => setFormData({ ...formData, horarioFechamento: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </FormField>
           </div>
@@ -368,7 +368,7 @@ function UnidadeForm({
             required
             value={formData.empresaId || ''}
             onChange={(e) => setFormData({ ...formData, empresaId: Number(e.target.value) })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
           >
             <option value="">Selecione uma empresa</option>
             {empresas.map((empresa) => (
@@ -387,7 +387,7 @@ function UnidadeForm({
               onChange={(e) => setFormData({ ...formData, cep: maskCEP(e.target.value) })}
               maxLength={9}
               placeholder="00000-000"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
           <FormField label="Telefone">
@@ -397,7 +397,7 @@ function UnidadeForm({
               onChange={(e) => setFormData({ ...formData, telefone: maskPhone(e.target.value) })}
               maxLength={15}
               placeholder="(00) 00000-0000"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
         </div>
@@ -407,7 +407,7 @@ function UnidadeForm({
             type="text"
             value={formData.endereco || ''}
             onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
           />
         </FormField>
 
@@ -417,7 +417,7 @@ function UnidadeForm({
             value={formData.email || ''}
             onChange={(e) => setFormData({ ...formData, email: e.target.value.toLowerCase().trim() })}
             placeholder="exemplo@email.com"
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
           />
         </FormField>
 
@@ -427,7 +427,7 @@ function UnidadeForm({
               type="text"
               value={formData.numero || ''}
               onChange={(e) => setFormData({ ...formData, numero: maskNumber(e.target.value) })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
           <FormField label="Bairro">
@@ -435,7 +435,7 @@ function UnidadeForm({
               type="text"
               value={formData.bairro || ''}
               onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
           <FormField label="UF">
@@ -444,7 +444,7 @@ function UnidadeForm({
               maxLength={2}
               value={formData.uf || ''}
               onChange={(e) => setFormData({ ...formData, uf: e.target.value.toUpperCase() })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>
         </div>
@@ -543,7 +543,7 @@ function AtendentesSection({ unidadeId }: { unidadeId: number }) {
         <Link
           to={rotaCadastroProfissional}
           state={{ unidadeId }}
-          className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+          className="text-sm text-violet-700 hover:text-violet-900 flex items-center"
         >
           Adicionar usuário <ExternalLink className="h-3 w-3 ml-1" />
         </Link>
