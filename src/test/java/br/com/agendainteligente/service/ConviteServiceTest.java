@@ -272,9 +272,11 @@ class ConviteServiceTest {
 
         service.finalizarCadastroAdministrador("tok", dto);
 
-        verify(empresaRepository).save(argThat(e -> "Empresa X".equals(e.getNome())));
-        verify(unidadeRepository).save(any(Unidade.class));
-        verify(usuarioRepository).save(any(Usuario.class));
+        // Empresa/Unidade/Usuario são salvos 2x cada: 1ª pra obter ID, 2ª pra setar adminUnicoId
+        // (o tenant root é o próprio usuário criado, então só depois do save inicial podemos preencher)
+        verify(empresaRepository, times(2)).save(argThat(e -> "Empresa X".equals(e.getNome())));
+        verify(unidadeRepository, times(2)).save(any(Unidade.class));
+        verify(usuarioRepository, times(2)).save(any(Usuario.class));
         verify(gerenteRepository).save(any());
         // Marca convite como usado
         assertNotNull(convite.getUsadoEm());
