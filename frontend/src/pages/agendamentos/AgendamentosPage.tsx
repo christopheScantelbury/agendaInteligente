@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { CalendarDays, LayoutGrid, CalendarRange } from 'lucide-react'
 import DayMode from './DayMode'
+import WeekMode from './WeekMode'
+import MonthMode from './MonthMode'
 
 type Modo = 'dia' | 'semana' | 'mes'
 
@@ -85,27 +87,25 @@ export default function AgendamentosPage() {
       )}
 
       {modoUrl === 'semana' && (
-        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
-          <div className="mx-auto h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mb-3">
-            <CalendarRange className="h-5 w-5" />
-          </div>
-          <p className="text-sm font-semibold text-slate-800">Visão Semanal em construção</p>
-          <p className="text-xs text-slate-500 mt-1">
-            Disponível na próxima atualização. Use "Dia" enquanto isso.
-          </p>
-        </div>
+        <WeekMode
+          selectedDate={selectedDate}
+          onDateChange={handleDateChange}
+          onJumpToDayMode={(date) => {
+            handleDateChange(date)
+            handleModoChange('dia')
+          }}
+        />
       )}
 
       {modoUrl === 'mes' && (
-        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
-          <div className="mx-auto h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mb-3">
-            <LayoutGrid className="h-5 w-5" />
-          </div>
-          <p className="text-sm font-semibold text-slate-800">Visão Mensal em construção</p>
-          <p className="text-xs text-slate-500 mt-1">
-            Disponível na próxima atualização. Use "Dia" enquanto isso.
-          </p>
-        </div>
+        <MonthMode
+          selectedDate={selectedDate}
+          onDateChange={handleDateChange}
+          onJumpToDayMode={(date) => {
+            handleDateChange(date)
+            handleModoChange('dia')
+          }}
+        />
       )}
     </div>
   )

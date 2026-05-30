@@ -1,5 +1,5 @@
 // Bump CACHE_NAME a cada release pra invalidar o cache do client.
-const CACHE_NAME = 'agenda-inteligente-v25-2026-05-29-agend-v2'
+const CACHE_NAME = 'agenda-inteligente-v26-2026-05-30-agend-v2-week-month'
 const urlsToCache = [
   '/',
   '/index.html',
