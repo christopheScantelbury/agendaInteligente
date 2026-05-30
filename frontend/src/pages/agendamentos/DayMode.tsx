@@ -9,6 +9,7 @@ import DiaHeader from '../../components/agendamentos/DiaHeader'
 import ProfissionalFilterChips, { ProfissionalChipItem } from '../../components/agendamentos/ProfissionalFilterChips'
 import AgendamentoCard from '../../components/agendamentos/AgendamentoCard'
 import AgendamentoFab from '../../components/agendamentos/AgendamentoFab'
+import NovoAgendamentoSheet from '../../components/agendamentos/NovoAgendamentoSheet'
 
 interface Props {
   selectedDate: Date
@@ -27,6 +28,7 @@ interface Props {
 export default function DayMode({ selectedDate, onDateChange }: Props) {
   const navigate = useNavigate()
   const [profissionalSelecionado, setProfissionalSelecionado] = useState<number | null>(null)
+  const [novoSheetOpen, setNovoSheetOpen] = useState(false)
 
   const { data: agendamentos = [], isLoading } = useQuery({
     queryKey: ['agendamentos'],
@@ -72,9 +74,32 @@ export default function DayMode({ selectedDate, onDateChange }: Props) {
   }
 
   const handleNovoAgendamento = () => {
-    // Slice 1: usa fluxo legado. Slice 2: bottom-sheet wizard.
-    navigate('/agendamentos/novo')
+    // Slice 3: abre o bottom-sheet wizard 3 passos.
+    // Pré-preenche data/hora com o dia selecionado às 09:00 (horário comum)
+    setNovoSheetOpen(true)
   }
+
+  // Data inicial sugerida: dia selecionado + 09:00 (ou horário atual se for hoje)
+  const initialDateTime = (() => {
+    const now = new Date()
+    const dt = new Date(selectedDate)
+    const isHoje =
+      selectedDate.getDate() === now.getDate() &&
+      selectedDate.getMonth() === now.getMonth() &&
+      selectedDate.getFullYear() === now.getFullYear()
+    if (isHoje) {
+      // arredonda pra próxima meia hora
+      dt.setMinutes(Math.ceil(now.getMinutes() / 30) * 30, 0, 0)
+      dt.setHours(now.getHours())
+      if (dt.getMinutes() === 60) {
+        dt.setHours(dt.getHours() + 1)
+        dt.setMinutes(0)
+      }
+    } else {
+      dt.setHours(9, 0, 0, 0)
+    }
+    return dt
+  })()
 
   return (
     <div className="space-y-4">
@@ -125,6 +150,12 @@ export default function DayMode({ selectedDate, onDateChange }: Props) {
       )}
 
       <AgendamentoFab onClick={handleNovoAgendamento} />
+
+      <NovoAgendamentoSheet
+        isOpen={novoSheetOpen}
+        onClose={() => setNovoSheetOpen(false)}
+        initialDateTime={initialDateTime}
+      />
     </div>
   )
 }
