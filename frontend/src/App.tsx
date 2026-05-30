@@ -39,6 +39,7 @@ const Usuarios = lazy(() => import('./pages/Usuarios'))
 const Clientes = lazy(() => import('./pages/Clientes'))
 const ClienteFormPage = lazy(() => import('./pages/ClienteFormPage'))
 const Agendamentos = lazy(() => import('./pages/Agendamentos'))
+const AgendamentosPageV2 = lazy(() => import('./pages/agendamentos/AgendamentosPage'))
 const NovoAgendamento = lazy(() => import('./pages/NovoAgendamento'))
 const Notificacoes = lazy(() => import('./pages/Notificacoes'))
 const Empresas = lazy(() => import('./pages/Empresas'))
@@ -453,6 +454,7 @@ function App() {
                         />
                         <Route path="/atendentes" element={<Navigate to="/profissionais" replace />} />
                         <Route path="/agendamentos" element={<RequirePermissao path="/agendamentos"><Agendamentos /></RequirePermissao>} />
+                        <Route path="/agendamentos-v2" element={<RequirePermissao path="/agendamentos"><AgendamentosPageV2 /></RequirePermissao>} />
                         <Route path="/agendamentos/novo" element={<RequirePermissao path="/agendamentos"><NovoAgendamento /></RequirePermissao>} />
                         <Route path="/notificacoes" element={<RequirePermissao path="/notificacoes"><Notificacoes /></RequirePermissao>} />
                         <Route path="/empresas" element={redirectAdminUnico(<RequirePermissao path="/empresas"><Empresas /></RequirePermissao>)} />
