@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
 import { startOfDay, endOfDay, isWithinInterval } from 'date-fns'
 import { agendamentoService, Agendamento } from '../../services/agendamentoService'
 import { atendenteService } from '../../services/atendenteService'
@@ -10,6 +9,7 @@ import ProfissionalFilterChips, { ProfissionalChipItem } from '../../components/
 import AgendamentoCard from '../../components/agendamentos/AgendamentoCard'
 import AgendamentoFab from '../../components/agendamentos/AgendamentoFab'
 import NovoAgendamentoSheet from '../../components/agendamentos/NovoAgendamentoSheet'
+import DetalhesSheet from '../../components/agendamentos/DetalhesSheet'
 
 interface Props {
   selectedDate: Date
@@ -26,9 +26,9 @@ interface Props {
  * (Multi-column resource view fica pra Slice 2.)
  */
 export default function DayMode({ selectedDate, onDateChange }: Props) {
-  const navigate = useNavigate()
   const [profissionalSelecionado, setProfissionalSelecionado] = useState<number | null>(null)
   const [novoSheetOpen, setNovoSheetOpen] = useState(false)
+  const [detalhesId, setDetalhesId] = useState<number | null>(null)
 
   const { data: agendamentos = [], isLoading } = useQuery({
     queryKey: ['agendamentos'],
@@ -68,9 +68,8 @@ export default function DayMode({ selectedDate, onDateChange }: Props) {
   }, [atendentes])
 
   const handleCardClick = (a: Agendamento) => {
-    // Slice 1: redireciona pra página legada com query — ela já abre o modal de detalhes.
-    // Slice 2: bottom-sheet de detalhes próprio.
-    if (a.id) navigate(`/agendamentos?openId=${a.id}`)
+    // Slice 4: abre o bottom-sheet de detalhes próprio em vez de redirecionar.
+    if (a.id) setDetalhesId(a.id)
   }
 
   const handleNovoAgendamento = () => {
@@ -156,6 +155,8 @@ export default function DayMode({ selectedDate, onDateChange }: Props) {
         onClose={() => setNovoSheetOpen(false)}
         initialDateTime={initialDateTime}
       />
+
+      <DetalhesSheet agendamentoId={detalhesId} onClose={() => setDetalhesId(null)} />
     </div>
   )
 }
