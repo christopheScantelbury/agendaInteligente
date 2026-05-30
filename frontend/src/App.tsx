@@ -453,8 +453,12 @@ function App() {
                           element={<RequirePermissao path="/profissionais" fallbackPaths={['/usuarios']}><Profissionais /></RequirePermissao>}
                         />
                         <Route path="/atendentes" element={<Navigate to="/profissionais" replace />} />
-                        <Route path="/agendamentos" element={<RequirePermissao path="/agendamentos"><Agendamentos /></RequirePermissao>} />
-                        <Route path="/agendamentos-v2" element={<RequirePermissao path="/agendamentos"><AgendamentosPageV2 /></RequirePermissao>} />
+                        {/* Slice 5 do redesign #140: /agendamentos agora aponta para a V2.
+                            O legado fica em /agendamentos-legacy pra fallback em edge cases
+                            (recorrência, sinal, NFS-e) acionados pelo DetalhesSheet. */}
+                        <Route path="/agendamentos" element={<RequirePermissao path="/agendamentos"><AgendamentosPageV2 /></RequirePermissao>} />
+                        <Route path="/agendamentos-v2" element={<Navigate to="/agendamentos" replace />} />
+                        <Route path="/agendamentos-legacy" element={<RequirePermissao path="/agendamentos"><Agendamentos /></RequirePermissao>} />
                         <Route path="/agendamentos/novo" element={<RequirePermissao path="/agendamentos"><NovoAgendamento /></RequirePermissao>} />
                         <Route path="/notificacoes" element={<RequirePermissao path="/notificacoes"><Notificacoes /></RequirePermissao>} />
                         <Route path="/empresas" element={redirectAdminUnico(<RequirePermissao path="/empresas"><Empresas /></RequirePermissao>)} />

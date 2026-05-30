@@ -234,7 +234,7 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
                 <button
                   onClick={() => {
                     onClose()
-                    navigate(`/agendamentos?openId=${agendamento.id}`)
+                    navigate(`/agendamentos-legacy?openId=${agendamento.id}`)
                   }}
                   className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition"
                 >
