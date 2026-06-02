@@ -13,6 +13,21 @@ body {
   min-height: 100vh;
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+   iOS Safari: prevenir zoom-on-focus em campos editáveis.
+   Causa: iOS dá auto-zoom em inputs com font-size < 16px (acessibilidade).
+   Solução: forçar 16px em inputs/textareas/selects APENAS em iOS Safari via
+   `@supports (-webkit-touch-callout: none)` — outros browsers ignoram.
+   Não usar `maximum-scale=1` no viewport (quebra acessibilidade real).
+   ────────────────────────────────────────────────────────────────────────── */
+@supports (-webkit-touch-callout: none) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 /* React Big Calendar Styles */
 .rbc-calendar {
   font-family: inherit;
