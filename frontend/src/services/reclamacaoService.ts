@@ -1,32 +1,43 @@
 import api from './api'
 import axios from 'axios'
 
+export type CategoriaReclamacao = 'RECLAMACAO' | 'SUGESTAO' | 'ELOGIO'
+export type StatusReclamacao = 'RECEBIDA' | 'EM_ANALISE' | 'RESOLVIDA' | 'ARQUIVADA'
+
 export interface Reclamacao {
   id?: number
   mensagem: string
   unidadeId?: number
+  nomeReclamante?: string
+  emailReclamante?: string
+  telefoneReclamante?: string
+  categoria?: CategoriaReclamacao
+  status?: StatusReclamacao
   lida?: boolean
   dataCriacao?: string
   dataLeitura?: string
+  resposta?: string
+  dataResposta?: string
+  respondidaPor?: string
 }
 
-// Instância do axios para endpoints públicos (sem autenticação)
+// Cliente axios separado pra endpoints públicos (sem header Authorization).
+// Strip do BOM zero-width que às vezes aparece no início da env var quando o
+// arquivo é salvo em UTF-8 BOM.
 const publicApi = axios.create({
   baseURL: (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/^﻿/, ''),
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
   timeout: 30000,
 })
 
 export const reclamacaoService = {
-  // Endpoint público - não requer autenticação
+  // ── Público (sem auth) ─────────────────────────────────────────────────
   criar: async (reclamacao: Reclamacao): Promise<Reclamacao> => {
     const response = await publicApi.post<Reclamacao>('/publico/reclamacoes', reclamacao)
     return response.data
   },
 
-  // Endpoints protegidos - requerem autenticação (ADMIN/GERENTE)
+  // ── Protegido (ADMIN/ADMINISTRADOR/GERENTE) ────────────────────────────
   listarTodas: async (): Promise<Reclamacao[]> => {
     const response = await api.get<Reclamacao[]>('/reclamacoes')
     return response.data
@@ -64,6 +75,18 @@ export const reclamacaoService = {
 
   marcarComoLida: async (id: number): Promise<Reclamacao> => {
     const response = await api.put<Reclamacao>(`/reclamacoes/${id}/marcar-lida`)
+    return response.data
+  },
+
+  atualizarStatus: async (id: number, status: StatusReclamacao): Promise<Reclamacao> => {
+    const response = await api.put<Reclamacao>(`/reclamacoes/${id}/status`, null, {
+      params: { status },
+    })
+    return response.data
+  },
+
+  responder: async (id: number, resposta: string): Promise<Reclamacao> => {
+    const response = await api.post<Reclamacao>(`/reclamacoes/${id}/responder`, { resposta })
     return response.data
   },
 }

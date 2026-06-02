@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { LogOut, RefreshCw, User, Mail, Hash } from 'lucide-react'
+import { LogOut, RefreshCw, User, Mail, Hash, MessageSquare } from 'lucide-react'
 import { clientePublicoService } from '../../services/clientePublicoService'
 import {
   iniciarTourCliente,
@@ -45,6 +45,24 @@ export default function PerfilCliente() {
 
       <section className="space-y-2">
         <h2 className="text-sm font-semibold text-slate-700">Ajuda</h2>
+        <button
+          type="button"
+          onClick={() => navigate('/reclamacoes')}
+          className="
+            w-full flex items-center gap-3 p-4
+            bg-white border border-gray-200 rounded-xl
+            hover:border-violet-300 hover:shadow-sm transition
+            text-left
+          "
+        >
+          <div className="w-10 h-10 rounded-full bg-violet-50 flex items-center justify-center">
+            <MessageSquare className="h-5 w-5 text-violet-600" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-slate-900">Enviar feedback</p>
+            <p className="text-xs text-gray-500">Reclamação, sugestão ou elogio</p>
+          </div>
+        </button>
         <button
           type="button"
           onClick={handleRefazerTour}

@@ -74,4 +74,24 @@ public class ReclamacaoController {
     public ResponseEntity<ReclamacaoDTO> marcarComoLida(@PathVariable Long id) {
         return ResponseEntity.ok(reclamacaoService.marcarComoLida(id));
     }
+
+    @PutMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('ADMIN','ADMINISTRADOR','GERENTE')")
+    @Operation(summary = "Atualizar status (RECEBIDA / EM_ANALISE / RESOLVIDA / ARQUIVADA)")
+    public ResponseEntity<ReclamacaoDTO> atualizarStatus(
+            @PathVariable Long id,
+            @RequestParam("status") br.com.agendainteligente.domain.entity.Reclamacao.Status status) {
+        return ResponseEntity.ok(reclamacaoService.atualizarStatus(id, status));
+    }
+
+    @PostMapping("/{id}/responder")
+    @PreAuthorize("hasAnyRole('ADMIN','ADMINISTRADOR','GERENTE')")
+    @Operation(summary = "Registrar resposta do gestor (auditoria — não envia, só persiste)")
+    public ResponseEntity<ReclamacaoDTO> responder(
+            @PathVariable Long id,
+            @RequestBody RespostaPayload body) {
+        return ResponseEntity.ok(reclamacaoService.registrarResposta(id, body.resposta()));
+    }
+
+    public record RespostaPayload(String resposta) {}
 }
