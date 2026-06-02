@@ -14,6 +14,7 @@ import {
     UserX,
     Copy,
     ClipboardCheck,
+    LayoutDashboard,
 } from 'lucide-react'
 import { agendamentoService } from '../services/agendamentoService'
 import { clienteService } from '../services/clienteService'
@@ -110,7 +111,7 @@ export default function Dashboard() {
     if (isLoadingAgendamentos || isLoadingClientes) {
         return (
             <div className="flex items-center justify-center h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600"></div>
             </div>
         )
     }
@@ -129,8 +130,8 @@ export default function Dashboard() {
             value: clientes.length,
             sub: 'cadastrados',
             icon: Users,
-            bgColor: 'bg-blue-50',
-            textColor: 'text-blue-600'
+            bgColor: 'bg-violet-50',
+            textColor: 'text-violet-600'
         },
         {
             title: 'Faturamento Geral',
@@ -151,24 +152,29 @@ export default function Dashboard() {
     ]
 
     return (
-        <div className="space-y-6 animate-fadeIn">
-            <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-                <p className="text-sm text-gray-500">Visão geral do negócio</p>
-            </div>
+        <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6 animate-fadeIn">
+            <header className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center flex-shrink-0">
+                    <LayoutDashboard className="h-6 w-6" />
+                </div>
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+                    <p className="text-sm text-slate-500">Visão geral do negócio</p>
+                </div>
+            </header>
 
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {kpiCards.map((card, index) => (
-                    <div key={index} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
+                    <div key={index} className="bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-md transition-shadow">
                         <div className="flex items-center justify-between mb-4">
                             <div className={`${card.bgColor} p-3 rounded-lg`}>
                                 <card.icon className={`h-6 w-6 ${card.textColor}`} />
                             </div>
                         </div>
-                        <h3 className="text-gray-500 text-sm font-medium">{card.title}</h3>
-                        <p className="text-2xl font-bold text-gray-900 mt-1">{card.value}</p>
-                        {card.sub && <p className="text-xs text-gray-400 mt-0.5">{card.sub}</p>}
+                        <h3 className="text-slate-500 text-sm font-medium">{card.title}</h3>
+                        <p className="text-2xl font-bold text-slate-900 mt-1">{card.value}</p>
+                        {card.sub && <p className="text-xs text-slate-400 mt-0.5">{card.sub}</p>}
                     </div>
                 ))}
                 
@@ -176,11 +182,11 @@ export default function Dashboard() {
                 {podeVerReclamacoes && (
                     <Link
                         to="/notificacoes"
-                        className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
+                        className="bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
                     >
                         <div className="flex items-center justify-between mb-4">
-                            <div className={`p-3 rounded-lg ${contadorReclamacoes > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
-                                <Bell className={`h-6 w-6 ${contadorReclamacoes > 0 ? 'text-red-600' : 'text-gray-600'}`} />
+                            <div className={`p-3 rounded-lg ${contadorReclamacoes > 0 ? 'bg-red-50' : 'bg-slate-50'}`}>
+                                <Bell className={`h-6 w-6 ${contadorReclamacoes > 0 ? 'text-red-600' : 'text-slate-600'}`} />
                             </div>
                             {contadorReclamacoes > 0 && (
                                 <span className="bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
@@ -188,9 +194,9 @@ export default function Dashboard() {
                                 </span>
                             )}
                         </div>
-                        <h3 className="text-gray-500 text-sm font-medium">Reclamações</h3>
+                        <h3 className="text-slate-500 text-sm font-medium">Reclamações</h3>
                         <div className="flex items-center gap-2 mt-1">
-                            <p className="text-2xl font-bold text-gray-900">
+                            <p className="text-2xl font-bold text-slate-900">
                                 {contadorReclamacoes > 0 ? contadorReclamacoes : 'Nenhuma'}
                             </p>
                             {contadorReclamacoes > 0 && (
@@ -206,52 +212,52 @@ export default function Dashboard() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Status Distribution */}
-                <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                    <h2 className="text-lg font-bold text-gray-900 mb-4">Status dos Agendamentos</h2>
+                <div className="bg-white rounded-2xl border border-slate-200 p-6">
+                    <h2 className="text-lg font-bold text-slate-900 mb-4">Status dos Agendamentos</h2>
                     <div className="space-y-4">
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                             <div className="flex items-center gap-3">
                                 <CheckCircle2 className="h-5 w-5 text-green-500" />
-                                <span className="text-sm font-medium text-gray-700">Finalizados</span>
+                                <span className="text-sm font-medium text-slate-700">Finalizados</span>
                             </div>
-                                <span className="font-bold text-gray-900">{agendamentosFinalizados}</span>
+                                <span className="font-bold text-slate-900">{agendamentosFinalizados}</span>
                         </div>
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                             <div className="flex items-center gap-3">
                                 <Clock className="h-5 w-5 text-blue-500" />
-                                <span className="text-sm font-medium text-gray-700">Agendados/Pendentes</span>
+                                <span className="text-sm font-medium text-slate-700">Agendados/Pendentes</span>
                             </div>
-                            <span className="font-bold text-gray-900">{totalAgendamentos - agendamentosFinalizados - agendamentosCancelados}</span>
+                            <span className="font-bold text-slate-900">{totalAgendamentos - agendamentosFinalizados - agendamentosCancelados}</span>
                         </div>
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                             <div className="flex items-center gap-3">
                                 <XCircle className="h-5 w-5 text-red-500" />
-                                <span className="text-sm font-medium text-gray-700">Cancelados</span>
+                                <span className="text-sm font-medium text-slate-700">Cancelados</span>
                             </div>
-                            <span className="font-bold text-gray-900">{agendamentosCancelados}</span>
+                            <span className="font-bold text-slate-900">{agendamentosCancelados}</span>
                         </div>
                     </div>
                 </div>
 
                 {/* Recent Activity */}
-                <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                    <h2 className="text-lg font-bold text-gray-900 mb-4">Atividade Recente</h2>
+                <div className="bg-white rounded-2xl border border-slate-200 p-6">
+                    <h2 className="text-lg font-bold text-slate-900 mb-4">Atividade Recente</h2>
                     <div className="space-y-6">
                         {agendamentos.slice(0, 5).map((agendamento) => (
                             <div key={agendamento.id} className="flex items-start gap-4">
                                 <div className="h-2 w-2 mt-2 rounded-full bg-indigo-500 shrink-0" />
                                 <div>
-                                    <p className="text-sm font-medium text-gray-900">
+                                    <p className="text-sm font-medium text-slate-900">
                                         {agendamento.cliente?.nome} - {agendamento.servicos?.[0]?.descricao || 'Serviço'}
                                     </p>
-                                    <p className="text-xs text-gray-500">
+                                    <p className="text-xs text-slate-500">
                                         {new Date(agendamento.dataHoraInicio).toLocaleDateString('pt-BR')} às {new Date(agendamento.dataHoraInicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                     </p>
                                 </div>
                             </div>
                         ))}
                         {agendamentos.length === 0 && (
-                            <p className="text-sm text-gray-500">Nenhuma atividade recente.</p>
+                            <p className="text-sm text-slate-500">Nenhuma atividade recente.</p>
                         )}
                     </div>
                 </div>
@@ -259,17 +265,17 @@ export default function Dashboard() {
 
             {/* Agenda de Hoje */}
             {!authService.isPerfilCliente() && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                             <Calendar className="h-5 w-5 text-violet-500" />
                             Agenda de Hoje
-                            <span className="ml-2 text-sm font-normal text-gray-500">
+                            <span className="ml-2 text-sm font-normal text-slate-500">
                                 {format(new Date(), "dd 'de' MMMM", { locale: ptBR })}
                             </span>
                         </h2>
                         <div className="flex gap-4 text-sm">
-                            <span className="text-gray-500">{agendamentosHoje} agendamento{agendamentosHoje !== 1 ? 's' : ''}</span>
+                            <span className="text-slate-500">{agendamentosHoje} agendamento{agendamentosHoje !== 1 ? 's' : ''}</span>
                             {agendamentosHojeConcluidos > 0 && (
                                 <span className="text-violet-600 font-semibold">{moneyFmt.format(faturamentoHoje)}</span>
                             )}
@@ -281,7 +287,7 @@ export default function Dashboard() {
                             <Clock className="h-5 w-5 text-violet-500 shrink-0" />
                             <div>
                                 <p className="text-xs font-semibold text-violet-600">Próximo</p>
-                                <p className="text-sm font-medium text-gray-900">
+                                <p className="text-sm font-medium text-slate-900">
                                     {format(new Date(proximoAgendamento.dataHoraInicio), 'HH:mm')} · {proximoAgendamento.cliente?.nome} — {proximoAgendamento.servicos?.[0]?.descricao || 'Serviço'}
                                 </p>
                             </div>
@@ -289,7 +295,7 @@ export default function Dashboard() {
                     )}
 
                     {agendamentosHojeList.length === 0 ? (
-                        <p className="text-sm text-gray-400 text-center py-6">Nenhum agendamento para hoje.</p>
+                        <p className="text-sm text-slate-400 text-center py-6">Nenhum agendamento para hoje.</p>
                     ) : (
                         <div className="relative">
                             <div className="absolute left-[23px] top-0 bottom-0 w-px bg-gray-200" />
@@ -297,7 +303,7 @@ export default function Dashboard() {
                                 {agendamentosHojeList.map(a => {
                                     const statusColors: Record<string, string> = {
                                         AGENDADO: 'bg-slate-800',
-                                        CONFIRMADO: 'bg-blue-500',
+                                        CONFIRMADO: 'bg-violet-500',
                                         EM_ANDAMENTO: 'bg-violet-500',
                                         PROCEDIMENTO_FIM: 'bg-violet-700',
                                         CONCLUIDO: 'bg-green-500',
@@ -314,11 +320,11 @@ export default function Dashboard() {
                                                     <p className="text-sm font-semibold text-gray-800 truncate">
                                                         {format(new Date(a.dataHoraInicio), 'HH:mm')} · {a.cliente?.nome || '—'}
                                                     </p>
-                                                    <span className="text-xs text-gray-400 shrink-0">
+                                                    <span className="text-xs text-slate-400 shrink-0">
                                                         {a.atendente?.nomeUsuario || a.atendente?.nome || ''}
                                                     </span>
                                                 </div>
-                                                <p className="text-xs text-gray-500 truncate">
+                                                <p className="text-xs text-slate-500 truncate">
                                                     {a.servicos?.[0]?.descricao || 'Serviço'}
                                                     {a.valorTotal ? ` · ${moneyFmt.format(a.valorTotal)}` : ''}
                                                 </p>
@@ -338,7 +344,7 @@ export default function Dashboard() {
 
                     {/* IA-2: Insights Semanais */}
                     <div className="bg-gradient-to-br from-violet-50 to-white rounded-xl shadow-sm p-6 border border-violet-100">
-                        <h2 className="text-base font-bold text-gray-900 mb-3 flex items-center gap-2">
+                        <h2 className="text-base font-bold text-slate-900 mb-3 flex items-center gap-2">
                             <Sparkles className="h-4 w-4 text-violet-500" /> Insight Semanal
                         </h2>
                         {insightsSemanal.length > 0 ? (
@@ -348,18 +354,18 @@ export default function Dashboard() {
                                         <p className="text-xs text-violet-500 font-medium mb-1">
                                             Semana de {format(new Date(insight.semana), "dd 'de' MMMM", { locale: ptBR })}
                                         </p>
-                                        <p className="text-sm text-gray-700 leading-snug">{insight.texto}</p>
+                                        <p className="text-sm text-slate-700 leading-snug">{insight.texto}</p>
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-sm text-gray-400">Os insights são gerados toda segunda-feira.</p>
+                            <p className="text-sm text-slate-400">Os insights são gerados toda segunda-feira.</p>
                         )}
                     </div>
 
                     {/* IA-3: Clientes em Risco */}
-                    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                        <h2 className="text-base font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    <div className="bg-white rounded-2xl border border-slate-200 p-6">
+                        <h2 className="text-base font-bold text-slate-900 mb-3 flex items-center gap-2">
                             <UserX className="h-4 w-4 text-amber-500" /> Clientes em Risco
                             {clientesRisco.length > 0 && (
                                 <span className="ml-auto text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">
@@ -374,13 +380,13 @@ export default function Dashboard() {
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-sm text-gray-400">Nenhum cliente ausente há mais de 30 dias. 🎉</p>
+                            <p className="text-sm text-slate-400">Nenhum cliente ausente há mais de 30 dias. 🎉</p>
                         )}
                     </div>
 
                     {/* IA-7: Churn por Profissional */}
-                    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                        <h2 className="text-base font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    <div className="bg-white rounded-2xl border border-slate-200 p-6">
+                        <h2 className="text-base font-bold text-slate-900 mb-3 flex items-center gap-2">
                             <AlertCircle className="h-4 w-4 text-rose-500" /> Alerta de Churn
                             {churnProfissional.length > 0 && (
                                 <span className="ml-auto text-xs bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full font-semibold">
@@ -398,7 +404,7 @@ export default function Dashboard() {
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-sm text-gray-400">Nenhuma perda significativa de clientes por profissional.</p>
+                            <p className="text-sm text-slate-400">Nenhuma perda significativa de clientes por profissional.</p>
                         )}
                     </div>
                 </div>
@@ -439,7 +445,7 @@ function ClienteRiscoItem({ cliente }: { cliente: { clienteId: number; clienteNo
                 </div>
             )}
             {expandido && cliente.mensagemSugerida && (
-                <p className="text-xs text-gray-600 mt-1 leading-snug">{cliente.mensagemSugerida}</p>
+                <p className="text-xs text-slate-600 mt-1 leading-snug">{cliente.mensagemSugerida}</p>
             )}
         </div>
     )
