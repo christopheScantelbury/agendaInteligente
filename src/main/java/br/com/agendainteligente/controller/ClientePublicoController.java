@@ -203,12 +203,57 @@ public class ClientePublicoController {
         return ResponseEntity.status(HttpStatus.CREATED).body(token);
     }
 
+    /**
+     * SEC: empresas que o cliente autenticado pertence. Vazio quando anônimo
+     * OU quando o cliente é novo sem unidade vinculada (1º agendamento).
+     * Comportamento:
+     * - null  → sem filtro (anônimo ou cliente sem vinculação)
+     * - vazio → cliente conhecido mas SEM empresas (raro; nada visível)
+     * - set   → filtrar pelas empresas listadas
+     */
+    private java.util.Set<Long> empresasPermitidasParaClienteLogado() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getName())) {
+            return null; // anônimo — sem filtro (mantém fluxo de cadastro inicial)
+        }
+        String identifier = auth.getName();
+        Cliente cliente = clienteRepository.findByEmail(identifier)
+                .orElseGet(() -> clienteRepository.findByCpfCnpj(identifier).orElse(null));
+        if (cliente == null) return null;
+
+        java.util.Set<Long> empresaIds = new java.util.HashSet<>();
+        if (cliente.getUnidade() != null && cliente.getUnidade().getEmpresa() != null) {
+            empresaIds.add(cliente.getUnidade().getEmpresa().getId());
+        }
+        if (cliente.getUnidades() != null) {
+            cliente.getUnidades().forEach(u -> {
+                if (u.getEmpresa() != null) empresaIds.add(u.getEmpresa().getId());
+            });
+        }
+        // Cliente conhecido mas sem unidade vinculada (recém-criado, 1º agendamento):
+        // mantém sem filtro pra permitir escolher onde agendar a 1ª vez.
+        if (empresaIds.isEmpty()) return null;
+        return empresaIds;
+    }
+
+    /** True quando a unidade pertence a alguma empresa permitida pro cliente logado. */
+    private boolean unidadeAcessivelPeloClienteLogado(Unidade unidade) {
+        java.util.Set<Long> permitidas = empresasPermitidasParaClienteLogado();
+        if (permitidas == null) return true; // anônimo ou sem vínculo prévio
+        if (unidade.getEmpresa() == null) return false;
+        return permitidas.contains(unidade.getEmpresa().getId());
+    }
+
     @GetMapping("/unidades")
-    @Operation(summary = "Listar unidades ativas disponíveis para agendamento (sem auth necessária)")
+    @Operation(summary = "Listar unidades ativas — quando cliente logado, filtra por empresas dele")
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<List<java.util.Map<String, Object>>> listarUnidadesPublicas() {
+        // SEC #SEC02 — vazamento multi-tenant: filtrar pelas empresas do cliente logado.
+        java.util.Set<Long> permitidas = empresasPermitidasParaClienteLogado();
         List<java.util.Map<String, Object>> unidades = unidadeRepository.findAll().stream()
                 .filter(u -> Boolean.TRUE.equals(u.getAtivo()))
+                .filter(u -> permitidas == null
+                        || (u.getEmpresa() != null && permitidas.contains(u.getEmpresa().getId())))
                 .map(u -> {
                     java.util.Map<String, Object> dto = new java.util.LinkedHashMap<>();
                     dto.put("id", u.getId());
@@ -231,8 +276,14 @@ public class ClientePublicoController {
     }
 
     @GetMapping("/unidades/{unidadeId}/servicos")
-    @Operation(summary = "Listar serviços ativos de uma unidade (sem auth necessária)")
+    @Operation(summary = "Listar serviços ativos de uma unidade — quando cliente logado, valida acesso à unidade")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<List<java.util.Map<String, Object>>> listarServicosPublicos(@PathVariable Long unidadeId) {
+        // SEC #SEC02 — bloquear se cliente logado tentar acessar serviços de outra empresa
+        Unidade unidade = unidadeRepository.findById(unidadeId).orElse(null);
+        if (unidade != null && !unidadeAcessivelPeloClienteLogado(unidade)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(List.of());
+        }
         List<java.util.Map<String, Object>> servicos = servicoRepository.findByUnidadeIdAndAtivoTrue(unidadeId).stream()
                 .map(s -> {
                     java.util.Map<String, Object> dto = new java.util.LinkedHashMap<>();
@@ -249,12 +300,19 @@ public class ClientePublicoController {
 
     @GetMapping("/horarios-disponiveis")
     @Operation(summary = "Buscar horários disponíveis para agendamento")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<List<HorarioDisponivelDTO>> buscarHorariosDisponiveis(
             @RequestParam Long unidadeId,
             @RequestParam Long servicoId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim) {
-        
+
+        // SEC #SEC02 — bloqueia consulta de horários de unidade fora do tenant do cliente logado.
+        Unidade unidade = unidadeRepository.findById(unidadeId).orElse(null);
+        if (unidade != null && !unidadeAcessivelPeloClienteLogado(unidade)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(List.of());
+        }
+
         List<HorarioDisponivelDTO> horarios = horarioDisponivelService.buscarHorariosDisponiveis(
                 unidadeId, servicoId, dataInicio, dataFim);
         
@@ -271,6 +329,16 @@ public class ClientePublicoController {
         Cliente cliente = clienteRepository.findByEmail(clienteEmailOuCpf)
                 .orElseGet(() -> clienteRepository.findByCpfCnpj(clienteEmailOuCpf)
                         .orElseThrow(() -> new BusinessException("Cliente não encontrado")));
+
+        // SEC #SEC02 — vazamento multi-tenant: validar que a unidade no payload pertence
+        // a uma empresa que o cliente está vinculado. Cliente sem vinculação prévia
+        // (1º agendamento) cria o vínculo nessa unidade — comportamento atual via service.
+        if (agendamentoDTO.getUnidadeId() != null) {
+            Unidade unidadeAlvo = unidadeRepository.findById(agendamentoDTO.getUnidadeId()).orElse(null);
+            if (unidadeAlvo != null && !unidadeAcessivelPeloClienteLogado(unidadeAlvo)) {
+                throw new BusinessException("Você não tem acesso a esta unidade para agendar.");
+            }
+        }
 
         // Garantir que o agendamento seja do cliente autenticado
         agendamentoDTO.setClienteId(cliente.getId());
