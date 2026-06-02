@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Briefcase, CalendarPlus, UserCircle2, MapPin, Loader2 } from 'lucide-react'
+import { ArrowLeft, Briefcase, CalendarPlus, UserCircle2, MapPin, Loader2, AlertCircle } from 'lucide-react'
 import { clienteService, Cliente } from '../services/clienteService'
 import { unidadeService } from '../services/unidadeService'
 import { atendenteService } from '../services/atendenteService'
@@ -12,6 +12,23 @@ import Button from '../components/Button'
 import { useNotification } from '../contexts/NotificationContext'
 import { maskCPF, maskCNPJ, maskPhone, maskEmail, maskCEP } from '../utils/masks'
 import { buscarEnderecoPorCep } from '../utils/viaCep'
+
+// Classes do input padrão (limpa) e do input com erro (borda vermelha + ring rosa).
+// Usa quando precisamos destacar campos que falharam validação local OU backend.
+const INPUT_BASE = 'mt-1 block w-full rounded-xl bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 transition'
+const INPUT_OK = `${INPUT_BASE} border border-slate-200 focus:border-violet-400 focus:ring-violet-100`
+const INPUT_ERR = `${INPUT_BASE} border border-red-300 focus:border-red-400 focus:ring-red-100`
+const cls = (field: string, errors: Record<string, string>) => (errors[field] ? INPUT_ERR : INPUT_OK)
+
+function FieldError({ field, errors }: { field: string; errors: Record<string, string> }) {
+  if (!errors[field]) return null
+  return (
+    <p className="mt-1 flex items-center gap-1 text-xs text-red-600">
+      <AlertCircle className="h-3 w-3 flex-shrink-0" />
+      <span>{errors[field]}</span>
+    </p>
+  )
+}
 
 type ClienteFormData = Cliente
 
@@ -63,6 +80,18 @@ export default function ClienteFormPage() {
   // Auto-preenche logradouro/bairro/cidade/uf SE estiverem vazios — não sobrescreve edição manual.
   const [cepCarregando, setCepCarregando] = useState(false)
   const cepAbortRef = useRef<AbortController | null>(null)
+
+  // Erros por campo (validação local + backend). Atualizado:
+  // - antes do submit (validação local), com mensagens específicas
+  // - em onError do save (parsing do `errors` retornado pelo GlobalExceptionHandler)
+  // - limpa o erro do campo conforme o user digita
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const clearFieldError = (field: string) =>
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev
+      const { [field]: _, ...rest } = prev
+      return rest
+    })
 
   const { data: clienteExistente, isLoading: isLoadingCliente } = useQuery({
     queryKey: ['cliente', clienteId],
@@ -195,18 +224,72 @@ export default function ClienteFormPage() {
       navigate('/clientes')
     },
     onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || 'Erro ao salvar cliente'
+      // GlobalExceptionHandler retorna { message, errors: { field: msg } } pra Bean Validation.
+      // Mapeamos `errors` em fieldErrors pra destacar exatamente os campos com problema.
+      const data = error?.response?.data
+      const backendErrors = (data?.errors ?? {}) as Record<string, string | string[]>
+      const flatErrors: Record<string, string> = {}
+      Object.entries(backendErrors).forEach(([k, v]) => {
+        flatErrors[k] = Array.isArray(v) ? String(v[0] ?? '') : String(v ?? '')
+      })
+      if (Object.keys(flatErrors).length > 0) {
+        setFieldErrors(flatErrors)
+        const primeiroErro = Object.values(flatErrors)[0]
+        showNotification('error', primeiroErro || 'Confira os campos destacados.')
+        // Tenta rolar pra primeira ocorrência
+        const firstField = Object.keys(flatErrors)[0]
+        setTimeout(() => {
+          document.querySelector(`[data-field="${firstField}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }, 50)
+        return
+      }
+      const errorMessage = data?.message || error?.message || 'Erro ao salvar cliente'
       showNotification('error', errorMessage)
     },
   })
 
+  /** Validação local antes do submit. Espelha as @Constraints do ClienteDTO. */
+  const validarFormulario = (): Record<string, string> => {
+    const errs: Record<string, string> = {}
+    if (!formData.nome?.trim()) {
+      errs.nome = 'Nome é obrigatório'
+    }
+    const cpfCnpjDigits = (formData.cpfCnpj ?? '').replace(/\D/g, '')
+    if (cpfCnpjDigits && cpfCnpjDigits.length !== 11 && cpfCnpjDigits.length !== 14) {
+      errs.cpfCnpj = 'CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos'
+    }
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errs.email = 'Email inválido'
+    }
+    const telDigits = (formData.telefone ?? '').replace(/\D/g, '')
+    if (telDigits && (telDigits.length < 10 || telDigits.length > 11)) {
+      errs.telefone = 'Telefone deve ter 10 ou 11 dígitos com DDD'
+    }
+    const cepDigits = (formData.cep ?? '').replace(/\D/g, '')
+    if (cepDigits && cepDigits.length !== 8) {
+      errs.cep = 'CEP deve ter 8 dígitos'
+    }
+    if (!formData.unidadesIds || formData.unidadesIds.length === 0) {
+      errs.unidadesIds = 'Selecione pelo menos uma unidade para o cliente'
+    }
+    return errs
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.unidadesIds || formData.unidadesIds.length === 0) {
-      showNotification('error', 'Selecione pelo menos uma unidade para o cliente')
+    const errs = validarFormulario()
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs)
+      const primeiroErro = Object.values(errs)[0]
+      showNotification('error', primeiroErro)
+      const firstField = Object.keys(errs)[0]
+      setTimeout(() => {
+        document.querySelector(`[data-field="${firstField}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 50)
       return
     }
+    setFieldErrors({})
 
     const { unidades, ...dadosBase } = formData
     const dadosEnvio: Cliente = {
@@ -215,8 +298,9 @@ export default function ClienteFormPage() {
       cpfCnpj: (formData.cpfCnpj ?? '').replace(/\D/g, ''),
       telefone: (formData.telefone ?? '').replace(/\D/g, ''),
       cep: (formData.cep ?? '').replace(/\D/g, ''),
-      unidadeId: formData.unidadesIds[0],
-      unidadesIds: formData.unidadesIds,
+      // validarFormulario garantiu que unidadesIds tem ≥ 1 — TS não consegue inferir, então !.
+      unidadeId: formData.unidadesIds![0],
+      unidadesIds: formData.unidadesIds!,
       uf: formData.uf?.toUpperCase().slice(0, 2),
     }
 
@@ -299,6 +383,25 @@ export default function ClienteFormPage() {
         </Button>
       </header>
 
+      {/* Banner-resumo dos erros (some quando user corrigir) */}
+      {Object.keys(fieldErrors).length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-red-900">
+              {Object.keys(fieldErrors).length === 1
+                ? 'Há 1 campo com problema:'
+                : `Há ${Object.keys(fieldErrors).length} campos com problema:`}
+            </p>
+            <ul className="mt-1 text-xs text-red-700 list-disc list-inside space-y-0.5">
+              {Object.entries(fieldErrors).map(([field, msg]) => (
+                <li key={field}>{msg}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <section className="space-y-4 bg-white rounded-2xl border border-slate-200 p-5 sm:p-6">
@@ -307,19 +410,25 @@ export default function ClienteFormPage() {
             <h2 className="text-base font-bold text-slate-900">Dados pessoais</h2>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Nome</label>
+          <div data-field="nome">
+            <label className="block text-xs font-semibold text-slate-600 mb-1">
+              Nome <span className="text-red-500">*</span>
+            </label>
             <input
               type="text"
               required
               value={formData.nome}
-              onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-              className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
+              onChange={(e) => {
+                setFormData({ ...formData, nome: e.target.value })
+                clearFieldError('nome')
+              }}
+              className={cls('nome', fieldErrors)}
             />
+            <FieldError field="nome" errors={fieldErrors} />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+            <div data-field="cpfCnpj">
               <label className="block text-xs font-semibold text-slate-600 mb-1">CPF/CNPJ</label>
               <input
                 type="text"
@@ -329,47 +438,52 @@ export default function ClienteFormPage() {
                   const numbers = raw.replace(/\D/g, '')
                   const masked = numbers.length <= 11 ? maskCPF(raw) : maskCNPJ(raw)
                   setFormData({ ...formData, cpfCnpj: masked })
+                  clearFieldError('cpfCnpj')
                 }}
                 maxLength={18}
                 placeholder="000.000.000-00 ou 00.000.000/0000-00"
-                className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
+                className={cls('cpfCnpj', fieldErrors)}
               />
+              <FieldError field="cpfCnpj" errors={fieldErrors} />
             </div>
 
-            <div>
+            <div data-field="rg">
               <label className="block text-xs font-semibold text-slate-600 mb-1">RG</label>
               <input
                 type="text"
                 value={formData.rg || ''}
-                onChange={(e) => setFormData({ ...formData, rg: e.target.value })}
+                onChange={(e) => { setFormData({ ...formData, rg: e.target.value }); clearFieldError('rg') }}
                 placeholder="Documento de identidade"
-                className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
+                className={cls('rg', fieldErrors)}
               />
+              <FieldError field="rg" errors={fieldErrors} />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2">
+            <div className="md:col-span-2" data-field="email">
               <label className="block text-xs font-semibold text-slate-600 mb-1">Email</label>
               <input
                 type="email"
                 value={formData.email || ''}
-                onChange={(e) => setFormData({ ...formData, email: maskEmail(e.target.value) })}
+                onChange={(e) => { setFormData({ ...formData, email: maskEmail(e.target.value) }); clearFieldError('email') }}
                 placeholder="email@exemplo.com"
-                className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
+                className={cls('email', fieldErrors)}
               />
+              <FieldError field="email" errors={fieldErrors} />
             </div>
 
-            <div>
+            <div data-field="telefone">
               <label className="block text-xs font-semibold text-slate-600 mb-1">Telefone</label>
               <input
                 type="text"
                 value={formData.telefone || ''}
-                onChange={(e) => setFormData({ ...formData, telefone: maskPhone(e.target.value) })}
+                onChange={(e) => { setFormData({ ...formData, telefone: maskPhone(e.target.value) }); clearFieldError('telefone') }}
                 maxLength={15}
                 placeholder="(00) 00000-0000"
-                className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
+                className={cls('telefone', fieldErrors)}
               />
+              <FieldError field="telefone" errors={fieldErrors} />
             </div>
           </div>
 
@@ -393,17 +507,17 @@ export default function ClienteFormPage() {
           <p className="text-xs text-slate-500 -mt-2">Digite o CEP que preenchemos o resto pra você.</p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
+            <div data-field="cep">
               <label className="block text-xs font-semibold text-slate-600 mb-1">CEP</label>
               <div className="relative">
                 <input
                   type="text"
                   value={formData.cep || ''}
-                  onChange={(e) => setFormData({ ...formData, cep: maskCEP(e.target.value) })}
+                  onChange={(e) => { setFormData({ ...formData, cep: maskCEP(e.target.value) }); clearFieldError('cep') }}
                   placeholder="00000-000"
                   maxLength={9}
                   inputMode="numeric"
-                  className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-9 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
+                  className={`${cls('cep', fieldErrors)} pr-9`}
                 />
                 {cepCarregando && (
                   <Loader2
@@ -412,6 +526,7 @@ export default function ClienteFormPage() {
                   />
                 )}
               </div>
+              <FieldError field="cep" errors={fieldErrors} />
             </div>
             <div className="md:col-span-2">
               <label className="block text-xs font-semibold text-slate-600 mb-1">Endereço</label>
@@ -485,11 +600,17 @@ export default function ClienteFormPage() {
         </section>
 
         {mostrarSecaoUnidades ? (
-          <section className="space-y-4 bg-white rounded-2xl border border-slate-200 p-5 sm:p-6">
+          <section
+            data-field="unidadesIds"
+            className={`space-y-4 bg-white rounded-2xl p-5 sm:p-6 ${
+              fieldErrors.unidadesIds ? 'border-2 border-red-300' : 'border border-slate-200'
+            }`}
+          >
             <div className="flex items-center gap-2">
               <Briefcase className="h-5 w-5 text-violet-600" />
-              <h2 className="text-base font-bold text-slate-900">Unidades</h2>
+              <h2 className="text-base font-bold text-slate-900">Unidades <span className="text-red-500">*</span></h2>
             </div>
+            <FieldError field="unidadesIds" errors={fieldErrors} />
 
             <p className="text-sm text-slate-600">Selecione uma ou mais unidades às quais o cliente terá acesso.</p>
 
