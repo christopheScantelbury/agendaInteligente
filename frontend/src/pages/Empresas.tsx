@@ -3,14 +3,15 @@ import { empresaService, Empresa } from '../services/empresaService'
 import { authService } from '../services/authService'
 import { perfilService } from '../services/perfilService'
 import { podeEditar } from '../utils/permissions'
-import { Plus, Trash2, Edit, Briefcase } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { Plus, Trash2, Edit, Briefcase, Loader2 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
 import FormField from '../components/FormField'
 import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { maskPhone, maskCEP, maskCNPJ, maskEmail } from '../utils/masks'
+import { buscarEnderecoPorCep } from '../utils/viaCep'
 
 export default function Empresas() {
   const { showNotification } = useNotification()
@@ -226,6 +227,42 @@ function EmpresaForm({
   )
   const [logoPreview, setLogoPreview] = useState<string | undefined>(empresa?.logo)
 
+  // ViaCEP: auto-preenche endereço/bairro/cidade/uf quando CEP completo.
+  const [cepCarregando, setCepCarregando] = useState(false)
+  const cepAbortRef = useRef<AbortController | null>(null)
+
+  useEffect(() => {
+    const cepDigits = (formData.cep ?? '').replace(/\D/g, '')
+    if (cepDigits.length !== 8) {
+      cepAbortRef.current?.abort()
+      setCepCarregando(false)
+      return
+    }
+    cepAbortRef.current?.abort()
+    const controller = new AbortController()
+    cepAbortRef.current = controller
+    setCepCarregando(true)
+    const timer = setTimeout(async () => {
+      try {
+        const endereco = await buscarEnderecoPorCep(cepDigits, controller.signal)
+        if (controller.signal.aborted || !endereco) return
+        setFormData((prev) => ({
+          ...prev,
+          endereco: prev.endereco?.trim() ? prev.endereco : endereco.logradouro,
+          bairro: prev.bairro?.trim() ? prev.bairro : endereco.bairro,
+          cidade: prev.cidade?.trim() ? prev.cidade : endereco.cidade,
+          uf: prev.uf?.trim() ? prev.uf : endereco.uf,
+        }))
+      } finally {
+        if (!controller.signal.aborted) setCepCarregando(false)
+      }
+    }, 350)
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [formData.cep])
+
   useEffect(() => {
     if (empresa) {
       setFormData(empresa)
@@ -347,14 +384,24 @@ function EmpresaForm({
         </FormField>
 
         <FormField label="CEP">
-          <input
-            type="text"
-            value={formData.cep || ''}
-            onChange={(e) => setFormData({ ...formData, cep: maskCEP(e.target.value) })}
-            maxLength={9}
-            placeholder="00000-000"
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
-          />
+          <div className="relative">
+            <input
+              type="text"
+              value={formData.cep || ''}
+              onChange={(e) => setFormData({ ...formData, cep: maskCEP(e.target.value) })}
+              maxLength={9}
+              placeholder="00000-000"
+              inputMode="numeric"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 pr-9"
+            />
+            {cepCarregando && (
+              <Loader2
+                className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5 h-4 w-4 text-violet-600 animate-spin"
+                aria-label="Buscando endereço..."
+              />
+            )}
+          </div>
+          <p className="text-[11px] text-slate-400 mt-1">Auto-preenche o resto.</p>
         </FormField>
 
         <FormField label="Endereço">

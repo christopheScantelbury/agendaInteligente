@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Briefcase, CalendarPlus } from 'lucide-react'
+import { ArrowLeft, Briefcase, CalendarPlus, UserCircle2, MapPin, Loader2 } from 'lucide-react'
 import { clienteService, Cliente } from '../services/clienteService'
 import { unidadeService } from '../services/unidadeService'
 import { atendenteService } from '../services/atendenteService'
@@ -11,6 +11,7 @@ import RecorrenciaConfig, { RecorrenciaConfig as RecorrenciaConfigType } from '.
 import Button from '../components/Button'
 import { useNotification } from '../contexts/NotificationContext'
 import { maskCPF, maskCNPJ, maskPhone, maskEmail, maskCEP } from '../utils/masks'
+import { buscarEnderecoPorCep } from '../utils/viaCep'
 
 type ClienteFormData = Cliente
 
@@ -57,6 +58,11 @@ export default function ClienteFormPage() {
     numeroOcorrencias: 4,
     intervalo: 1,
   })
+
+  // ViaCEP: busca debounced + AbortController quando user digita rápido.
+  // Auto-preenche logradouro/bairro/cidade/uf SE estiverem vazios — não sobrescreve edição manual.
+  const [cepCarregando, setCepCarregando] = useState(false)
+  const cepAbortRef = useRef<AbortController | null>(null)
 
   const { data: clienteExistente, isLoading: isLoadingCliente } = useQuery({
     queryKey: ['cliente', clienteId],
@@ -120,6 +126,44 @@ export default function ClienteFormPage() {
       })
     }
   }, [isEditing, clienteExistente])
+
+  // ViaCEP — dispara quando CEP tem 8 dígitos
+  useEffect(() => {
+    const cepDigits = (formData.cep ?? '').replace(/\D/g, '')
+    if (cepDigits.length !== 8) {
+      // CEP incompleto: cancela busca anterior e zera loading
+      cepAbortRef.current?.abort()
+      setCepCarregando(false)
+      return
+    }
+    // Cancela busca anterior e dispara nova
+    cepAbortRef.current?.abort()
+    const controller = new AbortController()
+    cepAbortRef.current = controller
+    setCepCarregando(true)
+    const timer = setTimeout(async () => {
+      try {
+        const endereco = await buscarEnderecoPorCep(cepDigits, controller.signal)
+        if (controller.signal.aborted) return
+        if (endereco) {
+          setFormData((prev) => ({
+            ...prev,
+            // Só preenche campos vazios — preserva edição manual do usuário
+            endereco: prev.endereco?.trim() ? prev.endereco : endereco.logradouro,
+            bairro: prev.bairro?.trim() ? prev.bairro : endereco.bairro,
+            cidade: prev.cidade?.trim() ? prev.cidade : endereco.cidade,
+            uf: prev.uf?.trim() ? prev.uf : endereco.uf,
+          }))
+        }
+      } finally {
+        if (!controller.signal.aborted) setCepCarregando(false)
+      }
+    }, 350)
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [formData.cep])
 
   useEffect(() => {
     if (!unidadeUnicaId) return
@@ -228,7 +272,7 @@ export default function ClienteFormPage() {
   if (isEditing && !hasValidClienteId) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold text-gray-900">Editar Cliente</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Editar Cliente</h1>
         <p className="text-red-600">ID de cliente inválido.</p>
         <Button variant="secondary" onClick={() => navigate('/clientes')}>Voltar</Button>
       </div>
@@ -240,37 +284,43 @@ export default function ClienteFormPage() {
   }
 
   return (
-    <div className="w-full">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
+    <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{isEditing ? 'Editar Cliente' : 'Novo Cliente'}</h1>
-          <p className="text-sm text-gray-600 mt-1">Preencha os dados completos do cliente.</p>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <UserCircle2 className="h-6 w-6 text-violet-600" />
+            {isEditing ? 'Editar Cliente' : 'Novo Cliente'}
+          </h1>
+          <p className="text-sm text-slate-500 mt-0.5">Preencha os dados completos do cliente.</p>
         </div>
         <Button variant="secondary" onClick={() => navigate('/clientes')}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
+          <ArrowLeft className="h-4 w-4" />
           Voltar
         </Button>
-      </div>
+      </header>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <section className="space-y-4 bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
-          <h2 className="text-lg font-semibold text-gray-900">Dados pessoais</h2>
+        <section className="space-y-4 bg-white rounded-2xl border border-slate-200 p-5 sm:p-6">
+          <div className="flex items-center gap-2">
+            <UserCircle2 className="h-5 w-5 text-violet-600" />
+            <h2 className="text-base font-bold text-slate-900">Dados pessoais</h2>
+          </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Nome</label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Nome</label>
             <input
               type="text"
               required
               value={formData.nome}
               onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+              className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">CPF/CNPJ</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">CPF/CNPJ</label>
               <input
                 type="text"
                 value={formData.cpfCnpj}
@@ -282,162 +332,175 @@ export default function ClienteFormPage() {
                 }}
                 maxLength={18}
                 placeholder="000.000.000-00 ou 00.000.000/0000-00"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+                className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">RG</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">RG</label>
               <input
                 type="text"
                 value={formData.rg || ''}
                 onChange={(e) => setFormData({ ...formData, rg: e.target.value })}
                 placeholder="Documento de identidade"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+                className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700">Email</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Email</label>
               <input
                 type="email"
                 value={formData.email || ''}
                 onChange={(e) => setFormData({ ...formData, email: maskEmail(e.target.value) })}
                 placeholder="email@exemplo.com"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+                className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Telefone</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Telefone</label>
               <input
                 type="text"
                 value={formData.telefone || ''}
                 onChange={(e) => setFormData({ ...formData, telefone: maskPhone(e.target.value) })}
                 maxLength={15}
                 placeholder="(00) 00000-0000"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+                className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Data de nascimento</label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Data de nascimento</label>
             <input
               type="date"
               value={formData.dataNascimento || ''}
               onChange={(e) => setFormData({ ...formData, dataNascimento: e.target.value })}
               max={new Date().toISOString().split('T')[0]}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+              className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
             />
           </div>
         </section>
 
-        <section className="space-y-4 bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
-          <h2 className="text-lg font-semibold text-gray-900">Endereço</h2>
+        <section className="space-y-4 bg-white rounded-2xl border border-slate-200 p-5 sm:p-6">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-5 w-5 text-violet-600" />
+            <h2 className="text-base font-bold text-slate-900">Endereço</h2>
+          </div>
+          <p className="text-xs text-slate-500 -mt-2">Digite o CEP que preenchemos o resto pra você.</p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">CEP</label>
-              <input
-                type="text"
-                value={formData.cep || ''}
-                onChange={(e) => setFormData({ ...formData, cep: maskCEP(e.target.value) })}
-                placeholder="00000-000"
-                maxLength={9}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
-              />
+              <label className="block text-xs font-semibold text-slate-600 mb-1">CEP</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={formData.cep || ''}
+                  onChange={(e) => setFormData({ ...formData, cep: maskCEP(e.target.value) })}
+                  placeholder="00000-000"
+                  maxLength={9}
+                  inputMode="numeric"
+                  className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-9 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
+                />
+                {cepCarregando && (
+                  <Loader2
+                    className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5 h-4 w-4 text-violet-600 animate-spin"
+                    aria-label="Buscando endereço..."
+                  />
+                )}
+              </div>
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700">Endereço</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Endereço</label>
               <input
                 type="text"
                 value={formData.endereco || ''}
                 onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
                 placeholder="Rua, avenida..."
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+                className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Número</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Número</label>
               <input
                 type="text"
                 value={formData.numero || ''}
                 onChange={(e) => setFormData({ ...formData, numero: e.target.value.replace(/\D/g, '') })}
                 placeholder="123"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+                className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700">Complemento</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Complemento</label>
               <input
                 type="text"
                 value={formData.complemento || ''}
                 onChange={(e) => setFormData({ ...formData, complemento: e.target.value })}
                 placeholder="Apartamento, bloco..."
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+                className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Bairro</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Bairro</label>
               <input
                 type="text"
                 value={formData.bairro || ''}
                 onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
                 placeholder="Bairro"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+                className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700">Cidade</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Cidade</label>
               <input
                 type="text"
                 value={formData.cidade || ''}
                 onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
                 placeholder="Cidade"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+                className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">UF</label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">UF</label>
             <input
               type="text"
               value={formData.uf || ''}
               onChange={(e) => setFormData({ ...formData, uf: e.target.value.toUpperCase().slice(0, 2) })}
               placeholder="UF"
               maxLength={2}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+              className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
             />
           </div>
         </section>
 
         {mostrarSecaoUnidades ? (
-          <section className="space-y-4 bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
+          <section className="space-y-4 bg-white rounded-2xl border border-slate-200 p-5 sm:p-6">
             <div className="flex items-center gap-2">
-              <Briefcase className="h-5 w-5 text-blue-600" />
-              <h2 className="text-lg font-semibold text-gray-900">Unidades</h2>
+              <Briefcase className="h-5 w-5 text-violet-600" />
+              <h2 className="text-base font-bold text-slate-900">Unidades</h2>
             </div>
 
-            <p className="text-sm text-gray-600">Selecione uma ou mais unidades às quais o cliente terá acesso.</p>
+            <p className="text-sm text-slate-600">Selecione uma ou mais unidades às quais o cliente terá acesso.</p>
 
-            <div className="space-y-2 max-h-56 overflow-y-auto border border-gray-200 rounded-md p-3">
+            <div className="space-y-2 max-h-56 overflow-y-auto border border-slate-200 rounded-xl p-3">
               {unidades.length === 0 ? (
-                <p className="text-sm text-gray-500">Nenhuma unidade disponível</p>
+                <p className="text-sm text-slate-500">Nenhuma unidade disponível</p>
               ) : (
                 unidades.map((unidade) => (
                   <label
                     key={unidade.id}
-                    className="flex items-center p-2 rounded hover:bg-gray-50 cursor-pointer"
+                    className="flex items-center p-2 rounded-lg hover:bg-slate-50 cursor-pointer"
                   >
                     <input
                       type="checkbox"
@@ -456,11 +519,11 @@ export default function ClienteFormPage() {
                           })
                         }
                       }}
-                      className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+                      className="rounded border-slate-300 text-violet-600 focus:ring-violet-500"
                     />
-                    <span className="ml-3 text-sm text-gray-700">
+                    <span className="ml-3 text-sm text-slate-700">
                       {unidade.nome}
-                      {unidade.cidade && <span className="text-gray-500 ml-2">({unidade.cidade})</span>}
+                      {unidade.cidade && <span className="text-slate-500 ml-2">({unidade.cidade})</span>}
                     </span>
                   </label>
                 ))
@@ -468,39 +531,39 @@ export default function ClienteFormPage() {
             </div>
 
             {formData.unidadesIds && formData.unidadesIds.length > 0 && (
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-slate-500">
                 {formData.unidadesIds.length} unidade(s) selecionada(s)
               </p>
             )}
           </section>
         ) : (
-          <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
+          <section className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6">
             <div className="flex items-center gap-2">
-              <Briefcase className="h-5 w-5 text-blue-600" />
-              <h2 className="text-lg font-semibold text-gray-900">Unidade</h2>
+              <Briefcase className="h-5 w-5 text-violet-600" />
+              <h2 className="text-base font-bold text-slate-900">Unidade</h2>
             </div>
-            <p className="text-sm text-gray-600 mt-2">
+            <p className="text-sm text-slate-600 mt-2">
               Unidade selecionada automaticamente: <strong>{unidadeUnica?.nome}</strong>
               {unidadeUnica?.cidade ? ` (${unidadeUnica.cidade})` : ''}
             </p>
           </section>
         )}
 
-        <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
+        <section className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6">
           <label className="flex items-center">
             <input
               type="checkbox"
               checked={formData.ativo ?? true}
               onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
-              className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+              className="rounded border-slate-300 text-violet-600 focus:ring-violet-500"
             />
-            <span className="ml-2 text-sm font-medium text-gray-700">Cliente ativo</span>
+            <span className="ml-2 text-sm font-medium text-slate-700">Cliente ativo</span>
           </label>
         </section>
 
         {!isEditing && (
-          <section className="xl:col-span-2 space-y-4 bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
-            <label className="flex items-center gap-2 cursor-pointer p-3 rounded-lg border border-gray-200 hover:bg-gray-50">
+          <section className="xl:col-span-2 space-y-4 bg-white rounded-2xl border border-slate-200 p-5 sm:p-6">
+            <label className="flex items-center gap-2 cursor-pointer p-3 rounded-xl border border-slate-200 hover:bg-slate-50">
               <input
                 type="checkbox"
                 checked={queroCriarAgendamento}
@@ -515,36 +578,36 @@ export default function ClienteFormPage() {
                 }}
                 className="rounded border-gray-300 text-violet-600 focus:ring-violet-500 w-4 h-4"
               />
-              <span className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <CalendarPlus className="w-5 h-5 text-blue-600" />
+              <span className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                <CalendarPlus className="w-5 h-5 text-violet-600" />
                 Já criar um agendamento para este cliente
               </span>
             </label>
 
             {queroCriarAgendamento && (
-              <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-sm text-gray-600">
+              <div className="space-y-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <p className="text-sm text-slate-600">
                   Preencha os dados do primeiro agendamento. Pode ser único ou recorrente.
                 </p>
 
                 {unidadeUnicaId ? (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Unidade do agendamento</label>
-                    <p className="text-sm text-gray-700 bg-white border border-gray-200 rounded-md px-3 py-2">
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Unidade do agendamento</label>
+                    <p className="text-sm text-slate-700 bg-white border border-slate-200 rounded-xl px-3 py-2">
                       {unidadeUnica?.nome}
                       {unidadeUnica?.cidade ? ` (${unidadeUnica.cidade})` : ''}
                     </p>
                   </div>
                 ) : (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Unidade do agendamento</label>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Unidade do agendamento</label>
                     <select
                       value={agendamentoUnidadeId}
                       onChange={(e) => {
                         setAgendamentoUnidadeId(e.target.value ? Number(e.target.value) : '')
                         setAgendamentoAtendenteId('')
                       }}
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 text-sm"
+                      className="block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
                     >
                       <option value="">Selecione</option>
                       {unidades.map((u) => (
@@ -558,12 +621,12 @@ export default function ClienteFormPage() {
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Atendente</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Atendente</label>
                   <select
                     value={agendamentoAtendenteId}
                     onChange={(e) => setAgendamentoAtendenteId(e.target.value ? Number(e.target.value) : '')}
                     disabled={!agendamentoUnidadeId}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 text-sm disabled:bg-gray-100"
+                    className="block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition disabled:bg-slate-100 disabled:text-slate-400"
                   >
                     <option value="">Selecione</option>
                     {atendentesAgendamento.map((a) => (
@@ -575,8 +638,8 @@ export default function ClienteFormPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Serviços</label>
-                  <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3 bg-white">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Serviços</label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-3 bg-white">
                     {(servicos || []).filter((s) => s.ativo !== false).map((s: Servico) => (
                       <label key={s.id} className="flex items-center gap-2 cursor-pointer">
                         <input
@@ -589,11 +652,11 @@ export default function ClienteFormPage() {
                               setAgendamentoServicosIds((prev) => prev.filter((itemId) => itemId !== s.id))
                             }
                           }}
-                          className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+                          className="rounded border-slate-300 text-violet-600 focus:ring-violet-500"
                         />
                         <span className="text-sm">
                           {s.nome}
-                          {s.valor != null && <span className="text-gray-500 ml-1">R$ {Number(s.valor).toFixed(2)}</span>}
+                          {s.valor != null && <span className="text-slate-500 ml-1">R$ {Number(s.valor).toFixed(2)}</span>}
                         </span>
                       </label>
                     ))}
@@ -601,13 +664,13 @@ export default function ClienteFormPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Data e hora</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Data e hora</label>
                   <input
                     type="datetime-local"
                     value={agendamentoDataHoraInicio}
                     onChange={(e) => setAgendamentoDataHoraInicio(e.target.value)}
                     min={new Date().toISOString().slice(0, 16)}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 text-sm"
+                    className="block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
                   />
                 </div>
 
@@ -618,7 +681,7 @@ export default function ClienteFormPage() {
         )}
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-5 flex flex-col-reverse sm:flex-row justify-end gap-2">
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 flex flex-col-reverse sm:flex-row justify-end gap-2">
           <Button type="button" variant="secondary" onClick={() => navigate('/clientes')}>
             Cancelar
           </Button>
