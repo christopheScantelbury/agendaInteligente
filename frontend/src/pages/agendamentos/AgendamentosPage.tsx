@@ -4,6 +4,7 @@ import { CalendarDays, LayoutGrid, CalendarRange } from 'lucide-react'
 import DayMode from './DayMode'
 import WeekMode from './WeekMode'
 import MonthMode from './MonthMode'
+import { authService } from '../../services/authService'
 
 type Modo = 'dia' | 'semana' | 'mes'
 
@@ -22,7 +23,10 @@ const MODES: Array<{ id: Modo; label: string; icon: React.ComponentType<{ classN
  */
 export default function AgendamentosPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const modoUrl = (searchParams.get('modo') as Modo) || 'dia'
+  // #137: PROFISSIONAL tem foco em visão de calendário (mês) por padrão.
+  // Demais perfis seguem em Dia (timeline) como antes.
+  const modoDefault: Modo = authService.isPerfilProfissional() ? 'mes' : 'dia'
+  const modoUrl = (searchParams.get('modo') as Modo) || modoDefault
   const dataUrl = searchParams.get('data')
 
   const [selectedDate, setSelectedDate] = useState<Date>(() => {

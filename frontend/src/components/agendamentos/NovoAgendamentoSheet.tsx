@@ -105,6 +105,36 @@ export default function NovoAgendamentoSheet({ isOpen, onClose, initialDateTime,
     enabled: !!unidadeId,
   })
 
+  // #136: Quando profissional selecionado, só exibe serviços que ele atende.
+  // Servico tem atendentesIds[] (vinculação m-n com atendente).
+  const servicosDisponiveis = useMemo(() => {
+    if (!atendenteId) return servicos
+    return servicos.filter((s) => (s.atendentesIds ?? []).includes(atendenteId))
+  }, [servicos, atendenteId])
+
+  // #136: Ao trocar profissional, remover serviços já selecionados que não pertencem
+  // ao novo profissional. Mostra um aviso quando algum cai.
+  const [aviso136, setAviso136] = useState<string | null>(null)
+  useEffect(() => {
+    if (!atendenteId || servicosIds.length === 0) {
+      if (aviso136) setAviso136(null)
+      return
+    }
+    const idsValidos = new Set(servicosDisponiveis.map((s) => s.id))
+    const removidos = servicosIds.filter((id) => !idsValidos.has(id))
+    if (removidos.length > 0) {
+      setServicosIds((prev) => prev.filter((id) => idsValidos.has(id)))
+      setAviso136(
+        removidos.length === 1
+          ? '1 serviço selecionado não é oferecido por este profissional e foi removido.'
+          : `${removidos.length} serviços não são oferecidos por este profissional e foram removidos.`
+      )
+    } else if (aviso136) {
+      setAviso136(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [atendenteId, servicosDisponiveis])
+
   const clientesFiltrados = useMemo(() => {
     if (!clienteSearch.trim()) return clientes.slice(0, 20)
     return clientes
@@ -326,17 +356,50 @@ export default function NovoAgendamentoSheet({ isOpen, onClose, initialDateTime,
             </div>
           )}
 
+          {/* #136: Profissional vem ANTES de Serviços pra filtrar serviços pelo profissional escolhido */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Profissional</label>
+            <select
+              value={atendenteId ?? ''}
+              onChange={(e) => setAtendenteId(Number(e.target.value) || null)}
+              disabled={!unidadeId}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:bg-slate-50 disabled:text-slate-400"
+            >
+              <option value="">Selecione...</option>
+              {atendentes.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.nomeUsuario || `Profissional #${a.id}`}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div>
             <label className="block text-xs font-semibold text-slate-600 mb-1">
               Serviços {servicosIds.length > 0 && <span className="text-violet-600">({servicosIds.length})</span>}
+              {atendenteId && (
+                <span className="ml-1 text-[10px] text-slate-400 font-normal">
+                  · só os deste profissional
+                </span>
+              )}
             </label>
+            {aviso136 && (
+              <div className="mb-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                {aviso136}
+              </div>
+            )}
             {!unidadeId ? (
               <p className="text-xs text-slate-500 py-2">Selecione uma unidade primeiro.</p>
             ) : servicos.length === 0 ? (
               <p className="text-xs text-slate-500 py-2">Nenhum serviço cadastrado nesta unidade.</p>
+            ) : atendenteId && servicosDisponiveis.length === 0 ? (
+              <div className="text-xs text-slate-500 py-3 px-3 bg-slate-50 border border-slate-200 rounded-xl">
+                Este profissional não tem serviços vinculados ainda. Cadastre em{' '}
+                <strong>Profissionais</strong> ou escolha outro profissional.
+              </div>
             ) : (
               <div className="space-y-1 max-h-44 overflow-y-auto rounded-xl border border-slate-100 p-1">
-                {servicos.map((s) => {
+                {servicosDisponiveis.map((s) => {
                   const checked = servicosIds.includes(s.id)
                   return (
                     <label
@@ -364,23 +427,6 @@ export default function NovoAgendamentoSheet({ isOpen, onClose, initialDateTime,
                 })}
               </div>
             )}
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Profissional</label>
-            <select
-              value={atendenteId ?? ''}
-              onChange={(e) => setAtendenteId(Number(e.target.value) || null)}
-              disabled={!unidadeId}
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:bg-slate-50 disabled:text-slate-400"
-            >
-              <option value="">Selecione...</option>
-              {atendentes.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.nomeUsuario || `Profissional #${a.id}`}
-                </option>
-              ))}
-            </select>
           </div>
 
           <div>
