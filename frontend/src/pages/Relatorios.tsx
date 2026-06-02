@@ -76,24 +76,16 @@ export default function Relatorios() {
   }))
 
   return (
-    <div className="w-full space-y-6">
-      {/* Sub-menu de relatórios */}
-      <div className="flex flex-wrap gap-2 text-sm">
-        <span className="text-gray-500">Ver também:</span>
-        <Link to="/relatorios/performance" className="text-violet-600 hover:text-violet-800 font-medium">Performance</Link>
-        <span className="text-gray-300">·</span>
-        <Link to="/relatorios/financeiro" className="text-violet-600 hover:text-violet-800 font-medium">Resumo Financeiro</Link>
-      </div>
-
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-violet-100 rounded-full">
-            <BarChart2 className="h-6 w-6 text-violet-600" />
+          <div className="h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center flex-shrink-0">
+            <BarChart2 className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Relatórios</h1>
-            <p className="text-sm text-gray-500">Análise de desempenho do negócio</p>
+            <h1 className="text-2xl font-bold text-slate-900">Relatórios</h1>
+            <p className="text-sm text-slate-500">Análise de desempenho do negócio</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -101,7 +93,7 @@ export default function Relatorios() {
             <select
               value={selectedUnidadeId ?? ''}
               onChange={e => setSelectedUnidadeId(e.target.value ? Number(e.target.value) : undefined)}
-              className="text-sm rounded-xl border border-gray-200 px-3 py-2 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-100"
+              className="text-sm rounded-xl border border-slate-200 px-3 py-2 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
             >
               <option value="">Todas as unidades</option>
               {unidades.map(u => (
@@ -112,46 +104,54 @@ export default function Relatorios() {
           <select
             value={meses}
             onChange={e => setMeses(Number(e.target.value))}
-            className="text-sm rounded-xl border border-gray-200 px-3 py-2 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-100"
+            className="text-sm rounded-xl border border-slate-200 px-3 py-2 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
           >
             <option value={3}>Últimos 3 meses</option>
             <option value={6}>Últimos 6 meses</option>
             <option value={12}>Últimos 12 meses</option>
           </select>
         </div>
+      </header>
+
+      {/* Sub-menu de relatórios (movido pra logo abaixo do header) */}
+      <div className="flex flex-wrap gap-2 text-sm">
+        <span className="text-slate-500">Ver também:</span>
+        <Link to="/relatorios/performance" className="text-violet-600 hover:text-violet-800 font-semibold">Performance</Link>
+        <span className="text-slate-300">·</span>
+        <Link to="/relatorios/financeiro" className="text-violet-600 hover:text-violet-800 font-semibold">Resumo Financeiro</Link>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
           <div className="flex items-center gap-3 mb-1">
             <TrendingUp className="h-5 w-5 text-violet-500" />
-            <span className="text-sm font-medium text-gray-500">Faturamento total</span>
+            <span className="text-sm font-medium text-slate-500">Faturamento total</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{moneyFmt.format(totalFaturamento)}</p>
-          <p className="text-xs text-gray-400 mt-1">últimos {meses} meses</p>
+          <p className="text-2xl font-bold text-slate-900">{moneyFmt.format(totalFaturamento)}</p>
+          <p className="text-xs text-slate-400 mt-1">últimos {meses} meses</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
           <div className="flex items-center gap-3 mb-1">
             <BarChart2 className="h-5 w-5 text-violet-500" />
-            <span className="text-sm font-medium text-gray-500">Agendamentos concluídos</span>
+            <span className="text-sm font-medium text-slate-500">Agendamentos concluídos</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{totalAgendamentos}</p>
-          <p className="text-xs text-gray-400 mt-1">últimos {meses} meses</p>
+          <p className="text-2xl font-bold text-slate-900">{totalAgendamentos}</p>
+          <p className="text-xs text-slate-400 mt-1">últimos {meses} meses</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
           <div className="flex items-center gap-3 mb-1">
             <Users className="h-5 w-5 text-violet-500" />
-            <span className="text-sm font-medium text-gray-500">Taxa de retorno</span>
+            <span className="text-sm font-medium text-slate-500">Taxa de retorno</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{ultimaTaxaRetorno.toFixed(1)}%</p>
-          <p className="text-xs text-gray-400 mt-1">clientes que voltam</p>
+          <p className="text-2xl font-bold text-slate-900">{ultimaTaxaRetorno.toFixed(1)}%</p>
+          <p className="text-xs text-slate-400 mt-1">clientes que voltam</p>
         </div>
       </div>
 
       {/* Faturamento Chart */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-        <h2 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
+      <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <h2 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-violet-500" /> Faturamento Mensal
         </h2>
         {loadingFat ? (
@@ -159,7 +159,7 @@ export default function Relatorios() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600" />
           </div>
         ) : faturamentoChart.length === 0 ? (
-          <p className="text-center text-gray-400 py-12">Nenhum dado disponível</p>
+          <p className="text-center text-slate-400 py-12">Nenhum dado disponível</p>
         ) : (
           <ChartContainerBar data={faturamentoChart} />
         )}
@@ -168,8 +168,8 @@ export default function Relatorios() {
       {/* Bottom Row: Top Serviços + Taxa Retorno */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Top Serviços Pie */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <h2 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <h2 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <Award className="h-4 w-4 text-violet-500" /> Top Serviços
           </h2>
           {loadingTop ? (
@@ -177,7 +177,7 @@ export default function Relatorios() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600" />
             </div>
           ) : topServicos.length === 0 ? (
-            <p className="text-center text-gray-400 py-12">Nenhum dado disponível</p>
+            <p className="text-center text-slate-400 py-12">Nenhum dado disponível</p>
           ) : (
             <div className="flex flex-col gap-3">
               {topServicos.slice(0, 6).map((s, i) => {
@@ -187,10 +187,10 @@ export default function Relatorios() {
                 return (
                   <div key={s.servicoNome}>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-gray-700 truncate max-w-[60%]">{s.servicoNome}</span>
-                      <span className="text-xs text-gray-500">{s.totalRealizados}x · {moneyFmt.format(Number(s.receitaTotal))}</span>
+                      <span className="text-sm text-slate-700 truncate max-w-[60%]">{s.servicoNome}</span>
+                      <span className="text-xs text-slate-500">{s.totalRealizados}x · {moneyFmt.format(Number(s.receitaTotal))}</span>
                     </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all"
                         style={{ width: `${pct}%`, backgroundColor: COLORS[i % COLORS.length] }}
@@ -204,8 +204,8 @@ export default function Relatorios() {
         </div>
 
         {/* Taxa de Retorno Line */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <h2 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <h2 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <Users className="h-4 w-4 text-violet-500" /> Taxa de Retorno de Clientes
           </h2>
           {loadingRetorno ? (
@@ -213,7 +213,7 @@ export default function Relatorios() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600" />
             </div>
           ) : retornoChart.length === 0 ? (
-            <p className="text-center text-gray-400 py-12">Nenhum dado disponível</p>
+            <p className="text-center text-slate-400 py-12">Nenhum dado disponível</p>
           ) : (
             <ChartContainerLine data={retornoChart} />
           )}

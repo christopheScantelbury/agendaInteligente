@@ -32,7 +32,7 @@ export default function Comissoes() {
   const podeGerir = podeAcessar
   if (!podeAcessar) {
     setTimeout(() => navigate('/'), 0)
-    return <div className="p-8 text-center text-sm text-gray-500">Acesso negado.</div>
+    return <div className="p-8 text-center text-sm text-slate-500">Acesso negado.</div>
   }
 
   const [atendenteId, setAtendenteId] = useState<number | null>(null)
@@ -118,13 +118,18 @@ export default function Comissoes() {
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Comissões</h1>
-        <p className="text-sm text-gray-500">Regras, pendências e pagamento por profissional</p>
-      </div>
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-5">
+      <header className="flex items-center gap-3">
+        <div className="h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center flex-shrink-0">
+          <DollarSign className="h-6 w-6" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Comissões</h1>
+          <p className="text-sm text-slate-500">Regras, pendências e pagamento por profissional</p>
+        </div>
+      </header>
 
-      <div className="bg-white rounded-lg shadow p-4 space-y-3">
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
         <FormField label="Profissional">
           <select
             value={atendenteId ?? ''}
@@ -132,7 +137,7 @@ export default function Comissoes() {
               setAtendenteId(e.target.value ? Number(e.target.value) : null)
               setSelecionados(new Set())
             }}
-            className="mt-1 block w-full sm:w-80 rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+            className="mt-1 block w-full sm:w-80 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
           >
             <option value="">Selecione um profissional</option>
             {atendentes.map((a) => (
@@ -146,14 +151,14 @@ export default function Comissoes() {
             <ResumoCard titulo="Comissão pendente" valor={formatMoeda(resumo.pendente)} cor="text-yellow-700" />
             <ResumoCard titulo="Comissão paga" valor={formatMoeda(resumo.pago)} cor="text-green-700" />
             <ResumoCard titulo="Atendimentos pendentes" valor={String(resumo.quantidadePendente)} cor="text-blue-700" />
-            <ResumoCard titulo="Atendimentos pagos" valor={String(resumo.quantidadePaga)} cor="text-gray-700" />
+            <ResumoCard titulo="Atendimentos pagos" valor={String(resumo.quantidadePaga)} cor="text-slate-700" />
           </div>
         )}
       </div>
 
       {atendenteId && (
         <>
-          <div className="border-b border-gray-200">
+          <div className="border-b border-slate-200">
             <nav className="-mb-px flex gap-4">
               <TabButton ativo={aba === 'pendentes'} onClick={() => setAba('pendentes')}>
                 Pendentes
@@ -168,7 +173,7 @@ export default function Comissoes() {
           </div>
 
           {aba === 'pendentes' && (
-            <div className="bg-white rounded-lg shadow">
+            <div className="bg-white rounded-2xl border border-slate-200">
               <div className="px-4 py-3 border-b flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-3">
                   <button
@@ -183,14 +188,14 @@ export default function Comissoes() {
                     {selecionados.size === pendentes.length && pendentes.length > 0 ? 'Desmarcar todos' : 'Selecionar todos'}
                   </button>
                   {selecionados.size > 0 && (
-                    <button onClick={() => setSelecionados(new Set())} className="text-xs text-gray-500 hover:text-gray-700">
+                    <button onClick={() => setSelecionados(new Set())} className="text-xs text-slate-500 hover:text-slate-700">
                       Limpar seleção
                     </button>
                   )}
                 </div>
                 <div className="text-sm">
                   Selecionado: <span className="font-bold text-violet-700">{formatMoeda(totalSelecionado)}</span>
-                  <span className="text-gray-500 ml-2">({selecionados.size} de {pendentes.length})</span>
+                  <span className="text-slate-500 ml-2">({selecionados.size} de {pendentes.length})</span>
                 </div>
                 {podeGerir && (
                   <Button
@@ -202,8 +207,8 @@ export default function Comissoes() {
                 )}
               </div>
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead className="bg-slate-50">
                     <tr>
                       <Th className="w-10">{''}</Th>
                       <Th>Data</Th>
@@ -214,14 +219,14 @@ export default function Comissoes() {
                       <Th className="text-right">Comissão</Th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white divide-y divide-slate-200">
                     {loadingPendentes ? (
-                      <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-500">Calculando...</td></tr>
+                      <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-500">Calculando...</td></tr>
                     ) : pendentes.length === 0 ? (
-                      <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-500">Nenhum atendimento pendente</td></tr>
+                      <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-500">Nenhum atendimento pendente</td></tr>
                     ) : pendentes.map((l) => (
                       <tr key={l.id}
-                        className={`hover:bg-gray-50 cursor-pointer ${selecionados.has(l.id) ? 'bg-violet-50' : ''}`}
+                        className={`hover:bg-slate-50 cursor-pointer ${selecionados.has(l.id) ? 'bg-violet-50' : ''}`}
                         onClick={() => toggleSelecionado(l.id)}>
                         <td className="px-4 py-3">
                           <input type="checkbox" checked={selecionados.has(l.id)}
@@ -229,11 +234,11 @@ export default function Comissoes() {
                             onClick={(e) => e.stopPropagation()}
                             className="rounded border-gray-300 text-violet-600 focus:ring-violet-500" />
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{formatDataHora(l.dataAgendamento)}</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">{l.clienteNome ?? '—'}</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">{l.servicoNome ?? '—'}</td>
+                        <td className="px-4 py-3 text-sm text-slate-700">{formatDataHora(l.dataAgendamento)}</td>
+                        <td className="px-4 py-3 text-sm text-slate-900">{l.clienteNome ?? '—'}</td>
+                        <td className="px-4 py-3 text-sm text-slate-900">{l.servicoNome ?? '—'}</td>
                         <td className="px-4 py-3 text-sm text-right">{formatMoeda(l.valorBase)}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
+                        <td className="px-4 py-3 text-sm text-slate-600">
                           {l.tipoAplicado === 'PERCENTUAL' ? `${l.valorRegra}%` : formatMoeda(l.valorRegra)}
                         </td>
                         <td className="px-4 py-3 text-sm text-right font-semibold text-violet-700">{formatMoeda(l.valorComissao)}</td>
@@ -246,7 +251,7 @@ export default function Comissoes() {
           )}
 
           {aba === 'regras' && (
-            <div className="bg-white rounded-lg shadow">
+            <div className="bg-white rounded-2xl border border-slate-200">
               <div className="px-4 py-3 border-b flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-gray-800">Regras configuradas</h3>
                 {podeGerir && (
@@ -256,8 +261,8 @@ export default function Comissoes() {
                 )}
               </div>
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead className="bg-slate-50">
                     <tr>
                       <Th>Serviço</Th>
                       <Th>Tipo</Th>
@@ -265,15 +270,15 @@ export default function Comissoes() {
                       <Th className="text-right">Ações</Th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white divide-y divide-slate-200">
                     {regras.length === 0 ? (
-                      <tr><td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-500">
+                      <tr><td colSpan={4} className="px-4 py-8 text-center text-sm text-slate-500">
                         Nenhuma regra. Cálculo usará o percentual do cadastro do profissional.
                       </td></tr>
                     ) : regras.map((r) => (
-                      <tr key={r.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-sm text-gray-900">
-                          {r.servicoNome ?? <span className="italic text-gray-500">Regra padrão (todos os serviços)</span>}
+                      <tr key={r.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-3 text-sm text-slate-900">
+                          {r.servicoNome ?? <span className="italic text-slate-500">Regra padrão (todos os serviços)</span>}
                         </td>
                         <td className="px-4 py-3 text-sm">{r.tipo === 'PERCENTUAL' ? 'Percentual' : 'Fixo'}</td>
                         <td className="px-4 py-3 text-sm text-right font-semibold">
@@ -296,14 +301,14 @@ export default function Comissoes() {
           )}
 
           {aba === 'pagamentos' && (
-            <div className="bg-white rounded-lg shadow">
+            <div className="bg-white rounded-2xl border border-slate-200">
               <div className="px-4 py-3 border-b flex items-center gap-2">
-                <History className="h-4 w-4 text-gray-500" />
+                <History className="h-4 w-4 text-slate-500" />
                 <h3 className="text-sm font-semibold text-gray-800">Histórico de pagamentos</h3>
               </div>
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead className="bg-slate-50">
                     <tr>
                       <Th>Data</Th>
                       <Th className="text-right">Valor</Th>
@@ -313,17 +318,17 @@ export default function Comissoes() {
                       <Th>Observação</Th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white divide-y divide-slate-200">
                     {pagamentos.length === 0 ? (
-                      <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-500">Nenhum pagamento</td></tr>
+                      <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-500">Nenhum pagamento</td></tr>
                     ) : pagamentos.map((p) => (
-                      <tr key={p.id} className="hover:bg-gray-50">
+                      <tr key={p.id} className="hover:bg-slate-50">
                         <td className="px-4 py-3 text-sm">{new Date(p.dataPagamento + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                         <td className="px-4 py-3 text-sm text-right font-semibold text-green-700">{formatMoeda(p.valorTotal)}</td>
                         <td className="px-4 py-3 text-sm">{p.quantidadeAtendimentos}</td>
                         <td className="px-4 py-3 text-sm">{p.formaPagamento ?? '—'}</td>
                         <td className="px-4 py-3 text-sm">{p.pagoPorNome ?? '—'}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{p.observacao ?? '—'}</td>
+                        <td className="px-4 py-3 text-sm text-slate-600">{p.observacao ?? '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -376,8 +381,8 @@ export default function Comissoes() {
 
 function ResumoCard({ titulo, valor, cor }: { titulo: string; valor: string; cor: string }) {
   return (
-    <div className="bg-gray-50 rounded p-3">
-      <div className="text-xs uppercase tracking-wide text-gray-500">{titulo}</div>
+    <div className="bg-slate-50 rounded p-3">
+      <div className="text-xs uppercase tracking-wide text-slate-500">{titulo}</div>
       <div className={`text-lg font-bold mt-1 ${cor}`}>{valor}</div>
     </div>
   )
@@ -388,7 +393,7 @@ function TabButton({ ativo, onClick, children }: { ativo: boolean; onClick: () =
     <button
       onClick={onClick}
       className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${
-        ativo ? 'border-violet-600 text-violet-700' : 'border-transparent text-gray-600 hover:text-gray-900'
+        ativo ? 'border-violet-600 text-violet-700' : 'border-transparent text-slate-600 hover:text-slate-900'
       }`}
     >
       {children}
@@ -398,7 +403,7 @@ function TabButton({ ativo, onClick, children }: { ativo: boolean; onClick: () =
 
 function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className={`px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider ${className}`}>
+    <th className={`px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider ${className}`}>
       {children}
     </th>
   )
@@ -427,7 +432,7 @@ function PagarForm({
       </div>
       <FormField label="Forma de pagamento">
         <select value={forma} onChange={(e) => setForma(e.target.value)}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500">
+          className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition">
           <option value="">—</option>
           <option value="DINHEIRO">Dinheiro</option>
           <option value="PIX">PIX</option>
@@ -437,7 +442,7 @@ function PagarForm({
       </FormField>
       <FormField label="Observação">
         <textarea rows={2} value={obs} onChange={(e) => setObs(e.target.value)}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500" />
+          className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
       </FormField>
       <div className="flex justify-end gap-2 pt-4 border-t">
         <Button variant="secondary" onClick={onCancelar}>Cancelar</Button>
@@ -483,7 +488,7 @@ function RegraForm({
     <form onSubmit={(e) => { e.preventDefault(); saveMutation.mutate(form) }} className="space-y-4">
       <FormField label="Serviço (deixe em branco para regra padrão)">
         <select value={form.servicoId ?? ''} onChange={(e) => setForm({ ...form, servicoId: e.target.value ? Number(e.target.value) : null })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500">
+          className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition">
           <option value="">Regra padrão (todos os serviços)</option>
           {servicos.map((s) => (
             <option key={s.id} value={s.id}>{s.nome}</option>
@@ -493,7 +498,7 @@ function RegraForm({
       <div className="grid grid-cols-2 gap-3">
         <FormField label="Tipo" required>
           <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value as TipoComissao })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500">
+            className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition">
             <option value="PERCENTUAL">Percentual (%)</option>
             <option value="FIXO">Valor fixo (R$)</option>
           </select>
@@ -501,7 +506,7 @@ function RegraForm({
         <FormField label={form.tipo === 'PERCENTUAL' ? 'Percentual (%)' : 'Valor (R$)'} required>
           <input required type="number" step="0.01" min="0" value={form.valor || ''}
             onChange={(e) => setForm({ ...form, valor: parseFloat(e.target.value) || 0 })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500" />
+            className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
         </FormField>
       </div>
       <div className="flex justify-end gap-2 pt-4 border-t">

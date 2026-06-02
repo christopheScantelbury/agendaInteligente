@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Edit, Trash2, Download, Tag, CheckCircle, AlertTriangle, Clock, Lock } from 'lucide-react'
+import { Plus, Edit, Trash2, Download, Tag, CheckCircle, AlertTriangle, Clock, Lock, Receipt } from 'lucide-react'
 import {
   despesaService,
   categoriaDespesaService,
@@ -28,7 +28,7 @@ const STATUS_LABEL: Record<StatusDespesa, string> = {
 }
 
 const STATUS_BADGE: Record<StatusDespesa, string> = {
-  RASCUNHO: 'bg-gray-100 text-gray-700 border-gray-200',
+  RASCUNHO: 'bg-gray-100 text-slate-700 border-gray-200',
   APROVADA: 'bg-blue-50 text-blue-700 border-blue-200',
   PAGA: 'bg-green-50 text-green-700 border-green-200',
   CANCELADA: 'bg-red-50 text-red-700 border-red-200',
@@ -69,7 +69,7 @@ export default function Despesas() {
   const podeEditar = podeAcessar
   if (!podeAcessar) {
     setTimeout(() => navigate('/'), 0)
-    return <div className="p-8 text-center text-sm text-gray-500">Acesso negado.</div>
+    return <div className="p-8 text-center text-sm text-slate-500">Acesso negado.</div>
   }
 
   const [inicio, setInicio] = useState(inicioDoMes())
@@ -146,11 +146,16 @@ export default function Despesas() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Despesas</h1>
-          <p className="text-sm text-gray-500">Controle financeiro operacional</p>
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-5">
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center flex-shrink-0">
+            <Receipt className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Despesas</h1>
+            <p className="text-sm text-slate-500">Controle financeiro operacional</p>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={() => setShowCategorias(true)}>
@@ -165,7 +170,7 @@ export default function Despesas() {
             </Button>
           )}
         </div>
-      </div>
+      </header>
 
       {resumo && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -176,15 +181,15 @@ export default function Despesas() {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 items-end bg-white p-3 rounded-lg shadow-sm">
+      <div className="flex flex-wrap gap-2 items-end bg-white p-3 rounded-2xl border border-slate-200">
         <FormField label="Buscar">
           <input type="text" value={busca} onChange={(e) => setBusca(e.target.value)}
             placeholder="Nome, fornecedor, descrição..."
-            className="mt-1 block w-64 rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500" />
+            className="mt-1 block w-64 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
         </FormField>
         <FormField label="Status">
           <select value={statusFiltro} onChange={(e) => setStatusFiltro(e.target.value)}
-            className="mt-1 block rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500">
+            className="mt-1 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition">
             <option value="TODAS">Todas</option>
             <option value="NAO_PAGAS">Somente não pagas</option>
             <option value="VENCENDO">Vencendo (7 dias)</option>
@@ -197,18 +202,18 @@ export default function Despesas() {
         </FormField>
         <FormField label="Início">
           <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)}
-            className="mt-1 block rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500" />
+            className="mt-1 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
         </FormField>
         <FormField label="Fim">
           <input type="date" value={fim} onChange={(e) => setFim(e.target.value)}
-            className="mt-1 block rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500" />
+            className="mt-1 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
         </FormField>
         {unidades.length > 1 && (
           <FormField label="Unidade">
             <select
               value={unidadeIdFiltro ?? ''}
               onChange={(e) => setUnidadeIdFiltro(e.target.value ? Number(e.target.value) : undefined)}
-              className="mt-1 block rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+              className="mt-1 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
             >
               <option value="">Todas</option>
               {unidades.map((u) => (
@@ -219,10 +224,10 @@ export default function Despesas() {
         )}
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-slate-200">
+            <thead className="bg-slate-50">
               <tr>
                 <Th>Nome</Th>
                 <Th className="text-right">Valor</Th>
@@ -234,18 +239,18 @@ export default function Despesas() {
                 <Th className="text-right">Ações</Th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-slate-200">
               {isLoading ? (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-500">Carregando...</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-sm text-slate-500">Carregando...</td></tr>
               ) : despesas.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-500">Nenhuma despesa no período</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-sm text-slate-500">Nenhuma despesa no período</td></tr>
               ) : despesas.map((d) => (
-                <tr key={d.id} className="hover:bg-gray-50">
+                <tr key={d.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3 text-sm">
-                    <div className="font-medium text-gray-900">{d.nome}</div>
-                    {d.fornecedor && <div className="text-xs text-gray-500">{d.fornecedor}</div>}
+                    <div className="font-medium text-slate-900">{d.nome}</div>
+                    {d.fornecedor && <div className="text-xs text-slate-500">{d.fornecedor}</div>}
                   </td>
-                  <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">{formatMoeda(d.valor)}</td>
+                  <td className="px-4 py-3 text-sm text-right font-semibold text-slate-900">{formatMoeda(d.valor)}</td>
                   <td className="px-4 py-3 text-sm">
                     {formatData(d.dataVencimento)}
                     {(d.diasAtraso ?? 0) > 0 && (
@@ -267,8 +272,8 @@ export default function Despesas() {
                       {STATUS_LABEL[d.status ?? 'RASCUNHO']}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{d.unidadeNome}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{RECORRENCIA_LABEL[d.recorrencia ?? 'NENHUMA']}</td>
+                  <td className="px-4 py-3 text-sm text-slate-700">{d.unidadeNome}</td>
+                  <td className="px-4 py-3 text-sm text-slate-700">{RECORRENCIA_LABEL[d.recorrencia ?? 'NENHUMA']}</td>
                   <td className="px-4 py-3 text-sm text-right">
                     <div className="flex justify-end gap-1">
                       {podeEditar && d.status !== 'PAGA' && d.status !== 'CANCELADA' && (
@@ -343,7 +348,7 @@ function ResumoCard({ titulo, valor, cor, icon }: { titulo: string; valor: strin
   return (
     <div className="bg-white rounded-lg shadow p-4">
       <div className="flex items-center justify-between">
-        <div className="text-xs uppercase tracking-wide text-gray-500">{titulo}</div>
+        <div className="text-xs uppercase tracking-wide text-slate-500">{titulo}</div>
         {icon && <div className={cor}>{icon}</div>}
       </div>
       <div className={`text-xl font-bold mt-1 ${cor}`}>{valor}</div>
@@ -353,7 +358,7 @@ function ResumoCard({ titulo, valor, cor, icon }: { titulo: string; valor: strin
 
 function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className={`px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider ${className}`}>
+    <th className={`px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider ${className}`}>
       {children}
     </th>
   )
@@ -409,18 +414,18 @@ function DespesaForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       <FormField label="Nome" required>
         <input required type="text" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500" />
+          className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
       </FormField>
 
       <div className="grid grid-cols-2 gap-3">
         <FormField label="Valor (R$)" required>
           <input required type="number" step="0.01" min="0.01" value={form.valor || ''}
             onChange={(e) => setForm({ ...form, valor: parseFloat(e.target.value) || 0 })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500" />
+            className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
         </FormField>
         <FormField label="Fornecedor">
           <input type="text" value={form.fornecedor ?? ''} onChange={(e) => setForm({ ...form, fornecedor: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500" />
+            className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
         </FormField>
       </div>
 
@@ -429,20 +434,20 @@ function DespesaForm({
           <input required type="date" value={form.dataCompetencia}
             min="2000-01-01" max="2099-12-31"
             onChange={(e) => setForm({ ...form, dataCompetencia: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500" />
+            className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
         </FormField>
         <FormField label="Data vencimento" required>
           <input required type="date" value={form.dataVencimento}
             min="2000-01-01" max="2099-12-31"
             onChange={(e) => setForm({ ...form, dataVencimento: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500" />
+            className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
         </FormField>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <FormField label="Categoria" required>
           <select required value={form.categoriaId} onChange={(e) => setForm({ ...form, categoriaId: Number(e.target.value) })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500">
+            className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition">
             <option value={0}>Selecione</option>
             {categorias.map((c) => (
               <option key={c.id} value={c.id}>{c.nome}</option>
@@ -451,7 +456,7 @@ function DespesaForm({
         </FormField>
         <FormField label="Unidade" required>
           <select required value={form.unidadeId} onChange={(e) => setForm({ ...form, unidadeId: Number(e.target.value) })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500">
+            className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition">
             <option value={0}>Selecione</option>
             {unidades.map((u) => (
               <option key={u.id} value={u.id}>{u.nome}</option>
@@ -463,7 +468,7 @@ function DespesaForm({
       <div className="grid grid-cols-2 gap-3">
         <FormField label="Status">
           <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as StatusDespesa })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500">
+            className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition">
             <option value="RASCUNHO">Rascunho</option>
             <option value="APROVADA">Aprovada</option>
             <option value="PAGA">Paga</option>
@@ -472,7 +477,7 @@ function DespesaForm({
         </FormField>
         <FormField label="Recorrência">
           <select value={form.recorrencia} onChange={(e) => setForm({ ...form, recorrencia: e.target.value as RecorrenciaDespesa })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500">
+            className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition">
             <option value="NENHUMA">Não recorrente</option>
             <option value="MENSAL">Mensal</option>
             <option value="TRIMESTRAL">Trimestral</option>
@@ -483,7 +488,7 @@ function DespesaForm({
 
       <FormField label="Forma de pagamento">
         <select value={form.formaPagamento ?? ''} onChange={(e) => setForm({ ...form, formaPagamento: e.target.value || undefined })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500">
+          className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition">
           <option value="">—</option>
           <option value="DINHEIRO">Dinheiro</option>
           <option value="PIX">PIX</option>
@@ -496,12 +501,12 @@ function DespesaForm({
 
       <FormField label="Descrição">
         <textarea rows={2} value={form.descricao ?? ''} onChange={(e) => setForm({ ...form, descricao: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500" />
+          className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
       </FormField>
 
       <FormField label="Centro de custo">
         <input type="text" value={form.centroCusto ?? ''} onChange={(e) => setForm({ ...form, centroCusto: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500" />
+          className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
       </FormField>
 
       <label className="flex items-center gap-2 text-sm">
@@ -555,7 +560,7 @@ function CategoriasManager({ onClose }: { onClose: () => void }) {
         <FormField label="Nova categoria">
           <input required type="text" value={novaCategoria.nome}
             onChange={(e) => setNovaCategoria({ ...novaCategoria, nome: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500" />
+            className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
         </FormField>
         <FormField label="Cor">
           <input type="color" value={novaCategoria.cor}
@@ -567,7 +572,7 @@ function CategoriasManager({ onClose }: { onClose: () => void }) {
 
       <div className="max-h-64 overflow-y-auto border rounded">
         {isLoading ? (
-          <div className="p-4 text-center text-sm text-gray-500">Carregando...</div>
+          <div className="p-4 text-center text-sm text-slate-500">Carregando...</div>
         ) : (
           <ul className="divide-y">
             {categorias.map((c) => (

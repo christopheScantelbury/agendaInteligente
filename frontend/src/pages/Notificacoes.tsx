@@ -79,33 +79,31 @@ export default function Notificacoes() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600"></div>
       </div>
     )
   }
 
   return (
-    <div className="w-full">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-blue-100 rounded-full">
-            <Bell className="h-6 w-6 text-blue-600" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Notificações</h1>
-            <p className="text-sm text-gray-500">
-              {contador > 0
-                ? `${contador} reclamação${contador > 1 ? 'ões' : ''} não lida${contador > 1 ? 's' : ''}`
-                : 'Nenhuma reclamação pendente'}
-            </p>
-          </div>
+    <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
+      <header className="flex items-center gap-3">
+        <div className="h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center flex-shrink-0">
+          <Bell className="h-6 w-6" />
         </div>
-      </div>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Notificações</h1>
+          <p className="text-sm text-slate-500">
+            {contador > 0
+              ? `${contador} reclamação${contador > 1 ? 'ões' : ''} não lida${contador > 1 ? 's' : ''}`
+              : 'Nenhuma reclamação pendente'}
+          </p>
+        </div>
+      </header>
 
       {/* Reclamações Não Lidas */}
       {reclamacoesNaoLidas.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <h2 className="text-base font-bold text-slate-900 mb-3 flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-red-500" />
             Não Lidas ({reclamacoesNaoLidas.length})
           </h2>
@@ -126,7 +124,7 @@ export default function Notificacoes() {
       {/* Reclamações Lidas */}
       {reclamacoesLidas.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <h2 className="text-base font-bold text-slate-900 mb-3 flex items-center gap-2">
             <Check className="h-5 w-5 text-green-500" />
             Lidas ({reclamacoesLidas.length})
           </h2>
@@ -146,9 +144,11 @@ export default function Notificacoes() {
       )}
 
       {reclamacoes.length === 0 && (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500 text-lg">Nenhuma reclamação encontrada</p>
+        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
+          <div className="mx-auto h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mb-3">
+            <Bell className="h-5 w-5" />
+          </div>
+          <p className="text-sm text-slate-600">Nenhuma reclamação encontrada.</p>
         </div>
       )}
     </div>
@@ -203,7 +203,7 @@ function ReclamacaoCard({
               {unidade.nome}
             </span>
           )}
-          <p className="text-gray-900 whitespace-pre-wrap">{reclamacao.mensagem}</p>
+          <p className="text-slate-900 whitespace-pre-wrap">{reclamacao.mensagem}</p>
         </div>
       </div>
 
@@ -232,7 +232,7 @@ function ReclamacaoCard({
       )}
 
       <div className="flex items-center justify-between pt-4 border-t mt-4">
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-slate-500">
           {reclamacao.dataCriacao && (
             <span>
               Enviada em{' '}
@@ -260,7 +260,7 @@ function ReclamacaoCard({
             </Button>
           )}
           {isLida && reclamacao.dataLeitura && (
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-slate-500">
               Lida em{' '}
               {format(new Date(reclamacao.dataLeitura), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", {
                 locale: ptBR,
