@@ -44,8 +44,10 @@ export default function MeusAgendamentosCliente() {
   const cancelarAgendamento = async (id: number) => {
     confirm({
       message: 'Tem certeza que deseja cancelar este agendamento?',
-      title: 'Confirmar Cancelamento',
-      variant: 'warning',
+      title: 'Cancelar agendamento',
+      variant: 'danger',
+      confirmText: 'Sim, cancelar',
+      cancelText: 'Voltar',
       onConfirm: async () => {
         setLoading(true)
 
