@@ -787,7 +787,17 @@ public class AgendamentoService {
                 if (novoStatus == StatusAgendamento.PROCEDIMENTO_FIM) return;
                 break;
             case PROCEDIMENTO_FIM:
+                // Reabrir o atendimento (gestor errou ao finalizar). Volta pra EM_ANDAMENTO.
+                if (novoStatus == StatusAgendamento.EM_ANDAMENTO) return;
                 throw new BusinessException("Use a ação de finalizar atendimento para concluir o agendamento");
+            case CONCLUIDO:
+                // Reabrir atendimento concluído (gestor finalizou por engano, valor
+                // errado, etc.). Volta pra EM_ANDAMENTO pra ajustar. Frontend mostra
+                // botão "Reabrir" no AcoesAgendamentoSheet quando status é CONCLUIDO.
+                // ATENÇÃO: se houver NFS-e emitida ou comissão paga, gestor deve
+                // ajustar manualmente esses registros em /comissoes e /relatorios.
+                if (novoStatus == StatusAgendamento.EM_ANDAMENTO) return;
+                throw new BusinessException("Agendamento concluído só pode ser reaberto (EM_ANDAMENTO)");
             case NO_SHOW:
                 // No-show é reversível — profissional pode ter marcado por engano
                 // (ex.: cliente chegou atrasado). Volta pra AGENDADO ou CONFIRMADO.
@@ -797,8 +807,9 @@ public class AgendamentoService {
                 }
                 break;
             case CANCELADO:
-            case CONCLUIDO:
-                throw new BusinessException("Não é possível alterar status de um agendamento encerrado");
+                // CANCELADO é o único estado realmente terminal — cliente decidiu
+                // não vir. Pra "ressuscitar" agendamento, criar novo.
+                throw new BusinessException("Não é possível alterar status de um agendamento cancelado");
             default:
                 break;
         }
