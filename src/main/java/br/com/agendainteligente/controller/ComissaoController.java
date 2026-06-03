@@ -1,9 +1,11 @@
 package br.com.agendainteligente.controller;
 
+import br.com.agendainteligente.domain.entity.ComissaoVale;
 import br.com.agendainteligente.dto.ComissaoLancamentoDTO;
 import br.com.agendainteligente.dto.ComissaoPagamentoDTO;
 import br.com.agendainteligente.dto.ComissaoRegraDTO;
 import br.com.agendainteligente.dto.ComissaoResumoDTO;
+import br.com.agendainteligente.dto.ComissaoValeDTO;
 import br.com.agendainteligente.service.ComissaoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -54,13 +57,42 @@ public class ComissaoController {
         @SuppressWarnings("unchecked")
         List<Number> rawIds = (List<Number>) body.get("lancamentosIds");
         List<Long> ids = rawIds == null ? List.of() : rawIds.stream().map(Number::longValue).toList();
+        // #141: vales opcionais a descontar
+        @SuppressWarnings("unchecked")
+        List<Number> rawValeIds = (List<Number>) body.get("valesIds");
+        List<Long> valeIds = rawValeIds == null ? List.of() : rawValeIds.stream().map(Number::longValue).toList();
         String formaPagamento = (String) body.getOrDefault("formaPagamento", null);
         String observacao = (String) body.getOrDefault("observacao", null);
-        return ResponseEntity.ok(service.pagar(atendenteId, ids, formaPagamento, observacao));
+        return ResponseEntity.ok(service.pagar(atendenteId, ids, valeIds, formaPagamento, observacao));
     }
 
     @GetMapping("/pagamentos")
     public List<ComissaoPagamentoDTO> listarPagamentos(@RequestParam Long atendenteId) {
         return service.listarPagamentos(atendenteId);
+    }
+
+    // ---------- Vales (#142) ----------
+
+    @GetMapping("/vales")
+    public List<ComissaoValeDTO> listarVales(
+            @RequestParam Long atendenteId,
+            @RequestParam(required = false) ComissaoVale.Status status) {
+        return service.listarVales(atendenteId, status);
+    }
+
+    @GetMapping("/vales/soma-pendentes")
+    public Map<String, BigDecimal> somaPendentes(@RequestParam Long atendenteId) {
+        return Map.of("total", service.somaValesPendentes(atendenteId));
+    }
+
+    @PostMapping("/vales")
+    public ResponseEntity<ComissaoValeDTO> criarVale(@RequestBody ComissaoValeDTO dto) {
+        return ResponseEntity.ok(service.criarVale(dto));
+    }
+
+    @DeleteMapping("/vales/{id}")
+    public ResponseEntity<Void> excluirVale(@PathVariable Long id) {
+        service.excluirVale(id);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { DollarSign, CheckSquare, Square, Trash2, Plus, History } from 'lucide-react'
+import { DollarSign, CheckSquare, Square, Trash2, Plus, History, Receipt } from 'lucide-react'
+import type { ComissaoVale } from '../services/comissaoService'
 import {
   comissaoService,
   ComissaoRegra,
@@ -41,6 +42,7 @@ export default function Comissoes() {
   const [aba, setAba] = useState<'pendentes' | 'regras' | 'pagamentos'>('pendentes')
   const [showPagar, setShowPagar] = useState(false)
   const [showRegra, setShowRegra] = useState(false)
+  const [showVales, setShowVales] = useState(false)
   const [editandoRegra, setEditandoRegra] = useState<ComissaoRegra | null>(null)
   const [confirmExcluirRegra, setConfirmExcluirRegra] = useState<{ open: boolean; id: number | null }>({ open: false, id: null })
 
@@ -74,8 +76,8 @@ export default function Comissoes() {
   })
 
   const pagarMutation = useMutation({
-    mutationFn: ({ ids, forma, obs }: { ids: number[]; forma?: string; obs?: string }) =>
-      comissaoService.pagar(atendenteId!, ids, forma, obs),
+    mutationFn: ({ ids, forma, obs, valesIds }: { ids: number[]; forma?: string; obs?: string; valesIds?: number[] }) =>
+      comissaoService.pagar(atendenteId!, ids, forma, obs, valesIds ?? []),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comissoes'] })
       setSelecionados(new Set())
@@ -83,6 +85,13 @@ export default function Comissoes() {
       showNotification('success', 'Pagamento registrado')
     },
     onError: (e) => showNotification('error', getApiErrorMessage(e, 'Erro ao pagar comissão')),
+  })
+
+  // #141/#142: lista de vales pendentes pra exibir no modal de pagamento
+  const { data: valesPendentes = [] } = useQuery({
+    queryKey: ['comissoes', 'vales', atendenteId, 'PENDENTE'],
+    queryFn: () => comissaoService.listarVales(atendenteId!, 'PENDENTE'),
+    enabled: !!atendenteId,
   })
 
   const excluirRegraMutation = useMutation({
@@ -199,12 +208,17 @@ export default function Comissoes() {
                   <span className="text-slate-500 ml-2">({selecionados.size} de {pendentes.length})</span>
                 </div>
                 {podeGerir && (
-                  <Button
-                    disabled={selecionados.size === 0}
-                    onClick={() => setShowPagar(true)}
-                  >
-                    <DollarSign className="h-4 w-4 mr-1" /> Pagar comissão
-                  </Button>
+                  <>
+                    <Button variant="secondary" onClick={() => setShowVales(true)}>
+                      <Receipt className="h-4 w-4 mr-1" /> Vales
+                    </Button>
+                    <Button
+                      disabled={selecionados.size === 0}
+                      onClick={() => setShowPagar(true)}
+                    >
+                      <DollarSign className="h-4 w-4 mr-1" /> Pagar comissão
+                    </Button>
+                  </>
                 )}
               </div>
               <div className="overflow-x-auto">
@@ -340,16 +354,21 @@ export default function Comissoes() {
         </>
       )}
 
-      <Modal isOpen={showPagar} onClose={() => setShowPagar(false)} title="Confirmar pagamento de comissão">
+      <Modal isOpen={showPagar} onClose={() => setShowPagar(false)} title="Pagamento de comissão">
         <PagarForm
           quantidade={selecionados.size}
           total={totalSelecionado}
-          onConfirmar={(forma, obs) =>
-            pagarMutation.mutate({ ids: Array.from(selecionados), forma, obs })
+          valesPendentes={valesPendentes}
+          onConfirmar={(forma, obs, valesIds) =>
+            pagarMutation.mutate({ ids: Array.from(selecionados), forma, obs, valesIds })
           }
           onCancelar={() => setShowPagar(false)}
           isLoading={pagarMutation.isPending}
         />
+      </Modal>
+
+      <Modal isOpen={showVales} onClose={() => setShowVales(false)} title="Vales/Adiantamentos">
+        {atendenteId && <ValesManager atendenteId={atendenteId} onClose={() => setShowVales(false)} />}
       </Modal>
 
       <Modal isOpen={showRegra} onClose={() => setShowRegra(false)} title={editandoRegra ? 'Editar regra' : 'Nova regra de comissão'}>
@@ -413,28 +432,127 @@ function Th({ children, className = '' }: { children: React.ReactNode; className
 function PagarForm({
   quantidade,
   total,
+  valesPendentes,
   onConfirmar,
   onCancelar,
   isLoading,
 }: {
   quantidade: number
   total: number
-  onConfirmar: (forma?: string, obs?: string) => void
+  valesPendentes: ComissaoVale[]
+  onConfirmar: (forma?: string, obs?: string, valesIds?: number[]) => void
   onCancelar: () => void
   isLoading: boolean
 }) {
   const [forma, setForma] = useState('')
   const [obs, setObs] = useState('')
+  // #141: vales selecionados para abater
+  const [valesSelecionados, setValesSelecionados] = useState<Set<number>>(new Set())
+
+  const totalVales = useMemo(
+    () => valesPendentes
+      .filter((v) => v.id != null && valesSelecionados.has(v.id))
+      .reduce((acc, v) => acc + Number(v.valor ?? 0), 0),
+    [valesPendentes, valesSelecionados],
+  )
+  const liquido = Math.max(0, total - totalVales)
+  const excedeu = totalVales > total
+
+  const formaInvalida = !forma
+
+  const toggleVale = (id?: number) => {
+    if (id == null) return
+    setValesSelecionados((s) => {
+      const next = new Set(s)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
   return (
     <div className="space-y-4">
-      <div className="bg-violet-50 border border-violet-200 rounded p-3 text-sm">
-        Você está prestes a pagar comissão de <b>{quantidade}</b> atendimento{quantidade > 1 ? 's' : ''} no
-        total de <b>{formatMoeda(total)}</b>. Esta ação é irreversível.
+      {/* Cabecalho */}
+      <div className="bg-violet-50 border border-violet-200 rounded-xl p-3 text-sm space-y-1">
+        <div>
+          <span className="text-slate-600">Atendimentos selecionados:</span>{' '}
+          <b className="text-slate-900">{quantidade}</b>
+        </div>
       </div>
-      <FormField label="Forma de pagamento">
+
+      {/* Resumo financeiro */}
+      <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-1 text-sm">
+        <div className="flex justify-between">
+          <span className="text-slate-500">Comissão bruta</span>
+          <span className="font-semibold text-slate-900">{formatMoeda(total)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-slate-500">Vales a descontar</span>
+          <span className={`font-semibold ${totalVales > 0 ? 'text-orange-600' : 'text-slate-400'}`}>
+            {totalVales > 0 ? `− ${formatMoeda(totalVales)}` : formatMoeda(0)}
+          </span>
+        </div>
+        <div className="flex justify-between border-t border-slate-200 pt-2 mt-2">
+          <span className="text-slate-700 font-semibold">Líquido a pagar</span>
+          <span className={`font-bold text-base ${excedeu ? 'text-red-600' : 'text-green-700'}`}>
+            {formatMoeda(liquido)}
+          </span>
+        </div>
+        {excedeu && (
+          <p className="text-xs text-red-600 mt-1">
+            Total de vales excede a comissão. Reduza a seleção.
+          </p>
+        )}
+      </div>
+
+      {/* Lista de vales */}
+      {valesPendentes.length > 0 && (
+        <div className="rounded-xl border border-slate-200 bg-white p-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Vales disponíveis
+            </span>
+            <span className="text-xs text-slate-500">
+              {valesSelecionados.size} de {valesPendentes.length} selecionado{valesSelecionados.size !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <ul className="space-y-1 max-h-48 overflow-y-auto">
+            {valesPendentes.map((v) => (
+              <li key={v.id}>
+                <button
+                  type="button"
+                  onClick={() => toggleVale(v.id)}
+                  className={`w-full flex items-center justify-between gap-2 px-2 py-2 rounded-lg text-sm transition ${
+                    v.id != null && valesSelecionados.has(v.id)
+                      ? 'bg-violet-50 border border-violet-200'
+                      : 'hover:bg-slate-50 border border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    {v.id != null && valesSelecionados.has(v.id)
+                      ? <CheckSquare className="h-4 w-4 text-violet-600 flex-shrink-0" />
+                      : <Square className="h-4 w-4 text-slate-400 flex-shrink-0" />}
+                    <div className="text-left min-w-0">
+                      <div className="text-slate-900 truncate">
+                        {v.observacao || 'Vale sem observação'}
+                      </div>
+                      <div className="text-xs text-slate-500">{formatDateBR(v.dataVale)}</div>
+                    </div>
+                  </div>
+                  <span className="font-semibold text-orange-700 flex-shrink-0">
+                    {formatMoeda(Number(v.valor))}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <FormField label="Forma de pagamento" required>
         <select value={forma} onChange={(e) => setForma(e.target.value)}
           className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition">
-          <option value="">—</option>
+          <option value="">Selecione…</option>
           <option value="DINHEIRO">Dinheiro</option>
           <option value="PIX">PIX</option>
           <option value="TRANSFERENCIA">Transferência</option>
@@ -447,12 +565,186 @@ function PagarForm({
       </FormField>
       <div className="flex justify-end gap-2 pt-4 border-t">
         <Button variant="secondary" onClick={onCancelar}>Cancelar</Button>
-        <Button onClick={() => onConfirmar(forma || undefined, obs || undefined)} isLoading={isLoading}>
+        <Button
+          onClick={() => onConfirmar(forma || undefined, obs || undefined, Array.from(valesSelecionados))}
+          isLoading={isLoading}
+          disabled={formaInvalida || excedeu}
+        >
           Confirmar pagamento
         </Button>
       </div>
     </div>
   )
+}
+
+// #142: gerente de vales (criar, listar, excluir pendentes)
+function ValesManager({ atendenteId, onClose: _onClose }: { atendenteId: number; onClose: () => void }) {
+  const queryClient = useQueryClient()
+  const { showNotification } = useNotification()
+  const [aba, setAba] = useState<'pendentes' | 'descontados'>('pendentes')
+  const [showForm, setShowForm] = useState(false)
+  const [valor, setValor] = useState<number>(0)
+  const [observacao, setObservacao] = useState('')
+  const [dataVale, setDataVale] = useState(() => new Date().toISOString().slice(0, 10))
+  const [confirmExcluir, setConfirmExcluir] = useState<{ open: boolean; id: number | null }>({ open: false, id: null })
+
+  const { data: pendentes = [] } = useQuery({
+    queryKey: ['comissoes', 'vales', atendenteId, 'PENDENTE'],
+    queryFn: () => comissaoService.listarVales(atendenteId, 'PENDENTE'),
+  })
+  const { data: descontados = [] } = useQuery({
+    queryKey: ['comissoes', 'vales', atendenteId, 'DESCONTADO'],
+    queryFn: () => comissaoService.listarVales(atendenteId, 'DESCONTADO'),
+  })
+  const totalPendente = pendentes.reduce((a, v) => a + Number(v.valor ?? 0), 0)
+
+  const criarMutation = useMutation({
+    mutationFn: () => comissaoService.criarVale({
+      atendenteId,
+      valor,
+      dataVale,
+      observacao: observacao || undefined,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comissoes', 'vales', atendenteId] })
+      setShowForm(false)
+      setValor(0)
+      setObservacao('')
+      setDataVale(new Date().toISOString().slice(0, 10))
+      showNotification('success', 'Vale registrado')
+    },
+    onError: (e) => showNotification('error', getApiErrorMessage(e, 'Erro ao criar vale')),
+  })
+
+  const excluirMutation = useMutation({
+    mutationFn: (id: number) => comissaoService.excluirVale(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comissoes', 'vales', atendenteId] })
+      setConfirmExcluir({ open: false, id: null })
+      showNotification('success', 'Vale excluído')
+    },
+    onError: (e) => showNotification('error', getApiErrorMessage(e, 'Erro ao excluir vale')),
+  })
+
+  const lista = aba === 'pendentes' ? pendentes : descontados
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl bg-orange-50 border border-orange-200 p-3 text-sm">
+        <div className="flex justify-between items-center">
+          <span className="text-slate-700">Total de vales pendentes</span>
+          <b className="text-orange-700">{formatMoeda(totalPendente)}</b>
+        </div>
+      </div>
+
+      {!showForm ? (
+        <Button onClick={() => setShowForm(true)} className="w-full sm:w-auto">
+          <Plus className="h-4 w-4 mr-1" /> Adicionar vale
+        </Button>
+      ) : (
+        <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FormField label="Valor" required>
+              <MoneyInput value={valor} onChange={setValor}
+                className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
+            </FormField>
+            <FormField label="Data" required>
+              <input type="date" value={dataVale} onChange={(e) => setDataVale(e.target.value)}
+                className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
+            </FormField>
+          </div>
+          <FormField label="Observação">
+            <input type="text" value={observacao} onChange={(e) => setObservacao(e.target.value)}
+              placeholder="Motivo do vale (opcional)"
+              className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
+          </FormField>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setShowForm(false)}>Cancelar</Button>
+            <Button onClick={() => criarMutation.mutate()} isLoading={criarMutation.isPending} disabled={valor <= 0}>
+              Salvar vale
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
+        <button
+          type="button"
+          onClick={() => setAba('pendentes')}
+          className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition ${
+            aba === 'pendentes' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'
+          }`}
+        >
+          Ainda não descontados ({pendentes.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setAba('descontados')}
+          className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition ${
+            aba === 'descontados' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'
+          }`}
+        >
+          Já descontados ({descontados.length})
+        </button>
+      </div>
+
+      {lista.length === 0 ? (
+        <p className="text-sm text-slate-500 text-center py-6">
+          {aba === 'pendentes' ? 'Nenhum vale pendente.' : 'Nenhum vale descontado.'}
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {lista.map((v) => (
+            <li key={v.id} className="rounded-xl border border-slate-200 bg-white p-3 flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="text-sm text-slate-900 truncate">
+                  {v.observacao || 'Vale sem observação'}
+                </div>
+                <div className="text-xs text-slate-500 mt-1">
+                  {formatDateBR(v.dataVale)}
+                  {v.status === 'DESCONTADO' && v.pagamentoId && (
+                    <span className="ml-2 text-violet-600">· descontado no pagamento #{v.pagamentoId}</span>
+                  )}
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <div className="font-semibold text-orange-700">{formatMoeda(Number(v.valor))}</div>
+                {aba === 'pendentes' && (
+                  <button
+                    type="button"
+                    onClick={() => v.id != null && setConfirmExcluir({ open: true, id: v.id })}
+                    className="text-xs text-red-600 hover:text-red-800 mt-1 inline-flex items-center gap-1"
+                  >
+                    <Trash2 className="h-3 w-3" /> Excluir
+                  </button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <ConfirmDialog
+        isOpen={confirmExcluir.open}
+        title="Excluir vale"
+        message="Confirma a exclusão deste vale? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        variant="danger"
+        onConfirm={() => confirmExcluir.id != null && excluirMutation.mutate(confirmExcluir.id)}
+        onCancel={() => setConfirmExcluir({ open: false, id: null })}
+      />
+    </div>
+  )
+}
+
+function formatDateBR(yyyyMmDd?: string): string {
+  if (!yyyyMmDd) return '—'
+  try {
+    const [y, m, d] = yyyyMmDd.split('-')
+    return `${d}/${m}/${y}`
+  } catch {
+    return yyyyMmDd
+  }
 }
 
 function RegraForm({

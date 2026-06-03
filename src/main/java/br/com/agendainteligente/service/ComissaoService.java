@@ -37,6 +37,7 @@ public class ComissaoService {
     private final ComissaoRegraRepository regraRepository;
     private final ComissaoLancamentoRepository lancamentoRepository;
     private final ComissaoPagamentoRepository pagamentoRepository;
+    private final ComissaoValeRepository valeRepository;
     private final AtendenteRepository atendenteRepository;
     private final ServicoRepository servicoRepository;
     private final AgendamentoRepository agendamentoRepository;
@@ -177,13 +178,22 @@ public class ComissaoService {
 
     // ---------- Pagamento ----------
 
+    /**
+     * #141: pagamento com desconto opcional de vales.
+     * Bruto = soma das comissoes selecionadas.
+     * Vales = soma dos vales selecionados (todos PENDENTE, do mesmo profissional).
+     * Liquido = Bruto - Vales. valorTotal segue armazenando o liquido.
+     */
     @Transactional
-    public ComissaoPagamentoDTO pagar(Long atendenteId, List<Long> lancamentoIds,
+    public ComissaoPagamentoDTO pagar(Long atendenteId, List<Long> lancamentoIds, List<Long> valeIds,
                                       String formaPagamento, String observacao) {
         validarGestao();
         validarAcessoAtendente(atendenteId);
         if (lancamentoIds == null || lancamentoIds.isEmpty()) {
             throw new BusinessException("Selecione ao menos um atendimento");
+        }
+        if (formaPagamento == null || formaPagamento.isBlank()) {
+            throw new BusinessException("Forma de pagamento é obrigatória");
         }
 
         Atendente atendente = atendenteRepository.findById(atendenteId)
@@ -202,14 +212,41 @@ public class ComissaoService {
             }
         }
 
-        BigDecimal total = lancamentos.stream()
+        BigDecimal bruto = lancamentos.stream()
                 .map(ComissaoLancamento::getValorComissao)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // #141/#142: abate vales selecionados (opcional). Cada vale deve estar PENDENTE
+        // e pertencer ao mesmo profissional.
+        List<ComissaoVale> vales = (valeIds == null || valeIds.isEmpty())
+                ? new ArrayList<>()
+                : valeRepository.findAllById(new HashSet<>(valeIds));
+        if (vales.size() != (valeIds == null ? 0 : new HashSet<>(valeIds).size())) {
+            throw new BusinessException("Um ou mais vales não foram encontrados");
+        }
+        for (ComissaoVale v : vales) {
+            if (!v.getAtendente().getId().equals(atendenteId)) {
+                throw new BusinessException("Vale de outro profissional");
+            }
+            if (v.getStatus() == ComissaoVale.Status.DESCONTADO) {
+                throw new BusinessException("Vale #" + v.getId() + " já foi descontado");
+            }
+        }
+        BigDecimal totalVales = vales.stream()
+                .map(ComissaoVale::getValor)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal liquido = bruto.subtract(totalVales);
+        if (liquido.signum() < 0) {
+            throw new BusinessException("Total de vales (R$ " + totalVales + ") excede a comissão bruta (R$ " + bruto + ")");
+        }
 
         Usuario logado = usuarioLogado();
         ComissaoPagamento pagamento = ComissaoPagamento.builder()
                 .atendente(atendente)
-                .valorTotal(total)
+                .valorTotal(liquido)
+                .valorBruto(bruto)
+                .valorVales(totalVales)
                 .dataPagamento(LocalDate.now())
                 .pagoPorId(logado.getId())
                 .formaPagamento(formaPagamento)
@@ -223,9 +260,91 @@ public class ComissaoService {
             l.setPagamento(pagamento);
         }
         lancamentoRepository.saveAll(lancamentos);
-        log.info("[COMISSAO] Pagamento #{} atendente={} valor={} lancamentos={}",
-                pagamento.getId(), atendenteId, total, lancamentoIds.size());
+
+        // Marca vales como descontados e vincula ao pagamento
+        java.time.LocalDateTime agora = java.time.LocalDateTime.now();
+        for (ComissaoVale v : vales) {
+            v.setStatus(ComissaoVale.Status.DESCONTADO);
+            v.setPagamento(pagamento);
+            v.setDataDescontado(agora);
+        }
+        if (!vales.isEmpty()) valeRepository.saveAll(vales);
+
+        log.info("[COMISSAO] Pagamento #{} atendente={} bruto={} vales={} liquido={} lancamentos={} valesIds={}",
+                pagamento.getId(), atendenteId, bruto, totalVales, liquido, lancamentoIds.size(),
+                vales.stream().map(ComissaoVale::getId).toList());
         return toPagamentoDTO(pagamento, lancamentos);
+    }
+
+    // ---------- Vales (#142) ----------
+
+    @Transactional(readOnly = true)
+    public List<br.com.agendainteligente.dto.ComissaoValeDTO> listarVales(Long atendenteId, ComissaoVale.Status status) {
+        validarAcessoAtendente(atendenteId);
+        List<ComissaoVale> vales = status != null
+                ? valeRepository.findByAtendenteIdAndStatusOrderByDataValeDesc(atendenteId, status)
+                : valeRepository.findByAtendenteIdOrderByDataValeDesc(atendenteId);
+        return vales.stream().map(this::toValeDTO).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public BigDecimal somaValesPendentes(Long atendenteId) {
+        validarAcessoAtendente(atendenteId);
+        BigDecimal soma = valeRepository.somaPendentesPorAtendente(atendenteId);
+        return soma != null ? soma : BigDecimal.ZERO;
+    }
+
+    @Transactional
+    public br.com.agendainteligente.dto.ComissaoValeDTO criarVale(br.com.agendainteligente.dto.ComissaoValeDTO dto) {
+        validarGestao();
+        if (dto.getAtendenteId() == null) throw new BusinessException("Profissional é obrigatório");
+        validarAcessoAtendente(dto.getAtendenteId());
+        if (dto.getValor() == null || dto.getValor().signum() <= 0) {
+            throw new BusinessException("Valor do vale deve ser maior que zero");
+        }
+        Atendente atendente = atendenteRepository.findById(dto.getAtendenteId())
+                .orElseThrow(() -> new ResourceNotFoundException("Profissional não encontrado"));
+
+        Usuario logado = usuarioLogado();
+        ComissaoVale vale = ComissaoVale.builder()
+                .atendente(atendente)
+                .valor(dto.getValor())
+                .dataVale(dto.getDataVale() != null ? dto.getDataVale() : LocalDate.now())
+                .observacao(dto.getObservacao())
+                .status(ComissaoVale.Status.PENDENTE)
+                .criadoPorId(logado.getId())
+                .adminUnicoId(atendente.getUnidade().getAdminUnicoId())
+                .build();
+        vale = valeRepository.save(vale);
+        log.info("[VALE] Criado #{} atendente={} valor={}", vale.getId(), atendente.getId(), vale.getValor());
+        return toValeDTO(vale);
+    }
+
+    @Transactional
+    public void excluirVale(Long valeId) {
+        validarGestao();
+        ComissaoVale vale = valeRepository.findById(valeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vale não encontrado"));
+        validarAcessoAtendente(vale.getAtendente().getId());
+        if (vale.getStatus() == ComissaoVale.Status.DESCONTADO) {
+            throw new BusinessException("Não é possível excluir vale já descontado em pagamento");
+        }
+        valeRepository.delete(vale);
+        log.info("[VALE] Excluido #{}", valeId);
+    }
+
+    private br.com.agendainteligente.dto.ComissaoValeDTO toValeDTO(ComissaoVale v) {
+        return br.com.agendainteligente.dto.ComissaoValeDTO.builder()
+                .id(v.getId())
+                .atendenteId(v.getAtendente() != null ? v.getAtendente().getId() : null)
+                .valor(v.getValor())
+                .dataVale(v.getDataVale())
+                .observacao(v.getObservacao())
+                .status(v.getStatus() != null ? v.getStatus().name() : null)
+                .pagamentoId(v.getPagamento() != null ? v.getPagamento().getId() : null)
+                .dataCriacao(v.getDataCriacao())
+                .dataDescontado(v.getDataDescontado())
+                .build();
     }
 
     @Transactional(readOnly = true)

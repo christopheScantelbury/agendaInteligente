@@ -26,8 +26,17 @@ public class ComissaoPagamento {
     @JoinColumn(name = "atendente_id", nullable = false)
     private Atendente atendente;
 
+    /** Total liquido pago ao profissional (valor_bruto - valor_vales). */
     @Column(name = "valor_total", nullable = false, precision = 12, scale = 2)
     private BigDecimal valorTotal;
+
+    /** #141: soma das comissoes lancadas (antes do desconto de vales). */
+    @Column(name = "valor_bruto", precision = 12, scale = 2)
+    private BigDecimal valorBruto;
+
+    /** #141: soma dos vales descontados neste pagamento. */
+    @Column(name = "valor_vales", precision = 12, scale = 2)
+    private BigDecimal valorVales;
 
     @Column(name = "data_pagamento", nullable = false)
     private LocalDate dataPagamento;

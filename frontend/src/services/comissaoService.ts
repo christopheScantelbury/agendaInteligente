@@ -34,6 +34,10 @@ export interface ComissaoPagamento {
   atendenteId: number
   atendenteNome?: string
   valorTotal: number
+  /** #141: bruto antes do desconto de vales (campo novo, retrocompatível). */
+  valorBruto?: number
+  /** #141: total de vales descontados neste pagamento. */
+  valorVales?: number
   dataPagamento: string
   pagoPorNome?: string
   formaPagamento?: string
@@ -41,6 +45,20 @@ export interface ComissaoPagamento {
   dataCriacao?: string
   lancamentosIds?: number[]
   quantidadeAtendimentos?: number
+}
+
+export type StatusVale = 'PENDENTE' | 'DESCONTADO'
+
+export interface ComissaoVale {
+  id?: number
+  atendenteId: number
+  valor: number
+  dataVale: string             // YYYY-MM-DD
+  observacao?: string
+  status?: StatusVale
+  pagamentoId?: number | null
+  dataCriacao?: string
+  dataDescontado?: string
 }
 
 export interface ComissaoResumo {
@@ -82,10 +100,12 @@ export const comissaoService = {
     lancamentosIds: number[],
     formaPagamento?: string,
     observacao?: string,
+    valesIds: number[] = [],
   ): Promise<ComissaoPagamento> => {
     const response = await api.post<ComissaoPagamento>('/comissoes/pagar', {
       atendenteId,
       lancamentosIds,
+      valesIds,
       formaPagamento,
       observacao,
     })
@@ -95,5 +115,28 @@ export const comissaoService = {
   listarPagamentos: async (atendenteId: number): Promise<ComissaoPagamento[]> => {
     const response = await api.get<ComissaoPagamento[]>('/comissoes/pagamentos', { params: { atendenteId } })
     return response.data
+  },
+
+  // ---------- Vales (#142) ----------
+
+  listarVales: async (atendenteId: number, status?: StatusVale): Promise<ComissaoVale[]> => {
+    const params: any = { atendenteId }
+    if (status) params.status = status
+    const response = await api.get<ComissaoVale[]>('/comissoes/vales', { params })
+    return response.data
+  },
+
+  somaValesPendentes: async (atendenteId: number): Promise<number> => {
+    const response = await api.get<{ total: number }>('/comissoes/vales/soma-pendentes', { params: { atendenteId } })
+    return Number(response.data?.total ?? 0)
+  },
+
+  criarVale: async (vale: ComissaoVale): Promise<ComissaoVale> => {
+    const response = await api.post<ComissaoVale>('/comissoes/vales', vale)
+    return response.data
+  },
+
+  excluirVale: async (id: number): Promise<void> => {
+    await api.delete(`/comissoes/vales/${id}`)
   },
 }
