@@ -771,7 +771,10 @@ public class AgendamentoService {
 
         switch (statusAtual) {
             case AGENDADO:
-                if (novoStatus == StatusAgendamento.CONFIRMADO) return;
+                // AGENDADO → CONFIRMADO (fluxo normal) ou direto NO_SHOW (cliente não
+                // apareceu sem ter passado pelo confirma — caso comum)
+                if (novoStatus == StatusAgendamento.CONFIRMADO
+                        || novoStatus == StatusAgendamento.NO_SHOW) return;
                 break;
             case CONFIRMADO:
                 if (novoStatus == StatusAgendamento.AGENDADO
@@ -794,9 +797,23 @@ public class AgendamentoService {
         }
 
         throw new BusinessException(String.format(
-                "Transição de status inválida: %s -> %s",
-                statusAtual.name(), novoStatus.name()
+                "Não dá pra mudar status de %s para %s",
+                rotuloStatus(statusAtual), rotuloStatus(novoStatus)
         ));
+    }
+
+    /** Rótulo em pt-BR pros enums de status, pra mensagens de erro amigáveis. */
+    private String rotuloStatus(StatusAgendamento s) {
+        return switch (s) {
+            case AGENDADO -> "Agendado";
+            case CONFIRMADO -> "Confirmado";
+            case EM_ANDAMENTO -> "Em andamento";
+            case PROCEDIMENTO_FIM -> "Procedimento finalizado";
+            case CONCLUIDO -> "Concluído";
+            case CANCELADO -> "Cancelado";
+            case NO_SHOW -> "Não compareceu";
+            default -> s.name();
+        };
     }
 
     private void validarClienteSemOutroAtendimentoEmAndamento(Agendamento agendamento) {
