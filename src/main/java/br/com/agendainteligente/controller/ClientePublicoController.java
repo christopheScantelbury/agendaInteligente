@@ -111,6 +111,7 @@ public class ClientePublicoController {
      */
     @PostMapping("/agendar-como-visitante")
     @Operation(summary = "Agendar sem cadastro prévio (guest checkout)")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<ClienteTokenDTO> agendarComoVisitante(@Valid @RequestBody AgendarComoVisitanteDTO dto) {
         // Verificar se já existe cliente por email
         Cliente cliente = clienteRepository.findByEmail(dto.getEmail()).orElse(null);
@@ -321,6 +322,7 @@ public class ClientePublicoController {
 
     @PostMapping("/agendamentos")
     @Operation(summary = "Criar novo agendamento (requer autenticação)")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<AgendamentoDTO> criarAgendamento(@Valid @RequestBody AgendamentoDTO agendamentoDTO) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String clienteEmailOuCpf = auth.getName();
