@@ -8,6 +8,7 @@ import { servicoService, type Servico } from '../../services/servicoService'
 import Button from '../../components/Button'
 import SimNaoField from '../../components/anamneses/SimNaoField'
 import { useNotification } from '../../contexts/NotificationContext'
+import { matchSearch } from '../../utils/normalize'
 
 const today = new Date().toISOString().split('T')[0]
 
@@ -145,8 +146,14 @@ export default function AnamneseFormPage() {
     clienteDebounceRef.current = setTimeout(async () => {
       try {
         const clientes = await clienteService.listar()
+        // #145: busca normaliza acentos (Marília acha quando digito "marilia") +
+        // cobre telefone/CPF/email como na listagem de clientes.
+        const termoDigits = value.replace(/\D/g, '')
         const filtered = clientes.filter((c) =>
-          c.nome.toLowerCase().includes(value.toLowerCase())
+          matchSearch(c.nome, value) ||
+          (termoDigits && c.telefone && c.telefone.replace(/\D/g, '').includes(termoDigits)) ||
+          (termoDigits && c.cpfCnpj && c.cpfCnpj.replace(/\D/g, '').includes(termoDigits)) ||
+          (c.email && matchSearch(c.email, value))
         )
         setClienteDropdown(filtered.slice(0, 8))
         setShowClienteDropdown(true)

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Edit, Trash2, Download, Tag, CheckCircle, AlertTriangle, Clock, Lock, Receipt } from 'lucide-react'
+import MoneyInput from '../components/forms/MoneyInput'
 import {
   despesaService,
   categoriaDespesaService,
@@ -418,9 +419,9 @@ function DespesaForm({
       </FormField>
 
       <div className="grid grid-cols-2 gap-3">
-        <FormField label="Valor (R$)" required>
-          <input required type="number" step="0.01" min="0.01" value={form.valor || ''}
-            onChange={(e) => setForm({ ...form, valor: parseFloat(e.target.value) || 0 })}
+        <FormField label="Valor" required>
+          <MoneyInput required value={form.valor}
+            onChange={(v) => setForm({ ...form, valor: v })}
             className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
         </FormField>
         <FormField label="Fornecedor">

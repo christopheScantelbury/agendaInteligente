@@ -12,7 +12,8 @@ import FormField from '../components/FormField'
 import FilterBar from '../components/FilterBar'
 import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
-import { maskPhone, maskEmail, maskCPF, maskCNPJ } from '../utils/masks'
+import { maskEmail, maskCPF, maskCNPJ, unmask } from '../utils/masks'
+import PhoneInput from '../components/forms/PhoneInput'
 import { authService } from '../services/authService'
 import { perfilService } from '../services/perfilService'
 import { podeEditar } from '../utils/permissions'
@@ -689,13 +690,14 @@ function AtendenteForm({
         <h3 className="text-sm font-semibold text-gray-800">Dados Profissionais</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField label="CPF/CNPJ" required>
+            {/* #144: CPF/CNPJ sempre exibido por completo, nunca mascarado parcialmente. */}
             <input
               type="text"
               required
               value={formData.cpf || ''}
               onChange={(e) => {
                 const value = e.target.value
-                const numbers = value.replace(/\D/g, '')
+                const numbers = unmask(value)
                 const masked = numbers.length <= 11 ? maskCPF(value) : maskCNPJ(value)
                 setFormData({ ...formData, cpf: masked })
               }}
@@ -706,13 +708,11 @@ function AtendenteForm({
           </FormField>
 
           <FormField label="Telefone">
-            <input
-              type="text"
+            {/* #144: máscara automática (10 ou 11 dígitos) durante a digitação. */}
+            <PhoneInput
               value={formData.telefone || ''}
-              onChange={(e) => setFormData({ ...formData, telefone: maskPhone(e.target.value) })}
-              maxLength={15}
-              placeholder="(00) 00000-0000"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+              onChange={(masked) => setFormData({ ...formData, telefone: masked })}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-200 focus:outline-none"
             />
           </FormField>
 

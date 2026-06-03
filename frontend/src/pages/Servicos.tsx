@@ -8,6 +8,7 @@ import { perfilService } from '../services/perfilService'
 import { podeEditar } from '../utils/permissions'
 import { Plus, Trash2, Edit, Sparkles, Scissors } from 'lucide-react'
 import { useState, useMemo, useEffect } from 'react'
+import MoneyInput from '../components/forms/MoneyInput'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
 import FormField from '../components/FormField'
@@ -481,16 +482,13 @@ function ServicoForm({
         )}
       </FormField>
 
-      <div className="grid grid-cols-2 gap-4">
-        <FormField label="Valor (R$)" required>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FormField label="Valor" required>
+          <MoneyInput
             required
             value={formData.valor}
-            onChange={(e) => setFormData({ ...formData, valor: parseFloat(e.target.value) || 0 })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+            onChange={(v) => setFormData({ ...formData, valor: v })}
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-200 focus:outline-none"
           />
         </FormField>
 

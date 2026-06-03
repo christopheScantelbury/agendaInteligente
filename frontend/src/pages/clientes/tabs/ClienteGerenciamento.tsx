@@ -46,10 +46,14 @@ export default function ClienteGerenciamento({ searchTerm }: Props) {
   const clientesFiltrados = useMemo(() => {
     let filtered = [...clientes]
     if (searchTerm) {
+      // #146: busca cobre nome, telefone (só dígitos), email, CPF/CNPJ.
+      const termoDigits = searchTerm.replace(/\D/g, '')
       filtered = filtered.filter(
         (c) =>
           matchSearch(c.nome, searchTerm) ||
-          (c.telefone && c.telefone.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, '')))
+          (termoDigits && c.telefone && c.telefone.replace(/\D/g, '').includes(termoDigits)) ||
+          (termoDigits && c.cpfCnpj && c.cpfCnpj.replace(/\D/g, '').includes(termoDigits)) ||
+          (c.email && matchSearch(c.email, searchTerm))
       )
     }
     if (filterAtivo !== '') {
