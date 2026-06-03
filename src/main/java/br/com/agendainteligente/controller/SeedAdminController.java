@@ -3,6 +3,7 @@ package br.com.agendainteligente.controller;
 import br.com.agendainteligente.domain.entity.Atendente;
 import br.com.agendainteligente.domain.entity.Cliente;
 import br.com.agendainteligente.domain.entity.Empresa;
+import br.com.agendainteligente.domain.entity.Servico;
 import br.com.agendainteligente.domain.entity.Unidade;
 import br.com.agendainteligente.domain.entity.Usuario;
 import br.com.agendainteligente.domain.entity.Usuario.PerfilUsuario;
@@ -10,6 +11,7 @@ import br.com.agendainteligente.domain.enums.CategoriaEmpresa;
 import br.com.agendainteligente.repository.AtendenteRepository;
 import br.com.agendainteligente.repository.ClienteRepository;
 import br.com.agendainteligente.repository.EmpresaRepository;
+import br.com.agendainteligente.repository.ServicoRepository;
 import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,12 +25,15 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -41,6 +46,7 @@ public class SeedAdminController {
     private final UnidadeRepository unidadeRepository;
     private final AtendenteRepository atendenteRepository;
     private final ClienteRepository clienteRepository;
+    private final ServicoRepository servicoRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Value("${app.seed.token:}")
@@ -119,13 +125,29 @@ public class SeedAdminController {
                             demo.email, empresa.getId(), unidade.getId());
                 } else {
                     unidade = unidadesExistentes.get(0);
+                    // Retroativo: garantir horários de funcionamento pro fallback de slots virtuais
+                    boolean precisaUpdate = false;
+                    if (unidade.getHorarioAbertura() == null) {
+                        unidade.setHorarioAbertura(LocalTime.of(8, 0));
+                        precisaUpdate = true;
+                    }
+                    if (unidade.getHorarioFechamento() == null) {
+                        unidade.setHorarioFechamento(LocalTime.of(18, 0));
+                        precisaUpdate = true;
+                    }
+                    if (precisaUpdate) {
+                        unidade = unidadeRepository.save(unidade);
+                        log.info("[SEED] Unidade {} atualizada com horários padrão 08-18", unidade.getId());
+                    }
                     item.put("unidadeId", unidade.getId());
                 }
 
                 // Seeds derivados: PROFISSIONAL, GERENTE, CLIENTE para esta empresa demo
                 String prefixo = demo.email.split("@")[0]; // ex.: "salao"
+                List<Servico> servicosDaUnidade = seedServicosDemo(unidade, demo.categoria);
                 Map<String, Object> derivados = new LinkedHashMap<>();
-                derivados.put("profissional", seedProfissionalDemo(prefixo, usuario.getId(), unidade));
+                derivados.put("servicos", servicosDaUnidade.stream().map(Servico::getNome).collect(Collectors.toList()));
+                derivados.put("profissional", seedProfissionalDemo(prefixo, usuario.getId(), unidade, servicosDaUnidade));
                 derivados.put("gerente", seedGerenteDemo(prefixo, usuario.getId(), unidade));
                 derivados.put("cliente", seedClienteDemo(prefixo, unidade));
                 item.put("derivados", derivados);
@@ -135,7 +157,7 @@ public class SeedAdminController {
         return ResponseEntity.ok(Map.of("usuarios", resultado));
     }
 
-    private Map<String, Object> seedProfissionalDemo(String prefixo, Long adminUnicoId, Unidade unidade) {
+    private Map<String, Object> seedProfissionalDemo(String prefixo, Long adminUnicoId, Unidade unidade, List<Servico> servicosDaUnidade) {
         String email = "profissional@" + prefixo + ".demo.com";
         Map<String, Object> info = new LinkedHashMap<>();
         info.put("email", email);
@@ -169,15 +191,70 @@ public class SeedAdminController {
                     .unidade(unidade)
                     .cpf(cpfFicticio(prefixo, "P"))
                     .telefone("11999990000")
-                    .servicos(new ArrayList<>())
+                    .servicos(new ArrayList<>(servicosDaUnidade))
                     .ativo(true)
                     .build();
             atendente = atendenteRepository.save(atendente);
-            log.info("[SEED] Atendente criado: usuario={}, atendente={}", usuario.getId(), atendente.getId());
+            log.info("[SEED] Atendente criado: usuario={}, atendente={}, servicos={}",
+                    usuario.getId(), atendente.getId(), servicosDaUnidade.size());
+        } else if (atendente.getServicos() == null || atendente.getServicos().isEmpty()) {
+            // Atendente já existia mas sem serviços vinculados — vincula agora
+            atendente.setServicos(new ArrayList<>(servicosDaUnidade));
+            atendente = atendenteRepository.save(atendente);
+            log.info("[SEED] Atendente {} re-vinculado a {} serviços", atendente.getId(), servicosDaUnidade.size());
         }
         info.put("atendenteId", atendente.getId());
         return info;
     }
+
+    /**
+     * Cria 3 serviços padrão pra cada unidade demo, baseado na categoria.
+     * Idempotente — só cria se não existe outro com o mesmo nome na unidade.
+     */
+    private List<Servico> seedServicosDemo(Unidade unidade, CategoriaEmpresa categoria) {
+        List<ServicoSpec> specs = switch (categoria) {
+            case SALAO_BELEZA -> List.of(
+                    new ServicoSpec("Corte feminino", "Corte com lavagem e finalização", new BigDecimal("80.00"), 60),
+                    new ServicoSpec("Corte masculino", "Corte tradicional ou degradê", new BigDecimal("40.00"), 30),
+                    new ServicoSpec("Hidratação", "Hidratação profunda dos fios", new BigDecimal("100.00"), 90)
+            );
+            case ACADEMIA -> List.of(
+                    new ServicoSpec("Avaliação física", "Bioimpedância + circunferências", new BigDecimal("80.00"), 30),
+                    new ServicoSpec("Treino personalizado", "Sessão 1:1 com personal", new BigDecimal("120.00"), 60),
+                    new ServicoSpec("Aula funcional", "Aula em grupo de 5 pessoas", new BigDecimal("50.00"), 45)
+            );
+            default -> List.of(
+                    new ServicoSpec("Atendimento padrão", "Sessão padrão", new BigDecimal("60.00"), 30),
+                    new ServicoSpec("Atendimento estendido", "Sessão longa", new BigDecimal("120.00"), 60),
+                    new ServicoSpec("Avaliação inicial", "Primeira consulta", new BigDecimal("90.00"), 45)
+            );
+        };
+
+        List<Servico> existentes = servicoRepository.findByUnidadeIdAndAtivoTrue(unidade.getId());
+        List<Servico> resultado = new ArrayList<>(existentes);
+        for (ServicoSpec spec : specs) {
+            boolean jaExiste = existentes.stream()
+                    .anyMatch(s -> spec.nome.equalsIgnoreCase(s.getNome()));
+            if (jaExiste) continue;
+            Servico s = Servico.builder()
+                    .nome(spec.nome)
+                    .descricao(spec.descricao)
+                    .valor(spec.valor)
+                    .duracaoMinutos(spec.duracaoMin)
+                    .unidade(unidade)
+                    .adminUnicoId(unidade.getAdminUnicoId())
+                    .ativo(true)
+                    .dataCriacao(LocalDateTime.now())
+                    .dataAtualizacao(LocalDateTime.now())
+                    .build();
+            s = servicoRepository.save(s);
+            resultado.add(s);
+            log.info("[SEED] Serviço {} criado na unidade {}", spec.nome, unidade.getId());
+        }
+        return resultado;
+    }
+
+    private record ServicoSpec(String nome, String descricao, BigDecimal valor, int duracaoMin) {}
 
     private Map<String, Object> seedGerenteDemo(String prefixo, Long adminUnicoId, Unidade unidade) {
         String email = "gerente@" + prefixo + ".demo.com";
@@ -271,6 +348,11 @@ public class SeedAdminController {
                 .empresa(empresa)
                 .adminUnicoId(usuario.getId())
                 .ativo(true)
+                // Horário de funcionamento padrão — necessário pro fallback de slots virtuais
+                // em HorarioDisponivelService (gera slots automaticamente quando o gestor
+                // não cadastrou HorarioDisponivel manual).
+                .horarioAbertura(LocalTime.of(8, 0))
+                .horarioFechamento(LocalTime.of(18, 0))
                 .dataCriacao(LocalDateTime.now())
                 .dataAtualizacao(LocalDateTime.now())
                 .build();

@@ -2,6 +2,8 @@ package br.com.agendainteligente.service;
 
 import br.com.agendainteligente.domain.entity.Atendente;
 import br.com.agendainteligente.domain.entity.HorarioDisponivel;
+import br.com.agendainteligente.domain.entity.Servico;
+import br.com.agendainteligente.domain.entity.Unidade;
 import br.com.agendainteligente.dto.HorarioDisponivelDTO;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
@@ -9,6 +11,8 @@ import br.com.agendainteligente.mapper.HorarioDisponivelMapper;
 import br.com.agendainteligente.repository.AgendamentoRepository;
 import br.com.agendainteligente.repository.AtendenteRepository;
 import br.com.agendainteligente.repository.HorarioDisponivelRepository;
+import br.com.agendainteligente.repository.ServicoRepository;
+import br.com.agendainteligente.repository.UnidadeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -29,6 +34,8 @@ public class HorarioDisponivelService {
     private final AtendenteRepository atendenteRepository;
     private final AgendamentoRepository agendamentoRepository;
     private final HorarioDisponivelMapper horarioDisponivelMapper;
+    private final ServicoRepository servicoRepository;
+    private final UnidadeRepository unidadeRepository;
 
     @Transactional(readOnly = true)
     public List<HorarioDisponivelDTO> listarPorAtendente(Long atendenteId) {
@@ -121,46 +128,101 @@ public class HorarioDisponivelService {
     }
 
     @Transactional(readOnly = true)
-    public List<HorarioDisponivelDTO> buscarHorariosDisponiveis(Long unidadeId, Long servicoId, 
+    public List<HorarioDisponivelDTO> buscarHorariosDisponiveis(Long unidadeId, Long servicoId,
                                                                   LocalDate dataInicio, LocalDate dataFim) {
-        log.debug("Buscando horários disponíveis - Unidade: {}, Serviço: {}, Período: {} a {}", 
+        log.debug("Buscando horários disponíveis - Unidade: {}, Serviço: {}, Período: {} a {}",
                   unidadeId, servicoId, dataInicio, dataFim);
-        
+
         // Buscar atendentes da unidade que prestam o serviço
         List<Atendente> atendentes = atendenteRepository.findByUnidadeIdAndAtivoTrue(unidadeId)
                 .stream()
-                .filter(atendente -> atendente.getServicos().stream()
-                        .anyMatch(servico -> servico.getId().equals(servicoId) && servico.getAtivo()))
+                .filter(a -> a.getServicos() != null && a.getServicos().stream()
+                        .anyMatch(s -> s.getId().equals(servicoId) && Boolean.TRUE.equals(s.getAtivo())))
                 .collect(Collectors.toList());
-        
+
         if (atendentes.isEmpty()) {
             log.debug("Nenhum atendente encontrado para a unidade {} e serviço {}", unidadeId, servicoId);
             return List.of();
         }
-        
+
         // Converter LocalDate para LocalDateTime (início e fim do dia)
         LocalDateTime dataHoraInicio = dataInicio.atStartOfDay();
         LocalDateTime dataHoraFim = dataFim.atTime(LocalTime.MAX);
-        
-        // Buscar horários disponíveis dos atendentes no período
-        List<HorarioDisponivel> horariosDisponiveis = atendentes.stream()
+
+        // Buscar horários cadastrados manualmente pelo gestor (controle fino)
+        List<HorarioDisponivel> horariosCadastrados = atendentes.stream()
                 .flatMap(atendente -> horarioDisponivelRepository
                         .findByAtendenteAndPeriodo(atendente.getId(), dataHoraInicio, dataHoraFim)
                         .stream())
                 .collect(Collectors.toList());
-        
-        // Filtrar horários que não têm conflito com agendamentos
-        return horariosDisponiveis.stream()
-                .filter(horario -> {
-                    // Verificar se há conflito com agendamentos
-                    return agendamentoRepository.findConflitoHorario(
-                            horario.getAtendente().getId(),
-                            horario.getDataHoraInicio(),
-                            horario.getDataHoraFim()
-                    ).isEmpty();
-                })
-                .map(this::toDTO)
-                .collect(Collectors.toList());
+
+        // Se houver cadastrados, usa só eles — gestor optou por controle manual
+        if (!horariosCadastrados.isEmpty()) {
+            return horariosCadastrados.stream()
+                    .filter(h -> agendamentoRepository.findConflitoHorario(
+                            h.getAtendente().getId(), h.getDataHoraInicio(), h.getDataHoraFim()).isEmpty())
+                    .map(this::toDTO)
+                    .collect(Collectors.toList());
+        }
+
+        // FALLBACK: gerar slots virtuais baseados no horário de funcionamento da unidade.
+        // Habilita agendamento por defaults razoáveis sem o gestor precisar cadastrar
+        // HorarioDisponivel manualmente. Quando ele cadastrar mesmo um único slot, esse
+        // branch é desligado (controle fino do gestor sobrepõe o automático).
+        Servico servico = servicoRepository.findById(servicoId).orElse(null);
+        Unidade unidade = unidadeRepository.findById(unidadeId).orElse(null);
+        if (servico == null || unidade == null
+                || unidade.getHorarioAbertura() == null || unidade.getHorarioFechamento() == null) {
+            log.debug("Sem horarios cadastrados e fallback indisponivel (servico/unidade/horario null). Retorna []");
+            return List.of();
+        }
+        int duracaoMin = servico.getDuracaoMinutos() != null ? servico.getDuracaoMinutos() : 30;
+        if (duracaoMin <= 0) duracaoMin = 30;
+        return gerarSlotsVirtuais(atendentes, unidade, duracaoMin, dataInicio, dataFim);
+    }
+
+    /**
+     * Gera slots virtuais (não persistidos) de duração `duracaoMin` em duracaoMin
+     * dentro do horário de funcionamento da unidade pra cada atendente, no período.
+     * Pula slots no passado e slots com conflito de agendamento.
+     */
+    private List<HorarioDisponivelDTO> gerarSlotsVirtuais(List<Atendente> atendentes, Unidade unidade,
+                                                            int duracaoMin, LocalDate dataInicio, LocalDate dataFim) {
+        LocalTime abertura = unidade.getHorarioAbertura();
+        LocalTime fechamento = unidade.getHorarioFechamento();
+        LocalDateTime agora = LocalDateTime.now();
+        List<HorarioDisponivelDTO> slots = new ArrayList<>();
+
+        for (LocalDate dia = dataInicio; !dia.isAfter(dataFim); dia = dia.plusDays(1)) {
+            for (Atendente atendente : atendentes) {
+                LocalTime cursor = abertura;
+                while (true) {
+                    LocalTime fimSlot = cursor.plusMinutes(duracaoMin);
+                    if (fimSlot.isAfter(fechamento)) break;
+                    LocalDateTime inicio = dia.atTime(cursor);
+                    LocalDateTime fim = dia.atTime(fimSlot);
+                    if (inicio.isAfter(agora)) {
+                        boolean temConflito = !agendamentoRepository.findConflitoHorario(
+                                atendente.getId(), inicio, fim).isEmpty();
+                        if (!temConflito) {
+                            HorarioDisponivelDTO dto = new HorarioDisponivelDTO();
+                            dto.setAtendenteId(atendente.getId());
+                            if (atendente.getUsuario() != null) {
+                                dto.setAtendenteNome(atendente.getUsuario().getNome());
+                            }
+                            dto.setDataHoraInicio(inicio);
+                            dto.setDataHoraFim(fim);
+                            dto.setDisponivel(true);
+                            slots.add(dto);
+                        }
+                    }
+                    cursor = fimSlot;
+                }
+            }
+        }
+        log.debug("Slots virtuais gerados: {} (atendentes={}, dias={})",
+                slots.size(), atendentes.size(), dataInicio.until(dataFim).getDays() + 1);
+        return slots;
     }
 
     private HorarioDisponivelDTO toDTO(HorarioDisponivel horario) {
