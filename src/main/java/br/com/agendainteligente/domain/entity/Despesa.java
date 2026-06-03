@@ -72,6 +72,14 @@ public class Despesa {
     @Column(name = "despesa_origem_id")
     private Long despesaOrigemId;
 
+    /** #143: posicao da parcela (1..N). null quando nao e parcelada. */
+    @Column(name = "numero_parcela")
+    private Integer numeroParcela;
+
+    /** #143: total de parcelas do grupo. */
+    @Column(name = "total_parcelas")
+    private Integer totalParcelas;
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean reembolsavel = false;

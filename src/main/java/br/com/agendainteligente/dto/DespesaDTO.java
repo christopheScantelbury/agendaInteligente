@@ -52,6 +52,16 @@ public class DespesaDTO {
     private StatusDespesa status;
     private RecorrenciaDespesa recorrencia;
     private Long despesaOrigemId;
+    // #143: parcelamento (persistido)
+    private Integer numeroParcela;
+    private Integer totalParcelas;
+    // #143: campos transientes vindos do form de criação (service usa pra gerar filhas)
+    private LocalDate dataInicioRecorrencia;
+    private LocalDate dataFimRecorrencia;
+    /** PRIMEIRA | NENHUMA — qual lançamento deve nascer já PAGO no modo FIXA_MENSAL */
+    private String modoPagamentoRecorrencia;
+    /** Quantidade de parcelas no modo PARCELADA. */
+    private Integer numeroParcelas;
     private Boolean reembolsavel;
     private String centroCusto;
 

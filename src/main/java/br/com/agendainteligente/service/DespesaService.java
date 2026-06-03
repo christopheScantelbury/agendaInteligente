@@ -115,6 +115,18 @@ public class DespesaService {
         CategoriaDespesa categoria = categoriaRepository.findById(dto.getCategoriaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Categoria não encontrada"));
 
+        // #143: 3 modos de criacao
+        // (a) PARCELADA: numeroParcelas > 1 → gera N despesas filhas com valor/N
+        // (b) FIXA_MENSAL: recorrencia=MENSAL com dataInicio + dataFim → gera 1 lançamento por mês
+        // (c) REGULAR: default — 1 lançamento único (comportamento antigo)
+        if (dto.getNumeroParcelas() != null && dto.getNumeroParcelas() > 1) {
+            return criarParcelada(dto, unidade, categoria, logado);
+        }
+        if (dto.getRecorrencia() == RecorrenciaDespesa.MENSAL
+                && dto.getDataInicioRecorrencia() != null) {
+            return criarFixaMensal(dto, unidade, categoria, logado);
+        }
+
         Despesa despesa = Despesa.builder()
                 .nome(dto.getNome().trim())
                 .descricao(dto.getDescricao())
@@ -138,6 +150,121 @@ public class DespesaService {
         despesa = despesaRepository.save(despesa);
         registrarAuditoria(despesa.getId(), logado.getId(), "CRIACAO", null, despesa.getStatus().name(), null);
         return toDTO(despesa);
+    }
+
+    /**
+     * #143 modo PARCELADA: gera N despesas filhas, valor = total/N, vencimentos
+     * mensais a partir de dataVencimento. Mantém uma "despesa-cabeca" como origem.
+     */
+    private DespesaDTO criarParcelada(DespesaDTO dto, Unidade unidade, CategoriaDespesa categoria, Usuario logado) {
+        int n = dto.getNumeroParcelas();
+        if (n < 2 || n > 60) {
+            throw new BusinessException("Quantidade de parcelas deve ser entre 2 e 60");
+        }
+        BigDecimal total = dto.getValor();
+        BigDecimal porParcela = total.divide(BigDecimal.valueOf(n), 2, java.math.RoundingMode.HALF_UP);
+        // Ajuste do centavo da ultima parcela (soma exata == total)
+        BigDecimal somaParciais = porParcela.multiply(BigDecimal.valueOf(n - 1L));
+        BigDecimal ultimaParcela = total.subtract(somaParciais);
+
+        Despesa primeira = null;
+        Long origemId = null;
+        for (int i = 1; i <= n; i++) {
+            LocalDate vencimento = dto.getDataVencimento().plusMonths((long) (i - 1));
+            LocalDate competencia = dto.getDataCompetencia() != null
+                    ? dto.getDataCompetencia().plusMonths((long) (i - 1))
+                    : vencimento;
+            BigDecimal valorParcela = (i == n) ? ultimaParcela : porParcela;
+
+            Despesa d = Despesa.builder()
+                    .nome(dto.getNome().trim() + " (" + i + "/" + n + ")")
+                    .descricao(dto.getDescricao())
+                    .valor(valorParcela)
+                    .dataCompetencia(competencia)
+                    .dataVencimento(vencimento)
+                    .categoria(categoria)
+                    .unidade(unidade)
+                    .adminUnicoId(adminUnicoIdDo(logado))
+                    .fornecedor(dto.getFornecedor())
+                    .formaPagamento(dto.getFormaPagamento())
+                    .status(StatusDespesa.RASCUNHO)
+                    .recorrencia(RecorrenciaDespesa.NENHUMA)
+                    .reembolsavel(Boolean.TRUE.equals(dto.getReembolsavel()))
+                    .centroCusto(dto.getCentroCusto())
+                    .criadoPorId(logado.getId())
+                    .atualizadoPorId(logado.getId())
+                    .numeroParcela(i)
+                    .totalParcelas(n)
+                    .despesaOrigemId(origemId)
+                    .build();
+            validarDatas(d);
+            d = despesaRepository.save(d);
+            if (i == 1) {
+                primeira = d;
+                origemId = d.getId();
+                // Auto-vincula as proximas a esta primeira
+            }
+            registrarAuditoria(d.getId(), logado.getId(), "CRIACAO", null, d.getStatus().name(), "Parcela " + i + "/" + n);
+        }
+        log.info("[DESPESA] PARCELADA criada — origem={} total={}x{}=R${}", origemId, n, porParcela, total);
+        return toDTO(primeira);
+    }
+
+    /**
+     * #143 modo FIXA_MENSAL: gera 1 despesa por mês entre dataInicio e dataFim
+     * (ou ate +12 meses default se sem dataFim). modoPagamentoRecorrencia define
+     * se a primeira ja nasce PAGA.
+     */
+    private DespesaDTO criarFixaMensal(DespesaDTO dto, Unidade unidade, CategoriaDespesa categoria, Usuario logado) {
+        LocalDate inicio = dto.getDataInicioRecorrencia();
+        LocalDate fim = dto.getDataFimRecorrencia() != null
+                ? dto.getDataFimRecorrencia()
+                : inicio.plusMonths(11L); // 12 meses default
+        if (fim.isBefore(inicio)) {
+            throw new BusinessException("Data final da recorrência deve ser maior ou igual à inicial");
+        }
+        long meses = java.time.temporal.ChronoUnit.MONTHS.between(
+                inicio.withDayOfMonth(1), fim.withDayOfMonth(1)) + 1;
+        if (meses < 1 || meses > 120) {
+            throw new BusinessException("Recorrência deve cobrir entre 1 e 120 meses");
+        }
+        boolean pagarPrimeira = "PRIMEIRA".equalsIgnoreCase(dto.getModoPagamentoRecorrencia());
+
+        Despesa primeira = null;
+        Long origemId = null;
+        for (int i = 0; i < meses; i++) {
+            LocalDate vencimento = inicio.plusMonths((long) i);
+            Despesa d = Despesa.builder()
+                    .nome(dto.getNome().trim())
+                    .descricao(dto.getDescricao())
+                    .valor(dto.getValor())
+                    .dataCompetencia(vencimento)
+                    .dataVencimento(vencimento)
+                    .dataPagamento(i == 0 && pagarPrimeira ? vencimento : null)
+                    .categoria(categoria)
+                    .unidade(unidade)
+                    .adminUnicoId(adminUnicoIdDo(logado))
+                    .fornecedor(dto.getFornecedor())
+                    .formaPagamento(dto.getFormaPagamento())
+                    .status(i == 0 && pagarPrimeira ? StatusDespesa.PAGA : StatusDespesa.RASCUNHO)
+                    .recorrencia(RecorrenciaDespesa.MENSAL)
+                    .reembolsavel(Boolean.TRUE.equals(dto.getReembolsavel()))
+                    .centroCusto(dto.getCentroCusto())
+                    .criadoPorId(logado.getId())
+                    .atualizadoPorId(logado.getId())
+                    .despesaOrigemId(origemId)
+                    .pagoPorId(i == 0 && pagarPrimeira ? logado.getId() : null)
+                    .build();
+            validarDatas(d);
+            d = despesaRepository.save(d);
+            if (i == 0) {
+                primeira = d;
+                origemId = d.getId();
+            }
+            registrarAuditoria(d.getId(), logado.getId(), "CRIACAO", null, d.getStatus().name(), "Recorrência mensal " + (i + 1) + "/" + meses);
+        }
+        log.info("[DESPESA] FIXA_MENSAL criada — origem={} meses={} pagarPrimeira={}", origemId, meses, pagarPrimeira);
+        return toDTO(primeira);
     }
 
     @Transactional
@@ -328,6 +455,8 @@ public class DespesaService {
                 .status(d.getStatus())
                 .recorrencia(d.getRecorrencia())
                 .despesaOrigemId(d.getDespesaOrigemId())
+                .numeroParcela(d.getNumeroParcela())
+                .totalParcelas(d.getTotalParcelas())
                 .reembolsavel(d.getReembolsavel())
                 .centroCusto(d.getCentroCusto())
                 .criadoPorId(d.getCriadoPorId())

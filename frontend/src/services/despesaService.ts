@@ -30,6 +30,16 @@ export interface Despesa {
   status?: StatusDespesa
   recorrencia?: RecorrenciaDespesa
   despesaOrigemId?: number | null
+  // #143: parcelamento (persistido)
+  numeroParcela?: number | null
+  totalParcelas?: number | null
+  // #143: campos transientes enviados ao criar (service backend gera filhas)
+  dataInicioRecorrencia?: string
+  dataFimRecorrencia?: string
+  /** PRIMEIRA | NENHUMA - quem nasce ja PAGA no modo FIXA_MENSAL */
+  modoPagamentoRecorrencia?: 'PRIMEIRA' | 'NENHUMA'
+  /** Quantidade de parcelas no modo PARCELADA. */
+  numeroParcelas?: number
   reembolsavel?: boolean
   centroCusto?: string
   criadoPorId?: number

@@ -395,6 +395,15 @@ function DespesaForm({
     reembolsavel: false,
   })
 
+  // #143: tipo de lançamento (Regular / Fixa Mensal / Parcelada).
+  // Só aparece quando estamos CRIANDO (não na edição de despesa existente).
+  type TipoLancamento = 'REGULAR' | 'FIXA_MENSAL' | 'PARCELADA'
+  const [tipoLancamento, setTipoLancamento] = useState<TipoLancamento>('REGULAR')
+  const [dataFimRec, setDataFimRec] = useState<string>('')
+  const [modoPagamentoRec, setModoPagamentoRec] = useState<'PRIMEIRA' | 'NENHUMA'>('NENHUMA')
+  const [numeroParcelas, setNumeroParcelas] = useState<number>(2)
+  const isCriando = !despesa?.id
+
   const saveMutation = useMutation({
     mutationFn: (data: Despesa) =>
       despesa?.id ? despesaService.atualizar(despesa.id, data) : despesaService.criar(data),
@@ -408,11 +417,57 @@ function DespesaForm({
     if (!form.valor || form.valor <= 0) return showNotification('error', 'Valor deve ser maior que zero')
     if (!form.categoriaId) return showNotification('error', 'Selecione uma categoria')
     if (!form.unidadeId) return showNotification('error', 'Selecione uma unidade')
-    saveMutation.mutate(form)
+
+    // #143: anexa campos do tipo escolhido só na criação
+    const payload: Despesa = { ...form }
+    if (isCriando) {
+      if (tipoLancamento === 'FIXA_MENSAL') {
+        payload.recorrencia = 'MENSAL'
+        payload.dataInicioRecorrencia = form.dataVencimento
+        if (dataFimRec) payload.dataFimRecorrencia = dataFimRec
+        payload.modoPagamentoRecorrencia = modoPagamentoRec
+      } else if (tipoLancamento === 'PARCELADA') {
+        if (numeroParcelas < 2) return showNotification('error', 'Mínimo de 2 parcelas')
+        if (numeroParcelas > 60) return showNotification('error', 'Máximo de 60 parcelas')
+        payload.numeroParcelas = numeroParcelas
+        payload.recorrencia = 'NENHUMA'
+      } else {
+        payload.recorrencia = 'NENHUMA'
+      }
+    }
+    saveMutation.mutate(payload)
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* #143: tipo de lançamento (só na criação) */}
+      {isCriando && (
+        <div>
+          <label className="block text-xs font-medium text-slate-700 mb-1.5">Tipo de lançamento</label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {([
+              { v: 'REGULAR', label: 'Regular', desc: 'Único lançamento' },
+              { v: 'FIXA_MENSAL', label: 'Fixa Mensal', desc: 'Recorrente todo mês' },
+              { v: 'PARCELADA', label: 'Parcelada', desc: 'Dividir em N parcelas' },
+            ] as { v: TipoLancamento; label: string; desc: string }[]).map((opt) => (
+              <button
+                key={opt.v}
+                type="button"
+                onClick={() => setTipoLancamento(opt.v)}
+                className={`p-3 rounded-xl border text-left transition ${
+                  tipoLancamento === opt.v
+                    ? 'border-violet-500 bg-violet-50 ring-2 ring-violet-100'
+                    : 'border-slate-200 bg-white hover:bg-slate-50'
+                }`}
+              >
+                <div className="text-sm font-semibold text-slate-900">{opt.label}</div>
+                <div className="text-xs text-slate-500">{opt.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <FormField label="Nome" required>
         <input required type="text" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })}
           className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
@@ -437,13 +492,45 @@ function DespesaForm({
             onChange={(e) => setForm({ ...form, dataCompetencia: e.target.value })}
             className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
         </FormField>
-        <FormField label="Data vencimento" required>
+        <FormField label={tipoLancamento === 'FIXA_MENSAL' ? 'Início (1º vencimento)' : 'Data vencimento'} required>
           <input required type="date" value={form.dataVencimento}
             min="2000-01-01" max="2099-12-31"
             onChange={(e) => setForm({ ...form, dataVencimento: e.target.value })}
             className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
         </FormField>
       </div>
+
+      {/* #143: campos extras por tipo */}
+      {isCriando && tipoLancamento === 'FIXA_MENSAL' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-violet-50/50 rounded-xl border border-violet-100">
+          <FormField label="Fim (opcional, default 12 meses)">
+            <input type="date" value={dataFimRec} onChange={(e) => setDataFimRec(e.target.value)}
+              className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
+          </FormField>
+          <FormField label="Marcar como pago">
+            <select value={modoPagamentoRec} onChange={(e) => setModoPagamentoRec(e.target.value as 'PRIMEIRA' | 'NENHUMA')}
+              className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition">
+              <option value="NENHUMA">Nenhuma (todas em RASCUNHO)</option>
+              <option value="PRIMEIRA">Apenas a primeira</option>
+            </select>
+          </FormField>
+        </div>
+      )}
+      {isCriando && tipoLancamento === 'PARCELADA' && (
+        <div className="p-3 bg-violet-50/50 rounded-xl border border-violet-100">
+          <FormField label="Quantidade de parcelas (2 a 60)" required>
+            <input required type="number" min={2} max={60} value={numeroParcelas}
+              onChange={(e) => setNumeroParcelas(Math.max(2, Math.min(60, Number(e.target.value) || 2)))}
+              className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
+          </FormField>
+          {form.valor > 0 && numeroParcelas > 0 && (
+            <p className="text-xs text-slate-500 mt-2">
+              Cada parcela: <b className="text-violet-700">R$ {(form.valor / numeroParcelas).toFixed(2).replace('.', ',')}</b>
+              {' '}— vencimento mensal a partir de <b>{form.dataVencimento}</b>
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <FormField label="Categoria" required>
