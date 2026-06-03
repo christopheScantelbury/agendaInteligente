@@ -62,8 +62,13 @@ public class SeedAdminController {
         boolean autorizadoViaAdmin = false;
         var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated()) {
-            autorizadoViaAdmin = auth.getAuthorities().stream()
+            // SEC: ADMIN GLOBAL apenas — ROLE_ADMINISTRADOR (admin de tenant) NÃO pode disparar seed
+            // Mesmo padrão do PlataformaController:65 (hasAuthority ROLE_ADMIN and !ROLE_ADMINISTRADOR)
+            boolean isAdminGlobal = auth.getAuthorities().stream()
                     .anyMatch(ga -> "ROLE_ADMIN".equals(ga.getAuthority()));
+            boolean isAdministradorTenant = auth.getAuthorities().stream()
+                    .anyMatch(ga -> "ROLE_ADMINISTRADOR".equals(ga.getAuthority()));
+            autorizadoViaAdmin = isAdminGlobal && !isAdministradorTenant;
         }
         if (!autorizadoViaToken && !autorizadoViaAdmin) {
             return ResponseEntity.status(401).body(Map.of(

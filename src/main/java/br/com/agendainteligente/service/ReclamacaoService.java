@@ -35,6 +35,14 @@ public class ReclamacaoService {
     @Transactional
     public ReclamacaoDTO criar(ReclamacaoDTO reclamacaoDTO) {
         Reclamacao reclamacao = reclamacaoMapper.toEntity(reclamacaoDTO);
+        // SEC: endpoint público — valida unidadeId pra não permitir spam contra unidade inexistente.
+        // Sem essa validação, qualquer atacante envia reclamações com unidadeId arbitrário e
+        // contamina o painel interno de tenants alheios (auditoria 03/06/2026).
+        // Reclamação genuinamente anônima/sem unidade segue permitida (unidadeId null).
+        if (reclamacao.getUnidadeId() != null
+                && !unidadeRepository.existsById(reclamacao.getUnidadeId())) {
+            throw new BusinessException("Unidade não encontrada");
+        }
         // Defaults
         if (reclamacao.getCategoria() == null) reclamacao.setCategoria(Reclamacao.Categoria.RECLAMACAO);
         if (reclamacao.getStatus() == null) reclamacao.setStatus(Reclamacao.Status.RECEBIDA);

@@ -250,7 +250,18 @@ public class AgendamentoService {
 
         switch (perfil) {
             case ADMIN:
+                return;
             case ADMINISTRADOR:
+                // SEC: NUNCA agrupar ADMIN+ADMINISTRADOR — ADMINISTRADOR só pode agir
+                // sobre unidades do PRÓPRIO tenant (mesmo adminUnicoId).
+                // Histórico: bug `#SEC02` repetido (memo sec_critico_vazamento_tenants_26_05).
+                Long admIdCriar = usuario.getAdminUnicoId() != null ? usuario.getAdminUnicoId() : usuario.getId();
+                Unidade unidadeAlvoCriar = unidadeRepository.findById(unidadeId).orElse(null);
+                if (unidadeAlvoCriar == null
+                        || unidadeAlvoCriar.getAdminUnicoId() == null
+                        || !admIdCriar.equals(unidadeAlvoCriar.getAdminUnicoId())) {
+                    throw new BusinessException("Você não tem permissão para criar agendamentos nesta unidade");
+                }
                 return;
 
             case GERENTE:
@@ -312,8 +323,13 @@ public class AgendamentoService {
         }
         switch (usuario.getPerfil()) {
             case ADMIN:
-            case ADMINISTRADOR:
                 return new java.util.HashSet<>(unidadeRepository.findAllIds());
+            case ADMINISTRADOR:
+                // SEC: ADMINISTRADOR só vê unidades do PRÓPRIO tenant
+                Long admIdAdminAgend = usuario.getAdminUnicoId() != null ? usuario.getAdminUnicoId() : usuario.getId();
+                return unidadeRepository.findByAdminUnicoId(admIdAdminAgend).stream()
+                        .map(Unidade::getId)
+                        .collect(Collectors.toSet());
             case GERENTE:
                 if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
                     return Set.of();
