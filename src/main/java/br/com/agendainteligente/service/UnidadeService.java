@@ -59,8 +59,9 @@ public class UnidadeService {
     private List<Unidade> filtrarPorPermissao() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) {
+            // SEC: defesa em profundidade — não vaza dados de TUDO quando auth falha.
             log.warn("Tentativa de listar unidades sem autenticação");
-            return unidadeRepository.findAll();
+            return List.of();
         }
 
         String email = auth.getName();

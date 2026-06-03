@@ -46,6 +46,8 @@ public class AnamneseService {
 
     @Transactional(readOnly = true)
     public List<AnamneseResumoDTO> listar(Long unidadeId, Long clienteId) {
+        // SEC: filtrar por unidades permitidas pro usuário logado
+        java.util.Set<Long> unidadesPermitidas = obterUnidadesIdsPermitidas();
         List<Anamnese> anamneses;
         if (clienteId != null && unidadeId != null) {
             anamneses = anamneseRepository.findByClienteIdAndUnidadeIdOrderByDataDesc(clienteId, unidadeId);
@@ -56,7 +58,50 @@ public class AnamneseService {
         } else {
             anamneses = anamneseRepository.findAll();
         }
+        // Filtro tenant: ADMIN global vê tudo (null), demais filtram por unidades permitidas
+        if (unidadesPermitidas != null) {
+            anamneses = anamneses.stream()
+                    .filter(a -> a.getUnidade() != null && unidadesPermitidas.contains(a.getUnidade().getId()))
+                    .collect(Collectors.toList());
+        }
         return anamneses.stream().map(this::toResumoDTO).collect(Collectors.toList());
+    }
+
+    /**
+     * Conjunto de unidadeIds que o usuário logado pode acessar.
+     * `null` = ADMIN global (sem filtro).
+     * Vazio = sem acesso a nada (logado mas sem vínculo).
+     */
+    private java.util.Set<Long> obterUnidadesIdsPermitidas() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) return java.util.Set.of();
+        Usuario usuario = usuarioRepository.findByEmail(auth.getName()).orElse(null);
+        if (usuario == null) return java.util.Set.of();
+        switch (usuario.getPerfil()) {
+            case ADMIN:
+                return null; // sem filtro
+            case ADMINISTRADOR:
+                Long adminId = usuario.getAdminUnicoId() != null ? usuario.getAdminUnicoId() : usuario.getId();
+                return unidadeRepository.findByAdminUnicoId(adminId).stream()
+                        .map(Unidade::getId)
+                        .collect(Collectors.toSet());
+            case GERENTE:
+                if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) return java.util.Set.of();
+                java.util.Set<Long> empresaIds = usuario.getUnidades().stream()
+                        .map(u -> u.getEmpresa() != null ? u.getEmpresa().getId() : null)
+                        .filter(id -> id != null)
+                        .collect(Collectors.toSet());
+                if (empresaIds.isEmpty()) return java.util.Set.of();
+                return unidadeRepository.findAll().stream()
+                        .filter(u -> u.getEmpresa() != null && empresaIds.contains(u.getEmpresa().getId()))
+                        .map(Unidade::getId)
+                        .collect(Collectors.toSet());
+            case PROFISSIONAL:
+                if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) return java.util.Set.of();
+                return usuario.getUnidades().stream().map(Unidade::getId).collect(Collectors.toSet());
+            default:
+                return java.util.Set.of();
+        }
     }
 
     @Transactional(readOnly = true)

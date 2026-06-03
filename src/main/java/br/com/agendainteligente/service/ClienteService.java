@@ -112,8 +112,9 @@ public class ClienteService {
     private List<Cliente> filtrarPorPermissao() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) {
+            // SEC: defesa em profundidade — não vaza dados de TUDO quando auth falha.
             log.warn("Tentativa de listar clientes sem autenticação");
-            return clienteRepository.findAll();
+            return List.of();
         }
 
         String email = auth.getName();

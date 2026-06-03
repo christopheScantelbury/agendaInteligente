@@ -55,8 +55,11 @@ public class AtendenteService {
     private List<Atendente> filtrarPorPermissao() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) {
+            // SEC: defesa em profundidade — não vaza dados de TUDO quando auth falha.
+            // @PreAuthorize no controller bloqueia antes, mas mantemos lista vazia
+            // como fallback caso o filtro seja chamado de outro contexto.
             log.warn("Tentativa de listar atendentes sem autenticação");
-            return atendenteRepository.findAll();
+            return List.of();
         }
 
         String email = auth.getName();
