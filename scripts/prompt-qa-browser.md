@@ -126,3 +126,110 @@ Antes de reportar, tente uma vez:
 Em paralelo, abra F12 e:
 - **Console**: cole qualquer erro vermelho que aparecer
 - **Network**: filtre por "agendamentos" — se algum POST/PATCH retornar 4xx ou 5xx, cole status + body
+
+---
+
+## Parte 2: brainstorm de cobertura — **OBRIGATÓRIO**
+
+Depois de executar os 8 cenários acima, **NÃO termine ainda**. Os cenários cobrem o caminho feliz + alguns bugs conhecidos, mas claramente deixam gaps. Sua segunda tarefa é **propor cenários que NÃO estão no prompt** e que você acha que deveriam estar testados.
+
+### Pense em pelo menos essas categorias
+
+**Casos de borda do agendamento:**
+- Cliente tenta agendar fora do horário de funcionamento da unidade (deve bloquear)
+- Cliente tenta agendar no passado
+- Cliente tenta agendar 2 horários sobrepostos (com mesmo atendente OU consigo mesmo)
+- Cliente tenta agendar 1 minuto após outro cliente pegar o slot (race condition)
+- Profissional tenta finalizar um agendamento de outro profissional
+- Profissional tenta abrir/editar agendamento de outra unidade
+- ADMINISTRADOR cria agendamento PARA cliente — funciona? bloqueia tenant cruzado?
+
+**Casos de borda de unidades/serviços:**
+- Unidade sem nenhum profissional cadastrado — quais slots aparecem?
+- Serviço inativo — aparece pro cliente?
+- Profissional inativo — slots dele aparecem?
+- Profissional vinculado a múltiplas unidades — slots filtram corretamente?
+
+**Casos de borda de autenticação:**
+- Token expirado: app trata bem? Mostra "sessão expirada" ou crasha?
+- Logout e tentar voltar com back do browser
+- Login simultâneo em duas abas — sincronia?
+- Recuperação de senha (se houver)
+- Bloqueio após N tentativas incorretas (se houver)
+
+**Casos de borda multi-tenant (SEC):**
+- Cliente do tenant A copia URL com ID de unidade do tenant B na barra → app bloqueia?
+- Profissional do salão tenta hit endpoint da academia no Network (manualmente via DevTools)
+- ADMINISTRADOR do salão consegue ver agendamentos de outras empresas? não pode.
+- Mudar `clienteId` no payload do POST `/agendamentos` pra agendar em nome de outro cliente
+
+**Casos de acessibilidade/UX:**
+- Tab navigation funciona em todas as telas
+- Leitor de tela: labels dos inputs, alt em imagens
+- Daltonismo: dá pra distinguir status só pela cor? (precisa ter texto também)
+- Touch targets ≥ 44px nos botões mobile
+- Estado de loading visível (spinner, skeleton)
+- Estado vazio (sem agendamentos / sem clientes) — tem mensagem amigável?
+
+**Casos de borda de input:**
+- Nome com 200+ caracteres
+- Telefone formato estrangeiro (+1, +44)
+- CPF/CNPJ inválido (dígito verificador errado)
+- Email com formato exótico (`teste+filter@gmail.com`)
+- XSS: input com `<script>alert(1)</script>` no campo de feedback/observações
+- SQL injection: `' OR 1=1 --` no campo de busca de clientes
+- Emojis em nome / mensagem
+
+**Casos de performance:**
+- Cliente com 100+ agendamentos no histórico — paginação? loading lento?
+- Buscar horários disponíveis em janela de 6 meses — backend trava?
+- 50+ unidades — dropdown vira pesadelo?
+
+**Casos de regressão visual:**
+- Modo escuro (se houver toggle)
+- Zoom 200% do browser
+- Tela ultra-larga (3440px)
+- iPhone SE (375px) — caminho mais apertado
+- Tablet retrato (768px)
+
+**Fluxos não cobertos:**
+- Reagendar (mudar data/hora de agendamento existente)
+- Avaliação pós-atendimento (se houver)
+- Notificações push / email — chegam? quando?
+- NFS-e emitida automaticamente ao concluir — gera mesmo?
+- Comissão calculada — aparece corretamente em /comissoes?
+- Anamnese: cliente preenche → profissional vê
+- Recorrência: criar agendamento recorrente semanal
+- Despesas (gestor cadastra → aparece no relatório financeiro)
+
+### Formato da entrega da Parte 2
+
+Pra cada cenário novo que você propor, use esse template:
+
+```
+### [CATEGORIA] Nome curto do cenário
+
+**Quem testa:** (cliente / profissional / admin / anônimo)
+**Por que importa:** (regra de negócio quebrada, regressão potencial, edge case real)
+**Passos:**
+1. ...
+2. ...
+3. ...
+**Resultado esperado:** ...
+**Severidade se falhar:** 🔴 crítico / 🟡 médio / 🟢 cosmético
+```
+
+### Critério de "boa proposta"
+
+- **Não duplica** os 8 cenários do prompt original
+- **Testável**: dá pra executar manualmente no navegador (não exige hack interno do banco)
+- **Realista**: alguém real faria isso, OU é vetor de ataque comum
+- **Específico**: não basta "testar segurança" — proponha A AÇÃO ESPECÍFICA que abusaria
+
+### Quantidade
+
+Mire em **10 a 20 cenários novos** distribuídos pelas categorias. Não force quantidade — qualidade > quantidade. Se 12 cenários ótimos cobrem tudo que faz sentido, melhor que 20 cenários repetitivos.
+
+### Bônus: priorize
+
+Ao final dos cenários propostos, liste os **top 5 mais críticos** pra rodar primeiro, ordenados por risco × probabilidade.
