@@ -345,10 +345,25 @@ public class AgendamentoService {
         if (auth == null || !auth.isAuthenticated()) {
             throw new BusinessException("Usuário não autenticado");
         }
-        
+
         String email = auth.getName();
-        Usuario usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+        Usuario usuario = usuarioRepository.findByEmail(email).orElse(null);
+
+        // CLIENTE sem Usuario associado (auth via clienteToken, ex.: seed
+        // cliente@salao.demo.com OU guest checkout #131/#135). auth.getName()
+        // é o email do cliente, mas não há registro em `usuarios` — busca em
+        // `clientes` e valida que o agendamento é do próprio cliente.
+        if (usuario == null) {
+            Cliente meuCliente = clienteRepository.findByEmail(email).orElse(null);
+            if (meuCliente == null) {
+                throw new BusinessException("Usuário não encontrado");
+            }
+            if (agendamento.getCliente() == null
+                    || !agendamento.getCliente().getId().equals(meuCliente.getId())) {
+                throw new BusinessException("Você não tem permissão para visualizar este agendamento");
+            }
+            return;
+        }
         
         Usuario.PerfilUsuario perfil = usuario.getPerfil();
         
