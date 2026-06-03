@@ -78,6 +78,18 @@ public class Agendamento {
     @Column
     private LocalDateTime dataAtualizacao;
 
+    // Auditoria de reabertura (V71) — quando gestor reabre CONCLUIDO/PROCEDIMENTO_FIM
+    // pra corrigir algo (valor, profissional, etc). valorFinal é zerado nesse momento
+    // e o profissional precisa finalizar de novo informando o novo valor.
+    @Column(name = "motivo_reabertura", columnDefinition = "TEXT")
+    private String motivoReabertura;
+
+    @Column(name = "data_reabertura")
+    private LocalDateTime dataReabertura;
+
+    @Column(name = "reaberto_por", length = 255)
+    private String reabertoPor;
+
     // Campos de recorrência
     @Column(name = "agendamento_recorrente")
     @Builder.Default

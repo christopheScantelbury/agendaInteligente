@@ -94,6 +94,11 @@ export const agendamentoService = {
     return response.data
   },
 
+  reabrir: async (id: number, motivo: string): Promise<Agendamento> => {
+    const response = await api.post<Agendamento>(`/agendamentos/${id}/reabrir`, { motivo })
+    return response.data
+  },
+
   emitirNotaFiscal: async (agendamentoId: number): Promise<void> => {
     await api.post(`/notas-fiscais/agendamento/${agendamentoId}/emitir`)
   },

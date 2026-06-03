@@ -92,4 +92,14 @@ public class AgendamentoController {
                                                      @Valid @RequestBody br.com.agendainteligente.dto.FinalizarAgendamentoDTO finalizarDTO) {
         return ResponseEntity.ok(agendamentoService.finalizar(id, finalizarDTO));
     }
+
+    @PostMapping("/{id}/reabrir")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRADOR', 'GERENTE', 'PROFISSIONAL')")
+    @Operation(summary = "Reabrir agendamento concluído (zera valor, exige motivo)")
+    public ResponseEntity<AgendamentoDTO> reabrir(@PathVariable Long id,
+                                                   @RequestBody ReaberturaPayload body) {
+        return ResponseEntity.ok(agendamentoService.reabrir(id, body.motivo()));
+    }
+
+    public record ReaberturaPayload(String motivo) {}
 }

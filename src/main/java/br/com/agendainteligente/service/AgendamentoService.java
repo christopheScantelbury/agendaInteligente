@@ -709,7 +709,47 @@ public class AgendamentoService {
         return dto;
     }
 
+    /**
+     * Reabre agendamento concluído/procedimento_fim — endpoint dedicado com motivo.
+     * Diferente de atualizarStatus pq:
+     * 1. Exige motivo (auditoria)
+     * 2. Zera valorFinal e remove pagamento (gestor finaliza de novo com novo valor)
+     * 3. Grava data + autor da reabertura
+     */
     @Transactional
+    public AgendamentoDTO reabrir(Long id, String motivo) {
+        if (motivo == null || motivo.isBlank()) {
+            throw new BusinessException("Informe o motivo da reabertura");
+        }
+        Agendamento agendamento = agendamentoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Agendamento não encontrado"));
+        validarPermissaoVisualizarAgendamento(agendamento);
+
+        StatusAgendamento statusAtual = agendamento.getStatus();
+        if (statusAtual != StatusAgendamento.CONCLUIDO
+                && statusAtual != StatusAgendamento.PROCEDIMENTO_FIM) {
+            throw new BusinessException(
+                    "Só dá pra reabrir agendamentos concluídos. Status atual: "
+                            + rotuloStatus(statusAtual));
+        }
+
+        // Reset financeiro — profissional vai finalizar de novo com novo valor.
+        agendamento.setValorFinal(java.math.BigDecimal.ZERO);
+        Optional<Pagamento> pagamentoExistente = pagamentoRepository.findByAgendamentoId(id);
+        pagamentoExistente.ifPresent(pagamentoRepository::delete);
+
+        // Auditoria
+        agendamento.setMotivoReabertura(motivo.trim());
+        agendamento.setDataReabertura(LocalDateTime.now());
+        Authentication authReabertura = SecurityContextHolder.getContext().getAuthentication();
+        agendamento.setReabertoPor(authReabertura != null ? authReabertura.getName() : "sistema");
+
+        agendamento.setStatus(StatusAgendamento.EM_ANDAMENTO);
+        agendamento = agendamentoRepository.save(agendamento);
+        log.info("Agendamento {} reaberto por {}: {}", id, agendamento.getReabertoPor(), motivo);
+        return agendamentoMapper.toDTO(agendamento);
+    }
+
     public AgendamentoDTO atualizarStatus(Long id, StatusAgendamento novoStatus) {
         log.debug("Atualizando status do agendamento {} para {}", id, novoStatus);
         

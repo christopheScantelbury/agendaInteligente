@@ -31,17 +31,36 @@ const PAGAMENTOS: { id: TipoPagamento; label: string }[] = [
   { id: 'BOLETO', label: 'Boleto' },
 ]
 
+// Motivos pré-definidos pra reabrir atendimento concluído.
+const MOTIVOS_REABERTURA = [
+  'Valor cobrado errado',
+  'Cliente vai pagar diferente',
+  'Profissional errado registrado',
+  'Serviço errado registrado',
+  'Cliente pediu para reverter',
+  'Erro de marcação (cliente ainda em atendimento)',
+  'Outro',
+] as const
+type MotivoReabertura = typeof MOTIVOS_REABERTURA[number]
+
 export default function AcoesAgendamentoSheet({ agendamento, onClose }: AcoesAgendamentoSheetProps) {
   const { showNotification } = useNotification()
   const queryClient = useQueryClient()
   const [modoFinalizar, setModoFinalizar] = useState(false)
   const [valorFinal, setValorFinal] = useState<string>('')
   const [tipoPagamento, setTipoPagamento] = useState<TipoPagamento>('PIX')
+  // Modo reabrir: select de motivos + textarea pra "Outro"
+  const [modoReabrir, setModoReabrir] = useState(false)
+  const [motivoSelecionado, setMotivoSelecionado] = useState<MotivoReabertura>(MOTIVOS_REABERTURA[0])
+  const [motivoTextoLivre, setMotivoTextoLivre] = useState<string>('')
 
   const isOpen = agendamento !== null
 
   function resetEFecha() {
     setModoFinalizar(false)
+    setModoReabrir(false)
+    setMotivoSelecionado(MOTIVOS_REABERTURA[0])
+    setMotivoTextoLivre('')
     setValorFinal('')
     setTipoPagamento('PIX')
     onClose()
@@ -72,6 +91,30 @@ export default function AcoesAgendamentoSheet({ agendamento, onClose }: AcoesAge
       showNotification('error', err.response?.data?.message || 'Erro ao finalizar')
     },
   })
+
+  const mutationReabrir = useMutation({
+    mutationFn: ({ id, motivo }: { id: number; motivo: string }) =>
+      agendamentoService.reabrir(id, motivo),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agendamentos'] })
+      showNotification('success', 'Atendimento reaberto. Finalize de novo com o valor correto.')
+      resetEFecha()
+    },
+    onError: (err: any) => {
+      showNotification('error', err.response?.data?.message || 'Erro ao reabrir')
+    },
+  })
+
+  function submeterReabrir() {
+    if (!agendamento?.id) return
+    const motivoFinal =
+      motivoSelecionado === 'Outro' ? motivoTextoLivre.trim() : motivoSelecionado
+    if (!motivoFinal || motivoFinal.length < 3) {
+      showNotification('error', 'Descreva o motivo da reabertura (mínimo 3 caracteres)')
+      return
+    }
+    mutationReabrir.mutate({ id: agendamento.id, motivo: motivoFinal })
+  }
 
   function alterarStatus(status: string) {
     if (!agendamento?.id) return
@@ -110,9 +153,13 @@ export default function AcoesAgendamentoSheet({ agendamento, onClose }: AcoesAge
   const carregando = mutationStatus.isPending || mutationFinalizar.isPending
 
   return (
-    <BottomSheet isOpen={isOpen} onClose={resetEFecha} title={modoFinalizar ? 'Finalizar e cobrar' : clienteNome}>
+    <BottomSheet isOpen={isOpen} onClose={resetEFecha} title={
+      modoFinalizar ? 'Finalizar e cobrar'
+        : modoReabrir ? 'Reabrir atendimento'
+        : clienteNome
+    }>
       {/* Cabeçalho do agendamento */}
-      {!modoFinalizar && (
+      {!modoFinalizar && !modoReabrir && (
         <div className="bg-gray-50 rounded-xl p-3 mb-4">
           <p className="text-xs text-gray-500">
             {format(inicio, "EEEE, dd 'de' MMM 'às' HH:mm", { locale: ptBR })}
@@ -124,7 +171,17 @@ export default function AcoesAgendamentoSheet({ agendamento, onClose }: AcoesAge
         </div>
       )}
 
-      {modoFinalizar ? (
+      {modoReabrir ? (
+        <ReabrirForm
+          motivoSelecionado={motivoSelecionado}
+          setMotivoSelecionado={setMotivoSelecionado}
+          motivoTextoLivre={motivoTextoLivre}
+          setMotivoTextoLivre={setMotivoTextoLivre}
+          carregando={mutationReabrir.isPending}
+          onCancel={() => setModoReabrir(false)}
+          onSubmit={submeterReabrir}
+        />
+      ) : modoFinalizar ? (
         <FinalizarForm
           valorFinal={valorFinal}
           setValorFinal={setValorFinal}
@@ -209,9 +266,9 @@ export default function AcoesAgendamentoSheet({ agendamento, onClose }: AcoesAge
                 icon={RotateCcw}
                 color="orange"
                 label="Reabrir"
-                desc="Voltar status para em andamento"
+                desc="Voltar status para em andamento (pede motivo)"
                 disabled={carregando}
-                onClick={() => alterarStatus('EM_ANDAMENTO')}
+                onClick={() => setModoReabrir(true)}
               />
             </>
           )}
@@ -365,6 +422,107 @@ function FinalizarForm({
           className="flex-1 py-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold disabled:opacity-50"
         >
           {carregando ? 'Confirmando...' : 'Confirmar'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function ReabrirForm({
+  motivoSelecionado,
+  setMotivoSelecionado,
+  motivoTextoLivre,
+  setMotivoTextoLivre,
+  carregando,
+  onCancel,
+  onSubmit,
+}: {
+  motivoSelecionado: MotivoReabertura
+  setMotivoSelecionado: (m: MotivoReabertura) => void
+  motivoTextoLivre: string
+  setMotivoTextoLivre: (s: string) => void
+  carregando: boolean
+  onCancel: () => void
+  onSubmit: () => void
+}) {
+  const ehOutro = motivoSelecionado === 'Outro'
+  return (
+    <div className="space-y-4">
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 flex items-start gap-2">
+        <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="font-semibold mb-0.5">Atenção</p>
+          <p>
+            Reabrir vai <strong>zerar o valor cobrado</strong> e apagar o registro de
+            pagamento. Você precisa finalizar de novo com o valor correto. Se NFS-e
+            foi emitida ou comissão calculada, ajuste em <strong>/comissoes</strong> e
+            <strong> /relatorios</strong>.
+          </p>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-slate-600 mb-1">
+          Motivo da reabertura <span className="text-red-500">*</span>
+        </label>
+        <div className="space-y-1">
+          {MOTIVOS_REABERTURA.map((m) => (
+            <label
+              key={m}
+              className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition ${
+                motivoSelecionado === m
+                  ? 'bg-violet-50 border-violet-300 ring-1 ring-violet-200'
+                  : 'bg-white border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              <input
+                type="radio"
+                name="motivo-reabertura"
+                value={m}
+                checked={motivoSelecionado === m}
+                onChange={() => setMotivoSelecionado(m)}
+                className="text-violet-600 focus:ring-violet-500"
+              />
+              <span className="text-sm text-slate-800">{m}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {ehOutro && (
+        <div>
+          <label className="block text-xs font-semibold text-slate-600 mb-1">
+            Descreva o motivo
+          </label>
+          <textarea
+            value={motivoTextoLivre}
+            onChange={(e) => setMotivoTextoLivre(e.target.value)}
+            rows={3}
+            placeholder="Conte o que aconteceu para que esse atendimento precise ser reaberto."
+            maxLength={500}
+            autoFocus
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 resize-none"
+          />
+          <p className="text-[11px] text-slate-400 mt-1 text-right">
+            {motivoTextoLivre.length}/500
+          </p>
+        </div>
+      )}
+
+      <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+        <button
+          onClick={onCancel}
+          disabled={carregando}
+          className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 transition"
+        >
+          Voltar
+        </button>
+        <button
+          onClick={onSubmit}
+          disabled={carregando || (ehOutro && motivoTextoLivre.trim().length < 3)}
+          className="px-4 py-2 rounded-xl text-sm font-semibold bg-orange-600 text-white hover:bg-orange-700 shadow-sm shadow-orange-200 disabled:bg-slate-300 disabled:shadow-none transition"
+        >
+          {carregando ? 'Reabrindo...' : 'Reabrir atendimento'}
         </button>
       </div>
     </div>
