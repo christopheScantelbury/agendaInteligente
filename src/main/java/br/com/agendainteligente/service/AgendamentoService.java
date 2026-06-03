@@ -788,9 +788,16 @@ public class AgendamentoService {
                 break;
             case PROCEDIMENTO_FIM:
                 throw new BusinessException("Use a ação de finalizar atendimento para concluir o agendamento");
+            case NO_SHOW:
+                // No-show é reversível — profissional pode ter marcado por engano
+                // (ex.: cliente chegou atrasado). Volta pra AGENDADO ou CONFIRMADO.
+                if (novoStatus == StatusAgendamento.AGENDADO
+                        || novoStatus == StatusAgendamento.CONFIRMADO) {
+                    return;
+                }
+                break;
             case CANCELADO:
             case CONCLUIDO:
-            case NO_SHOW:
                 throw new BusinessException("Não é possível alterar status de um agendamento encerrado");
             default:
                 break;
