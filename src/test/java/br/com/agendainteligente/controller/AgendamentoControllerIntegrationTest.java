@@ -116,6 +116,8 @@ class AgendamentoControllerIntegrationTest {
                                 .endereco("Rua Test")
                                 .ativo(true)
                                 .empresa(empresa)
+                                .horarioAbertura(java.time.LocalTime.of(8, 0))
+                                .horarioFechamento(java.time.LocalTime.of(18, 0))
                                 .build();
                 unidade = unidadeRepository.save(unidade);
 
