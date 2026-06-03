@@ -396,6 +396,15 @@ function UnidadeForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    // Validação local — espelha @NotNull + @AssertTrue do UnidadeDTO.
+    if (!formData.horarioAbertura || !formData.horarioFechamento) {
+      showNotification('error', 'Horário de abertura e fechamento são obrigatórios.')
+      return
+    }
+    if (formData.horarioAbertura >= formData.horarioFechamento) {
+      showNotification('error', 'Horário de fechamento precisa ser posterior ao de abertura.')
+      return
+    }
     saveMutation.mutate(formData)
   }
 
@@ -414,23 +423,30 @@ function UnidadeForm({
           </FormField>
 
           <div className="grid grid-cols-2 gap-2">
-            <FormField label="Abertura">
+            <FormField label="Abertura" required>
               <input
                 type="time"
+                required
                 value={formData.horarioAbertura || ''}
                 onChange={(e) => setFormData({ ...formData, horarioAbertura: e.target.value })}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </FormField>
-            <FormField label="Fechamento">
+            <FormField label="Fechamento" required>
               <input
                 type="time"
+                required
                 value={formData.horarioFechamento || ''}
                 onChange={(e) => setFormData({ ...formData, horarioFechamento: e.target.value })}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
               />
             </FormField>
           </div>
+          <p className="text-[11px] text-slate-500 -mt-1">
+            Necessário pra cliente conseguir agendar. Configure os horários típicos
+            de funcionamento — se quiser controle fino por dia, cadastre slots manuais
+            em <strong>Profissionais → Horários disponíveis</strong>.
+          </p>
         </div>
 
         <FormField label="Empresa" required>

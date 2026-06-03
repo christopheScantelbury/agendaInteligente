@@ -1,6 +1,8 @@
 package br.com.agendainteligente.dto;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -35,8 +37,18 @@ public class UnidadeDTO {
     private String regimeTributario;
     private String complemento;
 
+    @NotNull(message = "Horário de abertura é obrigatório")
     private java.time.LocalTime horarioAbertura;
+
+    @NotNull(message = "Horário de fechamento é obrigatório")
     private java.time.LocalTime horarioFechamento;
+
+    /** Garante que abertura < fechamento (validação cross-field). */
+    @AssertTrue(message = "Horário de fechamento precisa ser posterior ao de abertura")
+    public boolean isHorarioValido() {
+        if (horarioAbertura == null || horarioFechamento == null) return true; // outras anots reclamam
+        return horarioAbertura.isBefore(horarioFechamento);
+    }
 
     private Long empresaId;
 

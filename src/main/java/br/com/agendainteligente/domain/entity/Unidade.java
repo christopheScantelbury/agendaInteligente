@@ -55,10 +55,12 @@ public class Unidade {
     @Builder.Default
     private Boolean ativo = true;
 
-    @Column(name = "horario_abertura")
+    // Obrigatório (V70) — necessário pra fallback de slots automáticos no agendamento.
+    // Migration faz backfill 08-18 pra registros antigos antes de aplicar NOT NULL.
+    @Column(name = "horario_abertura", nullable = false)
     private java.time.LocalTime horarioAbertura;
 
-    @Column(name = "horario_fechamento")
+    @Column(name = "horario_fechamento", nullable = false)
     private java.time.LocalTime horarioFechamento;
 
     @Column(length = 14)
