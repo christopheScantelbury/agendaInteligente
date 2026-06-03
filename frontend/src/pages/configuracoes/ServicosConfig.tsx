@@ -7,6 +7,7 @@ import { unidadeService } from '../../services/unidadeService'
 import { useNotification } from '../../contexts/NotificationContext'
 import ConfigPageHeader from '../../components/configuracoes/ConfigPageHeader'
 import ProximaEtapaCard from '../../components/configuracoes/ProximaEtapaCard'
+import MoneyInput from '../../components/forms/MoneyInput'
 
 const moneyFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -148,15 +149,12 @@ export default function ServicosConfig() {
             </div>
             <div>
               <label htmlFor="valor" className="block text-xs font-medium text-slate-700 mb-1.5">
-                Valor (R$)
+                Valor
               </label>
-              <input
+              <MoneyInput
                 id="valor"
-                type="text"
-                inputMode="decimal"
-                value={form.valor}
-                onChange={(e) => setForm({ ...form, valor: e.target.value })}
-                placeholder="0,00"
+                value={valorNumber}
+                onChange={(v) => setForm({ ...form, valor: v > 0 ? String(v) : '' })}
                 className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
               />
             </div>

@@ -16,6 +16,7 @@ import FormField from '../components/FormField'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useNotification } from '../contexts/NotificationContext'
 import { getApiErrorMessage } from '../utils/apiError'
+import MoneyInput from '../components/forms/MoneyInput'
 
 const formatMoeda = (v: number) =>
   (v ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -503,10 +504,16 @@ function RegraForm({
             <option value="FIXO">Valor fixo (R$)</option>
           </select>
         </FormField>
-        <FormField label={form.tipo === 'PERCENTUAL' ? 'Percentual (%)' : 'Valor (R$)'} required>
-          <input required type="number" step="0.01" min="0" value={form.valor || ''}
-            onChange={(e) => setForm({ ...form, valor: parseFloat(e.target.value) || 0 })}
-            className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
+        <FormField label={form.tipo === 'PERCENTUAL' ? 'Percentual (%)' : 'Valor'} required>
+          {form.tipo === 'PERCENTUAL' ? (
+            <input required type="number" step="0.01" min="0" max="100" value={form.valor || ''}
+              onChange={(e) => setForm({ ...form, valor: parseFloat(e.target.value) || 0 })}
+              className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
+          ) : (
+            <MoneyInput required value={form.valor}
+              onChange={(v) => setForm({ ...form, valor: v })}
+              className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
+          )}
         </FormField>
       </div>
       <div className="flex justify-end gap-2 pt-4 border-t">
