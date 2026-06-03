@@ -56,6 +56,7 @@ export default function AgendarCliente() {
 
   const [step, setStep] = useState<Step>(1)
   const [unidades, setUnidades] = useState<Unidade[]>([])
+  const [unidadesCarregando, setUnidadesCarregando] = useState(true)
   const [servicos, setServicos] = useState<Servico[]>([])
   const [selectedUnidade, setSelectedUnidade] = useState<Unidade | null>(null)
   const [selectedServico, setSelectedServico] = useState<Servico | null>(null)
@@ -90,6 +91,7 @@ export default function AgendarCliente() {
   }, [step, selectedDate, selectedUnidade?.id, selectedServico?.id])
 
   async function carregarDados() {
+    setUnidadesCarregando(true)
     try {
       const unidadesData = await clientePublicoService.listarUnidades()
       setUnidades(unidadesData)
@@ -98,6 +100,8 @@ export default function AgendarCliente() {
       }
     } catch {
       showNotification('error', 'Erro ao carregar unidades')
+    } finally {
+      setUnidadesCarregando(false)
     }
   }
 
@@ -275,6 +279,7 @@ export default function AgendarCliente() {
       {step === 1 && (
         <Step1Servico
           unidades={unidades}
+          unidadesCarregando={unidadesCarregando}
           selectedUnidade={selectedUnidade}
           onUnidadeChange={setSelectedUnidade}
           busca={busca}
@@ -355,6 +360,7 @@ function ProgressHeader({ step, onBack }: { step: Step; onBack: () => void }) {
 
 function Step1Servico({
   unidades,
+  unidadesCarregando,
   selectedUnidade,
   onUnidadeChange,
   busca,
@@ -363,6 +369,7 @@ function Step1Servico({
   onServicoSelect,
 }: {
   unidades: Unidade[]
+  unidadesCarregando: boolean
   selectedUnidade: Unidade | null
   onUnidadeChange: (u: Unidade) => void
   busca: string
@@ -370,6 +377,62 @@ function Step1Servico({
   servicos: Servico[]
   onServicoSelect: (s: Servico) => void
 }) {
+  // B-NEW-1: enquanto unidades carregam, mostra skeleton em vez de "Selecione uma unidade primeiro"
+  if (unidadesCarregando) {
+    return (
+      <div className="space-y-3">
+        <div className="h-12 bg-gray-100 rounded-xl animate-pulse" />
+        <div className="h-16 bg-gray-100 rounded-xl animate-pulse" />
+        <div className="h-16 bg-gray-100 rounded-xl animate-pulse" />
+        <div className="h-16 bg-gray-100 rounded-xl animate-pulse" />
+      </div>
+    )
+  }
+
+  // B-NEW-1: zero unidades → estado de erro claro, não dead-end mudo
+  if (unidades.length === 0) {
+    return (
+      <div className="text-center py-10 px-4">
+        <MapPin className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+        <p className="text-sm font-semibold text-slate-700">Nenhuma unidade disponível</p>
+        <p className="text-xs text-gray-500 mt-1">
+          Não encontramos unidades cadastradas para sua conta. Entre em contato com o estabelecimento.
+        </p>
+      </div>
+    )
+  }
+
+  // B-NEW-1: sem unidade selecionada → mostra LISTA de unidades como cards (sempre visível, não só quando > 1)
+  if (!selectedUnidade) {
+    return (
+      <div className="space-y-3">
+        <p className="text-xs font-medium text-gray-700 mb-1">Escolha a unidade</p>
+        <ul className="space-y-2">
+          {unidades.map((u) => (
+            <li key={u.id}>
+              <button
+                type="button"
+                onClick={() => onUnidadeChange(u)}
+                className="w-full flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl hover:border-violet-300 hover:shadow-sm transition text-left"
+              >
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-violet-100 to-violet-50 flex items-center justify-center flex-shrink-0">
+                  <MapPin className="h-5 w-5 text-violet-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-slate-900 truncate">{u.nome}</p>
+                  {u.endereco && (
+                    <p className="text-xs text-gray-500 line-clamp-1">{u.endereco}</p>
+                  )}
+                </div>
+                <ChevronRight className="h-5 w-5 text-gray-300 flex-shrink-0" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-3">
       {unidades.length > 1 && (
@@ -411,7 +474,7 @@ function Step1Servico({
 
       {servicos.length === 0 ? (
         <div className="text-center py-10 text-sm text-gray-500">
-          {selectedUnidade ? 'Nenhum serviço encontrado.' : 'Selecione uma unidade primeiro.'}
+          Nenhum serviço encontrado.
         </div>
       ) : (
         <ul className="space-y-2">
