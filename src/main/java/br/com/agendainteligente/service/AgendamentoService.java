@@ -185,6 +185,40 @@ public class AgendamentoService {
         return dto;
     }
     
+    /**
+     * True quando o agendamento está sendo criado pelo PRÓPRIO cliente
+     * (perfil CLIENTE com Usuario OU cliente sem Usuario via /publico/clientes).
+     * Usado pra pular checks que só fazem sentido pra ADMIN/GERENTE criando
+     * agendamento PARA outro cliente.
+     */
+    private boolean ehClienteCriandoProprio(Long clienteIdAlvo) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) return false;
+        String email = auth.getName();
+        Cliente cliente = clienteRepository.findByEmail(email).orElse(null);
+        return cliente != null && cliente.getId().equals(clienteIdAlvo);
+    }
+
+    /**
+     * True quando o cliente pode agendar nesta unidade:
+     * 1. é a unidade principal (cliente.unidade.id == unidadeId)
+     * 2. OU está nas unidades adicionais (cliente.unidades manyToMany)
+     * 3. OU cliente NÃO TEM nenhuma unidade vinculada ainda (1º agendamento)
+     */
+    private boolean unidadeUnitadeDoCliente(Cliente cliente, Long unidadeId) {
+        if (cliente.getUnidade() == null
+                && (cliente.getUnidades() == null || cliente.getUnidades().isEmpty())) {
+            return true; // 1º agendamento — agendar cria vínculo
+        }
+        if (cliente.getUnidade() != null && cliente.getUnidade().getId().equals(unidadeId)) {
+            return true;
+        }
+        if (cliente.getUnidades() != null) {
+            return cliente.getUnidades().stream().anyMatch(u -> u.getId().equals(unidadeId));
+        }
+        return false;
+    }
+
     private void validarPermissaoCriarAgendamento(Long clienteId, Long unidadeId, Long atendenteId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) {
@@ -203,7 +237,10 @@ public class AgendamentoService {
             if (!meuCliente.getId().equals(clienteId)) {
                 throw new BusinessException("Você só pode criar agendamentos para si mesmo");
             }
-            if (meuCliente.getUnidade() == null || !meuCliente.getUnidade().getId().equals(unidadeId)) {
+            // Cliente pode agendar na unidade principal OU em qualquer unidade vinculada (M-N).
+            // Se NÃO tem nenhuma unidade ainda (1º agendamento) → libera; o agendamento
+            // será o evento que cria o vínculo (a unidade do cliente é setada elsewhere).
+            if (!unidadeUnitadeDoCliente(meuCliente, unidadeId)) {
                 throw new BusinessException("Você não tem permissão para agendar nesta unidade");
             }
             return;
@@ -245,7 +282,7 @@ public class AgendamentoService {
                 if (!meuCliente.getId().equals(clienteId)) {
                     throw new BusinessException("Você só pode criar agendamentos para si mesmo");
                 }
-                if (meuCliente.getUnidade() == null || !meuCliente.getUnidade().getId().equals(unidadeId)) {
+                if (!unidadeUnitadeDoCliente(meuCliente, unidadeId)) {
                     throw new BusinessException("Você não tem permissão para agendar nesta unidade");
                 }
                 return;
@@ -382,7 +419,14 @@ public class AgendamentoService {
         
         validarPermissaoCriarAgendamento(cliente.getId(), unidade.getId(), atendente.getId());
         Set<Long> unidadesPermitidas = obterUnidadesIdsPermitidas();
-        if (cliente.getUnidade() == null || !unidadesPermitidas.contains(cliente.getUnidade().getId())) {
+        // Esse check secundário existe pra impedir ADMIN/GERENTE de criar agendamento
+        // PARA cliente de outro tenant. Quando o próprio cliente está agendando
+        // (perfil CLIENTE ou sem Usuario), pular — `validarPermissaoCriarAgendamento`
+        // acima já validou e pode ser 1º agendamento (sem vínculo prévio).
+        boolean clienteEhProprio = ehClienteCriandoProprio(cliente.getId());
+        if (!clienteEhProprio
+                && (cliente.getUnidade() == null
+                    || !unidadesPermitidas.contains(cliente.getUnidade().getId()))) {
             throw new BusinessException("Cliente não pertence a uma unidade que você pode acessar");
         }
         
