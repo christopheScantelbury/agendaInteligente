@@ -2,6 +2,25 @@
 
 Cole esse prompt no agente do Chrome (Claude in Chrome / outro browser agent). Ele vai abrir as duas contas (cliente + profissional) e testar o fluxo completo de agendamento.
 
+> **IMPORTANTE — antes de começar:** use **DOIS perfis separados do Chrome** (não duas abas no mesmo perfil). Perfil 1 = Cliente, Perfil 2 = Profissional. Sem isso, o `localStorage` é compartilhado e contamina dados entre os logins (ex: nome do profissional vaza no formulário do cliente). Foi um bug reportado e a workaround é separar perfis.
+
+## Bugs corrigidos na última iteração — RETESTAR primeiro
+
+Antes de executar os 8 cenários, verifique se os bugs abaixo foram resolvidos. Se algum persistir, marque imediatamente como ❌ FAIL e siga com os demais:
+
+| ID | O que verificar | Esperado |
+|---|---|---|
+| **B1** | Login como `profissional@salao.demo.com` em `/login` | Vai pra `/profissional/hoje` SEM mostrar "Conta não vinculada como atendente". Se aparecer essa mensagem, peça pra rodar `POST /api/admin/seed-demo` autenticado como `chris@agendainteligente.com` |
+| **B2** | Em `/cliente/meus-agendamentos`, abra qualquer card | Campos **"Atendente:"** e **"Serviços:"** mostram VALORES (nome do profissional + nome dos serviços), não vazios |
+| **B3** | Cliente cria novo agendamento, clica "Confirmar agendamento" | **Toast verde "Agendamento realizado com sucesso!"** aparece por ~1,5s antes de redirecionar pra `/cliente/meus-agendamentos` (não pra `/cliente`) |
+| **B4** | Cliente cancela um agendamento ativo | Toast "Agendamento cancelado e movido para o histórico." aparece |
+| **B5** | Perfil cliente → seção "Conta" → botão "Sair" | Ícone do círculo em **violet** (não vermelho). Vermelho era bug |
+| **B6** | Tela `/cliente` → saudação | "Olá, **Cliente Salao**" (nome completo, não só primeiro nome) |
+| **B7** | Em perfil separado do Chrome, sem login admin, ir em Perfil → "Enviar feedback" | Form pré-preenche **"Cliente Salao"** no campo Nome (não "Profissional Salao") |
+| **B8** | Após enviar feedback | Tela de sucesso aparece com **"Mensagem enviada!"** + botões "Enviar outra" / "Voltar para meu perfil" |
+
+Reporte o resultado de cada retest como `✅ corrigido` / `❌ ainda quebrado` / `⚠️ parcial` antes de prosseguir.
+
 ---
 
 ## Prompt pro agente
@@ -233,3 +252,83 @@ Mire em **10 a 20 cenários novos** distribuídos pelas categorias. Não force q
 ### Bônus: priorize
 
 Ao final dos cenários propostos, liste os **top 5 mais críticos** pra rodar primeiro, ordenados por risco × probabilidade.
+
+---
+
+## Parte 3: cenários novos da rodada anterior — EXECUTE TAMBÉM
+
+A rodada anterior do QA já propôs 17 cenários adicionais. Execute pelo menos os **top 5 críticos** abaixo (são vetores reais de ataque ou bugs frequentes). Marque PASS/FAIL conforme template da Parte 2.
+
+### TOP 1 — SEC: cliente manipula `clienteId` no payload
+
+1. Logue como cliente, crie um agendamento normal pelo wizard
+2. F12 → Network → ache o `POST /api/publico/clientes/agendamentos` → botão direito → "Copy as fetch"
+3. Cole no console, MUDE `clienteId` pra outro número (ex: `1`, `2`, `99`)
+4. Submeta
+5. **Esperado:** servidor IGNORA o clienteId do body e usa o ID do JWT — agendamento cai pro cliente certo ou retorna 403. Se cair pro `clienteId` adulterado, é IDOR crítico
+
+### TOP 2 — SEC: copiar URL com `unidadeId` de outro tenant
+
+1. Em outra aba, logue como `cliente@academia.demo.com` / `Demo@2026`
+2. Anote o ID da unidade da Academia (via Network ou GET `/api/publico/clientes/unidades`)
+3. Faça logout, logue como `cliente@salao.demo.com`
+4. Cole `/cliente/agendar?unidadeId=<id_da_academia>` na URL
+5. **Esperado:** o wizard NÃO carrega serviços nem horários da Academia. Mostra "Unidade não encontrada" ou ignora o param
+
+### TOP 3 — Race condition: dois clientes mesmo slot simultâneo
+
+1. Em DOIS perfis Chrome separados, logue 2 clientes diferentes (`cliente@salao.demo.com` e `cliente@academia.demo.com` precisariam estar no mesmo tenant — alternativa: criar 2 cadastros no mesmo salão via guest checkout)
+2. Ambos chegam ao passo 3 do wizard com o MESMO horário do MESMO profissional
+3. Clique "Confirmar" em ambas as abas simultaneamente
+4. **Esperado:** um recebe 201, outro 409 com "Horário não disponível"
+
+### TOP 4 — SEC: profissional acessa endpoint de outra unidade
+
+1. Logue como profissional, abra F12 → Console
+2. Pegue o token: `localStorage.getItem('token')`
+3. Tente fetch de outra unidade:
+   ```js
+   fetch('/api/profissional/agendamentos/hoje?unidadeId=99', {
+     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+   }).then(r => r.json()).then(console.log)
+   ```
+4. **Esperado:** lista vazia ou 403 — nunca retorna agendamentos de unidade fora do tenant
+
+### TOP 5 — XSS no campo de feedback
+
+1. Vá em `/reclamacoes` (anônimo ou logado)
+2. No campo "Sua mensagem", cole: `<img src=x onerror=alert('xss')>` e também `<script>alert(1)</script>`
+3. Envie
+4. Logue como ADMINISTRADOR e abra `/notificacoes`
+5. **Esperado:** alert NÃO dispara em nenhum dos dois lados; texto aparece como string literal
+
+### Cenários extras (faça se sobrar tempo)
+
+- **Reagendar** (botão "Reagendar" no card do cliente) — verifica se mantém ID ou cria novo
+- **Disponibilidade janela 6 meses** — navega 20+ semanas no calendário, mede latência
+- **Tab navigation** no wizard de agendamento — fluxo completo sem mouse
+- **Estado vazio** — cliente novo sem agendamentos vê empty state amigável
+
+---
+
+## Como reportar
+
+Ao final, entregue **3 blocos**:
+
+### 1. Tabela de retests dos bugs B1–B8
+| ID | Status | Observação |
+|---|---|---|
+| B1 | ✅/❌/⚠️ | ... |
+
+### 2. Tabela dos 8 cenários originais + 5 críticos da Parte 3
+| Cenário | Status | Bugs novos encontrados |
+|---|---|---|
+
+### 3. Lista priorizada de TODOS os bugs encontrados nesta rodada
+- 🔴 Crítico: ...
+- 🟡 Médio: ...
+- 🟢 Cosmético: ...
+
+### 4. Novos cenários propostos (Parte 2 do brainstorm)
+- Mantenha o template (categoria, quem testa, passos, esperado, severidade)
+- Mire em cenários ainda NÃO cobertos pelos 17 anteriores

@@ -61,7 +61,9 @@ function servicosDoAgendamento(agendamento: any): { id: number; nome: string; va
 
 export default function HomeCliente() {
   const cliente = clientePublicoService.getCliente()
-  const primeiroNome = cliente?.nome?.split(' ')[0] ?? 'cliente'
+  // Nome completo na saudação — cliente quer reconhecer "Olá, Cliente Salao"
+  // (antes mostrava só primeiro nome, confundia em ambiente multi-tenant demo).
+  const nomeExibicao = cliente?.nome ?? 'cliente'
   const [historicoAberto, setHistoricoAberto] = useState(false)
 
   const { data: agendamentosAtivos = [], isLoading: loadingAtivos } = useQuery({
@@ -116,7 +118,7 @@ export default function HomeCliente() {
       {/* Saudação */}
       <header>
         <p className="text-sm text-gray-500">Olá,</p>
-        <h1 className="text-2xl font-bold text-slate-900">{primeiroNome}</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{nomeExibicao}</h1>
       </header>
 
       {/* Bloco 1 — Próximo horário */}

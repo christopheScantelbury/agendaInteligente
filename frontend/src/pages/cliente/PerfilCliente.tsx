@@ -95,8 +95,8 @@ export default function PerfilCliente() {
             text-left
           "
         >
-          <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
-            <LogOut className="h-5 w-5 text-red-600" />
+          <div className="w-10 h-10 rounded-full bg-violet-50 flex items-center justify-center">
+            <LogOut className="h-5 w-5 text-violet-600" />
           </div>
           <div>
             <p className="text-sm font-semibold text-slate-900">Sair</p>

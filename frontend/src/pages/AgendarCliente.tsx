@@ -222,7 +222,9 @@ export default function AgendarCliente() {
         guest: modoGuest,
       })
       showNotification('success', 'Agendamento realizado com sucesso!')
-      setTimeout(() => navigate('/cliente'), 800)
+      // Vai direto pra lista de agendamentos pro cliente ver o que criou.
+      // 1500ms dá tempo do toast ser visto antes da navegação trocar a árvore.
+      setTimeout(() => navigate('/cliente/meus-agendamentos'), 1500)
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Erro ao realizar agendamento'
       showNotification('error', errorMessage)

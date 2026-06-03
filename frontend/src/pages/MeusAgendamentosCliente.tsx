@@ -138,17 +138,20 @@ export default function MeusAgendamentosCliente() {
                 <span className="text-slate-500">Unidade:</span> {agendamento.unidade.nome}
               </div>
             )}
-            {agendamento.atendente && (
+            {agendamento.atendente && (agendamento.atendente.nomeUsuario || agendamento.atendente.usuario?.nome || agendamento.atendente.nome) && (
               <div>
                 <span className="text-slate-500">Atendente:</span>{' '}
-                {agendamento.atendente.usuario?.nome || agendamento.atendente.nome}
+                {agendamento.atendente.nomeUsuario
+                  || agendamento.atendente.usuario?.nome
+                  || agendamento.atendente.nome}
               </div>
             )}
             {agendamento.servicos && agendamento.servicos.length > 0 && (
               <div>
                 <span className="text-slate-500">Serviços:</span>{' '}
                 {agendamento.servicos
-                  .map((s: any) => s.servico?.nome || s.descricao)
+                  .map((s: any) => s.nomeServico || s.servico?.nome || s.descricao)
+                  .filter(Boolean)
                   .join(', ')}
               </div>
             )}

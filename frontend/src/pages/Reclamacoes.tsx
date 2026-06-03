@@ -17,6 +17,7 @@ import {
 import { reclamacaoService, Reclamacao, CategoriaReclamacao } from '../services/reclamacaoService'
 import { unidadeService } from '../services/unidadeService'
 import { authService } from '../services/authService'
+import { clientePublicoService } from '../services/clientePublicoService'
 import { useNotification } from '../contexts/NotificationContext'
 import { maskPhone, maskEmail } from '../utils/masks'
 
@@ -85,7 +86,14 @@ export default function Reclamacoes() {
   const params = new URLSearchParams(location.search)
   const unidadeIdParam = params.get('unidadeId')
 
-  const isAutenticado = !!authService.getToken?.() || !!authService.getUsuario?.()
+  // PRIORIZA cliente PWA (clienteToken). Se não tem clienteToken mas tem admin token,
+  // ignora o admin — não faz sentido pré-preencher reclamação como "Profissional Salao"
+  // quando o usuário veio do botão "Enviar feedback" do app cliente.
+  const clientePWA = clientePublicoService.getCliente?.()
+  const isAutenticadoComoCliente = !!clientePWA
+  const isAutenticado = isAutenticadoComoCliente
+    || !!authService.getToken?.()
+    || !!authService.getUsuario?.()
 
   const [form, setForm] = useState<Reclamacao>({
     mensagem: '',
@@ -99,9 +107,18 @@ export default function Reclamacoes() {
   const [enviado, setEnviado] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
-  // Pré-preenche dados do cliente logado quando disponível
+  // Pré-preenche dados do cliente logado quando disponível.
+  // Prioridade: clienteToken (PWA) > authService usuário (admin/profissional)
   useEffect(() => {
     if (!isAutenticado) return
+    if (clientePWA) {
+      setForm((prev) => ({
+        ...prev,
+        nomeReclamante: prev.nomeReclamante || (clientePWA as any).nome || '',
+        emailReclamante: prev.emailReclamante || (clientePWA as any).email || '',
+      }))
+      return
+    }
     const usuario = authService.getUsuario()
     if (!usuario) return
     setForm((prev) => ({
@@ -110,7 +127,7 @@ export default function Reclamacoes() {
       emailReclamante: prev.emailReclamante || (usuario as any).email || '',
       unidadeId: prev.unidadeId ?? (usuario as any).unidadeId,
     }))
-  }, [isAutenticado])
+  }, [isAutenticado, clientePWA])
 
   // Carrega unidades só quando autenticado (endpoint exige auth)
   const { data: unidades = [] } = useQuery({
