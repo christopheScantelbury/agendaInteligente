@@ -766,6 +766,10 @@ public class AgendamentoService {
         return agendamentoMapper.toDTO(agendamento);
     }
 
+    // B-NEW-5: sem @Transactional, o mapper acessa relations lazy fora da Session e
+    // dispara LazyInitializationException no response builder. A mudanca CHEGA a ser
+    // persistida (PATCH retorna 500 com sucesso parcial), mas o cliente recebe erro.
+    @Transactional
     public AgendamentoDTO atualizarStatus(Long id, StatusAgendamento novoStatus) {
         log.debug("Atualizando status do agendamento {} para {}", id, novoStatus);
         
