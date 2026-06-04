@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
@@ -14,7 +13,6 @@ import {
   X,
   CheckCircle2,
   AlertCircle,
-  Pencil,
 } from 'lucide-react'
 import BottomSheet from '../BottomSheet'
 import ConfirmDialog from '../ConfirmDialog'
@@ -54,7 +52,6 @@ const FORMAS_PAGAMENTO_FINALIZAR = [
  */
 export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
   const queryClient = useQueryClient()
-  const navigate = useNavigate()
   const { showNotification } = useNotification()
   const [confirmCancelar, setConfirmCancelar] = useState(false)
   const [finalizandoOpen, setFinalizandoOpen] = useState(false)
@@ -231,17 +228,6 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
                   </button>
                 )}
 
-                <button
-                  onClick={() => {
-                    onClose()
-                    navigate(`/agendamentos-legacy?openId=${agendamento.id}`)
-                  }}
-                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition"
-                >
-                  <Pencil className="h-4 w-4" />
-                  Editar no detalhe completo
-                </button>
-
                 {podeCancelar && (
                   <button
                     onClick={() => setConfirmCancelar(true)}
@@ -259,7 +245,7 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
               <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-start gap-2">
                 <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0" />
                 <p className="text-sm text-emerald-800">
-                  Atendimento finalizado. Para emitir NFS-e, acesse o detalhe completo no legado.
+                  Atendimento finalizado.
                 </p>
               </div>
             )}

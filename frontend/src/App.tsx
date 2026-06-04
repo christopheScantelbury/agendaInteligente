@@ -38,9 +38,7 @@ const Servicos = lazy(() => import('./pages/Servicos'))
 const Usuarios = lazy(() => import('./pages/Usuarios'))
 const Clientes = lazy(() => import('./pages/Clientes'))
 const ClienteFormPage = lazy(() => import('./pages/ClienteFormPage'))
-const Agendamentos = lazy(() => import('./pages/Agendamentos'))
 const AgendamentosPageV2 = lazy(() => import('./pages/agendamentos/AgendamentosPage'))
-const NovoAgendamento = lazy(() => import('./pages/NovoAgendamento'))
 const Notificacoes = lazy(() => import('./pages/Notificacoes'))
 const Empresas = lazy(() => import('./pages/Empresas'))
 const Perfis = lazy(() => import('./pages/Perfis'))
@@ -453,13 +451,12 @@ function App() {
                           element={<RequirePermissao path="/profissionais" fallbackPaths={['/usuarios']}><Profissionais /></RequirePermissao>}
                         />
                         <Route path="/atendentes" element={<Navigate to="/profissionais" replace />} />
-                        {/* Slice 5 do redesign #140: /agendamentos agora aponta para a V2.
-                            O legado fica em /agendamentos-legacy pra fallback em edge cases
-                            (recorrência, sinal, NFS-e) acionados pelo DetalhesSheet. */}
+                        {/* #153: redesign #140 Slice 5 concluido — telas legadas
+                            NovoAgendamento.tsx e Agendamentos.tsx removidas (#153). */}
                         <Route path="/agendamentos" element={<RequirePermissao path="/agendamentos"><AgendamentosPageV2 /></RequirePermissao>} />
                         <Route path="/agendamentos-v2" element={<Navigate to="/agendamentos" replace />} />
-                        <Route path="/agendamentos-legacy" element={<RequirePermissao path="/agendamentos"><Agendamentos /></RequirePermissao>} />
-                        <Route path="/agendamentos/novo" element={<RequirePermissao path="/agendamentos"><NovoAgendamento /></RequirePermissao>} />
+                        <Route path="/agendamentos-legacy" element={<Navigate to="/agendamentos" replace />} />
+                        <Route path="/agendamentos/novo" element={<Navigate to="/agendamentos" replace />} />
                         <Route path="/notificacoes" element={<RequirePermissao path="/notificacoes"><Notificacoes /></RequirePermissao>} />
                         <Route path="/empresas" element={redirectAdminUnico(<RequirePermissao path="/empresas"><Empresas /></RequirePermissao>)} />
                         <Route path="/perfis" element={<RequirePermissao path="/perfis"><Perfis /></RequirePermissao>} />
