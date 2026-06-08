@@ -48,6 +48,7 @@ public class ConviteService {
     private final ClienteRepository clienteRepository;
     private final PasswordEncoder passwordEncoder;
     private final PerfilService perfilService;
+    private final br.com.agendainteligente.repository.PlanoRepository planoRepository;
 
     private static final String PATH_CONVITES_ACESSO = "/convites-acesso";
     private static final String PATH_CONVITES_CLIENTE = "/convites-cliente";
@@ -294,9 +295,22 @@ public class ConviteService {
                 .build();
         gerenteRepository.save(gerente);
 
-        if (dto.getPlanoId() != null) {
-            log.info("planoId={} recebido no cadastro de ADMINISTRADOR — TODO #139: aplicar plano", dto.getPlanoId());
+        // #139: aplica plano. Se dto.planoId vier, usa ele; senão default Trial.
+        var plano = dto.getPlanoId() != null
+                ? planoRepository.findById(dto.getPlanoId())
+                    .orElseThrow(() -> new BusinessException("Plano selecionado não encontrado."))
+                : planoRepository.findByNome("TRIAL")
+                    .orElseThrow(() -> new BusinessException("Plano Trial não encontrado no catálogo."));
+        empresa.setPlano(plano);
+        empresa.setPlanoInicio(java.time.LocalDate.now());
+        if ("TRIAL".equals(plano.getNome()) && plano.getDuracaoTrialDias() != null) {
+            empresa.setPlanoExpiracao(java.time.LocalDate.now().plusDays(plano.getDuracaoTrialDias()));
+        } else {
+            empresa.setPlanoExpiracao(null); // pagos: vigência rolante via billing
         }
+        empresaRepository.save(empresa);
+        log.info("Plano aplicado à empresa {}: {} (expira em {})",
+                empresa.getId(), plano.getNome(), empresa.getPlanoExpiracao());
 
         convite.setUsadoEm(LocalDateTime.now());
         conviteAcessoRepository.save(convite);

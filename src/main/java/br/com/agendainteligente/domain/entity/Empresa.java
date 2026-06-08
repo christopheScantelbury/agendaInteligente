@@ -80,6 +80,18 @@ public class Empresa {
     @Column(name = "data_expiracao_acesso")
     private java.time.LocalDate dataExpiracaoAcesso;
 
+    /** #139: plano comercial atual da empresa. Default Trial no cadastro. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "plano_id")
+    private Plano plano;
+
+    @Column(name = "plano_inicio")
+    private java.time.LocalDate planoInicio;
+
+    /** Só preenchido pro Trial (data_criacao + duracao_trial_dias). NULL pros pagos. */
+    @Column(name = "plano_expiracao")
+    private java.time.LocalDate planoExpiracao;
+
     @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Unidade> unidades;
 

@@ -4,6 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { Eye, EyeOff, Loader2, AlertCircle, Check, Plus, Trash2, Building2 } from 'lucide-react'
 import api from '../services/api'
 import { useNotification } from '../contexts/NotificationContext'
+import { planoService, formatLimite, formatPrecoMensal } from '../services/planoService'
 
 interface UnidadeOpcao {
   id: number
@@ -39,6 +40,8 @@ interface FormState {
   // Fluxo GERENTE (admin global)
   nomeEmpresa: string
   unidades: UnidadeForm[]
+  /** #139: plano escolhido (null = default Trial no backend) */
+  planoId: number | null
   // Fluxo ATENDENTE
   cpf: string
   telefone: string
@@ -75,6 +78,7 @@ export default function CadastroPorConvite() {
     confirmarSenha: '',
     nomeEmpresa: '',
     unidades: [{ nome: '' }],
+    planoId: null,
     cpf: '',
     telefone: '',
     unidadesIds: [],
@@ -88,6 +92,13 @@ export default function CadastroPorConvite() {
     },
     enabled: !!token,
     retry: false,
+  })
+
+  // #139: catálogo de planos pra exibir no seletor (só ADMINISTRADOR escolhe)
+  const { data: planos = [] } = useQuery({
+    queryKey: ['planos'],
+    queryFn: planoService.listar,
+    enabled: info?.tipoDestinatario === 'ADMINISTRADOR',
   })
 
   const finalizarMutation = useMutation({
@@ -167,7 +178,8 @@ export default function CadastroPorConvite() {
         senha: form.senha,
         nomeEmpresa: form.nomeEmpresa.trim(),
         unidades: unidadesValidas.map((u) => ({ nome: u.nome.trim() })),
-        // planoId: TODO #139 — campo aceito pelo backend mas ignorado por ora
+        // #139: agora aplicado de verdade pelo backend
+        planoId: form.planoId ?? undefined,
       })
     }
   }
@@ -452,10 +464,53 @@ export default function CadastroPorConvite() {
                 <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2.5">
                   Sua empresa
                 </h2>
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3 text-xs text-amber-900">
-                  📋 <strong>Plano da empresa</strong> — definido pelo time da plataforma após o cadastro.
-                  Você receberá um email com os detalhes do plano e ativação.
-                </div>
+                {/* #139: seletor de planos. Default = Trial (14 dias gratuito sem cartão) */}
+                {planos.length > 0 && (
+                  <div className="mb-4">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Plano da empresa
+                    </label>
+                    <p className="text-xs text-slate-500 mb-2">
+                      Comece com o <strong>Trial</strong> (gratuito por 14 dias, sem cartão).
+                      Você pode mudar de plano a qualquer momento depois.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {planos.map((p) => {
+                        const selecionado = form.planoId === p.id || (form.planoId == null && p.nome === 'TRIAL')
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => setForm((prev) => ({ ...prev, planoId: p.id }))}
+                            className={`text-left p-3 rounded-xl border-2 transition ${
+                              selecionado
+                                ? 'border-violet-500 bg-violet-50 shadow-sm'
+                                : 'border-slate-200 bg-white hover:border-violet-300'
+                            }`}
+                          >
+                            <div className="flex items-baseline justify-between mb-1">
+                              <span className="text-sm font-bold text-slate-900">{p.nomePublico}</span>
+                              <span className="text-xs font-semibold text-violet-700">
+                                {p.precoMensalBrl > 0 ? `${formatPrecoMensal(p.precoMensalBrl)}/mês` : 'Grátis'}
+                              </span>
+                            </div>
+                            <ul className="text-[11px] text-slate-600 space-y-0.5">
+                              <li>{formatLimite(p.limiteUnidades)} {p.limiteUnidades === 1 ? 'unidade' : 'unidades'}</li>
+                              <li>{formatLimite(p.limiteProfissionais)} profissionais</li>
+                              <li>{formatLimite(p.limiteAgendamentosMes)} agendamentos/mês</li>
+                              <li>{formatLimite(p.limiteNfseMes)} NFS-e/mês</li>
+                              {p.nome === 'TRIAL' && p.duracaoTrialDias && (
+                                <li className="text-amber-700 font-semibold mt-1">
+                                  Trial expira em {p.duracaoTrialDias} dias
+                                </li>
+                              )}
+                            </ul>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-3">
                   <div>
                     <label htmlFor="nomeEmpresa" className="block text-xs font-semibold text-slate-700 mb-1.5">

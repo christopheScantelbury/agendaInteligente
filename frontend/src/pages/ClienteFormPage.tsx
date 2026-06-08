@@ -12,6 +12,7 @@ import Button from '../components/Button'
 import { useNotification } from '../contexts/NotificationContext'
 import { maskCPF, maskCNPJ, maskPhone, maskEmail, maskCEP } from '../utils/masks'
 import { buscarEnderecoPorCep } from '../utils/viaCep'
+import DateInput from '../components/forms/DateInput'
 
 // Classes do input padrão (limpa) e do input com erro (borda vermelha + ring rosa).
 // Usa quando precisamos destacar campos que falharam validação local OU backend.
@@ -489,12 +490,12 @@ export default function ClienteFormPage() {
 
           <div>
             <label className="block text-xs font-semibold text-slate-600 mb-1">Data de nascimento</label>
-            <input
-              type="date"
+            {/* #146: DateInput moderno — input nativo no mobile, 3 selects (dia/mês/ano) no desktop */}
+            <DateInput
               value={formData.dataNascimento || ''}
-              onChange={(e) => setFormData({ ...formData, dataNascimento: e.target.value })}
-              max={new Date().toISOString().split('T')[0]}
-              className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
+              onChange={(v) => setFormData({ ...formData, dataNascimento: v })}
+              futuroDesabilitado
+              className="mt-1"
             />
           </div>
         </section>
