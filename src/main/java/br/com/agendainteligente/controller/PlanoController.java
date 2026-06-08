@@ -4,10 +4,13 @@ import br.com.agendainteligente.domain.entity.Empresa;
 import br.com.agendainteligente.domain.entity.Plano;
 import br.com.agendainteligente.dto.PlanoDTO;
 import br.com.agendainteligente.repository.EmpresaRepository;
+import br.com.agendainteligente.exception.ResourceNotFoundException;
 import br.com.agendainteligente.repository.PlanoRepository;
 import br.com.agendainteligente.security.SecurityHelper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -54,6 +57,32 @@ public class PlanoController {
         resp.put("planoInicio", empresa.getPlanoInicio());
         resp.put("planoExpiracao", empresa.getPlanoExpiracao());
         return ResponseEntity.ok(resp);
+    }
+
+    /**
+     * Edita preço/limites/descrição do plano. NOME técnico (TRIAL/STARTER/...) é imutável.
+     * Só ADMIN GLOBAL pode editar — ADMINISTRADOR de tenant não tem permissão.
+     */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') and !hasAuthority('ROLE_ADMINISTRADOR')")
+    @Transactional
+    public ResponseEntity<PlanoDTO> atualizar(@PathVariable Long id, @RequestBody PlanoDTO dto) {
+        Plano plano = planoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Plano não encontrado"));
+        // Nome técnico permanece imutável (referenciado no código por findByNome("TRIAL"))
+        if (dto.getNomePublico() != null && !dto.getNomePublico().isBlank()) plano.setNomePublico(dto.getNomePublico().trim());
+        if (dto.getDescricao() != null) plano.setDescricao(dto.getDescricao());
+        if (dto.getPrecoMensalBrl() != null) plano.setPrecoMensalBrl(dto.getPrecoMensalBrl());
+        // null intencional = ilimitado (preserva semântica)
+        plano.setLimiteUnidades(dto.getLimiteUnidades());
+        plano.setLimiteProfissionais(dto.getLimiteProfissionais());
+        plano.setLimiteAgendamentosMes(dto.getLimiteAgendamentosMes());
+        if (dto.getLimiteNfseMes() != null) plano.setLimiteNfseMes(dto.getLimiteNfseMes());
+        plano.setPrecoExcedenteNfseBrl(dto.getPrecoExcedenteNfseBrl());
+        if (dto.getDuracaoTrialDias() != null) plano.setDuracaoTrialDias(dto.getDuracaoTrialDias());
+        if (dto.getOrdem() != null) plano.setOrdem(dto.getOrdem());
+        if (dto.getAtivo() != null) plano.setAtivo(dto.getAtivo());
+        return ResponseEntity.ok(toDTO(planoRepository.save(plano)));
     }
 
     private PlanoDTO toDTO(Plano p) {

@@ -61,6 +61,8 @@ const PerfilCliente = lazy(() => import('./pages/cliente/PerfilCliente'))
 const DashboardPlataforma = lazy(() => import('./pages/plataforma/DashboardPlataforma'))
 const EmpresasPlataforma = lazy(() => import('./pages/plataforma/EmpresasPlataforma'))
 const AuditoriaPlataforma = lazy(() => import('./pages/plataforma/AuditoriaPlataforma'))
+const PlanosAdmin = lazy(() => import('./pages/admin/PlanosAdmin'))
+const LandingAdmin = lazy(() => import('./pages/admin/LandingAdmin'))
 const DashboardGerente = lazy(() => import('./pages/gerente/DashboardGerente'))
 const HojeProfissional = lazy(() => import('./pages/profissional/HojeProfissional'))
 const AgendaProfissional = lazy(() => import('./pages/profissional/AgendaProfissional'))
@@ -328,6 +330,26 @@ function App() {
                     ? <Navigate to="/login" replace />
                     : (authService.getUsuario()?.perfil ?? '').toUpperCase() === 'ADMIN'
                       ? <Layout><AuditoriaPlataforma /></Layout>
+                      : <Navigate to="/" replace />
+                }
+              />
+              <Route
+                path="/plataforma/planos"
+                element={
+                  !authService.isAuthenticated()
+                    ? <Navigate to="/login" replace />
+                    : (authService.getUsuario()?.perfil ?? '').toUpperCase() === 'ADMIN'
+                      ? <Layout><PlanosAdmin /></Layout>
+                      : <Navigate to="/" replace />
+                }
+              />
+              <Route
+                path="/plataforma/landing"
+                element={
+                  !authService.isAuthenticated()
+                    ? <Navigate to="/login" replace />
+                    : (authService.getUsuario()?.perfil ?? '').toUpperCase() === 'ADMIN'
+                      ? <Layout><LandingAdmin /></Layout>
                       : <Navigate to="/" replace />
                 }
               />

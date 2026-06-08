@@ -36,6 +36,12 @@ export const planoService = {
     const { data } = await api.get<PlanoAtual>('/planos/meu')
     return data
   },
+
+  /** Edita preço/limites/descrição. NOME técnico é imutável. Só ADMIN GLOBAL. */
+  atualizar: async (id: number, plano: Partial<Plano>): Promise<Plano> => {
+    const { data } = await api.put<Plano>(`/planos/${id}`, plano)
+    return data
+  },
 }
 
 /** Formata limite como "∞" quando null, número senão. */

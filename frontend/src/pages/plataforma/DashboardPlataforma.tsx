@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import {
   Building2,
   Calendar,
@@ -7,6 +8,11 @@ import {
   TrendingUp,
   Activity,
   AlertCircle,
+  Tags,
+  LayoutDashboard,
+  Eye,
+  History,
+  ChevronRight,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -91,15 +97,46 @@ export default function DashboardPlataforma() {
         />
       </div>
 
+      {/* Quick-links das telas de plataforma */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+        <QuickLink to="/plataforma/empresas" icon={Eye} titulo="Empresas" desc="Listar, assumir sessão" />
+        <QuickLink to="/plataforma/auditoria" icon={History} titulo="Auditoria" desc="Log de eventos da plataforma" />
+        <QuickLink to="/plataforma/planos" icon={Tags} titulo="Planos" desc="Editar preço, limites e descrição" />
+        <QuickLink to="/plataforma/landing" icon={LayoutDashboard} titulo="Landing Page" desc="Hero, stats, destaques, comparativo" />
+      </div>
+
       <div className="bg-violet-50 border border-violet-200 rounded-xl p-4 text-sm text-violet-900">
         <p className="font-semibold mb-1">Visão de plataforma</p>
         <p className="text-violet-700">
           Esta tela é exclusiva do administrador global e mostra apenas dados agregados.
           Para acessar dados operacionais de uma empresa específica, use a ação{' '}
-          <strong>Assumir sessão</strong> (em breve) na listagem de empresas.
+          <strong>Assumir sessão</strong> na listagem de empresas.
         </p>
       </div>
     </div>
+  )
+}
+
+function QuickLink({ to, icon: Icon, titulo, desc }: {
+  to: string
+  icon: typeof Building2
+  titulo: string
+  desc: string
+}) {
+  return (
+    <Link
+      to={to}
+      className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 bg-white hover:border-violet-300 hover:shadow-sm transition group"
+    >
+      <div className="h-10 w-10 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center flex-shrink-0 group-hover:bg-violet-200 transition">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-slate-900">{titulo}</p>
+        <p className="text-xs text-slate-500 truncate">{desc}</p>
+      </div>
+      <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-violet-500 transition" />
+    </Link>
   )
 }
 

@@ -1,4 +1,7 @@
 import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { landingConfigService, LandingContent } from '../services/landingConfigService'
+import { planoService, formatLimite } from '../services/planoService'
 
 // ─── Logo mark SVG ───────────────────────────────────────────────────────────
 function LogoMark({ size = 32 }: { size?: number }) {
@@ -158,7 +161,34 @@ function PricingCard({
 }
 
 // ─── Main landing page ────────────────────────────────────────────────────────
+/**
+ * Acessor seguro com fallback hardcoded.
+ * `cfg?.hero?.tituloLinha1 ?? FALLBACK` — backend pode ter campos ausentes
+ * sem quebrar a renderização.
+ */
+function pick<T>(v: T | undefined | null, fallback: T): T {
+  return v != null && v !== ('' as any) ? v : fallback
+}
+
 export default function Landing() {
+  // Conteúdo configurável (admin global edita em /plataforma/landing).
+  // useQuery devolve undefined no primeiro render — fallbacks hardcoded mantêm
+  // a renderização funcional pra SEO/no-JS/backend down.
+  const { data: cfg } = useQuery<LandingContent>({
+    queryKey: ['landing-config'],
+    queryFn: landingConfigService.get,
+    staleTime: 5 * 60_000, // 5 min — landing muda raramente
+    retry: 1,
+  })
+
+  // Planos vêm do backend (também editáveis em /plataforma/planos).
+  const { data: planos = [] } = useQuery({
+    queryKey: ['planos'],
+    queryFn: planoService.listar,
+    staleTime: 5 * 60_000,
+  })
+  const planosPagos = planos.filter((p) => p.nome !== 'TRIAL').sort((a, b) => a.ordem - b.ordem)
+
   return (
     <div className="min-h-screen bg-slate-50" style={{ fontFamily: 'Outfit, system-ui, sans-serif' }}>
 
@@ -212,31 +242,29 @@ export default function Landing() {
             </div>
 
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 leading-[1.08] tracking-tight mb-6">
-              O único agendamento<br />
-              com <span className="text-violet-600">NF-e integrada</span><br />
-              para serviços
+              {pick(cfg?.hero?.tituloLinha1, 'O único agendamento')}<br />
+              <span className="text-violet-600">{pick(cfg?.hero?.tituloLinha2, 'que emite a NFS-e')}</span>
             </h1>
 
             <p className="text-lg text-slate-500 leading-relaxed mb-8 max-w-md">
-              Agenda online, gestão de equipe, lembretes automáticos e emissão de nota fiscal —
-              tudo em um lugar. Sem contabilista, sem planilha, sem dor de cabeça.
+              {pick(cfg?.hero?.subtitulo, 'Agenda online, gestão de equipe, lembretes automáticos e emissão de nota fiscal — tudo em um lugar. Sem contabilista, sem planilha, sem dor de cabeça.')}
             </p>
 
             <div className="flex flex-wrap gap-3 mb-10">
               <Link
-                to="/cadastro"
+                to={pick(cfg?.hero?.ctaPrimarioLink, '/cadastro')}
                 className="inline-flex items-center gap-2 px-6 py-3.5 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-base transition-all shadow-brand hover:shadow-brand-lg hover:-translate-y-0.5"
               >
-                Começar 14 dias grátis
+                {pick(cfg?.hero?.ctaPrimario, 'Começar 14 dias grátis')}
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </Link>
               <Link
-                to="/login"
+                to={pick(cfg?.hero?.ctaSecundarioLink, '/login')}
                 className="inline-flex items-center gap-2 px-6 py-3.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold rounded-xl text-base border border-slate-200 transition-all"
               >
-                Ver demonstração
+                {pick(cfg?.hero?.ctaSecundario, 'Ver demonstração')}
               </Link>
             </div>
 
@@ -263,19 +291,18 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── STATS STRIP ── */}
+      {/* ── STATS STRIP (configurável em /plataforma/landing) ── */}
       <section className="bg-slate-900">
         <div className="max-w-6xl mx-auto px-6 py-10 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8 text-center">
-          {[
-            { value: 'R$ 3,8bi', label: 'Mercado de agendamento no Brasil', sub: '22% crescimento ao ano' },
-            { value: '18M+', label: 'Profissionais com atendimento recorrente', sub: 'Salões, clínicas, academias...' },
-            { value: '62%', label: 'Ainda usa WhatsApp ou agenda em papel', sub: 'Mercado endereçável imediato' },
-            { value: '0', label: 'Concorrentes com NF-e nativa', sub: 'Trinks, Doctoralia, EasyFit — nenhum' },
-          ].map((s) => (
-            <div key={s.value}>
-              <div className="text-3xl font-black text-white tracking-tight mb-1">{s.value}</div>
-              <div className="text-sm font-semibold text-slate-300 leading-snug mb-1">{s.label}</div>
-              <div className="text-xs text-slate-500">{s.sub}</div>
+          {pick(cfg?.stats, [
+            { valor: 'R$ 3,8bi', label: 'Mercado de agendamento no Brasil' },
+            { valor: '18M+', label: 'Profissionais com atendimento recorrente' },
+            { valor: '62%', label: 'Ainda usa WhatsApp ou agenda em papel' },
+            { valor: '0', label: 'Concorrentes com NF-e nativa' },
+          ]).map((s, idx) => (
+            <div key={`${s.valor}-${idx}`}>
+              <div className="text-3xl font-black text-white tracking-tight mb-1">{s.valor}</div>
+              <div className="text-sm font-semibold text-slate-300 leading-snug">{s.label}</div>
             </div>
           ))}
         </div>
@@ -444,40 +471,19 @@ export default function Landing() {
               </tr>
             </thead>
             <tbody>
-              {[
-                {
-                  name: '★ AgendaInteligente',
-                  our: true,
-                  cols: ['✓ Completo', '✓ Sim', '✓ Nativa', '✓ Email', 'R$49–199'],
-                  colTypes: ['has', 'has', 'has', 'has', 'has'],
-                },
-                {
-                  name: 'Trinks',
-                  cols: ['✓', '⚠ Limitado', '✕', '✓', 'R$89–299'],
-                  colTypes: ['has', 'partial', 'no', 'has', 'neutral'],
-                },
-                {
-                  name: 'Doctoralia',
-                  cols: ['✓', '⚠', '✕', '⚠', 'R$149–449'],
-                  colTypes: ['has', 'partial', 'no', 'partial', 'neutral'],
-                },
-                {
-                  name: 'EasyFit',
-                  cols: ['✓', '✓', '✕', '⚠', 'R$199–599'],
-                  colTypes: ['has', 'has', 'no', 'partial', 'neutral'],
-                },
-                {
-                  name: 'Calendly',
-                  cols: ['✓', '✕', '✕', '✕', 'US$8–16'],
-                  colTypes: ['has', 'no', 'no', 'no', 'neutral'],
-                },
-              ].map((row) => (
-                <tr key={row.name} className={row.our ? 'bg-violet-50' : 'hover:bg-slate-50'}>
-                  <td className={`px-5 py-4 text-sm font-bold border-b border-slate-100 ${row.our ? 'text-violet-700' : 'text-slate-700'}`}>
-                    {row.name}
+              {pick(cfg?.comparativo?.concorrentes, [
+                { nome: '★ AgendaInteligente', destaque: true, cols: ['✓ Completo', '✓ Sim', '✓ Nativa', '✓ Email', 'R$49–199'], tipos: ['has', 'has', 'has', 'has', 'has'] as Array<'has' | 'no' | 'partial' | 'neutral'> },
+                { nome: 'Trinks', destaque: false, cols: ['✓', '⚠ Limitado', '✕', '✓', 'R$89–299'], tipos: ['has', 'partial', 'no', 'has', 'neutral'] as Array<'has' | 'no' | 'partial' | 'neutral'> },
+                { nome: 'Doctoralia', destaque: false, cols: ['✓', '⚠', '✕', '⚠', 'R$149–449'], tipos: ['has', 'partial', 'no', 'partial', 'neutral'] as Array<'has' | 'no' | 'partial' | 'neutral'> },
+                { nome: 'EasyFit', destaque: false, cols: ['✓', '✓', '✕', '⚠', 'R$199–599'], tipos: ['has', 'has', 'no', 'partial', 'neutral'] as Array<'has' | 'no' | 'partial' | 'neutral'> },
+                { nome: 'Calendly', destaque: false, cols: ['✓', '✕', '✕', '✕', 'US$8–16'], tipos: ['has', 'no', 'no', 'no', 'neutral'] as Array<'has' | 'no' | 'partial' | 'neutral'> },
+              ]).map((row, rowIdx) => (
+                <tr key={`${row.nome}-${rowIdx}`} className={row.destaque ? 'bg-violet-50' : 'hover:bg-slate-50'}>
+                  <td className={`px-5 py-4 text-sm font-bold border-b border-slate-100 ${row.destaque ? 'text-violet-700' : 'text-slate-700'}`}>
+                    {row.nome}
                   </td>
                   {row.cols.map((cell, i) => {
-                    const type = row.colTypes[i]
+                    const type = row.tipos[i]
                     const cls = type === 'has'
                       ? 'text-emerald-500 font-bold'
                       : type === 'no'
@@ -510,55 +516,38 @@ export default function Landing() {
             <p className="text-slate-500">NFS-e nativa em todos os planos — você emite nota direto do atendimento, sem abrir outro sistema.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
-            <PricingCard
-              tier="Starter"
-              price="49"
-              period="por mês · ideal pra quem está começando"
-              cta="Começar grátis"
-              ctaLink="/cadastro"
-              features={[
-                '1 unidade · até 3 profissionais',
-                'Até 200 agendamentos/mês',
-                'Link público de agendamento',
-                'Lembrete automático',
-                '20 NFS-e/mês inclusas',
-              ]}
-              noFeatures={['Multi-unidade', 'Relatórios avançados']}
-            />
-            <PricingCard
-              tier="Pro"
-              price="99"
-              period="por mês · pra negócios em crescimento"
-              cta="Assinar agora"
-              ctaLink="/cadastro"
-              featured
-              features={[
-                'Tudo do Starter',
-                'Até 3 unidades · 10 profissionais',
-                'Até 800 agendamentos/mês',
-                '100 NFS-e/mês inclusas',
-                'Controle financeiro completo',
-                'Relatórios avançados',
-                'Histórico do cliente',
-              ]}
-            />
-            <PricingCard
-              tier="Business"
-              price="199"
-              period="por mês · pra redes e operações grandes"
-              cta="Falar com vendas"
-              ctaLink="/cadastro"
-              features={[
-                'Tudo do Pro',
-                'Unidades ilimitadas',
-                'Profissionais ilimitados',
-                'Agendamentos ilimitados',
-                '500 NFS-e/mês inclusas',
-                'Painel consolidado multi-empresa',
-                'API para integração',
-                'Suporte prioritário SLA 4h',
-              ]}
-            />
+            {/* Pricing 100% dinâmico — vem de GET /api/planos (editor em /plataforma/planos).
+                Pula Trial — Trial é só padrão de cadastro, não vai pra landing. */}
+            {planosPagos.length > 0 ? (
+              planosPagos.map((p, idx) => {
+                const featured = idx === 1 // do meio destacado (convenção UX: Pro)
+                const features: string[] = [
+                  `${formatLimite(p.limiteUnidades)} ${p.limiteUnidades === 1 ? 'unidade' : 'unidades'} · ${formatLimite(p.limiteProfissionais)} profissionais`,
+                  `${formatLimite(p.limiteAgendamentosMes)} agendamentos/mês`,
+                  `${p.limiteNfseMes.toLocaleString('pt-BR')} NFS-e/mês inclusas`,
+                  p.descricao ?? 'Suporte por email',
+                ]
+                return (
+                  <PricingCard
+                    key={p.id}
+                    tier={p.nomePublico}
+                    price={String(Math.round(Number(p.precoMensalBrl)))}
+                    period="por mês · cancele quando quiser"
+                    cta={featured ? 'Assinar agora' : 'Começar grátis'}
+                    ctaLink="/cadastro"
+                    featured={featured}
+                    features={features}
+                  />
+                )
+              })
+            ) : (
+              // Fallback hardcoded (carregamento inicial / backend down / sem JS)
+              <>
+                <PricingCard tier="Starter" price="49" period="por mês · ideal pra quem está começando" cta="Começar grátis" ctaLink="/cadastro" features={['1 unidade · até 3 profissionais', 'Até 200 agendamentos/mês', '20 NFS-e/mês inclusas']} />
+                <PricingCard tier="Pro" price="99" period="por mês · pra negócios em crescimento" cta="Assinar agora" ctaLink="/cadastro" featured features={['Tudo do Starter', 'Até 3 unidades · 10 profissionais', '800 agendamentos/mês', '100 NFS-e/mês']} />
+                <PricingCard tier="Business" price="199" period="por mês · pra redes e operações grandes" cta="Falar com vendas" ctaLink="/cadastro" features={['Tudo do Pro', 'Unidades/profissionais ilimitados', '500 NFS-e/mês']} />
+              </>
+            )}
           </div>
           <p className="text-center text-sm text-slate-400 mt-6">
             Todos os planos começam com <strong className="text-slate-600">Trial gratuito de 14 dias</strong> · Sem cartão de crédito · Cancele quando quiser
@@ -599,16 +588,16 @@ export default function Landing() {
             <LogoMark size={36} />
           </div>
           <h2 className="text-3xl font-black text-white mb-4 tracking-tight">
-            Pronto para parar de perder clientes para a concorrência?
+            {pick(cfg?.footerCta?.titulo, 'Pronto para parar de perder clientes para a concorrência?')}
           </h2>
           <p className="text-slate-400 text-lg mb-8">
-            14 dias grátis. Sem cartão. Configuração em 5 minutos.
+            {pick(cfg?.footerCta?.subtitulo, '14 dias grátis. Sem cartão. Configuração em 5 minutos.')}
           </p>
           <Link
             to="/cadastro"
             className="inline-flex items-center gap-2 px-8 py-4 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl text-base transition-all shadow-brand hover:shadow-brand-lg hover:-translate-y-0.5"
           >
-            Criar conta gratuita
+            {pick(cfg?.footerCta?.cta, 'Criar conta gratuita')}
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>

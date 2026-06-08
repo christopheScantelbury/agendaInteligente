@@ -36,6 +36,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/publico/**").permitAll() // Endpoints públicos para clientes
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/planos").permitAll() // #138: catálogo público (GET /api/planos/meu segue autenticado)
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/landing-config").permitAll() // Landing config público (PUT segue ADMIN GLOBAL)
                         .requestMatchers("/api/nfse/test/**").permitAll()
                         .requestMatchers("/api/webhooks/**").permitAll() // Callbacks externos (NotaFácil, etc.)
                         .requestMatchers("/api/admin/seed-demo").permitAll() // Protegido por X-Seed-Token (APP_SEED_TOKEN)
