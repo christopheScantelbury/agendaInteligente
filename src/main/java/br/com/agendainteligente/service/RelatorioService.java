@@ -303,7 +303,7 @@ public class RelatorioService {
         Usuario u = usuarioRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
         return switch (u.getPerfil()) {
-            case ADMIN -> unidadeRepository.findAll().stream().map(Unidade::getId).collect(Collectors.toSet());
+            case ADMIN -> new java.util.HashSet<>(unidadeRepository.findAllIds());
             case ADMINISTRADOR -> unidadeRepository.findByAdminUnicoId(u.getId()).stream()
                     .map(Unidade::getId).collect(Collectors.toSet());
             case GERENTE -> {

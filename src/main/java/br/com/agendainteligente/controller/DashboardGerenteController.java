@@ -65,9 +65,9 @@ public class DashboardGerenteController {
         LocalDateTime inicioAnterior = anterior.atDay(1).atStartOfDay();
         LocalDateTime fimAnterior = anterior.atEndOfMonth().atTime(23, 59, 59);
 
-        List<Agendamento> doEscopo = agendamentoRepository.findAll().stream()
-                .filter(a -> a.getUnidade() != null && unidadeIds.contains(a.getUnidade().getId()))
-                .toList();
+        List<Agendamento> doEscopo = unidadeIds.isEmpty()
+                ? List.of()
+                : agendamentoRepository.findByUnidadeIdIn(unidadeIds);
 
         BigDecimal faturamentoAtual = somaFaturamentoConcluido(doEscopo, inicioAtual, fimAtual);
         BigDecimal faturamentoAnterior = somaFaturamentoConcluido(doEscopo, inicioAnterior, fimAnterior);
@@ -144,8 +144,9 @@ public class DashboardGerenteController {
         LocalDateTime corteInicio = inicioAnterior.atStartOfDay();
         LocalDateTime corteFim = hoje.atTime(23, 59, 59);
 
-        List<Agendamento> doEscopo = agendamentoRepository.findAll().stream()
-                .filter(a -> a.getUnidade() != null && unidadeIds.contains(a.getUnidade().getId()))
+        List<Agendamento> doEscopo = (unidadeIds.isEmpty()
+                ? List.<Agendamento>of()
+                : agendamentoRepository.findByUnidadeIdIn(unidadeIds)).stream()
                 .filter(a -> a.getDataHoraInicio() != null
                         && !a.getDataHoraInicio().isBefore(corteInicio)
                         && !a.getDataHoraInicio().isAfter(corteFim))
@@ -269,8 +270,9 @@ public class DashboardGerenteController {
         LocalDateTime fimHoje = hoje.atTime(23, 59, 59);
         LocalDateTime agora = LocalDateTime.now();
 
-        List<Agendamento> agendamentosHoje = agendamentoRepository.findAll().stream()
-                .filter(a -> a.getUnidade() != null && unidadeIds.contains(a.getUnidade().getId()))
+        List<Agendamento> agendamentosHoje = (unidadeIds.isEmpty()
+                ? List.<Agendamento>of()
+                : agendamentoRepository.findByUnidadeIdIn(unidadeIds)).stream()
                 .filter(a -> a.getDataHoraInicio() != null
                         && !a.getDataHoraInicio().isBefore(inicioHoje)
                         && !a.getDataHoraInicio().isAfter(fimHoje))
@@ -336,8 +338,9 @@ public class DashboardGerenteController {
         List<Long> unidadeIds = unidadeIdsDoUsuario(securityHelper.usuarioAtual());
         LocalDateTime agora = LocalDateTime.now();
 
-        List<Map<String, Object>> proximos = agendamentoRepository.findAll().stream()
-                .filter(a -> a.getUnidade() != null && unidadeIds.contains(a.getUnidade().getId()))
+        List<Map<String, Object>> proximos = (unidadeIds.isEmpty()
+                ? List.<Agendamento>of()
+                : agendamentoRepository.findByUnidadeIdIn(unidadeIds)).stream()
                 .filter(a -> a.getDataHoraInicio() != null && a.getDataHoraInicio().isAfter(agora))
                 .filter(a -> !STATUS_PERDA.contains(stringStatus(a))
                         && !STATUS_CONCLUIDO.contains(stringStatus(a)))

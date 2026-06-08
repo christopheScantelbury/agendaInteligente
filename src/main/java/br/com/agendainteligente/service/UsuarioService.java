@@ -69,7 +69,24 @@ public class UsuarioService {
                 return usuarioRepository.findAll();
             case ADMINISTRADOR:
                 log.debug("ADMINISTRADOR: listando o próprio admin, administradores filhos e profissionais vinculados ao admin_unico_id={}", usuarioLogado.getId());
-                return usuarioRepository.findAll().stream()
+                // Hardening #149: pré-narrowing por adminUnicoId no banco em vez de findAll().
+                // Inclui (a) o próprio admin, (b) usuários com adminUnicoId = admin.id e
+                // (c) usuários vinculados às unidades do admin (caso legacy sem adminUnicoId
+                // setado, contemplado pelo helper pertenceAoEscopoDoAdministrador).
+                java.util.Set<Long> candidatosAdmIds = new java.util.LinkedHashSet<>();
+                candidatosAdmIds.add(usuarioLogado.getId());
+                usuarioRepository.findByAdminUnicoId(usuarioLogado.getId())
+                        .forEach(u -> candidatosAdmIds.add(u.getId()));
+                List<Long> unidadeIdsDoAdm = unidadeRepository.findByAdminUnicoId(usuarioLogado.getId())
+                        .stream().map(Unidade::getId).collect(Collectors.toList());
+                if (!unidadeIdsDoAdm.isEmpty()) {
+                    usuarioRepository.findDistinctByUnidadesIdIn(unidadeIdsDoAdm)
+                            .forEach(u -> candidatosAdmIds.add(u.getId()));
+                }
+                if (candidatosAdmIds.isEmpty()) {
+                    return List.of();
+                }
+                return usuarioRepository.findAllById(candidatosAdmIds).stream()
                         .filter(u -> pertenceAoEscopoDoAdministrador(usuarioLogado, u))
                         .filter(u -> usuarioLogado.getId().equals(u.getId())
                                 || Usuario.PerfilUsuario.ADMINISTRADOR.equals(u.getPerfil())
@@ -84,50 +101,37 @@ public class UsuarioService {
                     log.warn("Gerente {} não tem unidades vinculadas", email);
                     return List.of();
                 }
-                
-                // Carregar unidades com empresas para evitar lazy loading
-                List<Unidade> unidadesGerente = usuarioLogado.getUnidades();
-                
-                // Obter IDs das empresas das unidades do gerente
-                Set<Long> empresaIds = unidadesGerente.stream()
-                        .map(u -> {
-                            // Forçar carregamento da empresa
-                            if (u.getEmpresa() == null) {
-                                Unidade unidadeCompleta = unidadeRepository.findById(u.getId())
-                                        .orElse(null);
-                                if (unidadeCompleta != null && unidadeCompleta.getEmpresa() != null) {
-                                    return unidadeCompleta.getEmpresa().getId();
-                                }
-                                return null;
-                            }
-                            return u.getEmpresa().getId();
-                        })
-                        .filter(id -> id != null)
-                        .collect(Collectors.toSet());
-                
+
+                // Hardening #149: resolver empresaIds via query (evita lazy-load por unidade)
+                // e empresa→unidades via findByEmpresaIdIn em vez de findAll() + filter.
+                List<Long> gerenteUnidadeIds = usuarioLogado.getUnidades().stream()
+                        .map(Unidade::getId)
+                        .collect(Collectors.toList());
+                Set<Long> empresaIds = new java.util.HashSet<>(unidadeRepository.findEmpresaIdsByIds(gerenteUnidadeIds));
+
                 if (empresaIds.isEmpty()) {
                     log.warn("Gerente {} não tem empresas vinculadas", email);
                     return List.of();
                 }
-                
+
                 log.debug("Gerente {} tem acesso às empresas: {}", email, empresaIds);
-                
-                // Obter IDs de todas as unidades das mesmas empresas
-                List<Unidade> todasUnidades = unidadeRepository.findAll();
-                List<Long> unidadesIds = todasUnidades.stream()
-                        .filter(u -> {
-                            if (u.getEmpresa() == null) {
-                                return false;
-                            }
-                            return empresaIds.contains(u.getEmpresa().getId());
-                        })
+
+                List<Long> unidadesIds = unidadeRepository.findByEmpresaIdIn(empresaIds).stream()
                         .map(Unidade::getId)
                         .collect(Collectors.toList());
-                
+
                 log.debug("Unidades acessíveis pelo gerente {}: {}", email, unidadesIds);
-                
-                List<Usuario> todosUsuarios = usuarioRepository.findAll();
-                List<Usuario> usuariosFiltrados = todosUsuarios.stream()
+
+                if (unidadesIds.isEmpty()) {
+                    return List.of();
+                }
+
+                // Pré-narrowing pelo banco: só usuários com ≥1 unidade no conjunto.
+                // O filter posterior mantém o invariante original (todas as unidades do
+                // usuário precisam estar no conjunto de unidades acessíveis ao gerente).
+                List<Usuario> candidatos = usuarioRepository.findDistinctByUnidadesIdIn(unidadesIds);
+                Set<Long> unidadesIdsSet = new java.util.HashSet<>(unidadesIds);
+                List<Usuario> usuariosFiltrados = candidatos.stream()
                         .filter(u -> {
                             if (Usuario.PerfilUsuario.ADMIN.equals(u.getPerfil())
                                     || Usuario.PerfilUsuario.ADMINISTRADOR.equals(u.getPerfil())) {
@@ -137,12 +141,13 @@ public class UsuarioService {
                                 return false;
                             }
                             boolean todasUnidadesNaEmpresa = u.getUnidades().stream()
-                                    .allMatch(unidade -> unidadesIds.contains(unidade.getId()));
+                                    .allMatch(unidade -> unidadesIdsSet.contains(unidade.getId()));
                             return todasUnidadesNaEmpresa;
                         })
                         .collect(Collectors.toList());
-                
-                log.debug("Gerente {} pode ver {} usuários de {} total", email, usuariosFiltrados.size(), todosUsuarios.size());
+
+                log.debug("Gerente {} pode ver {} usuários (pré-narrowing: {} candidatos)",
+                        email, usuariosFiltrados.size(), candidatos.size());
                 return usuariosFiltrados;
 
             case PROFISSIONAL:
@@ -155,20 +160,14 @@ public class UsuarioService {
                 List<Long> unidadesProfissional = usuarioLogado.getUnidades().stream()
                         .map(Unidade::getId)
                         .collect(Collectors.toList());
-                
-                return usuarioRepository.findAll().stream()
-                        .filter(u -> {
-                            if (Usuario.PerfilUsuario.ADMIN.equals(u.getPerfil())
-                                    || Usuario.PerfilUsuario.ADMINISTRADOR.equals(u.getPerfil())
-                                    || Usuario.PerfilUsuario.GERENTE.equals(u.getPerfil())) {
-                                return false;
-                            }
-                            if (u.getUnidades() == null || u.getUnidades().isEmpty()) {
-                                return false;
-                            }
-                            return u.getUnidades().stream()
-                                    .anyMatch(unidade -> unidadesProfissional.contains(unidade.getId()));
-                        })
+
+                // Hardening #149: pré-narrowing pelo banco. anyMatch(contains) é equivalente
+                // a "tem ao menos uma unidade no conjunto", então findDistinctByUnidadesIdIn
+                // já entrega o universo correto — só restam os filtros de perfil.
+                return usuarioRepository.findDistinctByUnidadesIdIn(unidadesProfissional).stream()
+                        .filter(u -> !Usuario.PerfilUsuario.ADMIN.equals(u.getPerfil())
+                                && !Usuario.PerfilUsuario.ADMINISTRADOR.equals(u.getPerfil())
+                                && !Usuario.PerfilUsuario.GERENTE.equals(u.getPerfil()))
                         .collect(Collectors.toList());
 
             case CLIENTE:

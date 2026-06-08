@@ -87,13 +87,15 @@ public class AnamneseService {
                         .collect(Collectors.toSet());
             case GERENTE:
                 if (usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) return java.util.Set.of();
-                java.util.Set<Long> empresaIds = usuario.getUnidades().stream()
-                        .map(u -> u.getEmpresa() != null ? u.getEmpresa().getId() : null)
-                        .filter(id -> id != null)
-                        .collect(Collectors.toSet());
+                // Hardening #149: resolver empresaIds via query e empresa→unidades via
+                // findByEmpresaIdIn em vez de findAll() + filter em memória.
+                java.util.List<Long> gerenteUnidadeIds = usuario.getUnidades().stream()
+                        .map(Unidade::getId)
+                        .collect(Collectors.toList());
+                java.util.Set<Long> empresaIds = new java.util.HashSet<>(
+                        unidadeRepository.findEmpresaIdsByIds(gerenteUnidadeIds));
                 if (empresaIds.isEmpty()) return java.util.Set.of();
-                return unidadeRepository.findAll().stream()
-                        .filter(u -> u.getEmpresa() != null && empresaIds.contains(u.getEmpresa().getId()))
+                return unidadeRepository.findByEmpresaIdIn(empresaIds).stream()
                         .map(Unidade::getId)
                         .collect(Collectors.toSet());
             case PROFISSIONAL:

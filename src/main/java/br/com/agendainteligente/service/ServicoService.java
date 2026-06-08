@@ -120,7 +120,7 @@ public class ServicoService {
         Usuario usuario = getUsuarioLogado();
         switch (usuario.getPerfil()) {
             case ADMIN:
-                return unidadeRepository.findAll().stream().map(Unidade::getId).collect(Collectors.toSet());
+                return new java.util.HashSet<>(unidadeRepository.findAllIds());
             case ADMINISTRADOR:
                 return unidadeRepository.findByAdminUnicoId(usuario.getId()).stream()
                         .map(Unidade::getId)
@@ -148,8 +148,7 @@ public class ServicoService {
                 if (empresaIds.isEmpty()) {
                     return Set.of();
                 }
-                return unidadeRepository.findAll().stream()
-                        .filter(u -> u.getEmpresa() != null && empresaIds.contains(u.getEmpresa().getId()))
+                return unidadeRepository.findByEmpresaIdIn(empresaIds).stream()
                         .map(Unidade::getId)
                         .collect(Collectors.toSet());
             case PROFISSIONAL:
