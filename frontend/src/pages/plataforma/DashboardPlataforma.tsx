@@ -83,17 +83,27 @@ export default function DashboardPlataforma() {
         />
       </div>
 
-      {/* Linha 2 — métricas de SaaS (placeholders) */}
+      {/* Linha 2 — métricas de SaaS (calculadas direto do banco). */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-        <PlaceholderCard
+        <KpiCard
           icon={TrendingUp}
           label="MRR (Receita mensal recorrente)"
-          desc="Disponível quando integração com Stripe estiver ativa"
+          value={data?.mrr ?? 0}
+          sub={`Soma de R$ dos planos pagos ativos (Trial não conta)`}
+          color="emerald"
+          loading={isLoading}
+          formatAsCurrency
         />
-        <PlaceholderCard
+        <KpiCard
           icon={Activity}
-          label="Churn 30d"
-          desc="Disponível quando integração com Stripe estiver ativa"
+          label="Churn últimos 30 dias"
+          value={data?.churn ?? 0}
+          sub={data?.inativadas30d != null
+            ? `${data.inativadas30d} empresa${data.inativadas30d !== 1 ? 's' : ''} inativada${data.inativadas30d !== 1 ? 's' : ''} no período`
+            : 'Empresas inativadas / base ativa'}
+          color="orange"
+          loading={isLoading}
+          formatAsPercent
         />
       </div>
 
@@ -147,6 +157,8 @@ function KpiCard({
   sub,
   color,
   loading,
+  formatAsCurrency = false,
+  formatAsPercent = false,
 }: {
   icon: React.ComponentType<{ className?: string }>
   label: string
@@ -154,6 +166,8 @@ function KpiCard({
   sub?: string
   color: 'violet' | 'emerald' | 'blue' | 'orange'
   loading: boolean
+  formatAsCurrency?: boolean
+  formatAsPercent?: boolean
 }) {
   const colorBg: Record<typeof color, string> = {
     violet: 'bg-violet-50 text-violet-600',
@@ -161,15 +175,21 @@ function KpiCard({
     blue: 'bg-blue-50 text-blue-600',
     orange: 'bg-orange-50 text-orange-600',
   }
+  const display = (() => {
+    const v = value ?? 0
+    if (formatAsCurrency) return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    if (formatAsPercent) return `${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
+    return v
+  })()
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${colorBg[color]}`}>
         <Icon className="h-5 w-5" />
       </div>
       {loading ? (
-        <div className="h-7 w-16 bg-gray-100 rounded animate-pulse" />
+        <div className="h-7 w-20 bg-gray-100 rounded animate-pulse" />
       ) : (
-        <p className="text-2xl font-black text-slate-900 leading-none">{value ?? 0}</p>
+        <p className="text-2xl font-black text-slate-900 leading-none">{display}</p>
       )}
       <p className="text-xs text-gray-500 mt-1 font-medium">{label}</p>
       {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
@@ -177,25 +197,3 @@ function KpiCard({
   )
 }
 
-function PlaceholderCard({
-  icon: Icon,
-  label,
-  desc,
-}: {
-  icon: React.ComponentType<{ className?: string }>
-  label: string
-  desc: string
-}) {
-  return (
-    <div className="bg-gray-50 border border-dashed border-gray-300 rounded-2xl p-4">
-      <div className="flex items-center gap-2 mb-1">
-        <Icon className="h-4 w-4 text-gray-400" />
-        <p className="text-xs text-gray-600 font-medium">{label}</p>
-      </div>
-      <p className="text-xs text-gray-400">{desc}</p>
-      <span className="inline-block mt-2 text-[10px] font-semibold uppercase tracking-wider text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
-        Em breve
-      </span>
-    </div>
-  )
-}

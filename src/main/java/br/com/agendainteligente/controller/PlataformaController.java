@@ -78,6 +78,31 @@ public class PlataformaController {
                 .filter(n -> n.getDataCriacao() != null && !n.getDataCriacao().isBefore(inicioDoMes))
                 .count();
 
+        // MRR: soma precoMensalBrl das empresas ativas com plano != TRIAL.
+        // Calculado direto do banco — não depende de Stripe.
+        java.math.BigDecimal mrr = empresaRepository.findByAtivoTrue().stream()
+                .filter(e -> e.getPlano() != null
+                        && !"TRIAL".equals(e.getPlano().getNome())
+                        && e.getPlano().getPrecoMensalBrl() != null)
+                .map(e -> e.getPlano().getPrecoMensalBrl())
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+        // Churn 30d: empresas inativadas nos últimos 30 dias / total ativo no início do período.
+        // Heurística: ativo=false + dataAtualizacao nos últimos 30 dias.
+        // Quando o ciclo de billing rolar, refinar com `plano_expiracao` vencido + sem renovação.
+        LocalDateTime ha30dias = LocalDateTime.now().minusDays(30);
+        long inativadas30d = empresaRepository.findAll().stream()
+                .filter(e -> Boolean.FALSE.equals(e.getAtivo())
+                        && e.getDataAtualizacao() != null
+                        && !e.getDataAtualizacao().isBefore(ha30dias))
+                .count();
+        // Base = empresas ativas hoje + as que viraram inativas no período (estavam ativas há 30d)
+        long baseChurn = empresasAtivas + inativadas30d;
+        Double churnPct = baseChurn > 0
+                ? java.math.BigDecimal.valueOf(inativadas30d * 100.0 / baseChurn)
+                        .setScale(1, java.math.RoundingMode.HALF_UP).doubleValue()
+                : 0.0;
+
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("empresasAtivas", empresasAtivas);
         response.put("totalEmpresas", totalEmpresas);
@@ -86,9 +111,9 @@ public class PlataformaController {
         response.put("agendamentosMes", agendamentosMes);
         response.put("totalNfse", totalNfse);
         response.put("nfseMes", nfseMes);
-        // Placeholders — dependem de integração Stripe (escopo futuro)
-        response.put("mrr", null);
-        response.put("churn", null);
+        response.put("mrr", mrr);
+        response.put("churn", churnPct);
+        response.put("inativadas30d", inativadas30d);
         return ResponseEntity.ok(response);
     }
 

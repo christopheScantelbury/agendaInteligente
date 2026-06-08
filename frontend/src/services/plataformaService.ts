@@ -10,6 +10,7 @@ export interface MetricasPlataforma {
   nfseMes: number
   mrr: number | null
   churn: number | null
+  inativadas30d?: number
 }
 
 export interface EmpresaPlataforma {

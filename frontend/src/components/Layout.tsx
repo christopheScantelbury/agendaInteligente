@@ -20,6 +20,7 @@ import {
   ClipboardList,
   Wallet,
   Percent,
+  Crown,
 } from 'lucide-react'
 import { authService } from '../services/authService'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -118,6 +119,16 @@ export default function Layout({ children }: LayoutProps) {
     // Início (Dashboard) - desabilitado para CLIENTE (ele vai direto para Agendamentos)
     if (!authService.isPerfilCliente() && temPermissaoMenu('/')) {
       items.push({ path: '/dashboard', label: 'Início', icon: <HomeIcon className="h-5 w-5" /> })
+    }
+
+    // Plataforma (ADMIN GLOBAL apenas — não ADMINISTRADOR de tenant)
+    if (!isAdminUnico && perfilNorm === 'ADMIN') {
+      items.push({
+        path: '/plataforma',
+        label: 'Plataforma',
+        icon: <Crown className="h-5 w-5" />,
+        paths: ['/plataforma', '/plataforma/empresas', '/plataforma/auditoria', '/plataforma/planos', '/plataforma/landing'],
+      })
     }
     
     // Empresas - apenas para ADMIN (ADMINISTRADOR usa Configurações)
