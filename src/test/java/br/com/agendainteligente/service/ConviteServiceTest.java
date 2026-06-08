@@ -57,6 +57,7 @@ class ConviteServiceTest {
     @Mock private ClienteRepository clienteRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private PerfilService perfilService;
+    @Mock private br.com.agendainteligente.repository.PlanoRepository planoRepository;
 
     @InjectMocks private ConviteService service;
 
@@ -264,6 +265,10 @@ class ConviteServiceTest {
         });
         when(passwordEncoder.encode("123456")).thenReturn("hashed");
         when(usuarioRepository.save(any(Usuario.class))).thenAnswer(i -> i.getArgument(0));
+        // #139: plano TRIAL default precisa ser resolvido pelo repository mock
+        br.com.agendainteligente.domain.entity.Plano trial = br.com.agendainteligente.domain.entity.Plano.builder()
+                .id(1L).nome("TRIAL").nomePublico("Trial").duracaoTrialDias(14).build();
+        when(planoRepository.findByNome("TRIAL")).thenReturn(Optional.of(trial));
 
         FinalizarCadastroAdministradorDTO dto = new FinalizarCadastroAdministradorDTO();
         dto.setNome("Fulano"); dto.setEmail("new@x.com"); dto.setSenha("123456");
@@ -272,9 +277,8 @@ class ConviteServiceTest {
 
         service.finalizarCadastroAdministrador("tok", dto);
 
-        // Empresa/Unidade/Usuario são salvos 2x cada: 1ª pra obter ID, 2ª pra setar adminUnicoId
-        // (o tenant root é o próprio usuário criado, então só depois do save inicial podemos preencher)
-        verify(empresaRepository, times(2)).save(argThat(e -> "Empresa X".equals(e.getNome())));
+        // Empresa salva 3x: 1ª pra obter ID, 2ª pra setar adminUnicoId, 3ª pra aplicar plano (#139)
+        verify(empresaRepository, times(3)).save(argThat(e -> "Empresa X".equals(e.getNome())));
         verify(unidadeRepository, times(2)).save(any(Unidade.class));
         verify(usuarioRepository, times(2)).save(any(Usuario.class));
         verify(gerenteRepository).save(any());
