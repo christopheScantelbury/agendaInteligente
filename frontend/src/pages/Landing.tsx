@@ -193,6 +193,18 @@ export default function Landing() {
     refetchOnMount: 'always',
   })
   const planosPagos = planos.filter((p) => p.nome !== 'TRIAL').sort((a, b) => a.ordem - b.ordem)
+  const planoTrial = planos.find((p) => p.nome === 'TRIAL')
+
+  // Texto do rodapé do pricing: reflete a configuração atual do Trial.
+  // Se Trial = 0 BRL → "Trial gratuito de X dias"
+  // Se Trial > 0 BRL → "Trial de X dias por R$ Y"
+  // Default 14 dias quando duracaoTrialDias não vier configurado.
+  const duracaoTrial = planoTrial?.duracaoTrialDias ?? 14
+  const precoTrial = Number(planoTrial?.precoMensalBrl ?? 0)
+  const textoTrial = precoTrial > 0
+    ? `Trial de ${duracaoTrial} dias por ${precoTrial.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`
+    : `Trial gratuito de ${duracaoTrial} dias`
+  const subtextoTrial = precoTrial > 0 ? 'Cancele quando quiser' : 'Sem cartão de crédito · Cancele quando quiser'
 
   return (
     <div className="min-h-screen bg-slate-50" style={{ fontFamily: 'Outfit, system-ui, sans-serif' }}>
@@ -555,7 +567,7 @@ export default function Landing() {
             )}
           </div>
           <p className="text-center text-sm text-slate-400 mt-6">
-            Todos os planos começam com <strong className="text-slate-600">Trial gratuito de 14 dias</strong> · Sem cartão de crédito · Cancele quando quiser
+            Todos os planos começam com <strong className="text-slate-600">{textoTrial}</strong> · {subtextoTrial}
           </p>
           <p className="text-center text-xs text-slate-400 mt-2">
             Excedente NFS-e: R$ 1,50 (Starter) · R$ 1,20 (Pro) · R$ 1,00 (Business) por nota

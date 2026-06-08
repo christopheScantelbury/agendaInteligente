@@ -125,6 +125,18 @@ function PlanoEditCard({ plano, onSaved }: { plano: Plano; onSaved: () => void }
         <span className="text-sm text-slate-500">{formatPrecoMensal(form.precoMensalBrl)}/mês</span>
       </div>
 
+      {plano.nome === 'TRIAL' && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-900">
+          ℹ️ <strong>Sobre o Trial:</strong> ele <em>não aparece</em> como card de venda na landing
+          (os 3 cards são Starter/Pro/Business). O que você edita aqui afeta:
+          <ul className="list-disc list-inside mt-1 space-y-0.5">
+            <li><strong>Duração:</strong> dias de teste após o cadastro de nova empresa</li>
+            <li><strong>Preço:</strong> se {'>'}{' '}R$ 0, o texto do rodapé da landing muda de <em>"Trial gratuito"</em> para <em>"Trial por R$ X"</em></li>
+            <li><strong>Limites (unidades/profissionais/agendamentos/NFS-e):</strong> o que o cliente pode usar durante o teste</li>
+          </ul>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-semibold text-slate-600 mb-1">Nome público</label>
