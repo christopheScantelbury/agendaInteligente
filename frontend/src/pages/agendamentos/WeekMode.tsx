@@ -13,6 +13,7 @@ import {
 import { ptBR } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Calendar, ChevronDown } from 'lucide-react'
 import { agendamentoService, Agendamento } from '../../services/agendamentoService'
+import { dotClass } from '../../utils/statusAgendamento'
 
 interface Props {
   selectedDate: Date
@@ -20,16 +21,7 @@ interface Props {
   onJumpToDayMode: (date: Date) => void
 }
 
-const STATUS_DOT: Record<string, string> = {
-  AGENDADO: 'bg-slate-900',
-  CONFIRMADO: 'bg-blue-500',
-  EM_ANDAMENTO: 'bg-blue-500',
-  PROCEDIMENTO_FIM: 'bg-blue-600',
-  CONCLUIDO: 'bg-emerald-500',
-  FINALIZADO: 'bg-emerald-500',
-  CANCELADO: 'bg-red-500',
-  NO_SHOW: 'bg-orange-500',
-}
+// #151: paleta unificada via helper statusAgendamento.
 
 /**
  * Modo Semana — 7 dias.
@@ -159,7 +151,7 @@ export default function WeekMode({ selectedDate, onDateChange, onJumpToDayMode }
                       {lista.slice(0, 3).map((a) => (
                         <li key={a.id} className="flex items-center gap-2 text-xs text-slate-600">
                           <span
-                            className={`h-2 w-2 rounded-full ${STATUS_DOT[a.status ?? ''] ?? 'bg-amber-400'}`}
+                            className={`h-2 w-2 rounded-full ${dotClass(a.status)}`}
                           />
                           <span className="font-mono font-semibold text-slate-900">
                             {format(new Date(a.dataHoraInicio), 'HH:mm')}

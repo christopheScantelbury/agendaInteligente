@@ -211,7 +211,7 @@ export default function Landing() {
               </span>
             </div>
 
-            <h1 className="text-4xl md:text-5xl font-black text-slate-900 leading-[1.08] tracking-tight mb-6">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 leading-[1.08] tracking-tight mb-6">
               O único agendamento<br />
               com <span className="text-violet-600">NF-e integrada</span><br />
               para serviços
@@ -265,7 +265,7 @@ export default function Landing() {
 
       {/* ── STATS STRIP ── */}
       <section className="bg-slate-900">
-        <div className="max-w-6xl mx-auto px-6 py-10 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+        <div className="max-w-6xl mx-auto px-6 py-10 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8 text-center">
           {[
             { value: 'R$ 3,8bi', label: 'Mercado de agendamento no Brasil', sub: '22% crescimento ao ano' },
             { value: '18M+', label: 'Profissionais com atendimento recorrente', sub: 'Salões, clínicas, academias...' },

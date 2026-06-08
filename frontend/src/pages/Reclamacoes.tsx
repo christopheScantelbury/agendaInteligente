@@ -275,7 +275,7 @@ export default function Reclamacoes() {
           <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
             O que você quer dizer?
           </p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {CATEGORIAS.map((c) => {
               const ativo = form.categoria === c.value
               const Icon = c.icon

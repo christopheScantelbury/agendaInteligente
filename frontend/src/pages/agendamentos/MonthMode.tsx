@@ -14,6 +14,7 @@ import {
 import { ptBR } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
 import { agendamentoService } from '../../services/agendamentoService'
+import { dotClass } from '../../utils/statusAgendamento'
 
 interface Props {
   selectedDate: Date
@@ -23,16 +24,7 @@ interface Props {
 
 const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 
-const STATUS_DOT: Record<string, string> = {
-  AGENDADO: 'bg-slate-900',
-  CONFIRMADO: 'bg-blue-500',
-  EM_ANDAMENTO: 'bg-blue-500',
-  PROCEDIMENTO_FIM: 'bg-blue-600',
-  CONCLUIDO: 'bg-emerald-500',
-  FINALIZADO: 'bg-emerald-500',
-  CANCELADO: 'bg-red-500',
-  NO_SHOW: 'bg-orange-500',
-}
+// #151: paleta unificada — usar helper compartilhado statusAgendamento.
 
 /**
  * Modo Mês — grid 7×N. Cada dia mostra contagem como número e até 3 dots de status.
@@ -187,7 +179,7 @@ export default function MonthMode({ selectedDate, onDateChange, onJumpToDayMode 
                         {statusUnicos.map((s, i) => (
                           <span
                             key={i}
-                            className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[s] ?? 'bg-amber-400'}`}
+                            className={`h-1.5 w-1.5 rounded-full ${dotClass(s)}`}
                           />
                         ))}
                       </div>

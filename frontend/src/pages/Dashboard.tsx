@@ -245,7 +245,7 @@ export default function Dashboard() {
                     <div className="space-y-6">
                         {agendamentos.slice(0, 5).map((agendamento) => (
                             <div key={agendamento.id} className="flex items-start gap-4">
-                                <div className="h-2 w-2 mt-2 rounded-full bg-indigo-500 shrink-0" />
+                                <div className="h-2 w-2 mt-2 rounded-full bg-violet-500 shrink-0" />
                                 <div>
                                     <p className="text-sm font-medium text-slate-900">
                                         {agendamento.cliente?.nome} - {agendamento.servicos?.[0]?.descricao || 'Serviço'}

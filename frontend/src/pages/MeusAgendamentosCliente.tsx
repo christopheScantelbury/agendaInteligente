@@ -4,6 +4,7 @@ import { Plus, LogOut, CalendarCheck2 } from 'lucide-react'
 import { clientePublicoService } from '../services/clientePublicoService'
 import { useNotification } from '../contexts/NotificationContext'
 import { useConfirm } from '../hooks/useConfirm'
+import { badgeClass, labelOf } from '../utils/statusAgendamento'
 
 export default function MeusAgendamentosCliente() {
   const navigate = useNavigate()
@@ -76,38 +77,9 @@ export default function MeusAgendamentosCliente() {
     })
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'AGENDADO':
-        return 'bg-gray-900 text-white'
-      case 'CONFIRMADO':
-      case 'EM_ANDAMENTO':
-      case 'PROCEDIMENTO_FIM':
-        return 'bg-blue-100 text-blue-800'
-      case 'CANCELADO':
-        return 'bg-red-100 text-red-800'
-      case 'NO_SHOW':
-        return 'bg-orange-100 text-orange-800'
-      case 'CONCLUIDO':
-      case 'FINALIZADO':
-        return 'bg-green-100 text-green-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'EM_ANDAMENTO':
-        return 'Em procedimento'
-      case 'PROCEDIMENTO_FIM':
-        return 'Procedimento finalizado'
-      case 'NO_SHOW':
-        return 'Não compareceu'
-      default:
-        return status
-    }
-  }
+  // #151: cores e labels vêm do helper compartilhado statusAgendamento.
+  const getStatusColor = (status: string) => badgeClass(status)
+  const getStatusLabel = (status: string) => labelOf(status)
 
   const cliente = clientePublicoService.getCliente()
   const semDados = agendamentos.length === 0 && cancelamentos.length === 0
