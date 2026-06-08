@@ -448,7 +448,7 @@ export default function Landing() {
                 {
                   name: '★ AgendaInteligente',
                   our: true,
-                  cols: ['✓ Completo', '✓ Sim', '✓ Nativa', '✓ Email', 'R$79–249'],
+                  cols: ['✓ Completo', '✓ Sim', '✓ Nativa', '✓ Email', 'R$49–199'],
                   colTypes: ['has', 'has', 'has', 'has', 'has'],
                 },
                 {
@@ -498,64 +498,73 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── PRICING ── */}
+      {/* ── PRICING ──
+          Valores alinhados com migration V74 (#138). Fonte de verdade:
+          `src/main/resources/db/migration/V74__create_planos.sql` + GET /api/planos.
+          Se mexer aqui, mexer LÁ também — preços e limites devem ser idênticos. */}
       <section id="preços" className="bg-slate-50 py-20">
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-14">
             <div className="text-xs font-bold text-violet-600 font-mono tracking-widest uppercase mb-3">Preços</div>
             <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-4">Simples. Justo. Sem surpresa.</h2>
-            <p className="text-slate-500">NF-e inclusa no Profissional — quem precisa (todos, pela lei) assina o plano do meio naturalmente.</p>
+            <p className="text-slate-500">NFS-e nativa em todos os planos — você emite nota direto do atendimento, sem abrir outro sistema.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             <PricingCard
-              tier="Básico"
-              price="79"
-              period="por unidade / mês · até 3 profissionais"
+              tier="Starter"
+              price="49"
+              period="por mês · ideal pra quem está começando"
               cta="Começar grátis"
               ctaLink="/cadastro"
               features={[
-                'Agendamento online ilimitado',
+                '1 unidade · até 3 profissionais',
+                'Até 200 agendamentos/mês',
                 'Link público de agendamento',
                 'Lembrete automático',
-                '1 unidade · até 3 profissionais',
+                '20 NFS-e/mês inclusas',
               ]}
-              noFeatures={['NF-e (add-on R$19/mês)', 'Multi-unidade', 'Relatórios avançados']}
+              noFeatures={['Multi-unidade', 'Relatórios avançados']}
             />
             <PricingCard
-              tier="Profissional"
-              price="149"
-              period="por unidade / mês · profissionais ilimitados"
+              tier="Pro"
+              price="99"
+              period="por mês · pra negócios em crescimento"
               cta="Assinar agora"
               ctaLink="/cadastro"
               featured
               features={[
-                'Tudo do Básico',
-                'Profissionais ilimitados',
+                'Tudo do Starter',
+                'Até 3 unidades · 10 profissionais',
+                'Até 800 agendamentos/mês',
+                '100 NFS-e/mês inclusas',
                 'Controle financeiro completo',
-                'NF-e inclusa via NotaFácil',
                 'Relatórios avançados',
                 'Histórico do cliente',
               ]}
-              noFeatures={['Multi-unidade']}
             />
             <PricingCard
-              tier="Empresarial"
-              price="249"
-              period="por empresa / mês · unidades ilimitadas"
+              tier="Business"
+              price="199"
+              period="por mês · pra redes e operações grandes"
               cta="Falar com vendas"
               ctaLink="/cadastro"
               features={[
-                'Tudo do Profissional',
+                'Tudo do Pro',
                 'Unidades ilimitadas',
-                'Painel consolidado',
+                'Profissionais ilimitados',
+                'Agendamentos ilimitados',
+                '500 NFS-e/mês inclusas',
+                'Painel consolidado multi-empresa',
                 'API para integração',
-                'Onboarding dedicado',
-                'Suporte SLA 4h',
+                'Suporte prioritário SLA 4h',
               ]}
             />
           </div>
           <p className="text-center text-sm text-slate-400 mt-6">
-            Todos os planos incluem 14 dias grátis · Sem cartão de crédito · Cancele quando quiser
+            Todos os planos começam com <strong className="text-slate-600">Trial gratuito de 14 dias</strong> · Sem cartão de crédito · Cancele quando quiser
+          </p>
+          <p className="text-center text-xs text-slate-400 mt-2">
+            Excedente NFS-e: R$ 1,50 (Starter) · R$ 1,20 (Pro) · R$ 1,00 (Business) por nota
           </p>
         </div>
       </section>
