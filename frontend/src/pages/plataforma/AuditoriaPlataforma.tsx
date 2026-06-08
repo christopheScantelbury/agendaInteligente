@@ -115,7 +115,66 @@ export default function AuditoriaPlataforma() {
         />
       </section>
 
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      {/* Mobile: cards */}
+      <div className="block sm:hidden space-y-2 mb-4">
+        {isLoading ? (
+          [...Array(5)].map((_, i) => (
+            <div key={i} className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="h-12 bg-gray-100 animate-pulse rounded" />
+            </div>
+          ))
+        ) : entries.length === 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+            Nenhum registro encontrado.
+          </div>
+        ) : entries.map((e) => (
+          <div key={e.id} className="rounded-2xl border border-slate-200 bg-white p-4 hover:shadow-sm transition">
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${badgeColor(e.tipoAcao)}`}>
+                {e.tipoAcao}
+              </span>
+              <button
+                type="button"
+                onClick={() => setDetalhe(e)}
+                aria-label="Ver detalhes"
+                className="p-1.5 rounded hover:bg-gray-100 text-gray-500 shrink-0"
+              >
+                <Eye className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="text-xs text-slate-600 space-y-1">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Quando</span>
+                <span className="text-slate-900">
+                  {format(parseISO(e.timestamp), "dd/MM/yyyy HH:mm:ss", { locale: ptBR })}
+                </span>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span className="text-slate-500">Autor</span>
+                <span className="text-slate-900 truncate text-right">
+                  {e.autorEmail ?? '—'}
+                  {e.autorPerfil && <span className="text-slate-500"> · {e.autorPerfil}</span>}
+                </span>
+              </div>
+              {e.entidade && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Entidade</span>
+                  <span className="text-slate-900">{e.entidade}{e.entidadeId ? ` #${e.entidadeId}` : ''}</span>
+                </div>
+              )}
+              {e.ip && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">IP</span>
+                  <span className="text-slate-900 font-mono">{e.ip}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop: tabela */}
+      <div className="hidden sm:block bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">

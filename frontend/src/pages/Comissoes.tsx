@@ -221,7 +221,54 @@ export default function Comissoes() {
                   </>
                 )}
               </div>
-              <div className="overflow-x-auto">
+              {/* Mobile: cards */}
+              <div className="block sm:hidden p-3 space-y-2">
+                {loadingPendentes ? (
+                  <div className="text-center py-6 text-sm text-slate-500">Calculando...</div>
+                ) : pendentes.length === 0 ? (
+                  <div className="text-center py-6 text-sm text-slate-500">Nenhum atendimento pendente</div>
+                ) : pendentes.map((l) => (
+                  <div
+                    key={l.id}
+                    onClick={() => toggleSelecionado(l.id)}
+                    className={`rounded-2xl border bg-white p-4 hover:shadow-sm transition cursor-pointer ${
+                      selecionados.has(l.id) ? 'border-violet-300 bg-violet-50' : 'border-slate-200'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-start gap-2 min-w-0">
+                        <input type="checkbox" checked={selecionados.has(l.id)}
+                          onChange={() => toggleSelecionado(l.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="mt-0.5 rounded border-gray-300 text-violet-600 focus:ring-violet-500" />
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-slate-900 truncate">{l.clienteNome ?? '—'}</div>
+                          <div className="text-xs text-slate-500 truncate">{l.servicoNome ?? '—'}</div>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-sm font-bold text-violet-700">{formatMoeda(l.valorComissao)}</div>
+                        <div className="text-xs text-slate-500">
+                          {l.tipoAplicado === 'PERCENTUAL' ? `${l.valorRegra}%` : formatMoeda(l.valorRegra)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-xs text-slate-600 space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Data</span>
+                        <span className="text-slate-900">{formatDataHora(l.dataAgendamento)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Valor base</span>
+                        <span className="font-semibold text-slate-900">{formatMoeda(l.valorBase)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: tabela */}
+              <div className="hidden sm:block overflow-x-auto">
                 <table className="min-w-full divide-y divide-slate-200">
                   <thead className="bg-slate-50">
                     <tr>
@@ -275,7 +322,40 @@ export default function Comissoes() {
                   </Button>
                 )}
               </div>
-              <div className="overflow-x-auto">
+              {/* Mobile: cards */}
+              <div className="block sm:hidden p-3 space-y-2">
+                {regras.length === 0 ? (
+                  <div className="text-center py-6 text-sm text-slate-500">
+                    Nenhuma regra. Cálculo usará o percentual do cadastro do profissional.
+                  </div>
+                ) : regras.map((r) => (
+                  <div key={r.id} className="rounded-2xl border border-slate-200 bg-white p-4 hover:shadow-sm transition">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-slate-900 truncate">
+                          {r.servicoNome ?? <span className="italic text-slate-500">Regra padrão (todos os serviços)</span>}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1">
+                          {r.tipo === 'PERCENTUAL' ? 'Percentual' : 'Fixo'} ·{' '}
+                          <span className="font-semibold text-slate-900">
+                            {r.tipo === 'PERCENTUAL' ? `${r.valor}%` : formatMoeda(r.valor)}
+                          </span>
+                        </div>
+                      </div>
+                      {podeGerir && (
+                        <button onClick={() => setConfirmExcluirRegra({ open: true, id: r.id! })}
+                          className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100"
+                          title="Excluir">
+                          <Trash2 className="h-3.5 w-3.5" /> Excluir
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: tabela */}
+              <div className="hidden sm:block overflow-x-auto">
                 <table className="min-w-full divide-y divide-slate-200">
                   <thead className="bg-slate-50">
                     <tr>
@@ -321,7 +401,44 @@ export default function Comissoes() {
                 <History className="h-4 w-4 text-slate-500" />
                 <h3 className="text-sm font-semibold text-gray-800">Histórico de pagamentos</h3>
               </div>
-              <div className="overflow-x-auto">
+              {/* Mobile: cards */}
+              <div className="block sm:hidden p-3 space-y-2">
+                {pagamentos.length === 0 ? (
+                  <div className="text-center py-6 text-sm text-slate-500">Nenhum pagamento</div>
+                ) : pagamentos.map((p) => (
+                  <div key={p.id} className="rounded-2xl border border-slate-200 bg-white p-4 hover:shadow-sm transition">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="text-sm font-semibold text-slate-900">
+                        {new Date(p.dataPagamento + 'T00:00:00').toLocaleDateString('pt-BR')}
+                      </div>
+                      <div className="text-sm font-bold text-green-700">{formatMoeda(p.valorTotal)}</div>
+                    </div>
+                    <div className="text-xs text-slate-600 space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Atendimentos</span>
+                        <span className="text-slate-900">{p.quantidadeAtendimentos}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Forma</span>
+                        <span className="text-slate-900">{p.formaPagamento ?? '—'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Pago por</span>
+                        <span className="text-slate-900 truncate ml-2">{p.pagoPorNome ?? '—'}</span>
+                      </div>
+                      {p.observacao && (
+                        <div>
+                          <span className="text-slate-500">Observação:</span>{' '}
+                          <span className="text-slate-700">{p.observacao}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: tabela */}
+              <div className="hidden sm:block overflow-x-auto">
                 <table className="min-w-full divide-y divide-slate-200">
                   <thead className="bg-slate-50">
                     <tr>

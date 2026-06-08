@@ -188,7 +188,41 @@ export default function ResumoFinanceiro() {
           )}
 
           {aba === 'DIARIO' && (
-            <div className="bg-white rounded-lg shadow overflow-hidden">
+            <>
+              {/* Mobile: cards */}
+              <div className="block sm:hidden space-y-2">
+                {fluxo.length === 0 ? (
+                  <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center text-sm text-slate-500">Sem dados no período</div>
+                ) : fluxo.map((f) => (
+                  <div key={f.dia} className="rounded-2xl border border-slate-200 bg-white p-4 hover:shadow-sm transition">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-sm font-semibold text-slate-900">{formatDia(f.dia)}</div>
+                      <div className={`text-sm font-bold ${f.saldoDia >= 0 ? 'text-slate-900' : 'text-red-700'}`}>
+                        {formatMoeda(f.saldoDia)}
+                      </div>
+                    </div>
+                    <div className="text-xs text-slate-600 space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Entradas</span>
+                        <span className="font-semibold text-green-700">{formatMoeda(f.entradas)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Saídas</span>
+                        <span className="font-semibold text-red-700">{formatMoeda(f.saidas)}</span>
+                      </div>
+                      <div className="flex justify-between border-t border-slate-100 pt-1 mt-1">
+                        <span className="text-slate-500">Saldo acumulado</span>
+                        <span className={`font-semibold ${f.saldoAcumulado >= 0 ? 'text-violet-700' : 'text-red-700'}`}>
+                          {formatMoeda(f.saldoAcumulado)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: tabela */}
+              <div className="hidden sm:block bg-white rounded-lg shadow overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
@@ -219,7 +253,8 @@ export default function ResumoFinanceiro() {
                   </tbody>
                 </table>
               </div>
-            </div>
+              </div>
+            </>
           )}
         </>
       )}

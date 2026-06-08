@@ -68,7 +68,39 @@ export default function AnamneseTemplatesPage() {
         </Button>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      {/* Mobile: cards */}
+      <div className="block sm:hidden space-y-2">
+        {isLoading ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center text-sm text-slate-500">Carregando...</div>
+        ) : templates.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center text-sm text-slate-500">Nenhum template cadastrado</div>
+        ) : templates.map((t) => (
+          <div key={t.id} className="rounded-2xl border border-slate-200 bg-white p-4 hover:shadow-sm transition">
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-slate-900 truncate">{t.nome}</div>
+                {t.descricao && <div className="text-xs text-slate-500 truncate">{t.descricao}</div>}
+              </div>
+              <span className="shrink-0 inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-violet-50 text-violet-700">
+                {t.perguntas?.length ?? 0} {((t.perguntas?.length ?? 0) === 1) ? 'pergunta' : 'perguntas'}
+              </span>
+            </div>
+            <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-slate-100">
+              <button onClick={() => { setEditando(t); setShowForm(true) }}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100">
+                <Edit className="h-3.5 w-3.5" /> Editar
+              </button>
+              <button onClick={() => setConfirmDelete({ open: true, id: t.id })}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100">
+                <Trash2 className="h-3.5 w-3.5" /> Inativar
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop: tabela */}
+      <div className="hidden sm:block bg-white rounded-lg shadow overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>

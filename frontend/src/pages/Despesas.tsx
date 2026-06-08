@@ -225,7 +225,95 @@ export default function Despesas() {
         )}
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      {/* Mobile: cards */}
+      <div className="block sm:hidden space-y-2">
+        {isLoading ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center text-sm text-slate-500">Carregando...</div>
+        ) : despesas.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center text-sm text-slate-500">Nenhuma despesa no período</div>
+        ) : despesas.map((d) => (
+          <div key={d.id} className="rounded-2xl border border-slate-200 bg-white p-4 hover:shadow-sm transition">
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-slate-900 truncate">{d.nome}</div>
+                {d.fornecedor && <div className="text-xs text-slate-500 truncate">{d.fornecedor}</div>}
+              </div>
+              <span className={`shrink-0 inline-block px-2 py-0.5 rounded-full text-xs border ${STATUS_BADGE[d.status ?? 'RASCUNHO']}`}>
+                {STATUS_LABEL[d.status ?? 'RASCUNHO']}
+              </span>
+            </div>
+            <div className="text-xs text-slate-600 space-y-1">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Valor</span>
+                <span className="font-semibold text-slate-900">{formatMoeda(d.valor)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Vencimento</span>
+                <span className="font-semibold text-slate-900">
+                  {formatData(d.dataVencimento)}
+                  {(d.diasAtraso ?? 0) > 0 && (
+                    <span className="ml-2 text-red-600 inline-flex items-center gap-1">
+                      <Clock className="h-3 w-3" /> {d.diasAtraso}d atraso
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Categoria</span>
+                <span className="inline-flex items-center gap-1 text-slate-900">
+                  {d.categoriaCor && (
+                    <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: d.categoriaCor }} />
+                  )}
+                  {d.categoriaNome ?? '—'}
+                </span>
+              </div>
+              {d.unidadeNome && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Unidade</span>
+                  <span className="text-slate-900">{d.unidadeNome}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-slate-500">Recorrência</span>
+                <span className="text-slate-900">{RECORRENCIA_LABEL[d.recorrencia ?? 'NENHUMA']}</span>
+              </div>
+            </div>
+            {podeEditar && (
+              <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-slate-100">
+                {d.status !== 'PAGA' && d.status !== 'CANCELADA' && (
+                  <button
+                    onClick={() => statusMutation.mutate({ id: d.id!, status: 'PAGA' })}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-green-700 bg-green-50 hover:bg-green-100"
+                    title="Marcar como paga"
+                  >
+                    <CheckCircle className="h-3.5 w-3.5" /> Pagar
+                  </button>
+                )}
+                {d.status !== 'PAGA' && d.status !== 'CANCELADA' && (
+                  <button onClick={() => { setEditando(d); setShowForm(true) }}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100">
+                    <Edit className="h-3.5 w-3.5" /> Editar
+                  </button>
+                )}
+                {d.status !== 'PAGA' && (
+                  <button onClick={() => setConfirmDelete({ open: true, id: d.id! })}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100">
+                    <Trash2 className="h-3.5 w-3.5" /> Excluir
+                  </button>
+                )}
+                {(d.status === 'PAGA' || d.status === 'CANCELADA') && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-gray-500 bg-gray-50">
+                    <Lock className="h-3.5 w-3.5" /> Bloqueada
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop: tabela */}
+      <div className="hidden sm:block bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-slate-50">

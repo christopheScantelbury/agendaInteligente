@@ -109,8 +109,79 @@ export default function EmpresasPlataforma() {
         </div>
       </div>
 
-      {/* Tabela */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      {/* Mobile: cards */}
+      <div className="block sm:hidden space-y-2 mb-4">
+        {isLoading ? (
+          [...Array(5)].map((_, i) => (
+            <div key={i} className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="h-12 bg-gray-100 animate-pulse rounded" />
+            </div>
+          ))
+        ) : empresasFiltradas.length === 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+            Nenhuma empresa encontrada com esses filtros.
+          </div>
+        ) : empresasFiltradas.map((e) => {
+          const ativa = e.status === 'ATIVA'
+          return (
+            <div key={e.id} className="rounded-2xl border border-slate-200 bg-white p-4 hover:shadow-sm transition">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-100 to-violet-50 flex items-center justify-center flex-shrink-0">
+                    <Building2 className="h-4 w-4 text-violet-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-900 truncate">{e.nome}</p>
+                    <p className="text-xs text-slate-500 truncate">{e.cnpj || e.email || '—'}</p>
+                  </div>
+                </div>
+                <span
+                  className={`shrink-0 inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                    ativa ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  {ativa ? 'Ativa' : 'Inativa'}
+                </span>
+              </div>
+              <div className="text-xs text-slate-600 space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Plano</span>
+                  <span className="text-slate-900">{e.plano ?? '—'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Cadastro</span>
+                  <span className="text-slate-900">
+                    {e.dataCadastro ? format(parseISO(e.dataCadastro), "dd/MM/yyyy", { locale: ptBR }) : '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Última atividade</span>
+                  <span className="text-slate-900 truncate ml-2">
+                    {e.ultimaAtividade ? formatDistanceToNow(parseISO(e.ultimaAtividade), { locale: ptBR, addSuffix: true }) : '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Agendamentos (mês)</span>
+                  <span className="font-semibold text-slate-900">{e.agendamentosMes}</span>
+                </div>
+              </div>
+              <div className="flex justify-end mt-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setConfirmacao(e)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-violet-700 bg-violet-50 hover:bg-violet-100 rounded-lg"
+                >
+                  <UserCog className="h-3.5 w-3.5" />
+                  Assumir sessão
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Desktop: tabela */}
+      <div className="hidden sm:block bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
