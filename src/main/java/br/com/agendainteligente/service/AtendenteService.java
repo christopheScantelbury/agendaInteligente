@@ -365,8 +365,9 @@ public class AtendenteService {
                     .map(Servico::getId)
                     .collect(Collectors.toList()));
         }
-        // Mascarar CPF em todas as respostas REST (LGPD / proteção contra leak).
-        dto.setCpf(br.com.agendainteligente.util.CpfCnpjMask.mask(dto.getCpf()));
+        // #144: CPF retornado integralmente. Issue diz explicitamente que a tela
+        // de profissionais NÃO deve mascarar parcialmente. Isolamento multi-tenant
+        // já garante que só gestão da própria empresa acessa esse endpoint.
         return dto;
     }
 

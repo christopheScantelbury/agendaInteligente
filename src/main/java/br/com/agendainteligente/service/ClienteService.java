@@ -435,8 +435,9 @@ public class ClienteService {
                     .collect(Collectors.toList()));
         }
 
-        // Mascarar CPF/CNPJ em todas as respostas REST (LGPD / proteção contra leak).
-        dto.setCpfCnpj(br.com.agendainteligente.util.CpfCnpjMask.mask(dto.getCpfCnpj()));
+        // #144 / #146: CPF/CNPJ retornado integralmente — a tela de Editar Cliente
+        // precisa hidratar o documento completo pra não recortar dados ao salvar.
+        // Isolamento multi-tenant já garante que só gestão da própria empresa acessa.
         return dto;
     }
 }
