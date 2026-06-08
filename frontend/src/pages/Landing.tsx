@@ -174,10 +174,13 @@ export default function Landing() {
   // Conteúdo configurável (admin global edita em /plataforma/landing).
   // useQuery devolve undefined no primeiro render — fallbacks hardcoded mantêm
   // a renderização funcional pra SEO/no-JS/backend down.
+  // staleTime curto (30s) garante que edições do admin aparecem rapidamente sem refresh manual.
   const { data: cfg } = useQuery<LandingContent>({
     queryKey: ['landing-config'],
     queryFn: landingConfigService.get,
-    staleTime: 5 * 60_000, // 5 min — landing muda raramente
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
     retry: 1,
   })
 
@@ -185,7 +188,9 @@ export default function Landing() {
   const { data: planos = [] } = useQuery({
     queryKey: ['planos'],
     queryFn: planoService.listar,
-    staleTime: 5 * 60_000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
   })
   const planosPagos = planos.filter((p) => p.nome !== 'TRIAL').sort((a, b) => a.ordem - b.ordem)
 

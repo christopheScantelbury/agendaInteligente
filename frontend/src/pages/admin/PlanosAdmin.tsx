@@ -90,7 +90,7 @@ function PlanoEditCard({ plano, onSaved }: { plano: Plano; onSaved: () => void }
   const saveMutation = useMutation({
     mutationFn: () => planoService.atualizar(plano.id, form),
     onSuccess: () => {
-      showNotification('success', `Plano ${plano.nomePublico} atualizado`)
+      showNotification('success', `Plano ${plano.nomePublico} atualizado — vai aparecer na landing em até 30s ou após próximo carregamento`)
       onSaved()
     },
     onError: (e) => showNotification('error', getApiErrorMessage(e, 'Erro ao salvar plano')),
