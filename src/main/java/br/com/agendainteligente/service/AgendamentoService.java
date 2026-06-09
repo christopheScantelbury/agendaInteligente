@@ -775,6 +775,48 @@ public class AgendamentoService {
         return agendamentoMapper.toDTO(agendamento);
     }
 
+    /**
+     * Registra pagamento de sinal/adiantamento (V76).
+     * Marca sinalPago=true e carimba a data + forma de pagamento.
+     * Valor é livre (admin pode pedir o que faz sentido, default é % da unidade).
+     */
+    @Transactional
+    public AgendamentoDTO registrarSinal(Long id, java.math.BigDecimal valor, String formaPagamento) {
+        if (valor == null || valor.signum() <= 0) {
+            throw new BusinessException("Informe um valor de sinal maior que zero");
+        }
+        if (formaPagamento == null || formaPagamento.isBlank()) {
+            throw new BusinessException("Informe a forma de pagamento");
+        }
+        Agendamento agendamento = agendamentoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Agendamento não encontrado"));
+        validarPermissaoVisualizarAgendamento(agendamento);
+
+        if (Boolean.TRUE.equals(agendamento.getSinalPago())) {
+            throw new BusinessException("Sinal já foi pago para este agendamento");
+        }
+        StatusAgendamento s = agendamento.getStatus();
+        if (s == StatusAgendamento.CANCELADO || s == StatusAgendamento.CONCLUIDO || s == StatusAgendamento.FINALIZADO) {
+            throw new BusinessException("Não dá pra registrar sinal em agendamento " + rotuloStatus(s).toLowerCase());
+        }
+        if (agendamento.getValorTotal() != null && valor.compareTo(agendamento.getValorTotal()) > 0) {
+            throw new BusinessException("Sinal não pode ser maior que o valor total do agendamento");
+        }
+
+        agendamento.setValorSinal(valor);
+        agendamento.setSinalPago(true);
+        agendamento.setSinalDataPagamento(LocalDateTime.now());
+        agendamento.setSinalFormaPagamento(formaPagamento.toUpperCase());
+        // Sinal pago → agendamento avança pra CONFIRMADO automaticamente
+        // (a menos que já esteja em estado avançado tipo EM_ANDAMENTO).
+        if (s == StatusAgendamento.AGENDADO) {
+            agendamento.setStatus(StatusAgendamento.CONFIRMADO);
+        }
+        agendamento = agendamentoRepository.save(agendamento);
+        log.info("[SINAL] agendamento={} valor={} forma={}", id, valor, formaPagamento);
+        return agendamentoMapper.toDTO(agendamento);
+    }
+
     // B-NEW-5: sem @Transactional, o mapper acessa relations lazy fora da Session e
     // dispara LazyInitializationException no response builder. A mudanca CHEGA a ser
     // persistida (PATCH retorna 500 com sucesso parcial), mas o cliente recebe erro.

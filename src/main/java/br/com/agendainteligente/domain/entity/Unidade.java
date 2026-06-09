@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -100,6 +101,17 @@ public class Unidade {
 
     @Column(name = "admin_unico_id")
     private Long adminUnicoId;
+
+    // ── Sinal/Adiantamento (V76) ────────────────────────────────────────────
+    /** Se TRUE, agendamentos pedem sinal antes de virar CONFIRMADO. */
+    @Column(name = "cobra_sinal", nullable = false)
+    @Builder.Default
+    private Boolean cobraSinal = false;
+
+    /** Percentual do valor total cobrado como sinal (0–100). */
+    @Column(name = "percentual_sinal", precision = 5, scale = 2)
+    @Builder.Default
+    private BigDecimal percentualSinal = new BigDecimal("30.00");
 
     // ── Integração NotaFácil (Nota MEI Gateway) ─────────────────────────────
     @Column(name = "notafacil_api_key", length = 255)

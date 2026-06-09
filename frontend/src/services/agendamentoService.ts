@@ -29,6 +29,11 @@ export interface Agendamento {
   formaPagamentoPreferida?: string
   valorTotal?: number
   valorFinal?: number
+  // ── Sinal/Adiantamento ──
+  valorSinal?: number
+  sinalPago?: boolean
+  sinalDataPagamento?: string
+  sinalFormaPagamento?: string
   status?: string
   servicos: AgendamentoServico[]
   cliente?: any
@@ -96,6 +101,11 @@ export const agendamentoService = {
 
   reabrir: async (id: number, motivo: string): Promise<Agendamento> => {
     const response = await api.post<Agendamento>(`/agendamentos/${id}/reabrir`, { motivo })
+    return response.data
+  },
+
+  registrarSinal: async (id: number, valor: number, formaPagamento: string): Promise<Agendamento> => {
+    const response = await api.post<Agendamento>(`/agendamentos/${id}/sinal`, { valor, formaPagamento })
     return response.data
   },
 

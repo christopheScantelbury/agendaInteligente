@@ -56,4 +56,8 @@ public class UnidadeDTO {
     private String municipioIbge;
     private String notafacilApiKey;
     private Boolean notafacilAtivo;
+
+    // ── Sinal/Adiantamento (V76) ─────────────────────────────────────────────
+    private Boolean cobraSinal;
+    private java.math.BigDecimal percentualSinal;
 }

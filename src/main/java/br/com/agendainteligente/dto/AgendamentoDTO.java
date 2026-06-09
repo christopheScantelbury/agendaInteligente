@@ -42,7 +42,13 @@ public class AgendamentoDTO {
     private StatusAgendamento status;
     
     private BigDecimal valorFinal; // Valor informado ao finalizar
-    
+
+    // ── Sinal/Adiantamento (V76) ─────────────────────────────────────────────
+    private BigDecimal valorSinal;
+    private Boolean sinalPago;
+    private java.time.LocalDateTime sinalDataPagamento;
+    private String sinalFormaPagamento;
+
     private ClienteDTO cliente;
     private UnidadeDTO unidade;
     private AtendenteDTO atendente;

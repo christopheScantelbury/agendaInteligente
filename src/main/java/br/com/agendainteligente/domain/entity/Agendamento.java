@@ -61,6 +61,22 @@ public class Agendamento {
     @Column(precision = 10, scale = 2)
     private BigDecimal valorFinal; // Valor informado ao finalizar o agendamento (pode ser diferente)
 
+    // ── Sinal/Adiantamento (V76) ─────────────────────────────────────────────
+    /** Valor do sinal pago. NULL = sem sinal. Diferente de valorFinal. */
+    @Column(name = "valor_sinal", precision = 12, scale = 2)
+    private BigDecimal valorSinal;
+
+    /** TRUE quando o cliente pagou o sinal — pode confirmar o agendamento. */
+    @Column(name = "sinal_pago", nullable = false)
+    @Builder.Default
+    private Boolean sinalPago = false;
+
+    @Column(name = "sinal_data_pagamento")
+    private LocalDateTime sinalDataPagamento;
+
+    @Column(name = "sinal_forma_pagamento", length = 40)
+    private String sinalFormaPagamento;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default

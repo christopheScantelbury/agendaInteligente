@@ -102,4 +102,20 @@ public class AgendamentoController {
     }
 
     public record ReaberturaPayload(String motivo) {}
+
+    // ── Sinal/Adiantamento (V76) ─────────────────────────────────────────────
+
+    /**
+     * Registrar pagamento de sinal pra agendamento.
+     * Útil pra unidades que exigem entrada antes de confirmar.
+     */
+    @PostMapping("/{id}/sinal")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRADOR', 'GERENTE', 'PROFISSIONAL')")
+    @Operation(summary = "Registrar pagamento de sinal/adiantamento")
+    public ResponseEntity<AgendamentoDTO> registrarSinal(@PathVariable Long id,
+                                                          @RequestBody SinalPayload body) {
+        return ResponseEntity.ok(agendamentoService.registrarSinal(id, body.valor(), body.formaPagamento()));
+    }
+
+    public record SinalPayload(java.math.BigDecimal valor, String formaPagamento) {}
 }

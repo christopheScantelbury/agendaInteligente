@@ -22,6 +22,9 @@ export interface Unidade {
   notafacilApiKey?: string
   notafacilAtivo?: boolean
   logo?: string
+  // ── Sinal/Adiantamento (V76) ──
+  cobraSinal?: boolean
+  percentualSinal?: number
 }
 
 export const unidadeService = {

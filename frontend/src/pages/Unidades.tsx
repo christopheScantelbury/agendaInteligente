@@ -600,6 +600,43 @@ function UnidadeForm({
           </label>
         </div>
 
+        {/* Sinal/Adiantamento (V76) */}
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+          <h3 className="text-sm font-bold text-slate-800">Sinal / Adiantamento</h3>
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={formData.cobraSinal ?? false}
+              onChange={(e) => setFormData({ ...formData, cobraSinal: e.target.checked })}
+              className="h-4 w-4 rounded border-gray-300 accent-violet-600"
+            />
+            <span className="text-sm text-slate-700">Esta unidade cobra sinal para confirmar agendamento</span>
+          </label>
+          {formData.cobraSinal && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FormField label="Percentual sugerido (% do valor total)">
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={formData.percentualSinal ?? 30}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      percentualSinal: e.target.value === '' ? undefined : Number(e.target.value),
+                    })
+                  }
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+                />
+              </FormField>
+              <div className="text-xs text-slate-500 self-end pb-1">
+                Exemplo: agendamento de R$ 100 com 30% → sinal de R$ 30
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="flex justify-end space-x-2 pt-4 border-t">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar

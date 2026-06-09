@@ -14,11 +14,13 @@ import {
   CheckCircle2,
   AlertCircle,
   RotateCcw,
+  Wallet,
 } from 'lucide-react'
 import BottomSheet from '../BottomSheet'
 import ConfirmDialog from '../ConfirmDialog'
 import MoneyInput from '../forms/MoneyInput'
 import ReabrirAgendamentoModal from './ReabrirAgendamentoModal'
+import ReceberSinalModal from './ReceberSinalModal'
 import { agendamentoService, FinalizarAgendamento } from '../../services/agendamentoService'
 import { useNotification } from '../../contexts/NotificationContext'
 import { getApiErrorMessage } from '../../utils/apiError'
@@ -73,6 +75,7 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
   const [valorFinalInput, setValorFinalInput] = useState<string>('')
   const [tipoPagamentoFinal, setTipoPagamentoFinal] = useState<string>('PIX')
   const [reabrirOpen, setReabrirOpen] = useState(false)
+  const [sinalOpen, setSinalOpen] = useState(false)
 
   const { data: agendamento, isLoading } = useQuery({
     queryKey: ['agendamento', agendamentoId],
@@ -86,6 +89,15 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
   const podeConfirmar = status === 'AGENDADO'
   const podeFinalizar = ['AGENDADO', 'CONFIRMADO', 'EM_ANDAMENTO', 'PROCEDIMENTO_FIM'].includes(status)
   const podeCancelar = !['CANCELADO', 'CONCLUIDO', 'FINALIZADO'].includes(status)
+  // Sinal: pode receber se status não-finalizado E sinal ainda não foi pago.
+  // A configuração `cobraSinal` da unidade só controla a sugestão/ênfase;
+  // mesmo unidade sem cobraSinal pode receber sinal voluntário pra qualquer agendamento.
+  const sinalPago = Boolean(agendamento?.sinalPago)
+  const podeReceberSinal =
+    !!agendamento?.id &&
+    !sinalPago &&
+    !['CANCELADO', 'CONCLUIDO', 'FINALIZADO'].includes(status)
+  const percentualSinalUnidade = Number(agendamento?.unidade?.percentualSinal ?? 30)
 
   const inicio = agendamento?.dataHoraInicio ? new Date(agendamento.dataHoraInicio) : null
   const valorPadrao = agendamento?.valorTotal ?? agendamento?.valorFinal ?? 0
@@ -218,10 +230,37 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
               )}
             </div>
 
+            {/* Bloco "Sinal pago" — informativo quando já foi recebido */}
+            {sinalPago && agendamento?.valorSinal != null && (
+              <div className="bg-violet-50 border border-violet-200 rounded-xl p-3 flex items-start gap-2">
+                <Wallet className="h-5 w-5 text-violet-600 flex-shrink-0" />
+                <div className="flex-1 text-sm">
+                  <p className="font-semibold text-violet-900">
+                    Sinal recebido: R$ {Number(agendamento.valorSinal).toFixed(2).replace('.', ',')}
+                  </p>
+                  {agendamento.sinalFormaPagamento && (
+                    <p className="text-xs text-violet-700 mt-0.5">
+                      via {agendamento.sinalFormaPagamento}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Ações */}
-            {(podeConfirmar || podeFinalizar || podeCancelar) && (
+            {(podeConfirmar || podeFinalizar || podeCancelar || podeReceberSinal) && (
               <div className="pt-2 space-y-2">
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Ações</p>
+
+                {podeReceberSinal && (
+                  <button
+                    onClick={() => setSinalOpen(true)}
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-violet-50 border border-violet-200 text-violet-700 text-sm font-semibold hover:bg-violet-100 transition"
+                  >
+                    <Wallet className="h-4 w-4" />
+                    Receber sinal {agendamento?.unidade?.cobraSinal ? `(${percentualSinalUnidade}% sugerido)` : ''}
+                  </button>
+                )}
 
                 {podeConfirmar && (
                   <button
@@ -309,6 +348,15 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
           // mas o detalhe aberto ainda mostra os botões antigos.
           onClose()
         }}
+      />
+
+      {/* Modal de receber sinal — z-[200] acima do BottomSheet */}
+      <ReceberSinalModal
+        agendamentoId={agendamentoId}
+        valorTotal={Number(agendamento?.valorTotal ?? 0)}
+        percentualSinal={percentualSinalUnidade}
+        isOpen={sinalOpen}
+        onClose={() => setSinalOpen(false)}
       />
 
       {/* Sub-sheet de finalizar (valor final + forma) */}
