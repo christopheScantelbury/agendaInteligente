@@ -15,8 +15,10 @@ import { matchSearch } from '../../utils/normalize'
 interface Props {
   isOpen: boolean
   onClose: () => void
-  /** Pré-preenche data/hora (vindo do tap em slot vazio na timeline futura) */
+  /** Pré-preenche data/hora (vindo do tap em slot vazio na timeline) */
   initialDateTime?: Date
+  /** Pré-seleciona profissional no Step 2 (vindo do tap em slot na coluna do prof) */
+  initialAtendenteId?: number
   onCreated?: () => void
 }
 
@@ -39,7 +41,7 @@ const FORMAS_PAGAMENTO = [
  * serviço editável) ficam pra próximas iterações — usuário com necessidade
  * complexa usa /agendamentos/novo legado.
  */
-export default function NovoAgendamentoSheet({ isOpen, onClose, initialDateTime, onCreated }: Props) {
+export default function NovoAgendamentoSheet({ isOpen, onClose, initialDateTime, initialAtendenteId, onCreated }: Props) {
   const queryClient = useQueryClient()
   const { showNotification } = useNotification()
 
@@ -62,7 +64,7 @@ export default function NovoAgendamentoSheet({ isOpen, onClose, initialDateTime,
       setClienteSearch('')
       setClienteId(null)
       setUnidadeId(null)
-      setAtendenteId(null)
+      setAtendenteId(initialAtendenteId ?? null)
       setServicosIds([])
       setObservacoes('')
       setFormaPagamento('')
@@ -72,7 +74,7 @@ export default function NovoAgendamentoSheet({ isOpen, onClose, initialDateTime,
           : format(new Date(), "yyyy-MM-dd'T'HH:mm")
       )
     }
-  }, [isOpen, initialDateTime])
+  }, [isOpen, initialDateTime, initialAtendenteId])
 
   const { data: clientes = [] } = useQuery({
     queryKey: ['clientes'],
