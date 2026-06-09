@@ -50,8 +50,14 @@ export default function ReabrirAgendamentoModal({ agendamentoId, isOpen, onClose
   const mutationReabrir = useMutation({
     mutationFn: ({ id, motivo }: { id: number; motivo: string }) =>
       agendamentoService.reabrir(id, motivo),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      // IMPORTANTE: invalidar TANTO a lista quanto o detalhe individual.
+      // Sem invalidar ['agendamento', id], o DetalhesSheet mantém cache stale
+      // com status CONCLUIDO/FINALIZADO mesmo após o reabrir bem-sucedido
+      // (bug 09/06 — card lista mostrava "EM PROCEDIMENTO" mas detalhe ainda
+      // mostrava "FINALIZADO" + banner verde).
       queryClient.invalidateQueries({ queryKey: ['agendamentos'] })
+      queryClient.invalidateQueries({ queryKey: ['agendamento', variables.id] })
       showNotification('success', 'Atendimento reaberto. Finalize de novo com o valor correto.')
       // Reset + fecha
       setMotivoSelecionado(MOTIVOS_REABERTURA[0])
