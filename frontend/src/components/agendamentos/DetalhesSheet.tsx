@@ -13,9 +13,11 @@ import {
   X,
   CheckCircle2,
   AlertCircle,
+  RotateCcw,
 } from 'lucide-react'
 import BottomSheet from '../BottomSheet'
 import ConfirmDialog from '../ConfirmDialog'
+import ReabrirAgendamentoModal from './ReabrirAgendamentoModal'
 import { agendamentoService, FinalizarAgendamento } from '../../services/agendamentoService'
 import { useNotification } from '../../contexts/NotificationContext'
 import { getApiErrorMessage } from '../../utils/apiError'
@@ -57,6 +59,7 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
   const [finalizandoOpen, setFinalizandoOpen] = useState(false)
   const [valorFinalInput, setValorFinalInput] = useState<string>('')
   const [tipoPagamentoFinal, setTipoPagamentoFinal] = useState<string>('PIX')
+  const [reabrirOpen, setReabrirOpen] = useState(false)
 
   const { data: agendamento, isLoading } = useQuery({
     queryKey: ['agendamento', agendamentoId],
@@ -240,13 +243,23 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
               </div>
             )}
 
-            {/* Aviso pra status finais */}
-            {(status === 'CONCLUIDO' || status === 'FINALIZADO') && (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-start gap-2">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0" />
-                <p className="text-sm text-emerald-800">
-                  Atendimento finalizado.
-                </p>
+            {/* Aviso pra status finais + opção de reabrir */}
+            {(status === 'CONCLUIDO' || status === 'FINALIZADO' || status === 'PROCEDIMENTO_FIM') && (
+              <div className="space-y-3">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-start gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0" />
+                  <p className="text-sm text-emerald-800">
+                    Atendimento finalizado.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setReabrirOpen(true)}
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-orange-50 border border-orange-200 text-orange-700 text-sm font-semibold hover:bg-orange-100 transition"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Reabrir atendimento
+                </button>
               </div>
             )}
 
@@ -270,6 +283,19 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
         variant="danger"
         onConfirm={() => cancelarMutation.mutate()}
         onCancel={() => setConfirmCancelar(false)}
+      />
+
+      {/* Modal compartilhado de reabertura — z-[200] acima do BottomSheet */}
+      <ReabrirAgendamentoModal
+        agendamentoId={agendamentoId}
+        isOpen={reabrirOpen}
+        onClose={() => setReabrirOpen(false)}
+        onSuccess={() => {
+          // Fecha o BottomSheet pra forçar refetch quando o admin abrir o
+          // agendamento de novo. Sem isso, status no card volta pra EM_ANDAMENTO
+          // mas o detalhe aberto ainda mostra os botões antigos.
+          onClose()
+        }}
       />
 
       {/* Sub-sheet de finalizar (valor final + forma) */}
