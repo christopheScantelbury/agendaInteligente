@@ -114,32 +114,32 @@ export function iniciarTourGerente(onComplete?: () => void) {
       {
         element: '[data-tour="kpis"]',
         popover: {
-          title: 'Seus números',
-          description: 'Faturamento, ocupação, ticket médio e taxa de cancelamento — atualizados em tempo real.',
+          title: 'Resumo do seu negócio',
+          description: 'Quanto você faturou, quantos horários estão preenchidos, valor médio por atendimento e quantos clientes desmarcaram. Tudo atualizado na hora.',
           side: 'bottom',
         },
       },
       {
         element: '[data-tour="grafico-faturamento"]',
         popover: {
-          title: 'Evolução do faturamento',
-          description: 'Compare seu desempenho com o período anterior. Use os filtros 7d / 30d / 90d / 1 ano.',
+          title: 'Como seu faturamento está evoluindo',
+          description: 'Compare quanto você faturou agora com o período anterior. Escolha entre últimos 7 dias, 30 dias, 3 meses ou 1 ano.',
           side: 'top',
         },
       },
       {
         element: '[data-tour="equipe"]',
         popover: {
-          title: 'Sua equipe',
-          description: 'Veja o status de cada profissional, próximo horário e faturamento do dia.',
+          title: 'Sua equipe em tempo real',
+          description: 'Veja quem está atendendo agora, qual é o próximo horário de cada um e quanto cada profissional faturou no dia.',
           side: 'top',
         },
       },
       {
         element: '[data-tour="checklist"]',
         popover: {
-          title: 'Comece aqui',
-          description: 'Siga o checklist para deixar seu negócio pronto pra receber clientes.',
+          title: 'Lista de tarefas para começar',
+          description: 'Siga os passos da lista para deixar seu negócio pronto para receber clientes. Cada tarefa concluída avança a configuração.',
           side: 'bottom',
         },
       },

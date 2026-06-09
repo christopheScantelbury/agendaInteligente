@@ -10,18 +10,9 @@ import {
   ChevronUp,
 } from 'lucide-react'
 import { faqsPorRota, SUPORTE_WHATSAPP } from '../config/faqs'
-import {
-  resetarOnboarding as resetCliente,
-  iniciarTourCliente,
-} from './cliente/OnboardingCliente'
-import {
-  resetarOnboardingProfissional as resetProfissional,
-  iniciarTourProfissional,
-} from './profissional/OnboardingProfissional'
-import {
-  resetarOnboardingGerente as resetGerente,
-  iniciarTourGerente,
-} from './gerente/OnboardingGerente'
+import { iniciarTourCliente } from './cliente/OnboardingCliente'
+import { iniciarTourProfissional } from './profissional/OnboardingProfissional'
+import { iniciarTourGerente } from './gerente/OnboardingGerente'
 
 /**
  * FAB de ajuda contextual — camada 4 do onboarding.
@@ -64,16 +55,17 @@ export default function HelpFab() {
 
   function refazerTour() {
     setAberto(false)
+    // IMPORTANTE: NÃO resetar localStorage do onboarding aqui. Se resetar, o
+    // modal de boas-vindas vai abrir junto com o tour driver.js disparado abaixo
+    // e os dois ficam sobrepostos. Quem clica "Refazer tour" já viu o modal antes
+    // — vai DIRETO pro tour guiado.
     if (contexto.tourId === 'cliente') {
-      resetCliente()
       navigate('/cliente')
       setTimeout(iniciarTourCliente, 300)
     } else if (contexto.tourId === 'profissional') {
-      resetProfissional()
       navigate('/profissional/hoje')
       setTimeout(iniciarTourProfissional, 300)
     } else if (contexto.tourId === 'gerente') {
-      resetGerente()
       navigate('/gerente/dashboard')
       setTimeout(iniciarTourGerente, 300)
     }

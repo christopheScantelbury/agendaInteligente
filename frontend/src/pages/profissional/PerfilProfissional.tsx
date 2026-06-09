@@ -7,7 +7,6 @@ import { atendenteService } from '../../services/atendenteService'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import {
   iniciarTourProfissional,
-  resetarOnboardingProfissional,
 } from '../../components/profissional/OnboardingProfissional'
 
 export default function PerfilProfissional() {
@@ -35,7 +34,9 @@ export default function PerfilProfissional() {
   }
 
   function handleRefazerTour() {
-    resetarOnboardingProfissional()
+    // NÃO resetar localStorage aqui — se resetar, o modal de boas-vindas vai abrir
+    // junto com o tour driver.js (chamado abaixo) e os dois ficam sobrepostos.
+    // Quem clica "Refazer tour" já viu o modal antes; vai direto pro tour guiado.
     navigate('/profissional/hoje')
     setTimeout(() => iniciarTourProfissional(), 300)
   }

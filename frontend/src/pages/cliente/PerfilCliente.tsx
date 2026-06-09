@@ -5,7 +5,6 @@ import { LogOut, RefreshCw, User, Mail, Hash, MessageSquare } from 'lucide-react
 import { clientePublicoService } from '../../services/clientePublicoService'
 import {
   iniciarTourCliente,
-  resetarOnboarding,
 } from '../../components/cliente/OnboardingCliente'
 import ConfirmDialog from '../../components/ConfirmDialog'
 
@@ -26,7 +25,9 @@ export default function PerfilCliente() {
   }
 
   function handleRefazerTour() {
-    resetarOnboarding()
+    // NÃO resetar localStorage aqui — se resetar, o modal de boas-vindas vai abrir
+    // junto com o tour driver.js e os dois ficam sobrepostos. Quem refaz já viu
+    // o modal antes; vai direto pro tour guiado.
     navigate('/cliente')
     setTimeout(() => iniciarTourCliente(), 300)
   }

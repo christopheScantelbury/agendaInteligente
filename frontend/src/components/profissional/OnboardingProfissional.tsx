@@ -114,24 +114,24 @@ export function iniciarTourProfissional(onComplete?: () => void) {
       {
         element: '[data-tour="header-dia"]',
         popover: {
-          title: 'Sua data e resumo do dia',
-          description: 'Veja qual dia está exibido, navegue entre dias e acompanhe os KPIs do dia.',
+          title: 'Data e resumo do dia',
+          description: 'Veja qual dia está sendo exibido, navegue entre os dias e acompanhe quantos atendimentos você tem e o total faturado.',
           side: 'bottom',
         },
       },
       {
         element: '[data-tour="timeline"]',
         popover: {
-          title: 'Linha do tempo',
-          description: 'Cada card é um agendamento. A cor indica o status. Toque em um para abrir as ações.',
+          title: 'Sua agenda em ordem do dia',
+          description: 'Cada cartão é um atendimento. A cor mostra a situação (agendado, em andamento, concluído ou cancelado). Toque em um cartão para ver as ações.',
           side: 'top',
         },
       },
       {
         element: '[data-tour="bottom-nav-profissional"]',
         popover: {
-          title: 'Navegação',
-          description: 'Hoje (modo dia), Agenda (próximos 7 dias) e Perfil.',
+          title: 'Menu inferior',
+          description: 'Hoje (visão do dia de hoje), Agenda (próximos sete dias) e Perfil (seus dados e ajustes).',
           side: 'top',
         },
       },
