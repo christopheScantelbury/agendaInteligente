@@ -76,7 +76,7 @@ export default function Login() {
 
       <div className="relative w-full max-w-sm">
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-6 sm:p-8">
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
             <Link to="/" className="flex items-center gap-2.5 mb-4">

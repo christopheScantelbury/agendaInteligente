@@ -465,7 +465,7 @@ function UnidadeForm({
           </select>
         </FormField>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField label="CEP">
             <div className="relative">
               <input
@@ -517,7 +517,7 @@ function UnidadeForm({
           />
         </FormField>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
           <FormField label="Número">
             <input
               type="text"
@@ -548,7 +548,7 @@ function UnidadeForm({
         {/* Seção NotaFácil */}
         <div className="border-t pt-4 mt-2">
           <p className="text-xs font-bold uppercase tracking-widest text-violet-600 mb-3">NotaFácil — Emissão de NFS-e</p>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="CNPJ da Unidade">
               <input
                 type="text"
@@ -568,7 +568,7 @@ function UnidadeForm({
               />
             </FormField>
           </div>
-          <div className="grid grid-cols-2 gap-4 mt-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
             <FormField label="Código IBGE do Município">
               <input
                 type="text"

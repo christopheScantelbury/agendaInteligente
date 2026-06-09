@@ -48,7 +48,7 @@ export default function BottomSheet({ isOpen, onClose, title, children, footer, 
       aria-modal="true"
     >
       <div
-        className={`w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-xl flex flex-col ${heightClass}`}
+        className={`w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-xl flex flex-col pb-[env(safe-area-inset-bottom)] sm:pb-0 ${heightClass}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag handle mobile */}

@@ -42,7 +42,7 @@ export default function NotificationContainer() {
 
   return (
     <div
-      className="fixed top-0 left-0 right-0 z-[99999] px-4 pt-4 pointer-events-none"
+      className="fixed top-0 left-0 right-0 z-[99999] px-4 pt-[calc(1rem+env(safe-area-inset-top))] pointer-events-none"
       style={{ position: 'fixed', zIndex: 99999 }}
     >
       <div className="max-w-7xl mx-auto space-y-2">

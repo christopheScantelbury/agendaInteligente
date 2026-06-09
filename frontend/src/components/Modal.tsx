@@ -141,7 +141,7 @@ export default function Modal({
             </button>
           )}
         </div>
-        <div className={bodyClassName ?? 'overflow-y-auto p-6 flex-1'}>{children}</div>
+        <div className={bodyClassName ?? 'overflow-y-auto p-4 sm:p-6 flex-1'}>{children}</div>
       </div>
     </div>
   )

@@ -94,8 +94,9 @@ export default function HelpFab() {
         onClick={() => setAberto(true)}
         aria-label="Abrir ajuda"
         className="
-          fixed bottom-20 right-4 sm:bottom-4 z-30
-          w-12 h-12 rounded-full
+          fixed right-4 z-30
+          bottom-[calc(5rem+env(safe-area-inset-bottom))] sm:bottom-4
+          w-14 h-14 rounded-full
           bg-violet-600 hover:bg-violet-700
           text-white shadow-lg shadow-violet-200
           flex items-center justify-center

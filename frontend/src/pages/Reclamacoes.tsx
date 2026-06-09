@@ -199,7 +199,7 @@ export default function Reclamacoes() {
     const categoria = CATEGORIAS.find((c) => c.value === form.categoria) ?? CATEGORIAS[0]
     return (
       <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
-        <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center">
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 text-center">
           <div className="mx-auto h-16 w-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4">
             <CheckCircle2 className="h-8 w-8" />
           </div>

@@ -561,7 +561,7 @@ function DespesaForm({
           className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
       </FormField>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <FormField label="Valor" required>
           <MoneyInput required value={form.valor}
             onChange={(v) => setForm({ ...form, valor: v })}
@@ -573,7 +573,7 @@ function DespesaForm({
         </FormField>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <FormField label="Data competência" required>
           <input required type="date" value={form.dataCompetencia}
             min="2000-01-01" max="2099-12-31"
@@ -620,7 +620,7 @@ function DespesaForm({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <FormField label="Categoria" required>
           <select required value={form.categoriaId} onChange={(e) => setForm({ ...form, categoriaId: Number(e.target.value) })}
             className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition">
@@ -641,7 +641,7 @@ function DespesaForm({
         </FormField>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <FormField label="Status">
           <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as StatusDespesa })}
             className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition">

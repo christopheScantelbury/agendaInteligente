@@ -186,7 +186,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       </div>
 
       <div className="relative w-full max-w-sm">
-        <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-6 sm:p-8">
           <div className="flex flex-col items-center mb-6">
             <Link to="/" className="flex items-center gap-2.5 mb-4">
               <LogoMark size={40} />
