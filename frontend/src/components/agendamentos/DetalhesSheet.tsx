@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import BottomSheet from '../BottomSheet'
 import ConfirmDialog from '../ConfirmDialog'
+import MoneyInput from '../forms/MoneyInput'
 import ReabrirAgendamentoModal from './ReabrirAgendamentoModal'
 import { agendamentoService, FinalizarAgendamento } from '../../services/agendamentoService'
 import { useNotification } from '../../contexts/NotificationContext'
@@ -44,6 +45,18 @@ const FORMAS_PAGAMENTO_FINALIZAR = [
   { value: 'CARTAO_CREDITO', label: 'Cartão de crédito' },
   { value: 'CARTAO_DEBITO', label: 'Cartão de débito' },
 ] as const
+
+/**
+ * Converte a string interna do form (sempre número puro ou vírgula decimal)
+ * pro number consumido pelo MoneyInput. Mantém compatibilidade com a lógica
+ * antiga (parseValorBr no submit).
+ */
+function parseValorInput(s: string): number {
+  if (!s) return 0
+  const limpo = s.replace(/[^\d,.-]/g, '').replace(',', '.')
+  const n = parseFloat(limpo)
+  return Number.isFinite(n) ? n : 0
+}
 
 /**
  * Bottom-sheet de detalhes do agendamento.
@@ -324,29 +337,37 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Valor recebido (R$)</label>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={valorFinalInput}
-              onChange={(e) => setValorFinalInput(e.target.value)}
-              placeholder="0,00"
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Valor recebido</label>
+            <MoneyInput
+              value={parseValorInput(valorFinalInput)}
+              onChange={(n) => setValorFinalInput(n > 0 ? String(n) : '')}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Forma de pagamento</label>
-            <select
-              value={tipoPagamentoFinal}
-              onChange={(e) => setTipoPagamentoFinal(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-            >
-              {FORMAS_PAGAMENTO_FINALIZAR.map((f) => (
-                <option key={f.value} value={f.value}>
-                  {f.label}
-                </option>
-              ))}
-            </select>
+            <label className="block text-xs font-semibold text-slate-600 mb-2">Forma de pagamento</label>
+            {/* Grid de botões selecionáveis — substitui o <select> nativo (não
+                estilizado, ruim em mobile). Padrão consolidado no projeto
+                (igual ao /cliente/agendar passo 3 e PWA do profissional). */}
+            <div className="grid grid-cols-2 gap-2">
+              {FORMAS_PAGAMENTO_FINALIZAR.map((f) => {
+                const ativo = tipoPagamentoFinal === f.value
+                return (
+                  <button
+                    key={f.value}
+                    type="button"
+                    onClick={() => setTipoPagamentoFinal(f.value)}
+                    className={`px-3 py-2.5 rounded-xl border text-sm font-semibold transition text-left ${
+                      ativo
+                        ? 'bg-emerald-50 border-emerald-400 text-emerald-800 ring-2 ring-emerald-100'
+                        : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
       </BottomSheet>
