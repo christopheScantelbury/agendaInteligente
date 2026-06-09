@@ -57,8 +57,107 @@ export default function ReciboModal({ agendamento, onClose }: Props) {
 
   const numeroRecibo = String(agendamento.id ?? '').padStart(6, '0')
 
+  /**
+   * Imprime o recibo via janela popup separada (mais confiável que
+   * window.print() + @media print, que brigava com o overlay fixed do modal
+   * e gerava página em branco).
+   *
+   * Estratégia:
+   * 1. Pega o HTML do elemento #recibo-print
+   * 2. Abre nova janela
+   * 3. Injeta HTML + estilos Tailwind essenciais (cores, espaçamento, layout)
+   * 4. Aguarda load → chama window.print() na nova janela
+   * 5. Fecha automaticamente depois
+   */
   const handlePrint = () => {
-    window.print()
+    const conteudo = document.getElementById('recibo-print')
+    if (!conteudo) {
+      console.error('Recibo: container #recibo-print não encontrado')
+      return
+    }
+    const win = window.open('', '_blank', 'width=720,height=900')
+    if (!win) {
+      alert('Pop-up bloqueado pelo navegador. Permita pop-ups pra imprimir.')
+      return
+    }
+    // CSS mínimo equivalente às classes Tailwind usadas — independente de carregar bundle
+    const css = `
+      * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      body { margin: 0; padding: 24px; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #0f172a; background: white; }
+      h1 { font-size: 22px; font-weight: 900; letter-spacing: -0.02em; margin: 0; }
+      .text-center { text-align: center; }
+      .text-right { text-align: right; }
+      .border-b { border-bottom: 1px solid #e2e8f0; }
+      .border-t { border-top: 1px solid #cbd5e1; }
+      .pb-4 { padding-bottom: 16px; } .pt-2 { padding-top: 8px; } .pt-3 { padding-top: 12px; } .pt-4 { padding-top: 16px; }
+      .mt-1 { margin-top: 4px; } .mt-2 { margin-top: 8px; } .mb-1 { margin-bottom: 4px; } .mb-2 { margin-bottom: 8px; }
+      .space-y-5 > * + * { margin-top: 20px; }
+      .space-y-2 > * + * { margin-top: 8px; }
+      .space-y-1 > * + * { margin-top: 4px; }
+      .grid { display: grid; }
+      .grid-cols-2 { grid-template-columns: 1fr 1fr; }
+      .gap-4 { gap: 16px; }
+      .flex { display: flex; }
+      .items-center { align-items: center; } .items-baseline { align-items: baseline; }
+      .justify-between { justify-content: space-between; }
+      .gap-3 { gap: 12px; } .flex-1 { flex: 1; min-width: 0; }
+      .p-3 { padding: 12px; }
+      .rounded-xl { border-radius: 12px; }
+      .bg-slate-50 { background: #f8fafc; }
+      .bg-emerald-50 { background: #ecfdf5; }
+      .bg-emerald-600 { background: #059669; color: white; }
+      .border { border: 1px solid #e2e8f0; }
+      .border-emerald-200 { border-color: #a7f3d0; }
+      .border-slate-100 { border-color: #f1f5f9; }
+      .text-violet-700 { color: #6d28d9; }
+      .text-emerald-700 { color: #047857; }
+      .text-emerald-800 { color: #065f46; }
+      .text-emerald-900 { color: #064e3b; }
+      .text-slate-400 { color: #94a3b8; }
+      .text-slate-500 { color: #64748b; }
+      .text-slate-600 { color: #475569; }
+      .text-slate-700 { color: #334155; }
+      .uppercase { text-transform: uppercase; }
+      .tracking-wider { letter-spacing: 0.08em; } .tracking-widest { letter-spacing: 0.12em; }
+      .font-bold { font-weight: 700; }
+      .font-semibold { font-weight: 600; }
+      .font-black { font-weight: 900; }
+      .text-xs { font-size: 12px; line-height: 16px; }
+      .text-sm { font-size: 14px; line-height: 20px; }
+      .text-base { font-size: 16px; line-height: 24px; }
+      .text-xl { font-size: 20px; line-height: 28px; }
+      .tabular-nums { font-variant-numeric: tabular-nums; }
+      ul { list-style: none; padding: 0; margin: 0; }
+      .border-dashed { border-style: dashed; }
+      .last-pb-0:last-child { padding-bottom: 0; border: 0; }
+      .px-3 { padding-left: 12px; padding-right: 12px; }
+      .py-1 { padding-top: 4px; padding-bottom: 4px; }
+      .rounded-full { border-radius: 9999px; }
+      .inline-flex { display: inline-flex; }
+      .text-orange-700 { color: #c2410c; }
+      img, svg { max-width: 100%; }
+    `
+    win.document.open()
+    win.document.write(`<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Recibo de atendimento</title>
+<style>${css}</style>
+</head>
+<body>
+${conteudo.innerHTML}
+<script>
+  window.addEventListener('load', function() {
+    setTimeout(function() {
+      window.print();
+      setTimeout(function() { window.close(); }, 300);
+    }, 100);
+  });
+</script>
+</body>
+</html>`)
+    win.document.close()
   }
 
   const formatMoeda = (n: number) =>
@@ -66,25 +165,12 @@ export default function ReciboModal({ agendamento, onClose }: Props) {
 
   return (
     <>
-      {/* CSS print — esconde tudo exceto #recibo-print durante impressão */}
-      <style>{`
-        @media print {
-          body * { visibility: hidden; }
-          #recibo-print, #recibo-print * { visibility: visible; }
-          #recibo-print {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            padding: 24px;
-            background: white;
-          }
-          .no-print { display: none !important; }
-        }
-      `}</style>
+      {/* Impressão usa janela popup separada (handlePrint), sem @media print no
+          documento principal — abordagem mais confiável e evita briga com o
+          overlay fixed do modal (que ficou em branco na 1ª implementação). */}
 
       <div
-        className="fixed inset-0 z-[200] bg-slate-900/50 flex items-end sm:items-center justify-center p-0 sm:p-4 no-print"
+        className="fixed inset-0 z-[200] bg-slate-900/50 flex items-end sm:items-center justify-center p-0 sm:p-4"
         onClick={(e) => {
           if (e.target === e.currentTarget) onClose()
         }}
@@ -236,7 +322,7 @@ export default function ReciboModal({ agendamento, onClose }: Props) {
           </div>
 
           {/* Ações (não aparecem na impressão) */}
-          <footer className="flex flex-col sm:flex-row gap-2 p-4 sm:p-5 border-t border-slate-100 no-print">
+          <footer className="flex flex-col sm:flex-row gap-2 p-4 sm:p-5 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
