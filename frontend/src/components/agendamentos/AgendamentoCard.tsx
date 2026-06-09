@@ -45,6 +45,13 @@ export default function AgendamentoCard({ agendamento, showProfissionalChip = fa
     .filter(Boolean)
     .join(' · ')
   const valorTotal = agendamento.valorTotal ?? agendamento.valorFinal ?? null
+  // #155: agendamento pode ter outros profissionais nos itens
+  const principalId = (agendamento as any).atendente?.id ?? agendamento.atendenteId
+  const outrosProfs = new Set(
+    servicos
+      .map((s: any) => s.atendenteId)
+      .filter((id: any) => id != null && id !== principalId)
+  )
 
   return (
     <button
@@ -85,6 +92,11 @@ export default function AgendamentoCard({ agendamento, showProfissionalChip = fa
                     {profissionalInicial}
                   </span>
                   <span className="font-medium">{profissionalNome.split(' ')[0]}</span>
+                  {outrosProfs.size > 0 && (
+                    <span className="ml-1 text-[10px] font-bold text-violet-700">
+                      +{outrosProfs.size}
+                    </span>
+                  )}
                 </span>
               )}
               {valorTotal != null && (

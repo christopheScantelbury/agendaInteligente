@@ -79,10 +79,20 @@ export default function DayMode({ selectedDate, onDateChange }: Props) {
     if (profissionaisSelecionados.length > 0) return profissionaisSelecionados.slice(0, 2)
     if (atendentesAtivos.length === 1) return [atendentesAtivos[0].id]
 
-    // Sem seleção e múltiplos profs: top 2 por nº de agendamentos do dia (fallback alfabético)
+    // Sem seleção e múltiplos profs: top 2 por nº de items do dia (fallback alfabético).
+    // Conta cada item separadamente pra refletir atendentes que só aparecem como
+    // item em agendamentos cujo principal é outro (#155).
     const contagem = new Map<number, number>()
     agendamentosDoDia.forEach((a) => {
-      if (a.atendenteId) contagem.set(a.atendenteId, (contagem.get(a.atendenteId) ?? 0) + 1)
+      const items = (a.servicos ?? []) as any[]
+      if (items.length === 0) {
+        if (a.atendenteId) contagem.set(a.atendenteId, (contagem.get(a.atendenteId) ?? 0) + 1)
+        return
+      }
+      items.forEach((it) => {
+        const eff = (it.atendenteId as number | undefined) ?? a.atendenteId
+        if (eff) contagem.set(eff, (contagem.get(eff) ?? 0) + 1)
+      })
     })
     const ordenados = [...atendentesAtivos].sort((a, b) => {
       const diff = (contagem.get(b.id) ?? 0) - (contagem.get(a.id) ?? 0)
@@ -92,14 +102,44 @@ export default function DayMode({ selectedDate, onDateChange }: Props) {
     return ordenados.slice(0, 2).map((a) => a.id)
   }, [profissionaisSelecionados, atendentesAtivos, agendamentosDoDia])
 
-  // Monta colunas pra timeline
+  // Monta colunas pra timeline. Issue #155: cada SERVICO do agendamento pode ter
+  // atendente/horário próprios. Achatamos em "agendamentos virtuais" — 1 por item.
+  // Items sem atendente próprio herdam o do agendamento pai (compat).
   const colunas = useMemo<ColunaProfissional[]>(() => {
+    const porColuna = new Map<number, any[]>()
+    idsExibidos.forEach((id) => porColuna.set(id, []))
+
+    agendamentosDoDia.forEach((a) => {
+      const servicos = (a.servicos ?? []) as any[]
+      if (servicos.length === 0) {
+        // Sem serviços (raro) — usa agendamento direto na coluna do principal
+        if (a.atendenteId && porColuna.has(a.atendenteId)) {
+          porColuna.get(a.atendenteId)!.push(a)
+        }
+        return
+      }
+      servicos.forEach((item) => {
+        const atendenteEfetivo = (item.atendenteId as number | undefined) ?? a.atendenteId
+        if (!atendenteEfetivo || !porColuna.has(atendenteEfetivo)) return
+
+        const inicioStr = (item.dataHoraInicio as string | undefined) ?? a.dataHoraInicio
+        const fimStr = (item.dataHoraFim as string | undefined) ?? a.dataHoraFim
+        // Agendamento "virtual" — mesmo id pro click abrir o DetalhesSheet correto
+        const virtual = {
+          ...a,
+          dataHoraInicio: inicioStr,
+          dataHoraFim: fimStr,
+          servicos: [item],
+        }
+        porColuna.get(atendenteEfetivo)!.push(virtual)
+      })
+    })
+
     return idsExibidos
       .map((id) => {
         const at = atendentesAtivos.find((a) => a.id === id)
         if (!at) return null
-        const ags = agendamentosDoDia.filter((a) => a.atendenteId === id)
-        return { id, nome: at.nome, agendamentos: ags }
+        return { id, nome: at.nome, agendamentos: porColuna.get(id) ?? [] }
       })
       .filter((c): c is ColunaProfissional => c !== null)
   }, [idsExibidos, atendentesAtivos, agendamentosDoDia])

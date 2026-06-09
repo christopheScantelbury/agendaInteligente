@@ -200,6 +200,22 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
 
               <InfoRow icon={User} label="Profissional">
                 {agendamento.atendente?.usuario?.nome ?? agendamento.atendente?.nome ?? '—'}
+                {(() => {
+                  // #155: marca quando há outros profissionais nos itens
+                  const itens = (agendamento.servicos ?? []) as any[]
+                  const principal = agendamento.atendente?.id ?? agendamento.atendenteId
+                  const outros = new Set(
+                    itens
+                      .map((it) => it.atendenteId)
+                      .filter((id) => id != null && id !== principal)
+                  )
+                  if (outros.size === 0) return null
+                  return (
+                    <span className="ml-2 text-[10px] font-semibold text-violet-700 bg-violet-50 border border-violet-200 rounded-full px-1.5 py-0.5">
+                      + {outros.size} prof.
+                    </span>
+                  )
+                })()}
               </InfoRow>
 
               {agendamento.unidade?.nome && (
@@ -209,11 +225,27 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
               )}
 
               <InfoRow icon={Briefcase} label="Serviços">
-                {agendamento.servicos && agendamento.servicos.length > 0
-                  ? agendamento.servicos
-                      .map((s: any) => s.servico?.nome ?? s.descricao ?? 'Serviço')
-                      .join(', ')
-                  : '—'}
+                {agendamento.servicos && agendamento.servicos.length > 0 ? (
+                  <div className="space-y-1">
+                    {agendamento.servicos.map((s: any, i: number) => {
+                      const nomeServico = s.servico?.nome ?? s.descricao ?? 'Serviço'
+                      // #155: mostra nome do profissional do item quando diverge do principal
+                      const nomeAt = s.nomeAtendente
+                      return (
+                        <div key={i} className="text-sm">
+                          <span className="text-slate-800">{nomeServico}</span>
+                          {nomeAt && (
+                            <span className="ml-1.5 text-[11px] text-violet-700 bg-violet-50 border border-violet-100 rounded px-1.5 py-0.5">
+                              {nomeAt.split(' ')[0]}
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  '—'
+                )}
               </InfoRow>
 
               <InfoRow icon={CreditCard} label="Valor">

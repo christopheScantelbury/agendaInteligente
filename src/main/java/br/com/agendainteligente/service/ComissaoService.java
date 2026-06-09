@@ -95,17 +95,14 @@ public class ComissaoService {
         Atendente atendente = atendenteRepository.findById(atendenteId)
                 .orElseThrow(() -> new ResourceNotFoundException("Profissional não encontrado"));
 
-        // 1. Calcular lançamentos para agendamentos CONCLUIDOS que ainda não têm lançamento
-        List<Agendamento> concluidos = agendamentoRepository.findByAtendenteId(atendenteId).stream()
-                .filter(a -> a.getStatus() == StatusAgendamento.CONCLUIDO)
-                .collect(Collectors.toList());
+        // #155: a comissão é POR ITEM. Buscar items cujo atendente efetivo (item ou
+        // herdado do agendamento) é o atendenteId, com agendamento CONCLUIDO.
+        List<AgendamentoServico> items = agendamentoServicoRepository
+                .findByAtendenteEfetivoAndAgendamentoStatus(atendenteId, StatusAgendamento.CONCLUIDO);
 
-        for (Agendamento ag : concluidos) {
-            List<AgendamentoServico> servicos = agendamentoServicoRepository.findByAgendamentoId(ag.getId());
-            for (AgendamentoServico as : servicos) {
-                if (lancamentoRepository.existsByAgendamentoServicoId(as.getId())) continue;
-                criarLancamento(atendente, ag, as);
-            }
+        for (AgendamentoServico as : items) {
+            if (lancamentoRepository.existsByAgendamentoServicoId(as.getId())) continue;
+            criarLancamento(atendente, as.getAgendamento(), as);
         }
 
         return lancamentoRepository.findByAtendenteIdAndStatus(atendenteId, StatusComissao.PENDENTE).stream()

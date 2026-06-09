@@ -433,170 +433,251 @@ public class AgendamentoService {
     @Transactional
     public AgendamentoDTO criar(AgendamentoDTO agendamentoDTO) {
         log.debug("Criando novo agendamento: {}", agendamentoDTO);
-        
+
         // Validações básicas
         if (agendamentoDTO.getServicos() == null || agendamentoDTO.getServicos().isEmpty()) {
             throw new BusinessException("É necessário informar pelo menos um serviço");
         }
-        
+
         Cliente cliente = clienteRepository.findById(agendamentoDTO.getClienteId())
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado"));
-        
+
         Unidade unidade = unidadeRepository.findById(agendamentoDTO.getUnidadeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada"));
-        
-        Atendente atendente = atendenteRepository.findById(agendamentoDTO.getAtendenteId())
+
+        Atendente atendentePrincipal = atendenteRepository.findById(agendamentoDTO.getAtendenteId())
                 .orElseThrow(() -> new ResourceNotFoundException("Atendente não encontrado"));
-        
-        validarPermissaoCriarAgendamento(cliente.getId(), unidade.getId(), atendente.getId());
+
+        validarPermissaoCriarAgendamento(cliente.getId(), unidade.getId(), atendentePrincipal.getId());
         Set<Long> unidadesPermitidas = obterUnidadesIdsPermitidas();
-        // Esse check secundário existe pra impedir ADMIN/GERENTE de criar agendamento
-        // PARA cliente de outro tenant. Quando o próprio cliente está agendando
-        // (perfil CLIENTE ou sem Usuario), pular — `validarPermissaoCriarAgendamento`
-        // acima já validou e pode ser 1º agendamento (sem vínculo prévio).
         boolean clienteEhProprio = ehClienteCriandoProprio(cliente.getId());
         if (!clienteEhProprio
                 && (cliente.getUnidade() == null
                     || !unidadesPermitidas.contains(cliente.getUnidade().getId()))) {
             throw new BusinessException("Cliente não pertence a uma unidade que você pode acessar");
         }
-        
+
         if (!unidade.getAtivo()) {
             throw new BusinessException("Unidade não está ativa");
         }
-        
-        if (!atendente.getAtivo()) {
+        if (!atendentePrincipal.getAtivo()) {
             throw new BusinessException("Atendente não está ativo");
         }
-        
-        // Valida que o atendente pode prestar os serviços
+
+        // Issue #155: items podem ter atendente/data próprios. NULL = herda do agendamento.
+        // Coleta serviços e atendentes únicos do payload.
         List<Long> servicosIds = agendamentoDTO.getServicos().stream()
                 .map(AgendamentoServicoDTO::getServicoId)
+                .distinct()
                 .collect(Collectors.toList());
-        
         List<Servico> servicos = servicoRepository.findAllById(servicosIds);
         if (servicos.size() != servicosIds.size()) {
             throw new ResourceNotFoundException("Um ou mais serviços não foram encontrados");
         }
+        java.util.Map<Long, Servico> servicoById = servicos.stream()
+                .collect(Collectors.toMap(Servico::getId, s -> s));
         for (Servico s : servicos) {
             if (s.getUnidade() == null || !unidadesPermitidas.contains(s.getUnidade().getId())) {
                 throw new BusinessException("Um ou mais serviços não pertencem a unidades que você pode acessar");
             }
         }
-        
-        // Verifica se atendente pode prestar os serviços
-        List<Long> servicosDoAtendente = atendente.getServicos().stream()
-                .map(Servico::getId)
-                .collect(Collectors.toList());
-        
-        for (Long servicoId : servicosIds) {
-            if (!servicosDoAtendente.contains(servicoId)) {
-                throw new BusinessException("Atendente não está habilitado para prestar um dos serviços selecionados");
+
+        Set<Long> atendentesIdsExtras = agendamentoDTO.getServicos().stream()
+                .map(AgendamentoServicoDTO::getAtendenteId)
+                .filter(java.util.Objects::nonNull)
+                .filter(id -> !id.equals(atendentePrincipal.getId()))
+                .collect(Collectors.toSet());
+        java.util.Map<Long, Atendente> atendentePorId = new java.util.HashMap<>();
+        atendentePorId.put(atendentePrincipal.getId(), atendentePrincipal);
+        if (!atendentesIdsExtras.isEmpty()) {
+            for (Atendente extra : atendenteRepository.findAllById(atendentesIdsExtras)) {
+                if (!extra.getAtivo()) {
+                    throw new BusinessException("Atendente '" + nomeAtendente(extra) + "' não está ativo");
+                }
+                if (extra.getUnidade() == null || !extra.getUnidade().getId().equals(unidade.getId())) {
+                    throw new BusinessException(
+                            "Atendente '" + nomeAtendente(extra) + "' não pertence à unidade selecionada");
+                }
+                atendentePorId.put(extra.getId(), extra);
+            }
+            if (atendentePorId.size() - 1 < atendentesIdsExtras.size()) {
+                throw new ResourceNotFoundException("Um ou mais profissionais do agendamento não foram encontrados");
             }
         }
-        
-        // Calcula duração total e valor total
-        int duracaoTotal = servicos.stream()
-                .mapToInt(Servico::getDuracaoMinutos)
-                .max()
-                .orElse(30); // Default 30 minutos se não houver
-        
+
+        LocalDateTime dataHoraInicioPrincipal = agendamentoDTO.getDataHoraInicio();
+        if (dataHoraInicioPrincipal == null) {
+            throw new BusinessException("Data e hora do agendamento são obrigatórias");
+        }
+
+        // Resolve atendente + datas efetivas por item, valida habilitação e calcula valores.
+        record ItemEfetivo(AgendamentoServicoDTO dto, Servico servico, Atendente atendente,
+                           LocalDateTime inicio, LocalDateTime fim, BigDecimal valorItem) {}
+        List<ItemEfetivo> efetivos = new ArrayList<>();
         BigDecimal valorTotal = BigDecimal.ZERO;
+        LocalDateTime menorInicio = null;
+        LocalDateTime maiorFim = null;
+
         for (AgendamentoServicoDTO servicoDTO : agendamentoDTO.getServicos()) {
-            Servico servico = servicos.stream()
-                    .filter(s -> s.getId().equals(servicoDTO.getServicoId()))
-                    .findFirst()
-                    .orElseThrow();
-            
+            Servico servico = servicoById.get(servicoDTO.getServicoId());
+            if (servico == null) {
+                throw new ResourceNotFoundException("Serviço " + servicoDTO.getServicoId() + " não encontrado");
+            }
             if (!servico.getAtivo()) {
                 throw new BusinessException("Serviço " + servico.getNome() + " não está ativo");
             }
-            
+
+            Long atendenteEfetivoId = servicoDTO.getAtendenteId() != null
+                    ? servicoDTO.getAtendenteId()
+                    : atendentePrincipal.getId();
+            Atendente atendenteItem = atendentePorId.get(atendenteEfetivoId);
+            if (atendenteItem == null) {
+                throw new ResourceNotFoundException("Atendente " + atendenteEfetivoId + " não encontrado");
+            }
+            // Habilitação: o atendente efetivo do item DEVE oferecer o serviço.
+            boolean habilitado = atendenteItem.getServicos() != null
+                    && atendenteItem.getServicos().stream().anyMatch(s -> s.getId().equals(servico.getId()));
+            if (!habilitado) {
+                throw new BusinessException(
+                        "O profissional '" + nomeAtendente(atendenteItem)
+                                + "' não está habilitado para o serviço '" + servico.getNome() + "'");
+            }
+
+            LocalDateTime inicioItem = servicoDTO.getDataHoraInicio() != null
+                    ? servicoDTO.getDataHoraInicio()
+                    : dataHoraInicioPrincipal;
+            int duracao = servico.getDuracaoMinutos() != null ? servico.getDuracaoMinutos() : 30;
+            LocalDateTime fimItem = servicoDTO.getDataHoraFim() != null
+                    ? servicoDTO.getDataHoraFim()
+                    : inicioItem.plusMinutes(duracao);
+
             BigDecimal valor = servicoDTO.getValor() != null ? servicoDTO.getValor() : servico.getValor();
             Integer quantidade = servicoDTO.getQuantidade() != null ? servicoDTO.getQuantidade() : 1;
             BigDecimal valorItem = valor.multiply(BigDecimal.valueOf(quantidade));
-            
+            servicoDTO.setValor(valor);
+            servicoDTO.setQuantidade(quantidade);
             servicoDTO.setValorTotal(valorItem);
             valorTotal = valorTotal.add(valorItem);
+
+            if (menorInicio == null || inicioItem.isBefore(menorInicio)) menorInicio = inicioItem;
+            if (maiorFim == null || fimItem.isAfter(maiorFim)) maiorFim = fimItem;
+
+            efetivos.add(new ItemEfetivo(servicoDTO, servico, atendenteItem, inicioItem, fimItem, valorItem));
         }
-        
-        LocalDateTime dataHoraInicio = agendamentoDTO.getDataHoraInicio();
-        LocalDateTime dataHoraFim = dataHoraInicio.plusMinutes(duracaoTotal);
-        
-        // Verifica se é agendamento recorrente
+
+        // Recorrência só faz sentido com 1 atendente/horário. Bloqueia se houver itens com profs diferentes.
+        boolean temItemComProfPropria = agendamentoDTO.getServicos().stream()
+                .anyMatch(s -> s.getAtendenteId() != null && !s.getAtendenteId().equals(atendentePrincipal.getId()));
+        boolean temItemComHorarioProprio = agendamentoDTO.getServicos().stream()
+                .anyMatch(s -> s.getDataHoraInicio() != null);
+
         RecorrenciaDTO recorrencia = agendamentoDTO.getRecorrencia();
         boolean isRecorrente = recorrencia != null && Boolean.TRUE.equals(recorrencia.getRecorrente());
-        
         if (isRecorrente) {
-            // Cria agendamentos recorrentes
+            if (temItemComProfPropria || temItemComHorarioProprio) {
+                throw new BusinessException(
+                        "Recorrência ainda não suporta agendamento com profissionais ou horários diferentes por serviço.");
+            }
+            int duracaoTotal = servicos.stream()
+                    .mapToInt(s -> s.getDuracaoMinutos() != null ? s.getDuracaoMinutos() : 30)
+                    .max()
+                    .orElse(30);
             List<Agendamento> agendamentosRecorrentes = agendamentoRecorrenteService.criarAgendamentosRecorrentes(
                     agendamentoDTO,
                     recorrencia,
                     cliente,
                     unidade,
-                    atendente,
+                    atendentePrincipal,
                     servicos,
                     agendamentoDTO.getServicos(),
                     valorTotal,
                     duracaoTotal
             );
-            
             if (agendamentosRecorrentes.isEmpty()) {
                 throw new BusinessException("Não foi possível criar nenhum agendamento recorrente. Verifique conflitos de horário.");
             }
-            
             log.info("Criados {} agendamentos recorrentes", agendamentosRecorrentes.size());
-            return agendamentoMapper.toDTO(agendamentosRecorrentes.get(0)); // Retorna o primeiro
+            return agendamentoMapper.toDTO(agendamentosRecorrentes.get(0));
         }
-        
-        // Verifica conflito de horário (verifica sobreposição com outros agendamentos do mesmo atendente)
-        if (agendamentoRepository.findConflitoHorario(atendente.getId(), dataHoraInicio, dataHoraFim).isPresent()) {
-            throw new BusinessException("Já existe um agendamento neste horário para este atendente");
+
+        // Verifica conflito de horário por atendente efetivo. Agendamentos do mesmo
+        // grupo (sendo criados juntos) podem ter horários iguais entre profs diferentes,
+        // mas não podem sobrepor no mesmo profissional.
+        for (ItemEfetivo ef : efetivos) {
+            if (agendamentoRepository.findConflitoHorario(ef.atendente().getId(), ef.inicio(), ef.fim()).isPresent()) {
+                throw new BusinessException(
+                        "Conflito de horário para '" + nomeAtendente(ef.atendente()) + "' às "
+                                + ef.inicio().toLocalTime());
+            }
         }
-        
-        // Cria agendamento único
+        // Conflito interno (itens do mesmo payload no mesmo profissional sobrepostos)
+        for (int i = 0; i < efetivos.size(); i++) {
+            for (int j = i + 1; j < efetivos.size(); j++) {
+                ItemEfetivo a = efetivos.get(i);
+                ItemEfetivo b = efetivos.get(j);
+                if (!a.atendente().getId().equals(b.atendente().getId())) continue;
+                boolean sobrepoe = a.inicio().isBefore(b.fim()) && b.inicio().isBefore(a.fim());
+                if (sobrepoe) {
+                    throw new BusinessException(
+                            "Dois serviços do mesmo profissional '" + nomeAtendente(a.atendente())
+                                    + "' têm horários sobrepostos");
+                }
+            }
+        }
+
+        // Cria agendamento "cabeça"
         Agendamento agendamento = agendamentoMapper.toEntity(agendamentoDTO);
         agendamento.setCliente(cliente);
         agendamento.setUnidade(unidade);
-        agendamento.setAtendente(atendente);
-        agendamento.setDataHoraInicio(dataHoraInicio);
-        agendamento.setDataHoraFim(dataHoraFim);
+        agendamento.setAtendente(atendentePrincipal);
+        agendamento.setDataHoraInicio(menorInicio != null ? menorInicio : dataHoraInicioPrincipal);
+        agendamento.setDataHoraFim(maiorFim != null ? maiorFim : dataHoraInicioPrincipal.plusMinutes(30));
         agendamento.setValorTotal(valorTotal);
         agendamento.setStatus(StatusAgendamento.AGENDADO);
         agendamento.setAgendamentoRecorrente(false);
+        // V76: sinalPago tem default false na entity (@Builder.Default), mas MapStruct
+        // não respeita defaults — toEntity copia null do DTO. Garante false aqui.
+        if (agendamento.getSinalPago() == null) agendamento.setSinalPago(false);
         agendamento.setServicos(new ArrayList<>());
-        
+
         agendamento = agendamentoRepository.save(agendamento);
-        
-        // Cria serviços do agendamento
+
+        // Cria itens com atendente/datas efetivos. Persiste o atendente do item
+        // SOMENTE se diverge do principal (mantém atendente_id NULL = herda — bom pra rollback).
         List<AgendamentoServico> agendamentoServicos = new ArrayList<>();
-        for (AgendamentoServicoDTO servicoDTO : agendamentoDTO.getServicos()) {
-            Servico servico = servicos.stream()
-                    .filter(s -> s.getId().equals(servicoDTO.getServicoId()))
-                    .findFirst()
-                    .orElseThrow();
-            
-            AgendamentoServico agendamentoServico = AgendamentoServico.builder()
+        for (ItemEfetivo ef : efetivos) {
+            AgendamentoServico item = AgendamentoServico.builder()
                     .agendamento(agendamento)
-                    .servico(servico)
-                    .valor(servicoDTO.getValor() != null ? servicoDTO.getValor() : servico.getValor())
-                    .descricao(servicoDTO.getDescricao() != null ? servicoDTO.getDescricao() : servico.getDescricao())
-                    .quantidade(servicoDTO.getQuantidade() != null ? servicoDTO.getQuantidade() : 1)
-                    .valorTotal(servicoDTO.getValorTotal())
+                    .servico(ef.servico())
+                    .valor(ef.dto().getValor())
+                    .descricao(ef.dto().getDescricao() != null ? ef.dto().getDescricao() : ef.servico().getDescricao())
+                    .quantidade(ef.dto().getQuantidade())
+                    .valorTotal(ef.valorItem())
+                    .atendente(ef.atendente().getId().equals(atendentePrincipal.getId()) ? null : ef.atendente())
+                    .dataHoraInicio(ef.dto().getDataHoraInicio())
+                    .dataHoraFim(ef.dto().getDataHoraFim())
                     .build();
-            
-            agendamentoServicos.add(agendamentoServico);
+            agendamentoServicos.add(item);
         }
-        
         agendamentoServicoRepository.saveAll(agendamentoServicos);
         agendamento.setServicos(agendamentoServicos);
-        
-        log.info("Agendamento criado com sucesso. ID: {}, Serviços: {}, Valor Total: {}",
-                agendamento.getId(), agendamentoServicos.size(), valorTotal);
+
+        log.info("Agendamento criado. ID: {}, Itens: {}, Profissionais únicos: {}, Valor: {}",
+                agendamento.getId(), agendamentoServicos.size(),
+                efetivos.stream().map(e -> e.atendente().getId()).distinct().count(),
+                valorTotal);
 
         lembreteAgendadoService.enviarConfirmacao(agendamento);
 
         return agendamentoMapper.toDTO(agendamento);
+    }
+
+    private String nomeAtendente(Atendente a) {
+        if (a == null) return "—";
+        if (a.getUsuario() != null && a.getUsuario().getNome() != null) {
+            return a.getUsuario().getNome();
+        }
+        return "Profissional #" + a.getId();
     }
 
     @Transactional
@@ -796,7 +877,7 @@ public class AgendamentoService {
             throw new BusinessException("Sinal já foi pago para este agendamento");
         }
         StatusAgendamento s = agendamento.getStatus();
-        if (s == StatusAgendamento.CANCELADO || s == StatusAgendamento.CONCLUIDO || s == StatusAgendamento.FINALIZADO) {
+        if (s == StatusAgendamento.CANCELADO || s == StatusAgendamento.CONCLUIDO) {
             throw new BusinessException("Não dá pra registrar sinal em agendamento " + rotuloStatus(s).toLowerCase());
         }
         if (agendamento.getValorTotal() != null && valor.compareTo(agendamento.getValorTotal()) > 0) {

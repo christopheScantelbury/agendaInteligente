@@ -1,7 +1,10 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { Check, ChevronRight, ChevronLeft, Search, User, Briefcase, CalendarClock, CreditCard } from 'lucide-react'
+import {
+  Check, ChevronRight, ChevronLeft, Search, User, Briefcase, CreditCard,
+  X, UserPlus
+} from 'lucide-react'
 import BottomSheet from '../BottomSheet'
 import { clienteService } from '../../services/clienteService'
 import { unidadeService } from '../../services/unidadeService'
@@ -17,7 +20,7 @@ interface Props {
   onClose: () => void
   /** Pré-preenche data/hora (vindo do tap em slot vazio na timeline) */
   initialDateTime?: Date
-  /** Pré-seleciona profissional no Step 2 (vindo do tap em slot na coluna do prof) */
+  /** Pré-seleciona profissional no primeiro bloco (vindo do tap em slot da timeline) */
   initialAtendenteId?: number
   onCreated?: () => void
 }
@@ -33,47 +36,70 @@ const FORMAS_PAGAMENTO = [
   { value: 'TRANSFERENCIA', label: 'Transferência' },
 ]
 
+interface Bloco {
+  /** id local pra key do React */
+  uid: string
+  atendenteId: number | null
+  servicoIds: number[]
+  /** Data + hora em formato datetime-local. Inicia herdando do bloco anterior. */
+  dataHora: string
+}
+
+const novoBloco = (atendenteId: number | null, dataHora: string): Bloco => ({
+  uid: `b-${Date.now()}-${Math.floor(Math.random() * 9999)}`,
+  atendenteId,
+  servicoIds: [],
+  dataHora,
+})
+
+const splitDataHora = (v: string): { data: string; hora: string } => {
+  if (!v) return { data: '', hora: '' }
+  const [data, hora = ''] = v.split('T')
+  return { data, hora: hora.slice(0, 5) }
+}
+const mergeDataHora = (data: string, hora: string): string =>
+  data && hora ? `${data}T${hora}` : ''
+
 /**
  * Wizard 3 passos pra criar agendamento.
- * Mobile: bottom-sheet full-screen. Desktop: modal centralizado.
  *
- * Slice 3 do redesign #140. Edge cases avançados (recorrência, valor por
- * serviço editável) ficam pra próximas iterações — usuário com necessidade
- * complexa usa /agendamentos/novo legado.
+ * Step 2 reescrito (issue #155): em vez de 1 profissional + lista de serviços,
+ * o usuário monta um ou mais BLOCOS (profissional + serviços + data/hora).
+ * No save, o backend recebe 1 agendamento com servicos[] tendo atendenteId
+ * e dataHoraInicio por item — cada item respeita seu bloco.
  */
-export default function NovoAgendamentoSheet({ isOpen, onClose, initialDateTime, initialAtendenteId, onCreated }: Props) {
+export default function NovoAgendamentoSheet({
+  isOpen, onClose, initialDateTime, initialAtendenteId, onCreated,
+}: Props) {
   const queryClient = useQueryClient()
   const { showNotification } = useNotification()
+
+  const initialDateTimeStr = initialDateTime
+    ? format(initialDateTime, "yyyy-MM-dd'T'HH:mm")
+    : format(new Date(), "yyyy-MM-dd'T'HH:mm")
 
   const [step, setStep] = useState<Step>(1)
   const [clienteSearch, setClienteSearch] = useState('')
   const [clienteId, setClienteId] = useState<number | null>(null)
   const [unidadeId, setUnidadeId] = useState<number | null>(null)
-  const [atendenteId, setAtendenteId] = useState<number | null>(null)
-  const [servicosIds, setServicosIds] = useState<number[]>([])
-  const [dataHora, setDataHora] = useState<string>(
-    initialDateTime ? format(initialDateTime, "yyyy-MM-dd'T'HH:mm") : format(new Date(), "yyyy-MM-dd'T'HH:mm")
-  )
+  const [blocos, setBlocos] = useState<Bloco[]>([
+    novoBloco(initialAtendenteId ?? null, initialDateTimeStr),
+  ])
   const [formaPagamento, setFormaPagamento] = useState<string>('')
   const [observacoes, setObservacoes] = useState<string>('')
 
-  // Reset quando reabre
+  // Reset ao abrir
   useEffect(() => {
     if (isOpen) {
       setStep(1)
       setClienteSearch('')
       setClienteId(null)
       setUnidadeId(null)
-      setAtendenteId(initialAtendenteId ?? null)
-      setServicosIds([])
       setObservacoes('')
       setFormaPagamento('')
-      setDataHora(
-        initialDateTime
-          ? format(initialDateTime, "yyyy-MM-dd'T'HH:mm")
-          : format(new Date(), "yyyy-MM-dd'T'HH:mm")
-      )
+      setBlocos([novoBloco(initialAtendenteId ?? null, initialDateTimeStr)])
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialDateTime, initialAtendenteId])
 
   const { data: clientes = [] } = useQuery({
@@ -88,7 +114,6 @@ export default function NovoAgendamentoSheet({ isOpen, onClose, initialDateTime,
     enabled: isOpen,
   })
 
-  // Auto-seleciona unidade se só existir 1
   useEffect(() => {
     if (unidades.length === 1 && !unidadeId) {
       setUnidadeId(unidades[0].id ?? null)
@@ -107,35 +132,11 @@ export default function NovoAgendamentoSheet({ isOpen, onClose, initialDateTime,
     enabled: !!unidadeId,
   })
 
-  // #136: Quando profissional selecionado, só exibe serviços que ele atende.
-  // Servico tem atendentesIds[] (vinculação m-n com atendente).
-  const servicosDisponiveis = useMemo(() => {
-    if (!atendenteId) return servicos
-    return servicos.filter((s) => (s.atendentesIds ?? []).includes(atendenteId))
-  }, [servicos, atendenteId])
-
-  // #136: Ao trocar profissional, remover serviços já selecionados que não pertencem
-  // ao novo profissional. Mostra um aviso quando algum cai.
-  const [aviso136, setAviso136] = useState<string | null>(null)
-  useEffect(() => {
-    if (!atendenteId || servicosIds.length === 0) {
-      if (aviso136) setAviso136(null)
-      return
-    }
-    const idsValidos = new Set(servicosDisponiveis.map((s) => s.id))
-    const removidos = servicosIds.filter((id) => !idsValidos.has(id))
-    if (removidos.length > 0) {
-      setServicosIds((prev) => prev.filter((id) => idsValidos.has(id)))
-      setAviso136(
-        removidos.length === 1
-          ? '1 serviço selecionado não é oferecido por este profissional e foi removido.'
-          : `${removidos.length} serviços não são oferecidos por este profissional e foram removidos.`
-      )
-    } else if (aviso136) {
-      setAviso136(null)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [atendenteId, servicosDisponiveis])
+  // Serviços disponíveis para um profissional. Servico tem atendentesIds[] (m-n).
+  const servicosPorAtendente = (atId: number | null) => {
+    if (!atId) return servicos
+    return servicos.filter((s) => (s.atendentesIds ?? []).includes(atId))
+  }
 
   const clientesFiltrados = useMemo(() => {
     if (!clienteSearch.trim()) return clientes.slice(0, 20)
@@ -149,13 +150,14 @@ export default function NovoAgendamentoSheet({ isOpen, onClose, initialDateTime,
     [clientes, clienteId]
   )
 
-  const valorTotal = useMemo(
-    () =>
-      servicos
-        .filter((s) => servicosIds.includes(s.id))
-        .reduce((acc, s) => acc + Number(s.valor || 0), 0),
-    [servicos, servicosIds]
-  )
+  const valorTotal = useMemo(() => {
+    return blocos.reduce((acc, b) => {
+      const v = servicos
+        .filter((s) => b.servicoIds.includes(s.id))
+        .reduce((sub, s) => sub + Number(s.valor || 0), 0)
+      return acc + v
+    }, 0)
+  }, [blocos, servicos])
 
   const createMutation = useMutation({
     mutationFn: agendamentoService.criar,
@@ -170,9 +172,59 @@ export default function NovoAgendamentoSheet({ isOpen, onClose, initialDateTime,
     },
   })
 
+  // Bloco helpers
+  const updateBloco = (uid: string, patch: Partial<Bloco>) => {
+    setBlocos((prev) =>
+      prev.map((b) => {
+        if (b.uid !== uid) return b
+        const next = { ...b, ...patch }
+        // Se o profissional mudou, remove serviços que não pertencem ao novo prof
+        if (patch.atendenteId !== undefined && patch.atendenteId !== b.atendenteId) {
+          const disponivel = new Set(servicosPorAtendente(patch.atendenteId ?? null).map((s) => s.id))
+          next.servicoIds = next.servicoIds.filter((id) => disponivel.has(id))
+        }
+        return next
+      })
+    )
+  }
+
+  const adicionarBloco = () => {
+    setBlocos((prev) => {
+      const ultimo = prev[prev.length - 1]
+      return [...prev, novoBloco(null, ultimo?.dataHora ?? initialDateTimeStr)]
+    })
+  }
+
+  const removerBloco = (uid: string) => {
+    setBlocos((prev) => (prev.length === 1 ? prev : prev.filter((b) => b.uid !== uid)))
+  }
+
+  const adicionarServicoAoBloco = (uid: string, servicoId: number) => {
+    setBlocos((prev) =>
+      prev.map((b) =>
+        b.uid === uid && !b.servicoIds.includes(servicoId)
+          ? { ...b, servicoIds: [...b.servicoIds, servicoId] }
+          : b
+      )
+    )
+  }
+  const removerServicoDoBloco = (uid: string, servicoId: number) => {
+    setBlocos((prev) =>
+      prev.map((b) =>
+        b.uid === uid ? { ...b, servicoIds: b.servicoIds.filter((id) => id !== servicoId) } : b
+      )
+    )
+  }
+
   const canAdvance = () => {
     if (step === 1) return clienteId != null
-    if (step === 2) return unidadeId != null && atendenteId != null && servicosIds.length > 0 && dataHora
+    if (step === 2) {
+      if (!unidadeId) return false
+      if (blocos.length === 0) return false
+      return blocos.every(
+        (b) => b.atendenteId != null && b.servicoIds.length > 0 && !!b.dataHora
+      )
+    }
     return true
   }
 
@@ -181,21 +233,44 @@ export default function NovoAgendamentoSheet({ isOpen, onClose, initialDateTime,
     if (step < 3) setStep((step + 1) as Step)
     else handleSubmit()
   }
-
   const handleBack = () => {
     if (step > 1) setStep((step - 1) as Step)
   }
 
   const handleSubmit = () => {
-    if (clienteId == null || unidadeId == null || atendenteId == null || servicosIds.length === 0) return
+    if (clienteId == null || unidadeId == null || blocos.length === 0) return
+
+    // Atendente principal = primeiro bloco. dataHoraInicio = menor entre os blocos.
+    const principal = blocos[0]
+    if (principal.atendenteId == null) return
+    const menorData = blocos
+      .map((b) => b.dataHora)
+      .filter(Boolean)
+      .sort()[0]
+
+    // Achata blocos em items: cada serviço vira 1 item com seu atendenteId + dataHora.
+    // Se TODO o agendamento tem 1 só atendente e 1 só dataHora, manda só servicoId
+    // (compat com endpoints/legado).
+    const todosMesmoAt = blocos.every((b) => b.atendenteId === principal.atendenteId)
+    const todosMesmaData = blocos.every((b) => b.dataHora === principal.dataHora)
+
+    const servicosPayload = blocos.flatMap((b) =>
+      b.servicoIds.map((sId) => {
+        const item: any = { servicoId: sId }
+        if (!todosMesmoAt && b.atendenteId != null) item.atendenteId = b.atendenteId
+        if (!todosMesmaData && b.dataHora) item.dataHoraInicio = b.dataHora
+        return item
+      })
+    )
+
     createMutation.mutate({
       clienteId,
       unidadeId,
-      atendenteId,
-      dataHoraInicio: dataHora,
+      atendenteId: principal.atendenteId,
+      dataHoraInicio: menorData,
       observacoes: observacoes.trim() || undefined,
       formaPagamentoPreferida: formaPagamento || undefined,
-      servicos: servicosIds.map((id) => ({ servicoId: id })),
+      servicos: servicosPayload,
     })
   }
 
@@ -323,7 +398,7 @@ export default function NovoAgendamentoSheet({ isOpen, onClose, initialDateTime,
         </div>
       )}
 
-      {/* STEP 2 — Serviço, profissional, horário */}
+      {/* STEP 2 — Blocos (profissional + serviços + data/hora) */}
       {step === 2 && (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
@@ -331,8 +406,10 @@ export default function NovoAgendamentoSheet({ isOpen, onClose, initialDateTime,
               <Briefcase className="h-5 w-5" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-slate-900">O que e quando?</h4>
-              <p className="text-xs text-slate-500">Serviço, profissional e horário</p>
+              <h4 className="text-sm font-bold text-slate-900">O que, com quem e quando?</h4>
+              <p className="text-xs text-slate-500">
+                Pode misturar profissionais — adicione um bloco para cada
+              </p>
             </div>
           </div>
 
@@ -343,8 +420,7 @@ export default function NovoAgendamentoSheet({ isOpen, onClose, initialDateTime,
                 value={unidadeId ?? ''}
                 onChange={(e) => {
                   setUnidadeId(Number(e.target.value) || null)
-                  setAtendenteId(null)
-                  setServicosIds([])
+                  setBlocos([novoBloco(null, initialDateTimeStr)])
                 }}
                 className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
               >
@@ -358,99 +434,181 @@ export default function NovoAgendamentoSheet({ isOpen, onClose, initialDateTime,
             </div>
           )}
 
-          {/* #136: Profissional vem ANTES de Serviços pra filtrar serviços pelo profissional escolhido */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Profissional</label>
-            <select
-              value={atendenteId ?? ''}
-              onChange={(e) => setAtendenteId(Number(e.target.value) || null)}
-              disabled={!unidadeId}
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:bg-slate-50 disabled:text-slate-400"
-            >
-              <option value="">Selecione...</option>
-              {atendentes.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.nomeUsuario || `Profissional #${a.id}`}
-                </option>
-              ))}
-            </select>
-          </div>
+          {!unidadeId ? (
+            <p className="text-xs text-slate-500 py-2">Selecione uma unidade primeiro.</p>
+          ) : (
+            <>
+              {blocos.map((bloco, idx) => {
+                const disponiveis = servicosPorAtendente(bloco.atendenteId)
+                const selecionados = servicos.filter((s) => bloco.servicoIds.includes(s.id))
+                const naoSelecionados = disponiveis.filter((s) => !bloco.servicoIds.includes(s.id))
+                const dh = splitDataHora(bloco.dataHora)
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">
-              Serviços {servicosIds.length > 0 && <span className="text-violet-600">({servicosIds.length})</span>}
-              {atendenteId && (
-                <span className="ml-1 text-[10px] text-slate-400 font-normal">
-                  · só os deste profissional
-                </span>
-              )}
-            </label>
-            {aviso136 && (
-              <div className="mb-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
-                {aviso136}
-              </div>
-            )}
-            {!unidadeId ? (
-              <p className="text-xs text-slate-500 py-2">Selecione uma unidade primeiro.</p>
-            ) : servicos.length === 0 ? (
-              <p className="text-xs text-slate-500 py-2">Nenhum serviço cadastrado nesta unidade.</p>
-            ) : atendenteId && servicosDisponiveis.length === 0 ? (
-              <div className="text-xs text-slate-500 py-3 px-3 bg-slate-50 border border-slate-200 rounded-xl">
-                Este profissional não tem serviços vinculados ainda. Cadastre em{' '}
-                <strong>Profissionais</strong> ou escolha outro profissional.
-              </div>
-            ) : (
-              <div className="space-y-1 max-h-44 overflow-y-auto rounded-xl border border-slate-100 p-1">
-                {servicosDisponiveis.map((s) => {
-                  const checked = servicosIds.includes(s.id)
-                  return (
-                    <label
-                      key={s.id}
-                      className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition ${
-                        checked ? 'bg-violet-50' : 'hover:bg-slate-50'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={(e) => {
-                          if (e.target.checked) setServicosIds([...servicosIds, s.id])
-                          else setServicosIds(servicosIds.filter((id) => id !== s.id))
-                        }}
-                        className="rounded border-slate-300 text-violet-600 focus:ring-violet-500"
-                      />
-                      <span className="flex-1 text-sm text-slate-800 truncate">{s.nome}</span>
-                      <span className="text-xs font-semibold text-slate-600">
-                        R$ {Number(s.valor).toFixed(2).replace('.', ',')}
+                return (
+                  <div
+                    key={bloco.uid}
+                    className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-violet-700">
+                        <span className="h-5 w-5 rounded-full bg-violet-100 flex items-center justify-center">
+                          {idx + 1}
+                        </span>
+                        Bloco {idx + 1}
                       </span>
-                      <span className="text-[11px] text-slate-400">{s.duracaoMinutos}min</span>
-                    </label>
-                  )
-                })}
-              </div>
-            )}
-          </div>
+                      {blocos.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removerBloco(bloco.uid)}
+                          className="text-xs text-rose-600 font-semibold hover:text-rose-700 inline-flex items-center gap-1"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Remover
+                        </button>
+                      )}
+                    </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1 flex items-center gap-1">
-              <CalendarClock className="h-3.5 w-3.5" />
-              Data e hora
-            </label>
-            <input
-              type="datetime-local"
-              value={dataHora}
-              onChange={(e) => setDataHora(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-            />
-          </div>
+                    {/* Profissional */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Profissional
+                      </label>
+                      <select
+                        value={bloco.atendenteId ?? ''}
+                        onChange={(e) =>
+                          updateBloco(bloco.uid, { atendenteId: Number(e.target.value) || null })
+                        }
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                      >
+                        <option value="">Selecione...</option>
+                        {atendentes.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.nomeUsuario || `Profissional #${a.id}`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-          {valorTotal > 0 && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-sm">
-              <span className="text-emerald-700">Valor total:</span>{' '}
-              <span className="font-bold text-emerald-900">
-                R$ {valorTotal.toFixed(2).replace('.', ',')}
-              </span>
-            </div>
+                    {/* Serviços */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Serviços {selecionados.length > 0 && (
+                          <span className="text-violet-600">({selecionados.length})</span>
+                        )}
+                      </label>
+
+                      {/* Serviços já selecionados */}
+                      {selecionados.length > 0 && (
+                        <div className="space-y-1 mb-2">
+                          {selecionados.map((s) => (
+                            <div
+                              key={s.id}
+                              className="flex items-center gap-2 p-2 rounded-lg bg-violet-50 border border-violet-100"
+                            >
+                              <span className="flex-1 text-sm text-slate-800 truncate">{s.nome}</span>
+                              <span className="text-xs font-semibold text-slate-600">
+                                R$ {Number(s.valor).toFixed(2).replace('.', ',')}
+                              </span>
+                              <span className="text-[11px] text-slate-400">{s.duracaoMinutos}min</span>
+                              <button
+                                type="button"
+                                onClick={() => removerServicoDoBloco(bloco.uid, s.id)}
+                                className="text-rose-500 hover:text-rose-700"
+                                aria-label="Remover serviço"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Adicionar serviço (select) */}
+                      {!bloco.atendenteId ? (
+                        <p className="text-xs text-slate-500 py-1.5">
+                          Escolha o profissional primeiro.
+                        </p>
+                      ) : naoSelecionados.length === 0 ? (
+                        <p className="text-xs text-slate-500 py-1.5">
+                          {selecionados.length > 0
+                            ? 'Todos os serviços deste profissional já foram adicionados.'
+                            : 'Este profissional não tem serviços vinculados.'}
+                        </p>
+                      ) : (
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            const id = Number(e.target.value)
+                            if (id) adicionarServicoAoBloco(bloco.uid, id)
+                          }}
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                        >
+                          <option value="">
+                            {selecionados.length > 0
+                              ? '+ Adicionar outro serviço…'
+                              : 'Selecione um serviço…'}
+                          </option>
+                          {naoSelecionados.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.nome} — R$ {Number(s.valor).toFixed(2).replace('.', ',')} ·{' '}
+                              {s.duracaoMinutos}min
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+
+                    {/* Data + Hora (separados pra ficar mais responsivo em mobile) */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">Data</label>
+                        <input
+                          type="date"
+                          value={dh.data}
+                          onChange={(e) =>
+                            updateBloco(bloco.uid, {
+                              dataHora: mergeDataHora(e.target.value, dh.hora || '09:00'),
+                            })
+                          }
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">Hora</label>
+                        <input
+                          type="time"
+                          value={dh.hora}
+                          onChange={(e) =>
+                            updateBloco(bloco.uid, {
+                              dataHora: mergeDataHora(dh.data, e.target.value),
+                            })
+                          }
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+
+              <button
+                type="button"
+                onClick={adicionarBloco}
+                className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl border-2 border-dashed border-violet-200 text-violet-700 font-semibold text-sm hover:bg-violet-50 transition"
+              >
+                <UserPlus className="h-4 w-4" />
+                Adicionar profissional
+              </button>
+
+              {valorTotal > 0 && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-sm">
+                  <span className="text-emerald-700">Valor total:</span>{' '}
+                  <span className="font-bold text-emerald-900">
+                    R$ {valorTotal.toFixed(2).replace('.', ',')}
+                  </span>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -501,29 +659,39 @@ export default function NovoAgendamentoSheet({ isOpen, onClose, initialDateTime,
               <span className="text-slate-500">Cliente:</span>{' '}
               <span className="font-semibold">{clienteSelecionado?.nome}</span>
             </p>
-            <p className="text-slate-700">
-              <span className="text-slate-500">Profissional:</span>{' '}
-              <span className="font-semibold">
-                {atendentes.find((a) => a.id === atendenteId)?.nomeUsuario ?? '—'}
-              </span>
-            </p>
-            <p className="text-slate-700">
-              <span className="text-slate-500">Data:</span>{' '}
-              <span className="font-semibold">
-                {dataHora ? format(new Date(dataHora), "dd/MM/yyyy 'às' HH:mm") : '—'}
-              </span>
-            </p>
-            <p className="text-slate-700">
-              <span className="text-slate-500">Serviços:</span>{' '}
-              <span className="font-semibold">
-                {servicos
-                  .filter((s) => servicosIds.includes(s.id))
-                  .map((s) => s.nome)
-                  .join(', ')}
-              </span>
-            </p>
+
+            {blocos.map((bloco, idx) => {
+              const at = atendentes.find((a) => a.id === bloco.atendenteId)
+              const servs = servicos.filter((s) => bloco.servicoIds.includes(s.id))
+              return (
+                <div key={bloco.uid} className="pt-1.5 border-t border-slate-200 mt-1.5 first:border-0 first:mt-0 first:pt-0">
+                  {blocos.length > 1 && (
+                    <p className="text-[11px] font-bold text-violet-700 mb-0.5">Bloco {idx + 1}</p>
+                  )}
+                  <p className="text-slate-700">
+                    <span className="text-slate-500">Profissional:</span>{' '}
+                    <span className="font-semibold">{at?.nomeUsuario ?? '—'}</span>
+                  </p>
+                  <p className="text-slate-700">
+                    <span className="text-slate-500">Data:</span>{' '}
+                    <span className="font-semibold">
+                      {bloco.dataHora
+                        ? format(new Date(bloco.dataHora), "dd/MM/yyyy 'às' HH:mm")
+                        : '—'}
+                    </span>
+                  </p>
+                  <p className="text-slate-700">
+                    <span className="text-slate-500">Serviços:</span>{' '}
+                    <span className="font-semibold">
+                      {servs.map((s) => s.nome).join(', ')}
+                    </span>
+                  </p>
+                </div>
+              )
+            })}
+
             {valorTotal > 0 && (
-              <p className="text-emerald-700 font-bold pt-1 border-t border-slate-200 mt-2">
+              <p className="text-emerald-700 font-bold pt-2 border-t border-slate-200 mt-2">
                 Total: R$ {valorTotal.toFixed(2).replace('.', ',')}
               </p>
             )}

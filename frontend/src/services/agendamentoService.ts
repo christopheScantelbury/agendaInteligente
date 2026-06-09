@@ -6,6 +6,16 @@ export interface AgendamentoServico {
   valor?: number
   descricao?: string
   valorTotal?: number
+  // ── Issue #155: por item (opcionais) ──
+  /** Profissional do item; opcional. Se nulo, herda do agendamento. */
+  atendenteId?: number
+  /** Início do item; opcional. Se nulo, herda do agendamento. */
+  dataHoraInicio?: string
+  /** Fim do item; opcional. */
+  dataHoraFim?: string
+  // Exibição
+  nomeServico?: string
+  nomeAtendente?: string
 }
 
 export interface Recorrencia {
