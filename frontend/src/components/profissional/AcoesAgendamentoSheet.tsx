@@ -15,6 +15,7 @@ import { agendamentoService, Agendamento } from '../../services/agendamentoServi
 import { useNotification } from '../../contexts/NotificationContext'
 import { Events, track } from '../../lib/analytics'
 import BottomSheet from '../ui/BottomSheet'
+import ReciboModal from './ReciboModal'
 
 interface AcoesAgendamentoSheetProps {
   agendamento: Agendamento | null
@@ -53,6 +54,8 @@ export default function AcoesAgendamentoSheet({ agendamento, onClose }: AcoesAge
   const [modoReabrir, setModoReabrir] = useState(false)
   const [motivoSelecionado, setMotivoSelecionado] = useState<MotivoReabertura>(MOTIVOS_REABERTURA[0])
   const [motivoTextoLivre, setMotivoTextoLivre] = useState<string>('')
+  // Recibo: modal com dados completos do atendimento finalizado + botão imprimir
+  const [verRecibo, setVerRecibo] = useState(false)
 
   const isOpen = agendamento !== null
 
@@ -258,9 +261,7 @@ export default function AcoesAgendamentoSheet({ agendamento, onClose }: AcoesAge
                 label="Ver recibo"
                 desc="Detalhes do atendimento finalizado"
                 disabled={carregando}
-                onClick={() => {
-                  showNotification('info', 'Tela de recibo em breve — escopo futuro.')
-                }}
+                onClick={() => setVerRecibo(true)}
               />
               <ActionButton
                 icon={RotateCcw}
@@ -291,6 +292,13 @@ export default function AcoesAgendamentoSheet({ agendamento, onClose }: AcoesAge
             </div>
           )}
         </div>
+      )}
+      {/* Recibo de atendimento finalizado (z-[200], acima do BottomSheet) */}
+      {verRecibo && (
+        <ReciboModal
+          agendamento={agendamento}
+          onClose={() => setVerRecibo(false)}
+        />
       )}
     </BottomSheet>
   )
