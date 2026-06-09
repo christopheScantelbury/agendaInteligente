@@ -58,106 +58,155 @@ export default function ReciboModal({ agendamento, onClose }: Props) {
   const numeroRecibo = String(agendamento.id ?? '').padStart(6, '0')
 
   /**
-   * Imprime o recibo via janela popup separada (mais confiável que
-   * window.print() + @media print, que brigava com o overlay fixed do modal
-   * e gerava página em branco).
+   * Gera HTML do recibo do ZERO com `style="..."` inline em CADA elemento.
+   * Sem classes Tailwind, sem dependência de bundle, sem @media print.
    *
-   * Estratégia:
-   * 1. Pega o HTML do elemento #recibo-print
-   * 2. Abre nova janela
-   * 3. Injeta HTML + estilos Tailwind essenciais (cores, espaçamento, layout)
-   * 4. Aguarda load → chama window.print() na nova janela
-   * 5. Fecha automaticamente depois
+   * Por que abordagens anteriores falharam:
+   * - @media print + visibility hidden: brigou com overlay fixed do modal
+   * - window.open + classes Tailwind: popup não tem o CSS compilado → layout quebrado
+   *
+   * Esta versão tem CSS inline em TUDO. Funciona em qualquer browser, sem
+   * depender de nada do app. Auto-suficiente.
    */
-  const handlePrint = () => {
-    const conteudo = document.getElementById('recibo-print')
-    if (!conteudo) {
-      console.error('Recibo: container #recibo-print não encontrado')
-      return
-    }
-    const win = window.open('', '_blank', 'width=720,height=900')
-    if (!win) {
-      alert('Pop-up bloqueado pelo navegador. Permita pop-ups pra imprimir.')
-      return
-    }
-    // CSS mínimo equivalente às classes Tailwind usadas — independente de carregar bundle
-    const css = `
-      * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      body { margin: 0; padding: 24px; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #0f172a; background: white; }
-      h1 { font-size: 22px; font-weight: 900; letter-spacing: -0.02em; margin: 0; }
-      .text-center { text-align: center; }
-      .text-right { text-align: right; }
-      .border-b { border-bottom: 1px solid #e2e8f0; }
-      .border-t { border-top: 1px solid #cbd5e1; }
-      .pb-4 { padding-bottom: 16px; } .pt-2 { padding-top: 8px; } .pt-3 { padding-top: 12px; } .pt-4 { padding-top: 16px; }
-      .mt-1 { margin-top: 4px; } .mt-2 { margin-top: 8px; } .mb-1 { margin-bottom: 4px; } .mb-2 { margin-bottom: 8px; }
-      .space-y-5 > * + * { margin-top: 20px; }
-      .space-y-2 > * + * { margin-top: 8px; }
-      .space-y-1 > * + * { margin-top: 4px; }
-      .grid { display: grid; }
-      .grid-cols-2 { grid-template-columns: 1fr 1fr; }
-      .gap-4 { gap: 16px; }
-      .flex { display: flex; }
-      .items-center { align-items: center; } .items-baseline { align-items: baseline; }
-      .justify-between { justify-content: space-between; }
-      .gap-3 { gap: 12px; } .flex-1 { flex: 1; min-width: 0; }
-      .p-3 { padding: 12px; }
-      .rounded-xl { border-radius: 12px; }
-      .bg-slate-50 { background: #f8fafc; }
-      .bg-emerald-50 { background: #ecfdf5; }
-      .bg-emerald-600 { background: #059669; color: white; }
-      .border { border: 1px solid #e2e8f0; }
-      .border-emerald-200 { border-color: #a7f3d0; }
-      .border-slate-100 { border-color: #f1f5f9; }
-      .text-violet-700 { color: #6d28d9; }
-      .text-emerald-700 { color: #047857; }
-      .text-emerald-800 { color: #065f46; }
-      .text-emerald-900 { color: #064e3b; }
-      .text-slate-400 { color: #94a3b8; }
-      .text-slate-500 { color: #64748b; }
-      .text-slate-600 { color: #475569; }
-      .text-slate-700 { color: #334155; }
-      .uppercase { text-transform: uppercase; }
-      .tracking-wider { letter-spacing: 0.08em; } .tracking-widest { letter-spacing: 0.12em; }
-      .font-bold { font-weight: 700; }
-      .font-semibold { font-weight: 600; }
-      .font-black { font-weight: 900; }
-      .text-xs { font-size: 12px; line-height: 16px; }
-      .text-sm { font-size: 14px; line-height: 20px; }
-      .text-base { font-size: 16px; line-height: 24px; }
-      .text-xl { font-size: 20px; line-height: 28px; }
-      .tabular-nums { font-variant-numeric: tabular-nums; }
-      ul { list-style: none; padding: 0; margin: 0; }
-      .border-dashed { border-style: dashed; }
-      .last-pb-0:last-child { padding-bottom: 0; border: 0; }
-      .px-3 { padding-left: 12px; padding-right: 12px; }
-      .py-1 { padding-top: 4px; padding-bottom: 4px; }
-      .rounded-full { border-radius: 9999px; }
-      .inline-flex { display: inline-flex; }
-      .text-orange-700 { color: #c2410c; }
-      img, svg { max-width: 100%; }
-    `
-    win.document.open()
-    win.document.write(`<!doctype html>
+  function renderHtmlImpressao(): string {
+    const fmtData = format(dataAgendamento, "EEEE, dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })
+    const fmtEmitido = format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+
+    const enderecoLinha = [unidade.endereco, unidade.numero ? `, ${unidade.numero}` : '', unidade.bairro ? ` · ${unidade.bairro}` : '']
+      .filter(Boolean).join('')
+
+    const itensServicos = servicos.length === 0
+      ? `<p style="font-size:14px;color:#64748b;font-style:italic;margin:0;">Nenhum serviço discriminado</p>`
+      : `<ul style="list-style:none;padding:0;margin:0;">${servicos.map((s: any, idx) => {
+          const valorUnit = Number(s.valor ?? 0)
+          const qtd = Number(s.quantidade ?? 1)
+          const total = Number(s.valorTotal ?? valorUnit * qtd)
+          const nome = (s.nomeServico ?? s.servico?.nome ?? s.descricao ?? `Serviço ${idx + 1}`) as string
+          const isLast = idx === servicos.length - 1
+          return `<li style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;${isLast ? '' : 'border-bottom:1px dashed #e2e8f0;padding-bottom:8px;margin-bottom:8px;'}">
+            <div style="flex:1;min-width:0;">
+              <p style="font-size:14px;font-weight:600;margin:0;">${escapeHtml(nome)}</p>
+              ${qtd > 1 ? `<p style="font-size:12px;color:#64748b;margin:0;">${qtd}× ${formatMoeda(valorUnit)}</p>` : ''}
+            </div>
+            <p style="font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;margin:0;">${formatMoeda(total)}</p>
+          </li>`
+        }).join('')}</ul>`
+
+    const blocoAjuste = Math.abs(ajuste) > 0.005
+      ? `<div style="display:flex;justify-content:space-between;font-size:14px;color:${ajuste < 0 ? '#047857' : '#c2410c'};">
+          <span>${ajuste < 0 ? 'Desconto' : 'Acréscimo'}</span>
+          <span style="font-variant-numeric:tabular-nums;">${ajuste < 0 ? '−' : '+'} ${formatMoeda(Math.abs(ajuste))}</span>
+        </div>`
+      : ''
+
+    return `<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
 <title>Recibo de atendimento</title>
-<style>${css}</style>
+<style>
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; padding: 24px; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #0f172a; background: white; }
+  @page { margin: 16mm; }
+</style>
 </head>
 <body>
-${conteudo.innerHTML}
+  <div style="max-width:680px;margin:0 auto;">
+    <!-- Cabeçalho -->
+    <div style="text-align:center;padding-bottom:16px;border-bottom:1px solid #e2e8f0;">
+      <h1 style="font-size:24px;font-weight:900;letter-spacing:-0.02em;margin:0;color:#0f172a;">${escapeHtml(unidade.nome ?? 'Atendimento')}</h1>
+      ${enderecoLinha ? `<p style="font-size:12px;color:#64748b;margin:4px 0 0;">${escapeHtml(enderecoLinha)}</p>` : ''}
+      ${unidade.cnpj ? `<p style="font-size:12px;color:#64748b;margin:2px 0 0;">CNPJ ${escapeHtml(unidade.cnpj)}</p>` : ''}
+      <p style="font-size:11px;color:#6d28d9;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;margin:8px 0 0;">Recibo de atendimento — Nº ${numeroRecibo}</p>
+    </div>
+
+    <!-- Cliente + Profissional -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;">
+      <div>
+        <p style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;font-weight:600;margin:0 0 4px;">Cliente</p>
+        <p style="font-size:14px;font-weight:600;margin:0;">${escapeHtml(cliente.nome ?? '—')}</p>
+        ${cliente.cpfCnpj ? `<p style="font-size:12px;color:#64748b;margin:2px 0 0;">CPF/CNPJ ${escapeHtml(cliente.cpfCnpj)}</p>` : ''}
+        ${cliente.telefone ? `<p style="font-size:12px;color:#64748b;margin:2px 0 0;">Tel ${escapeHtml(cliente.telefone)}</p>` : ''}
+      </div>
+      <div>
+        <p style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;font-weight:600;margin:0 0 4px;">Profissional</p>
+        <p style="font-size:14px;font-weight:600;margin:0;">${escapeHtml(atendente.nomeUsuario ?? atendente.usuario?.nome ?? atendente.nome ?? '—')}</p>
+      </div>
+    </div>
+
+    <!-- Data/hora -->
+    <div style="background:#f8fafc;border-radius:12px;padding:12px;margin-top:20px;">
+      <p style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;font-weight:600;margin:0 0 4px;">Atendido em</p>
+      <p style="font-size:14px;font-weight:600;margin:0;text-transform:capitalize;">${fmtData}</p>
+    </div>
+
+    <!-- Serviços -->
+    <div style="margin-top:20px;">
+      <p style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;font-weight:600;margin:0 0 8px;">Serviços</p>
+      ${itensServicos}
+    </div>
+
+    <!-- Totais -->
+    <div style="border-top:1px solid #cbd5e1;padding-top:12px;margin-top:20px;">
+      <div style="display:flex;justify-content:space-between;font-size:14px;color:#475569;">
+        <span>Subtotal</span>
+        <span style="font-variant-numeric:tabular-nums;">${formatMoeda(valorTotal)}</span>
+      </div>
+      ${blocoAjuste}
+      <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:900;margin-top:8px;padding-top:8px;border-top:1px solid #cbd5e1;">
+        <span>Total pago</span>
+        <span style="color:#6d28d9;font-variant-numeric:tabular-nums;">${formatMoeda(valorFinal)}</span>
+      </div>
+    </div>
+
+    <!-- Forma de pagamento + status -->
+    <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:12px;display:flex;align-items:center;justify-content:space-between;margin-top:20px;">
+      <div>
+        <p style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:#047857;font-weight:600;margin:0;">Pagamento</p>
+        <p style="font-size:14px;font-weight:600;color:#064e3b;margin:2px 0 0;">${escapeHtml(formaPagamentoLabel)}</p>
+      </div>
+      <span style="display:inline-flex;align-items:center;background:#059669;color:#fff;padding:4px 12px;border-radius:9999px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">✓ Pago</span>
+    </div>
+
+    <!-- Rodapé legal -->
+    <div style="text-align:center;padding-top:16px;border-top:1px solid #f1f5f9;margin-top:20px;">
+      <p style="font-size:10px;color:#94a3b8;line-height:1.5;margin:0;">
+        Este recibo é um comprovante interno de atendimento e <strong>não substitui Nota Fiscal de Serviço</strong>.<br>
+        Emitido por <strong>Agenda Inteligente</strong> em ${fmtEmitido}.
+      </p>
+    </div>
+  </div>
 <script>
   window.addEventListener('load', function() {
     setTimeout(function() {
       window.print();
       setTimeout(function() { window.close(); }, 300);
-    }, 100);
+    }, 200);
   });
 </script>
 </body>
-</html>`)
+</html>`
+  }
+
+  const handlePrint = () => {
+    const win = window.open('', '_blank', 'width=720,height=900')
+    if (!win) {
+      alert('Pop-up bloqueado pelo navegador. Permita pop-ups pra imprimir.')
+      return
+    }
+    win.document.open()
+    win.document.write(renderHtmlImpressao())
     win.document.close()
+  }
+
+  // Util pra prevenir XSS — sanitiza strings antes de injetar no HTML
+  function escapeHtml(s: any): string {
+    return String(s ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
   }
 
   const formatMoeda = (n: number) =>
