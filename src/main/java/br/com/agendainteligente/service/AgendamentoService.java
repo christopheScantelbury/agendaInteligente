@@ -752,7 +752,16 @@ public class AgendamentoService {
         // Reset financeiro — profissional vai finalizar de novo com novo valor.
         agendamento.setValorFinal(java.math.BigDecimal.ZERO);
         Optional<Pagamento> pagamentoExistente = pagamentoRepository.findByAgendamentoId(id);
-        pagamentoExistente.ifPresent(pagamentoRepository::delete);
+        if (pagamentoExistente.isPresent()) {
+            // IMPORTANTE: Agendamento tem @OneToOne pagamento cascade=ALL. Se deletar o
+            // Pagamento via repository SEM zerar a referência em memória, o save(agendamento)
+            // tenta MERGE via cascade na entity deletada → ObjectDeletedException.
+            // Setar agendamento.pagamento=null PRIMEIRO, salvar pra cascade remover,
+            // depois excluir explicitamente garante consistência.
+            agendamento.setPagamento(null);
+            pagamentoRepository.delete(pagamentoExistente.get());
+            pagamentoRepository.flush();
+        }
 
         // Auditoria
         agendamento.setMotivoReabertura(motivo.trim());
