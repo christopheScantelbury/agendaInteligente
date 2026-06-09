@@ -15,12 +15,15 @@ import {
   AlertCircle,
   RotateCcw,
   Wallet,
+  Receipt,
 } from 'lucide-react'
 import BottomSheet from '../BottomSheet'
 import ConfirmDialog from '../ConfirmDialog'
 import MoneyInput from '../forms/MoneyInput'
 import ReabrirAgendamentoModal from './ReabrirAgendamentoModal'
 import ReceberSinalModal from './ReceberSinalModal'
+import ReciboModal from '../profissional/ReciboModal'
+
 import { agendamentoService, FinalizarAgendamento } from '../../services/agendamentoService'
 import { useNotification } from '../../contexts/NotificationContext'
 import { getApiErrorMessage } from '../../utils/apiError'
@@ -76,6 +79,7 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
   const [tipoPagamentoFinal, setTipoPagamentoFinal] = useState<string>('PIX')
   const [reabrirOpen, setReabrirOpen] = useState(false)
   const [sinalOpen, setSinalOpen] = useState(false)
+  const [reciboOpen, setReciboOpen] = useState(false)
 
   const { data: agendamento, isLoading } = useQuery({
     queryKey: ['agendamento', agendamentoId],
@@ -295,7 +299,7 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
               </div>
             )}
 
-            {/* Aviso pra status finais + opção de reabrir */}
+            {/* Aviso pra status finais + ver recibo + opção de reabrir */}
             {(status === 'CONCLUIDO' || status === 'FINALIZADO' || status === 'PROCEDIMENTO_FIM') && (
               <div className="space-y-3">
                 <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-start gap-2">
@@ -304,6 +308,14 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
                     Atendimento finalizado.
                   </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setReciboOpen(true)}
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition"
+                >
+                  <Receipt className="h-4 w-4" />
+                  Ver recibo
+                </button>
                 <button
                   type="button"
                   onClick={() => setReabrirOpen(true)}
@@ -357,6 +369,12 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
         percentualSinal={percentualSinalUnidade}
         isOpen={sinalOpen}
         onClose={() => setSinalOpen(false)}
+      />
+
+      {/* Modal de recibo (somente leitura + imprimir) — z-[200] */}
+      <ReciboModal
+        agendamento={reciboOpen ? (agendamento ?? null) : null}
+        onClose={() => setReciboOpen(false)}
       />
 
       {/* Sub-sheet de finalizar (valor final + forma) */}
