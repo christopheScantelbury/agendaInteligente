@@ -50,7 +50,7 @@ export default function AuditoriaPlataforma() {
 
   if (error) {
     return (
-      <div className="max-w-5xl mx-auto p-6">
+      <div className="max-w-5xl mx-auto p-4 sm:p-6">
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
           <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
           <div>
@@ -66,7 +66,7 @@ export default function AuditoriaPlataforma() {
 
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6">
-      <header className="mb-6 flex items-start justify-between gap-4">
+      <header className="mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <ShieldCheck className="h-6 w-6 text-violet-600" />
@@ -82,15 +82,15 @@ export default function AuditoriaPlataforma() {
           type="button"
           onClick={() => exportCsv(entries)}
           disabled={entries.length === 0}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold disabled:opacity-50 w-full sm:w-auto flex-shrink-0"
         >
           <Download className="h-4 w-4" />
           Exportar CSV
         </button>
       </header>
 
-      <section className="bg-white border border-gray-200 rounded-xl p-3 mb-4 flex flex-col sm:flex-row gap-2 items-stretch">
-        <div className="flex items-center gap-1.5 text-xs text-gray-500 px-2">
+      <section className="bg-white border border-gray-200 rounded-xl p-3 mb-4 space-y-2 sm:space-y-0 sm:flex sm:flex-row sm:gap-2 sm:items-stretch">
+        <div className="hidden sm:flex items-center gap-1.5 text-xs text-gray-500 px-2 flex-shrink-0">
           <Filter className="h-3.5 w-3.5" />
           Filtros:
         </div>
@@ -99,20 +99,22 @@ export default function AuditoriaPlataforma() {
           placeholder="Tipo de ação (ex: LOGIN_SUCCESS)"
           value={filtros.tipoAcao ?? ''}
           onChange={(e) => setFiltros({ ...filtros, tipoAcao: e.target.value || undefined, page: 0 })}
-          className="flex-1 px-3 py-1.5 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+          className="block w-full sm:flex-1 px-3 py-2 sm:py-1.5 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
         />
-        <input
-          type="date"
-          value={filtros.de?.slice(0, 10) ?? ''}
-          onChange={(e) => setFiltros({ ...filtros, de: e.target.value ? `${e.target.value}T00:00:00` : undefined, page: 0 })}
-          className="px-3 py-1.5 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-        />
-        <input
-          type="date"
-          value={filtros.ate?.slice(0, 10) ?? ''}
-          onChange={(e) => setFiltros({ ...filtros, ate: e.target.value ? `${e.target.value}T23:59:59` : undefined, page: 0 })}
-          className="px-3 py-1.5 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-        />
+        <div className="grid grid-cols-2 gap-2 sm:contents">
+          <input
+            type="date"
+            value={filtros.de?.slice(0, 10) ?? ''}
+            onChange={(e) => setFiltros({ ...filtros, de: e.target.value ? `${e.target.value}T00:00:00` : undefined, page: 0 })}
+            className="px-3 py-2 sm:py-1.5 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+          />
+          <input
+            type="date"
+            value={filtros.ate?.slice(0, 10) ?? ''}
+            onChange={(e) => setFiltros({ ...filtros, ate: e.target.value ? `${e.target.value}T23:59:59` : undefined, page: 0 })}
+            className="px-3 py-2 sm:py-1.5 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+          />
+        </div>
       </section>
 
       {/* Mobile: cards */}

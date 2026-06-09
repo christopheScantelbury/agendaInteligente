@@ -168,7 +168,7 @@ function PlanoEditCard({ plano, onSaved }: { plano: Plano; onSaved: () => void }
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Unidades (vazio = ∞)</label>
+          <label className="block text-xs font-semibold text-slate-600 mb-1">Unidades</label>
           {limitInput(form.limiteUnidades, (n) => setForm({ ...form, limiteUnidades: n }), '∞')}
         </div>
         <div>
@@ -214,7 +214,7 @@ function PlanoEditCard({ plano, onSaved }: { plano: Plano; onSaved: () => void }
         )}
       </div>
 
-      <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-slate-100 pt-3">
         <label className="flex items-center gap-2 text-sm text-slate-700">
           <input
             type="checkbox"
@@ -228,7 +228,7 @@ function PlanoEditCard({ plano, onSaved }: { plano: Plano; onSaved: () => void }
           type="button"
           onClick={() => saveMutation.mutate()}
           disabled={!dirty || saveMutation.isPending}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm shadow-violet-200"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm shadow-violet-200 w-full sm:w-auto"
         >
           {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Salvar

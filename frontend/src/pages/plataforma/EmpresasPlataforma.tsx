@@ -57,7 +57,7 @@ export default function EmpresasPlataforma() {
 
   if (error) {
     return (
-      <div className="max-w-5xl mx-auto p-6">
+      <div className="max-w-5xl mx-auto p-4 sm:p-6">
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
           <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
           <div>
@@ -70,7 +70,7 @@ export default function EmpresasPlataforma() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
+    <div className="max-w-5xl mx-auto p-4 sm:p-6">
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Empresas da plataforma</h1>
         <p className="text-sm text-gray-500 mt-1">

@@ -74,14 +74,17 @@ export default function LandingAdmin() {
           href="/"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-sm text-violet-600 hover:text-violet-700 font-medium"
+          className="hidden sm:inline-flex items-center gap-1 text-sm text-violet-600 hover:text-violet-700 font-medium flex-shrink-0"
         >
           Ver site <ExternalLink className="h-3.5 w-3.5" />
         </a>
       </header>
 
       <div className="bg-violet-50 border border-violet-200 rounded-2xl p-3 text-xs text-violet-900">
-        💡 <strong>Dica:</strong> as mudanças levam até 30 segundos pra aparecer no site público após salvar. Clique em <em>"Ver site"</em> no canto superior pra abrir em nova aba e validar.
+        💡 <strong>Dica:</strong> as mudanças levam até 30 segundos pra aparecer no site após salvar.{' '}
+        <a href="/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-semibold text-violet-700 hover:underline">
+          Abrir site <ExternalLink className="h-3 w-3" />
+        </a>
       </div>
 
       {/* TOPO DA PÁGINA */}
@@ -264,7 +267,7 @@ export default function LandingAdmin() {
         </Field>
       </Section>
 
-      <div className="sticky bottom-3 sm:bottom-4 z-10 flex justify-end">
+      <div className="sticky bottom-3 sm:bottom-4 z-10 flex justify-end pb-[env(safe-area-inset-bottom)]">
         <button
           type="button"
           onClick={() => saveMutation.mutate()}
