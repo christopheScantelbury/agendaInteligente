@@ -38,7 +38,11 @@ export default function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-[100] p-4"
+      // z-[200]: ConfirmDialog SEMPRE acima de Modal (z-100) e BottomSheet (z-120).
+      // Hierarquia consolidada: Toast (99999) > ConfirmDialog (200) > BottomSheet (120)
+      // > Modal (100) > BottomNav (40). Bug reportado 08/06: dialog ficava atrás do
+      // bottom-sheet de detalhes do agendamento.
+      className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-[200] p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onCancel()
