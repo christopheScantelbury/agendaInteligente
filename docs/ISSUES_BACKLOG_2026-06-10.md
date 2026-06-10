@@ -1,7 +1,7 @@
 # Backlog de issues — 10/06/2026
 
-> 3 issues redigidas em sessão mas não criadas no GitHub (API estava fora).
-> Pra criar: `gh issue create --title "..." --body "$(cat <<'EOF' ... EOF)"`.
+> ✅ Issues criadas no GitHub em 10/06/2026: **#158** (modal Empresa), **#159** (NotaFácil provisioning), **#160** (branding landing).
+> Este arquivo fica como referência do escopo detalhado.
 
 ---
 
