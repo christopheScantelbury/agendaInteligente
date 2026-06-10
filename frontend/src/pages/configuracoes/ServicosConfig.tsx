@@ -8,12 +8,13 @@ import { useNotification } from '../../contexts/NotificationContext'
 import ConfigPageHeader from '../../components/configuracoes/ConfigPageHeader'
 import ProximaEtapaCard from '../../components/configuracoes/ProximaEtapaCard'
 import MoneyInput from '../../components/forms/MoneyInput'
+import IntegerInput from '../../components/forms/IntegerInput'
 
 const moneyFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 
 interface FormState {
   nome: string
-  duracao: string
+  duracao: number | undefined
   valor: string
   unidadeId: number | null
 }
@@ -35,7 +36,7 @@ export default function ServicosConfig() {
 
   const [form, setForm] = useState<FormState>({
     nome: '',
-    duracao: '30',
+    duracao: 30,
     valor: '',
     unidadeId: null,
   })
@@ -56,8 +57,8 @@ export default function ServicosConfig() {
   }, [form.valor])
 
   const duracaoNumber = useMemo(() => {
-    const n = parseInt(form.duracao, 10)
-    return Number.isFinite(n) && n > 0 ? n : null
+    const n = form.duracao
+    return n != null && n > 0 ? n : null
   }, [form.duracao])
 
   const criarMutation = useMutation({
@@ -137,13 +138,11 @@ export default function ServicosConfig() {
               <label htmlFor="duracao" className="block text-xs font-medium text-slate-700 mb-1.5">
                 Duração (min)
               </label>
-              <input
+              <IntegerInput
                 id="duracao"
-                type="number"
-                min="5"
-                step="5"
+                min={5}
                 value={form.duracao}
-                onChange={(e) => setForm({ ...form, duracao: e.target.value })}
+                onChange={(v) => setForm({ ...form, duracao: v })}
                 className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
               />
             </div>

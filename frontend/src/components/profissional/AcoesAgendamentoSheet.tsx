@@ -16,6 +16,7 @@ import { useNotification } from '../../contexts/NotificationContext'
 import { Events, track } from '../../lib/analytics'
 import BottomSheet from '../ui/BottomSheet'
 import ReciboModal from './ReciboModal'
+import MoneyInput from '../forms/MoneyInput'
 
 interface AcoesAgendamentoSheetProps {
   agendamento: Agendamento | null
@@ -48,7 +49,7 @@ export default function AcoesAgendamentoSheet({ agendamento, onClose }: AcoesAge
   const { showNotification } = useNotification()
   const queryClient = useQueryClient()
   const [modoFinalizar, setModoFinalizar] = useState(false)
-  const [valorFinal, setValorFinal] = useState<string>('')
+  const [valorFinal, setValorFinal] = useState<number | null>(null)
   const [tipoPagamento, setTipoPagamento] = useState<TipoPagamento>('PIX')
   // Modo reabrir: select de motivos + textarea pra "Outro"
   const [modoReabrir, setModoReabrir] = useState(false)
@@ -64,7 +65,7 @@ export default function AcoesAgendamentoSheet({ agendamento, onClose }: AcoesAge
     setModoReabrir(false)
     setMotivoSelecionado(MOTIVOS_REABERTURA[0])
     setMotivoTextoLivre('')
-    setValorFinal('')
+    setValorFinal(null)
     setTipoPagamento('PIX')
     onClose()
   }
@@ -129,7 +130,7 @@ export default function AcoesAgendamentoSheet({ agendamento, onClose }: AcoesAge
 
   function submeterFinalizar() {
     if (!agendamento?.id) return
-    const valorNum = parseFloat(valorFinal.replace(',', '.'))
+    const valorNum = valorFinal ?? NaN
     if (Number.isNaN(valorNum) || valorNum < 0) {
       showNotification('error', 'Valor inválido')
       return
@@ -247,7 +248,7 @@ export default function AcoesAgendamentoSheet({ agendamento, onClose }: AcoesAge
               desc="Registrar valor e forma de pagamento"
               disabled={carregando}
               onClick={() => {
-                setValorFinal(String(Number(valorBase).toFixed(2)))
+                setValorFinal(Number(valorBase))
                 setModoFinalizar(true)
               }}
             />
@@ -361,8 +362,8 @@ function FinalizarForm({
   onCancel,
   onSubmit,
 }: {
-  valorFinal: string
-  setValorFinal: (s: string) => void
+  valorFinal: number | null
+  setValorFinal: (n: number | null) => void
   tipoPagamento: TipoPagamento
   setTipoPagamento: (t: TipoPagamento) => void
   valorPrevisto: number
@@ -376,15 +377,10 @@ function FinalizarForm({
         <label htmlFor="valorFinal" className="block text-xs font-semibold text-slate-700 mb-1">
           Valor cobrado (R$)
         </label>
-        <input
+        <MoneyInput
           id="valorFinal"
-          type="number"
-          step="0.01"
-          min="0"
           value={valorFinal}
-          onChange={(e) => setValorFinal(e.target.value)}
-          placeholder="0,00"
-          inputMode="decimal"
+          onChange={(n) => setValorFinal(n)}
           className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-slate-900 text-base font-semibold focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
         />
         {valorPrevisto > 0 && (
@@ -426,7 +422,7 @@ function FinalizarForm({
         <button
           type="button"
           onClick={onSubmit}
-          disabled={carregando || !valorFinal}
+          disabled={carregando || valorFinal == null || valorFinal <= 0}
           className="flex-1 py-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold disabled:opacity-50"
         >
           {carregando ? 'Confirmando...' : 'Confirmar'}

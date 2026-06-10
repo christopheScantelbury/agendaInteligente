@@ -11,6 +11,7 @@ import FormField from '../../components/FormField'
 import Button from '../../components/Button'
 import { baixarArquivo } from '../../utils/downloadFile'
 import { useChartReady } from '../../hooks/useChartReady'
+import IntegerInput from '../../components/forms/IntegerInput'
 
 const formatMoeda = (v: number) =>
   (v ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -105,7 +106,7 @@ export default function ResumoFinanceiro() {
         <>
           <div className="flex items-end gap-3">
             <FormField label="Ano">
-              <input type="number" value={ano} onChange={(e) => setAno(Number(e.target.value))}
+              <IntegerInput value={ano} onChange={(v) => setAno(v ?? new Date().getFullYear())} min={2000} max={2100}
                 className="mt-1 block w-28 rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500" />
             </FormField>
           </div>

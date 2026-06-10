@@ -6,6 +6,7 @@ import { planoService, Plano, formatPrecoMensal } from '../../services/planoServ
 import { authService } from '../../services/authService'
 import { useNotification } from '../../contexts/NotificationContext'
 import MoneyInput from '../../components/forms/MoneyInput'
+import IntegerInput from '../../components/forms/IntegerInput'
 import { getApiErrorMessage } from '../../utils/apiError'
 
 /**
@@ -103,11 +104,10 @@ function PlanoEditCard({ plano, onSaved }: { plano: Plano; onSaved: () => void }
     placeholder: string,
   ) => (
     <div className="flex items-center gap-1">
-      <input
-        type="number"
+      <IntegerInput
         min={0}
-        value={valor ?? ''}
-        onChange={(e) => setter(e.target.value === '' ? null : Number(e.target.value))}
+        value={valor ?? undefined}
+        onChange={(v) => setter(v === undefined ? null : v)}
         placeholder={placeholder}
         className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
       />
@@ -181,11 +181,10 @@ function PlanoEditCard({ plano, onSaved }: { plano: Plano; onSaved: () => void }
         </div>
         <div>
           <label className="block text-xs font-semibold text-slate-600 mb-1">NFS-e/mês</label>
-          <input
-            type="number"
+          <IntegerInput
             min={0}
             value={form.limiteNfseMes}
-            onChange={(e) => setForm({ ...form, limiteNfseMes: Number(e.target.value) || 0 })}
+            onChange={(v) => setForm({ ...form, limiteNfseMes: v ?? 0 })}
             className="block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
           />
         </div>
@@ -202,12 +201,11 @@ function PlanoEditCard({ plano, onSaved }: { plano: Plano; onSaved: () => void }
         {plano.nome === 'TRIAL' && (
           <div>
             <label className="block text-xs font-semibold text-slate-600 mb-1">Duração do trial (dias)</label>
-            <input
-              type="number"
+            <IntegerInput
               min={1}
               max={90}
               value={form.duracaoTrialDias ?? 14}
-              onChange={(e) => setForm({ ...form, duracaoTrialDias: Number(e.target.value) || 14 })}
+              onChange={(v) => setForm({ ...form, duracaoTrialDias: v ?? 14 })}
               className="block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
             />
           </div>

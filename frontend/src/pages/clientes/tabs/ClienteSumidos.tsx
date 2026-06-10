@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { clienteService } from '../../../services/clienteService'
 import { authService } from '../../../services/authService'
 import ClienteQuickModal from '../../../components/clientes/ClienteQuickModal'
+import IntegerInput from '../../../components/forms/IntegerInput'
 
 // #147: opção "Personalizado" libera input numérico livre.
 const DIAS_OPTIONS = [
@@ -34,8 +35,8 @@ export default function ClienteSumidos() {
   const [diasSemRetorno, setDiasSemRetorno] = useState(15)
   const [minAtendimentos, setMinAtendimentos] = useState(1)
   // #147: estado separado pra modo Personalizado (não sai do select pra query até user digitar)
-  const [diasPersonalizado, setDiasPersonalizado] = useState<number | ''>('')
-  const [minAtPersonalizado, setMinAtPersonalizado] = useState<number | ''>('')
+  const [diasPersonalizado, setDiasPersonalizado] = useState<number | undefined>(undefined)
+  const [minAtPersonalizado, setMinAtPersonalizado] = useState<number | undefined>(undefined)
   const [diasModo, setDiasModo] = useState<'preset' | 'custom'>('preset')
   const [minAtModo, setMinAtModo] = useState<'preset' | 'custom'>('preset')
   const [quickModalId, setQuickModalId] = useState<number | null>(null)
@@ -80,19 +81,18 @@ export default function ClienteSumidos() {
             </select>
           ) : (
             <div className="flex items-center gap-1">
-              <input
-                type="number"
+              <IntegerInput
                 min={1}
                 max={3650}
                 value={diasPersonalizado}
-                onChange={(e) => setDiasPersonalizado(e.target.value === '' ? '' : Number(e.target.value))}
+                onChange={(v) => setDiasPersonalizado(v)}
                 placeholder="dias"
                 className="bg-white text-slate-900 border border-slate-200 rounded-lg px-3 py-1.5 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
               />
               <span className="text-xs text-slate-500">dias</span>
               <button
                 type="button"
-                onClick={() => { setDiasModo('preset'); setDiasPersonalizado('') }}
+                onClick={() => { setDiasModo('preset'); setDiasPersonalizado(undefined) }}
                 className="text-xs text-violet-600 hover:text-violet-800 ml-1"
               >
                 voltar
@@ -122,19 +122,18 @@ export default function ClienteSumidos() {
             </select>
           ) : (
             <div className="flex items-center gap-1">
-              <input
-                type="number"
+              <IntegerInput
                 min={1}
                 max={1000}
                 value={minAtPersonalizado}
-                onChange={(e) => setMinAtPersonalizado(e.target.value === '' ? '' : Number(e.target.value))}
+                onChange={(v) => setMinAtPersonalizado(v)}
                 placeholder="qtd"
                 className="bg-white text-slate-900 border border-slate-200 rounded-lg px-3 py-1.5 text-sm w-20 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
               />
               <span className="text-xs text-slate-500">atend.</span>
               <button
                 type="button"
-                onClick={() => { setMinAtModo('preset'); setMinAtPersonalizado('') }}
+                onClick={() => { setMinAtModo('preset'); setMinAtPersonalizado(undefined) }}
                 className="text-xs text-violet-600 hover:text-violet-800 ml-1"
               >
                 voltar

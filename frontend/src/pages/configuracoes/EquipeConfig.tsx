@@ -16,6 +16,7 @@ import { conviteService } from '../../services/conviteService'
 import { useNotification } from '../../contexts/NotificationContext'
 import ConfigPageHeader from '../../components/configuracoes/ConfigPageHeader'
 import ProximaEtapaCard from '../../components/configuracoes/ProximaEtapaCard'
+import IntegerInput from '../../components/forms/IntegerInput'
 
 const HOJE = new Date()
 const pad = (n: number) => n.toString().padStart(2, '0')
@@ -58,18 +59,22 @@ export default function EquipeConfig() {
 
   const [tokenCopiado, setTokenCopiado] = useState<number | null>(null)
   const [criou, setCriou] = useState(false)
-  const [form, setForm] = useState({
-    maxUnidades: '1',
-    diasExpiracaoLink: '7',
-    diasExpiracaoAcesso: '365',
+  const [form, setForm] = useState<{
+    maxUnidades: number | undefined
+    diasExpiracaoLink: number | undefined
+    diasExpiracaoAcesso: number | undefined
+  }>({
+    maxUnidades: 1,
+    diasExpiracaoLink: 7,
+    diasExpiracaoAcesso: 365,
   })
 
   const criarMutation = useMutation({
     mutationFn: () =>
       conviteService.criarConviteAcesso({
-        maxUnidades: parseInt(form.maxUnidades, 10) || 1,
-        dataExpiracaoLink: emDiasDateTime(parseInt(form.diasExpiracaoLink, 10) || 7),
-        dataExpiracaoAcesso: emDiasDate(parseInt(form.diasExpiracaoAcesso, 10) || 365),
+        maxUnidades: form.maxUnidades ?? 1,
+        dataExpiracaoLink: emDiasDateTime(form.diasExpiracaoLink ?? 7),
+        dataExpiracaoAcesso: emDiasDate(form.diasExpiracaoAcesso ?? 365),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['configuracoes', 'convites-acesso'] })
@@ -121,13 +126,12 @@ export default function EquipeConfig() {
             <label htmlFor="maxUnidades" className="block text-xs font-medium text-slate-700 mb-1.5">
               Máx. unidades
             </label>
-            <input
+            <IntegerInput
               id="maxUnidades"
-              type="number"
-              min="1"
-              max="10"
+              min={1}
+              max={10}
               value={form.maxUnidades}
-              onChange={(e) => setForm({ ...form, maxUnidades: e.target.value })}
+              onChange={(v) => setForm({ ...form, maxUnidades: v })}
               className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
             />
           </div>
@@ -135,13 +139,12 @@ export default function EquipeConfig() {
             <label htmlFor="diasLink" className="block text-xs font-medium text-slate-700 mb-1.5">
               Link expira em (dias)
             </label>
-            <input
+            <IntegerInput
               id="diasLink"
-              type="number"
-              min="1"
-              max="30"
+              min={1}
+              max={30}
               value={form.diasExpiracaoLink}
-              onChange={(e) => setForm({ ...form, diasExpiracaoLink: e.target.value })}
+              onChange={(v) => setForm({ ...form, diasExpiracaoLink: v })}
               className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
             />
           </div>
@@ -149,13 +152,12 @@ export default function EquipeConfig() {
             <label htmlFor="diasAcesso" className="block text-xs font-medium text-slate-700 mb-1.5">
               Acesso válido (dias)
             </label>
-            <input
+            <IntegerInput
               id="diasAcesso"
-              type="number"
-              min="30"
-              max="3650"
+              min={30}
+              max={3650}
               value={form.diasExpiracaoAcesso}
-              onChange={(e) => setForm({ ...form, diasExpiracaoAcesso: e.target.value })}
+              onChange={(v) => setForm({ ...form, diasExpiracaoAcesso: v })}
               className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
             />
           </div>

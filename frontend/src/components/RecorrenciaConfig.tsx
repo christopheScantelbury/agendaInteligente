@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import FormField from './FormField'
 import { Repeat, X } from 'lucide-react'
+import IntegerInput from './forms/IntegerInput'
 
 export interface RecorrenciaConfig {
   recorrente: boolean
@@ -183,15 +184,9 @@ export default function RecorrenciaConfig({ value, onChange, onClose }: Recorren
           <FormField
             label={`A cada quantas ${config.tipoRecorrencia === 'SEMANAL' ? 'semanas' : 'meses'}?`}
           >
-            <input
-              type="number"
-              value={config.intervalo || 1}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setConfig({
-                  ...config,
-                  intervalo: Math.max(1, parseInt(e.target.value) || 1),
-                })
-              }
+            <IntegerInput
+              value={config.intervalo ?? 1}
+              onChange={(v) => setConfig({ ...config, intervalo: Math.max(1, v ?? 1) })}
               min={1}
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
@@ -265,20 +260,9 @@ export default function RecorrenciaConfig({ value, onChange, onClose }: Recorren
       {config.tipoTermino === 'OCORRENCIAS' && (
         <div className="mb-4">
           <FormField label="Número de Ocorrências">
-            <input
-              type="number"
-              value={config.numeroOcorrencias ?? ''}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                const raw = e.target.value
-                if (raw === '') {
-                  setConfig({ ...config, numeroOcorrencias: undefined })
-                  return
-                }
-                const n = parseInt(raw, 10)
-                if (!isNaN(n)) {
-                  setConfig({ ...config, numeroOcorrencias: Math.min(365, Math.max(1, n)) })
-                }
-              }}
+            <IntegerInput
+              value={config.numeroOcorrencias}
+              onChange={(v) => setConfig({ ...config, numeroOcorrencias: v })}
               min={1}
               max={365}
               placeholder="Ex: 5"

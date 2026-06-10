@@ -4,6 +4,7 @@ import { clienteService } from '../../../services/clienteService'
 import { servicoService } from '../../../services/servicoService'
 import { authService } from '../../../services/authService'
 import ClienteQuickModal from '../../../components/clientes/ClienteQuickModal'
+import IntegerInput from '../../../components/forms/IntegerInput'
 
 const PRAZO_OPTIONS = [
   { value: 15, label: '15 dias' },
@@ -26,7 +27,7 @@ export default function ClienteRetornos() {
 
   const [servicoId, setServicoId] = useState<number | null>(null)
   const [diasLimite, setDiasLimite] = useState(30)
-  const [customDias, setCustomDias] = useState('')
+  const [customDias, setCustomDias] = useState<number | undefined>(undefined)
   const [quickModalId, setQuickModalId] = useState<number | null>(null)
 
   const isCustom = !PRAZO_OPTIONS.some((o) => o.value === diasLimite)
@@ -78,11 +79,11 @@ export default function ClienteRetornos() {
               value={isCustom ? 'custom' : diasLimite}
               onChange={(e) => {
                 if (e.target.value === 'custom') {
-                  setCustomDias('')
+                  setCustomDias(undefined)
                   setDiasLimite(-1)
                 } else {
                   setDiasLimite(Number(e.target.value))
-                  setCustomDias('')
+                  setCustomDias(undefined)
                 }
               }}
               className="bg-white text-slate-900 border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
@@ -96,15 +97,13 @@ export default function ClienteRetornos() {
           {isCustom && (
             <div>
               <label className="block text-slate-500 text-xs mb-1 font-medium">Dias</label>
-              <input
-                type="number"
+              <IntegerInput
                 min={1}
                 max={730}
                 value={customDias}
-                onChange={(e) => {
-                  setCustomDias(e.target.value)
-                  const n = parseInt(e.target.value, 10)
-                  if (n > 0) setDiasLimite(n)
+                onChange={(v) => {
+                  setCustomDias(v)
+                  if (v && v > 0) setDiasLimite(v)
                 }}
                 placeholder="ex: 45"
                 className="w-24 bg-white text-slate-900 border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"

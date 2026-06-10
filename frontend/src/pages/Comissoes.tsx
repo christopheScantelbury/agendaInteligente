@@ -915,8 +915,18 @@ function RegraForm({
         </FormField>
         <FormField label={form.tipo === 'PERCENTUAL' ? 'Percentual (%)' : 'Valor'} required>
           {form.tipo === 'PERCENTUAL' ? (
-            <input required type="number" step="0.01" min="0" max="100" value={form.valor || ''}
-              onChange={(e) => setForm({ ...form, valor: parseFloat(e.target.value) || 0 })}
+            <input
+              required
+              type="text"
+              inputMode="decimal"
+              value={form.valor ? String(form.valor).replace('.', ',') : ''}
+              onChange={(e) => {
+                const cleaned = e.target.value.replace(/[^\d,.]/g, '').replace(/[.,]/g, ',').replace(/(,.*?),/g, '$1')
+                if (cleaned === '') { setForm({ ...form, valor: 0 }); return }
+                const v = parseFloat(cleaned.replace(',', '.'))
+                if (!isNaN(v)) setForm({ ...form, valor: Math.max(0, Math.min(100, v)) })
+              }}
+              placeholder="0,00"
               className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
           ) : (
             <MoneyInput required value={form.valor}
