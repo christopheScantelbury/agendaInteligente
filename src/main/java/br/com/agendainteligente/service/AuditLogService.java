@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,10 @@ import java.util.Map;
 /**
  * Registra eventos de auditoria (#95).
  * Pega o contexto (usuário atual, IP, user-agent, impersonação) automaticamente.
+ *
+ * Toggle: `app.audit.enabled` (default false em 10/06/2026 — economia de memória).
+ * Quando false, todos os métodos `registrar(...)` viram no-op silencioso. Pra
+ * reativar: set env `APP_AUDIT_ENABLED=true` ou alterar application.yml.
  */
 @Service
 @RequiredArgsConstructor
@@ -29,7 +34,11 @@ public class AuditLogService {
     private final JwtTokenProvider jwtTokenProvider;
     private final ObjectProvider<HttpServletRequest> requestProvider;
 
+    @Value("${app.audit.enabled:false}")
+    private boolean enabled;
+
     public void registrar(String tipoAcao, String entidade, Long entidadeId, String descricao, Map<String, Object> metadata) {
+        if (!enabled) return;  // toggle desativado — vira no-op silencioso
         try {
             AuditLog.AuditLogBuilder builder = AuditLog.builder()
                     .tipoAcao(tipoAcao)

@@ -11,7 +11,7 @@ import {
   Tags,
   LayoutDashboard,
   Eye,
-  History,
+  // History,  // re-importar quando feature de Auditoria voltar (10/06/2026)
   ChevronRight,
 } from 'lucide-react'
 import { format } from 'date-fns'
@@ -107,10 +107,13 @@ export default function DashboardPlataforma() {
         />
       </div>
 
-      {/* Quick-links das telas de plataforma */}
+      {/* Quick-links das telas de plataforma.
+          Auditoria foi escondida em 10/06/2026 — feature pausada pra economia de
+          memória do servidor (toggle backend `app.audit.enabled=false`). Pra
+          religar, descomentar a linha + setar a env var no Railway. */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
         <QuickLink to="/plataforma/empresas" icon={Eye} titulo="Empresas" desc="Listar, assumir sessão" />
-        <QuickLink to="/plataforma/auditoria" icon={History} titulo="Auditoria" desc="Log de eventos da plataforma" />
+        {/* <QuickLink to="/plataforma/auditoria" icon={History} titulo="Auditoria" desc="Log de eventos da plataforma" /> */}
         <QuickLink to="/plataforma/planos" icon={Tags} titulo="Planos" desc="Editar preço, limites e descrição" />
         <QuickLink to="/plataforma/landing" icon={LayoutDashboard} titulo="Landing Page" desc="Hero, stats, destaques, comparativo" />
       </div>
