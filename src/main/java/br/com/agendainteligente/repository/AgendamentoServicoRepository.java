@@ -18,14 +18,21 @@ public interface AgendamentoServicoRepository extends JpaRepository<AgendamentoS
      * Itens de agendamento cujo atendente efetivo (próprio do item OU herdado do
      * agendamento) é o atendenteId informado, com agendamento no status indicado.
      * Usado por ComissaoService.listarPendentes (#155).
+     *
+     * IMPORTANTE: `LEFT JOIN s.atendente` explícito é obrigatório aqui. Path
+     * expression `s.atendente.id` no WHERE faz o JPA gerar INNER JOIN implícito,
+     * o que excluiria items com `atendente IS NULL` (caso do atendente principal
+     * que herda do agendamento). Bug crítico que o QA pegou — itens herdando do
+     * principal nunca geravam comissão.
      */
     @Query("""
             select s from AgendamentoServico s
             join s.agendamento a
+            left join s.atendente sa
             where a.status = :status
               and (
-                (s.atendente.id = :atendenteId)
-                or (s.atendente is null and a.atendente.id = :atendenteId)
+                sa.id = :atendenteId
+                or (sa is null and a.atendente.id = :atendenteId)
               )
             """)
     List<AgendamentoServico> findByAtendenteEfetivoAndAgendamentoStatus(

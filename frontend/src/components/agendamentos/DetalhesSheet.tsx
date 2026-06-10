@@ -199,7 +199,10 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
               </InfoRow>
 
               <InfoRow icon={User} label="Profissional">
-                {agendamento.atendente?.usuario?.nome ?? agendamento.atendente?.nome ?? '—'}
+                {agendamento.atendente?.nomeUsuario
+                  ?? agendamento.atendente?.usuario?.nome
+                  ?? agendamento.atendente?.nome
+                  ?? '—'}
                 {(() => {
                   // #155: marca quando há outros profissionais nos itens
                   const itens = (agendamento.servicos ?? []) as any[]

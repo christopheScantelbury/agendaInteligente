@@ -36,7 +36,11 @@ export default function AgendamentoCard({ agendamento, showProfissionalChip = fa
   const duracao = inicio && fim ? Math.round((fim.getTime() - inicio.getTime()) / 60000) : null
 
   const clienteNome = agendamento.cliente?.nome ?? `Cliente #${agendamento.clienteId}`
-  const profissionalNome = agendamento.atendente?.usuario?.nome ?? agendamento.atendente?.nome ?? null
+  const profissionalNome =
+    agendamento.atendente?.nomeUsuario
+    ?? agendamento.atendente?.usuario?.nome
+    ?? agendamento.atendente?.nome
+    ?? null
   const profissionalInicial = profissionalNome ? profissionalNome.charAt(0).toUpperCase() : null
 
   const servicos = agendamento.servicos ?? []
