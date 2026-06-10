@@ -204,14 +204,19 @@ export default function TimelineView({ agendamentos, selectedDate, onEventClick,
                                     {format(inicio, 'HH:mm')} - {format(fim, 'HH:mm')}
                                   </span>
                                 </div>
-                                {agendamento.atendente?.nome && (
-                                  <div className="flex min-w-0 max-w-full items-center">
-                                    <User className="mr-1.5 h-3 w-3 shrink-0 text-slate-400 sm:h-4 sm:w-4" />
-                                    <span className="max-w-[80px] truncate sm:max-w-[120px]">
-                                      {agendamento.atendente.nome}
-                                    </span>
-                                  </div>
-                                )}
+                                {(() => {
+                                  const nomeAtendente = agendamento.atendente?.nomeUsuario
+                                    ?? agendamento.atendente?.usuario?.nome
+                                    ?? agendamento.atendente?.nome
+                                  return nomeAtendente ? (
+                                    <div className="flex min-w-0 max-w-full items-center">
+                                      <User className="mr-1.5 h-3 w-3 shrink-0 text-slate-400 sm:h-4 sm:w-4" />
+                                      <span className="max-w-[80px] truncate sm:max-w-[120px]">
+                                        {nomeAtendente}
+                                      </span>
+                                    </div>
+                                  ) : null
+                                })()}
                                 {agendamento.unidade?.nome && (
                                   <div className="flex min-w-0 max-w-full items-center">
                                     <MapPin className="mr-1.5 h-3 w-3 shrink-0 text-slate-400 sm:h-4 sm:w-4" />

@@ -321,7 +321,7 @@ export default function Dashboard() {
                                                         {format(new Date(a.dataHoraInicio), 'HH:mm')} · {a.cliente?.nome || '—'}
                                                     </p>
                                                     <span className="text-xs text-slate-400 shrink-0">
-                                                        {a.atendente?.nomeUsuario || a.atendente?.nome || ''}
+                                                        {a.atendente?.nomeUsuario ?? a.atendente?.usuario?.nome ?? a.atendente?.nome ?? ''}
                                                     </span>
                                                 </div>
                                                 <p className="text-xs text-slate-500 truncate">

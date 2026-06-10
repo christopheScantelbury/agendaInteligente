@@ -46,7 +46,7 @@ function formatDataHora(dataHora: string) {
 }
 
 function nomeAtendente(agendamento: any): string | null {
-  return agendamento.atendente?.usuario?.nome ?? agendamento.atendente?.nome ?? null
+  return agendamento.atendente?.nomeUsuario ?? agendamento.atendente?.usuario?.nome ?? agendamento.atendente?.nome ?? null
 }
 
 function servicosDoAgendamento(agendamento: any): { id: number; nome: string; valor?: number }[] {
