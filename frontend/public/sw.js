@@ -1,5 +1,5 @@
 // Bump CACHE_NAME a cada release pra invalidar o cache do client.
-const CACHE_NAME = 'agenda-inteligente-v80-2026-06-10-daytimeline-scroll'
+const CACHE_NAME = 'agenda-inteligente-v81-2026-06-10-picker-profs-busca'
 const urlsToCache = [
   '/',
   '/index.html',

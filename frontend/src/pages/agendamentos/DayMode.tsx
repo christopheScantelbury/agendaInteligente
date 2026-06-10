@@ -10,6 +10,7 @@ import AgendamentoFab from '../../components/agendamentos/AgendamentoFab'
 import NovoAgendamentoSheet from '../../components/agendamentos/NovoAgendamentoSheet'
 import DetalhesSheet from '../../components/agendamentos/DetalhesSheet'
 import DayTimeline, { ColunaProfissional } from '../../components/agendamentos/DayTimeline'
+import ProfissionalPickerSheet, { PickerItem } from '../../components/agendamentos/ProfissionalPickerSheet'
 
 interface Props {
   selectedDate: Date
@@ -31,6 +32,7 @@ interface Props {
 export default function DayMode({ selectedDate, onDateChange }: Props) {
   const [profissionaisSelecionados, setProfissionaisSelecionados] = useState<number[]>([])
   const touchedRef = useRef(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
   const [novoSheetOpen, setNovoSheetOpen] = useState(false)
   const [novoInitial, setNovoInitial] = useState<{ date: Date; atendenteId?: number } | null>(null)
   const [detalhesId, setDetalhesId] = useState<number | null>(null)
@@ -157,12 +159,40 @@ export default function DayMode({ selectedDate, onDateChange }: Props) {
       .filter((c): c is ColunaProfissional => c !== null)
   }, [idsExibidos, atendentesAtivos, agendamentosDoDia])
 
-  // Chips: apenas atendentes ativos. Sem "Todos" — quando todos estão ativos
-  // visualmente, fica claro pelo highlight. ProfissionalFilterChips se esconde
-  // sozinho se só houver 1 profissional.
+  // Chips: apenas atendentes ativos. ProfissionalFilterChips em multi mode
+  // renderiza só os selecionados + botão "Selecionar profissionais" que abre
+  // o picker com busca (escala bem com unidades de muitos profs).
   const chips = useMemo<ProfissionalChipItem[]>(
     () => atendentesAtivos.map((a) => ({ id: a.id, nome: a.nome })),
     [atendentesAtivos]
+  )
+
+  // Contagem de items por atendente efetivo (mesmo cálculo que define top2DoDia,
+  // mas exposto pra o picker mostrar "N agendamentos no dia" ao lado de cada).
+  const contagemPorAtendente = useMemo(() => {
+    const m = new Map<number, number>()
+    agendamentosDoDia.forEach((a) => {
+      const items = (a.servicos ?? []) as any[]
+      if (items.length === 0) {
+        if (a.atendenteId) m.set(a.atendenteId, (m.get(a.atendenteId) ?? 0) + 1)
+        return
+      }
+      items.forEach((it) => {
+        const eff = (it.atendenteId as number | undefined) ?? a.atendenteId
+        if (eff) m.set(eff, (m.get(eff) ?? 0) + 1)
+      })
+    })
+    return m
+  }, [agendamentosDoDia])
+
+  const pickerItems = useMemo<PickerItem[]>(
+    () =>
+      atendentesAtivos.map((a) => ({
+        id: a.id,
+        nome: a.nome,
+        count: contagemPorAtendente.get(a.id) ?? 0,
+      })),
+    [atendentesAtivos, contagemPorAtendente]
   )
 
   const handleSlotClick = (date: Date, atendenteId: number) => {
@@ -203,6 +233,16 @@ export default function DayMode({ selectedDate, onDateChange }: Props) {
         selectedIds={profissionaisSelecionados}
         onChange={handleProfChange}
         maxSelected={2}
+        onOpenPicker={() => setPickerOpen(true)}
+      />
+
+      <ProfissionalPickerSheet
+        isOpen={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        items={pickerItems}
+        initialSelectedIds={profissionaisSelecionados}
+        maxSelected={2}
+        onConfirm={(ids) => handleProfChange(ids)}
       />
 
       {isLoading ? (

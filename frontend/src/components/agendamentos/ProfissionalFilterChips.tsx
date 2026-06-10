@@ -1,4 +1,4 @@
-import { Users } from 'lucide-react'
+import { Users, Plus, X } from 'lucide-react'
 
 export interface ProfissionalChipItem {
   id: number | null  // null = "Todos"
@@ -17,88 +17,80 @@ interface SingleProps extends BaseProps {
 
 interface MultiProps extends BaseProps {
   mode: 'multi'
-  /** Lista de ids selecionados. Array vazio = "Todos". */
+  /** Lista de ids selecionados. */
   selectedIds: number[]
   onChange: (ids: number[]) => void
-  /** Limite de seleção simultânea (default 2). "Todos" não conta. */
+  /** Limite de seleção simultânea (default 2). */
   maxSelected?: number
+  /** Callback do botão "Selecionar profissionais" — abre picker com busca. */
+  onOpenPicker?: () => void
 }
 
 type Props = SingleProps | MultiProps
 
 /**
- * Strip horizontal scrollável de chips de profissional.
+ * Strip de chips de profissional.
  *
- * - `mode="single"` (default): comportamento clássico — 1 chip ativo, "Todos" reseta.
- * - `mode="multi"`: até `maxSelected` profissionais ativos simultaneamente.
- *   Chip "Todos" limpa a seleção. Tentar selecionar além do limite desativa o
- *   chip (cursor + opacity) com tooltip.
+ * - `mode="single"`: comportamento clássico — 1 chip ativo, "Todos" reseta.
+ * - `mode="multi"`: mostra APENAS os profissionais selecionados como chips
+ *   (com X pra desmarcar). Botão "+ Selecionar profissionais (M/N)" abre o
+ *   picker com busca. Escala bem pra unidades com muitos profs.
  *
- * Não renderiza nada quando só existe "Todos" + 1 profissional (não há o que filtrar).
+ * Não renderiza nada (single) quando só existe "Todos" + 1 profissional.
  */
 export default function ProfissionalFilterChips(props: Props) {
-  if (props.items.length <= 1) return null  // só 1 profissional → nada a filtrar
-
   if (props.mode === 'multi') {
-    const { items, selectedIds, onChange, maxSelected = 2 } = props
-    const atLimit = selectedIds.length >= maxSelected
+    const { items, selectedIds, onChange, onOpenPicker } = props
+    // maxSelected é usado pelo picker; aqui só servimos selecionados como chips removíveis.
+    const totalProfs = items.length
+    // Em multi mode, o componente sempre rendera o controle se houver >= 2 profs
+    // (com 1 prof, o DayMode já auto-seleciona e esconde o filtro pelo idsExibidos).
+    if (totalProfs <= 1) return null
+
+    const selectedItems = selectedIds
+      .map((id) => items.find((i) => i.id === id))
+      .filter((i): i is ProfissionalChipItem => !!i && i.id !== null)
 
     return (
       <div className="-mx-1 overflow-x-auto scrollbar-none">
         <div className="flex items-center gap-2 px-1 py-1 whitespace-nowrap">
-          {items.map((item) => {
-            const isTodos = item.id === null
-            const isActive = isTodos ? selectedIds.length === 0 : selectedIds.includes(item.id as number)
-            const isDisabled = !isActive && !isTodos && atLimit
-            const inicial = isTodos ? null : item.nome.charAt(0).toUpperCase()
-
-            const handleClick = () => {
-              if (isTodos) {
-                onChange([])
-                return
-              }
-              const id = item.id as number
-              if (isActive) {
-                onChange(selectedIds.filter((x) => x !== id))
-              } else if (!atLimit) {
-                onChange([...selectedIds, id])
-              }
-            }
-
+          {selectedItems.map((item) => {
+            const inicial = (item.nome || '').charAt(0).toUpperCase()
             return (
               <button
-                key={item.id ?? 'todos'}
-                onClick={handleClick}
-                disabled={isDisabled}
-                title={isDisabled ? `Limite de ${maxSelected} profissionais selecionados` : undefined}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition flex-shrink-0 ${
-                  isActive
-                    ? 'bg-violet-600 text-white shadow-sm shadow-violet-200'
-                    : isDisabled
-                    ? 'bg-white border border-slate-200 text-slate-400 opacity-50 cursor-not-allowed'
-                    : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-                }`}
+                key={item.id}
+                onClick={() => onChange(selectedIds.filter((x) => x !== item.id))}
+                title="Remover da seleção"
+                className="inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1.5 rounded-full text-xs font-semibold bg-violet-600 text-white shadow-sm shadow-violet-200 flex-shrink-0 hover:bg-violet-700 transition"
               >
-                {isTodos ? (
-                  <Users className="h-3.5 w-3.5" />
-                ) : (
-                  <span
-                    className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-violet-100 text-violet-700'
-                    }`}
-                  >
-                    {inicial}
-                  </span>
-                )}
+                <span className="h-5 w-5 rounded-full bg-white/20 text-white flex items-center justify-center text-[10px] font-bold">
+                  {inicial}
+                </span>
                 <span>{item.nome}</span>
+                <X className="h-3.5 w-3.5 opacity-80" />
               </button>
             )
           })}
+
+          {/* Botão "+ Selecionar profissionais (M/N)" — abre o picker */}
+          {onOpenPicker && (
+            <button
+              onClick={onOpenPicker}
+              className="inline-flex items-center gap-1.5 pl-2.5 pr-3 py-1.5 rounded-full text-xs font-semibold flex-shrink-0 bg-white border border-dashed border-violet-300 text-violet-700 hover:bg-violet-50 transition"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>
+                Selecionar profissionais ({selectedIds.length}/{totalProfs})
+              </span>
+            </button>
+          )}
         </div>
       </div>
     )
   }
 
+  // single mode (mantido por compat)
+  if (props.items.length <= 1) return null
   const { items, selectedId, onSelect } = props
   return (
     <div className="-mx-1 overflow-x-auto scrollbar-none">
