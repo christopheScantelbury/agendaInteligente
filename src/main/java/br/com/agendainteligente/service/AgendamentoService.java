@@ -917,6 +917,15 @@ public class AgendamentoService {
         
         if (novoStatus == StatusAgendamento.EM_ANDAMENTO) {
             validarClienteSemOutroAtendimentoEmAndamento(agendamento);
+            // #157: gate "requer sinal pra iniciar"
+            Unidade unidadeAg = agendamento.getUnidade();
+            if (unidadeAg != null
+                    && Boolean.TRUE.equals(unidadeAg.getRequerSinalPraIniciar())
+                    && Boolean.TRUE.equals(unidadeAg.getCobraSinal())
+                    && !Boolean.TRUE.equals(agendamento.getSinalPago())) {
+                throw new BusinessException(
+                        "Esta unidade exige sinal pago antes do atendimento começar");
+            }
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             if (auth != null && auth.isAuthenticated()) {
                 usuarioRepository.findByEmail(auth.getName())
@@ -1208,7 +1217,30 @@ public class AgendamentoService {
         if (agendamento.getStatus() == StatusAgendamento.NO_SHOW) {
             throw new BusinessException("Não é possível cancelar um agendamento marcado como não comparecimento");
         }
-        
+
+        // #157: gate "cliente pode cancelar após confirmar"
+        // Só aplica quando o CANCELAMENTO está sendo feito pelo próprio cliente.
+        // Admin/gerente/profissional continuam podendo cancelar normalmente.
+        Authentication authCancel = SecurityContextHolder.getContext().getAuthentication();
+        boolean clienteCancelando = false;
+        if (authCancel != null && authCancel.isAuthenticated()) {
+            String emailC = authCancel.getName();
+            Usuario uC = usuarioRepository.findByEmail(emailC).orElse(null);
+            if (uC == null) {
+                // Cliente sem Usuario (guest checkout) ou autenticado via clienteToken
+                clienteCancelando = clienteRepository.findByEmail(emailC).isPresent();
+            } else if (uC.getPerfil() == Usuario.PerfilUsuario.CLIENTE) {
+                clienteCancelando = true;
+            }
+        }
+        if (clienteCancelando
+                && agendamento.getStatus() == StatusAgendamento.CONFIRMADO
+                && agendamento.getUnidade() != null
+                && Boolean.FALSE.equals(agendamento.getUnidade().getClientePodeCancelarAposConfirmar())) {
+            throw new BusinessException(
+                    "Após confirmar o agendamento, só a equipe da unidade pode cancelar. Entre em contato.");
+        }
+
         agendamento.setStatus(StatusAgendamento.CANCELADO);
         agendamentoRepository.save(agendamento);
         log.info("Agendamento cancelado com sucesso. ID: {}", id);
@@ -1275,7 +1307,16 @@ public class AgendamentoService {
         BigDecimal novoTotalPago = valorPagoAtual.add(valorPagamentoFinal);
         BigDecimal valorTotalAgendamento = agendamento.getValorTotal() != null ? agendamento.getValorTotal() : BigDecimal.ZERO;
 
+        // #157: gate "permite finalizar sem pagamento"
+        Unidade unidadeFinal = agendamento.getUnidade();
+        boolean exigePagamento = unidadeFinal != null
+                && Boolean.FALSE.equals(unidadeFinal.getPermiteFinalizarSemPagamento());
+
         if (novoTotalPago.compareTo(BigDecimal.ZERO) <= 0) {
+            if (exigePagamento) {
+                throw new BusinessException(
+                        "Esta unidade exige registro de pagamento ao finalizar o atendimento");
+            }
             throw new BusinessException("Informe um valor para pagamento ou registre um pagamento prévio");
         }
 

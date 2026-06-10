@@ -25,6 +25,11 @@ export interface Unidade {
   // ── Sinal/Adiantamento (V76) ──
   cobraSinal?: boolean
   percentualSinal?: number
+  // ── Flags de fluxo (#157 / V78) ──
+  requerSinalPraIniciar?: boolean
+  permiteFinalizarSemPagamento?: boolean
+  clientePodeCancelarAposConfirmar?: boolean
+  lembreteConfirmacaoHoras?: number
 }
 
 export const unidadeService = {

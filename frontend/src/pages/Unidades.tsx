@@ -637,6 +637,88 @@ function UnidadeForm({
           )}
         </div>
 
+        {/* Fluxo de atendimento (#157 / V78) */}
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+          <h3 className="text-sm font-bold text-slate-800">Fluxo de atendimento</h3>
+          <p className="text-xs text-slate-500">
+            Regras operacionais desta unidade. Padrões preservam o fluxo atual — só altere se entender o impacto.
+          </p>
+
+          <label className="flex items-start gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={formData.requerSinalPraIniciar ?? false}
+              onChange={(e) => setFormData({ ...formData, requerSinalPraIniciar: e.target.checked })}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-violet-600"
+              disabled={!formData.cobraSinal}
+            />
+            <span className="text-sm text-slate-700">
+              Exigir sinal pago para iniciar o atendimento
+              <span className="block text-[11px] text-slate-500">
+                Profissional não consegue iniciar enquanto o cliente não pagar o sinal.
+                {!formData.cobraSinal && (
+                  <span className="text-amber-700"> Disponível só com "Cobra sinal" ativo.</span>
+                )}
+              </span>
+            </span>
+          </label>
+
+          <label className="flex items-start gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={!(formData.permiteFinalizarSemPagamento ?? true)}
+              onChange={(e) =>
+                setFormData({ ...formData, permiteFinalizarSemPagamento: !e.target.checked })
+              }
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-violet-600"
+            />
+            <span className="text-sm text-slate-700">
+              Exigir pagamento ao finalizar atendimento
+              <span className="block text-[11px] text-slate-500">
+                Bloqueia "Finalizar" sem registrar valor recebido. Use quando todo atendimento é pago na hora.
+              </span>
+            </span>
+          </label>
+
+          <label className="flex items-start gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={!(formData.clientePodeCancelarAposConfirmar ?? true)}
+              onChange={(e) =>
+                setFormData({ ...formData, clientePodeCancelarAposConfirmar: !e.target.checked })
+              }
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-violet-600"
+            />
+            <span className="text-sm text-slate-700">
+              Bloquear cancelamento pelo cliente após confirmar
+              <span className="block text-[11px] text-slate-500">
+                Cliente só consegue cancelar antes de confirmar. Equipe da unidade continua podendo cancelar.
+              </span>
+            </span>
+          </label>
+
+          <FormField label="Antecedência do lembrete automático (horas, 1–168)">
+            <input
+              type="number"
+              min={1}
+              max={168}
+              step={1}
+              value={formData.lembreteConfirmacaoHoras ?? 24}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  lembreteConfirmacaoHoras:
+                    e.target.value === '' ? undefined : Number(e.target.value),
+                })
+              }
+              className="mt-1 block w-full sm:w-40 rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+            />
+          </FormField>
+          <p className="text-[11px] text-slate-500 -mt-1">
+            Tempo antes do horário do agendamento pra notificar o cliente confirmar.
+          </p>
+        </div>
+
         <div className="flex justify-end space-x-2 pt-4 border-t">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar

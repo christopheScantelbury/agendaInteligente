@@ -113,6 +113,27 @@ public class Unidade {
     @Builder.Default
     private BigDecimal percentualSinal = new BigDecimal("30.00");
 
+    // ── Flags de fluxo de atendimento (V78 / issue #157) ─────────────────────
+    /** Bloqueia CONFIRMADO→EM_ANDAMENTO se cobra_sinal=true e sinal_pago=false. */
+    @Column(name = "requer_sinal_pra_iniciar", nullable = false)
+    @Builder.Default
+    private Boolean requerSinalPraIniciar = false;
+
+    /** Quando false, finalizar exige valorFinal > 0. */
+    @Column(name = "permite_finalizar_sem_pagamento", nullable = false)
+    @Builder.Default
+    private Boolean permiteFinalizarSemPagamento = true;
+
+    /** Quando false, perfil CLIENTE não cancela após status CONFIRMADO. */
+    @Column(name = "cliente_pode_cancelar_apos_confirmar", nullable = false)
+    @Builder.Default
+    private Boolean clientePodeCancelarAposConfirmar = true;
+
+    /** Antecedência (horas) do lembrete automático de confirmação (1-168). */
+    @Column(name = "lembrete_confirmacao_horas", nullable = false)
+    @Builder.Default
+    private Short lembreteConfirmacaoHoras = 24;
+
     // ── Integração NotaFácil (Nota MEI Gateway) ─────────────────────────────
     @Column(name = "notafacil_api_key", length = 255)
     private String notafacilApiKey;

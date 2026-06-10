@@ -60,4 +60,10 @@ public class UnidadeDTO {
     // ── Sinal/Adiantamento (V76) ─────────────────────────────────────────────
     private Boolean cobraSinal;
     private java.math.BigDecimal percentualSinal;
+
+    // ── Flags de fluxo de atendimento (V78 / issue #157) ─────────────────────
+    private Boolean requerSinalPraIniciar;
+    private Boolean permiteFinalizarSemPagamento;
+    private Boolean clientePodeCancelarAposConfirmar;
+    private Short lembreteConfirmacaoHoras;
 }

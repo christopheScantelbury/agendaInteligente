@@ -18,20 +18,40 @@ public class LembreteAgendadoService {
 
     private final AgendamentoRepository agendamentoRepository;
 
+    /**
+     * Roda de hora em hora. Marca como "lembrete enviado" agendamentos que estão
+     * entrando na janela de antecedência configurada pela unidade.
+     *
+     * #157: cada unidade configura `lembrete_confirmacao_horas` (1-168). Pegamos
+     * a janela máxima possível (168h) e filtramos por agendamento conforme a
+     * antecedência da unidade dele. Tolerância de ±1h pra cobrir entre execuções.
+     */
     @Scheduled(cron = "0 0 * * * *")
     @Transactional
-    public void enviarLembretes24h() {
-        LocalDateTime inicio = LocalDateTime.now().plusHours(23);
-        LocalDateTime fim = LocalDateTime.now().plusHours(25);
+    public void enviarLembretes() {
+        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime fimJanela = agora.plusHours(168); // máximo configurável
 
-        List<Agendamento> pendentes = agendamentoRepository.findAgendamentosParaLembrete24h(inicio, fim);
-        for (Agendamento ag : pendentes) {
-            ag.setLembrete24hEnviado(true);
-            agendamentoRepository.save(ag);
+        List<Agendamento> candidatos =
+                agendamentoRepository.findAgendamentosParaLembrete24h(agora, fimJanela);
+
+        int marcados = 0;
+        for (Agendamento ag : candidatos) {
+            short horas = ag.getUnidade() != null && ag.getUnidade().getLembreteConfirmacaoHoras() != null
+                    ? ag.getUnidade().getLembreteConfirmacaoHoras()
+                    : 24;
+            LocalDateTime alvo = ag.getDataHoraInicio().minusHours(horas);
+            // Tolerância de 1h: pega agendamentos cuja janela alvo já passou ou
+            // entra na próxima hora. Idempotente — `lembrete24hEnviado=true` evita repetir.
+            if (!agora.isBefore(alvo.minusMinutes(30))
+                    && agora.isBefore(alvo.plusHours(1))) {
+                ag.setLembrete24hEnviado(true);
+                agendamentoRepository.save(ag);
+                marcados++;
+            }
         }
-
-        if (!pendentes.isEmpty()) {
-            log.info("Lembretes 24h marcados (sem envio): {}", pendentes.size());
+        if (marcados > 0) {
+            log.info("Lembretes de confirmação marcados (sem envio): {}", marcados);
         }
     }
 
