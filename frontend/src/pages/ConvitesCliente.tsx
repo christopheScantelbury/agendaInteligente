@@ -8,7 +8,19 @@ import { useState } from 'react'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
 import FormField from '../components/FormField'
+import DateTimeInput from '../components/forms/DateTimeInput'
 import { useNotification } from '../contexts/NotificationContext'
+
+function pad(n: number) { return String(n).padStart(2, '0') }
+function isoDateTime(d: Date) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+function nowMinIso() {
+  const d = new Date(); d.setSeconds(0, 0); d.setMinutes(d.getMinutes() + 1); return isoDateTime(d)
+}
+function defaultExp() {
+  const d = new Date(); d.setDate(d.getDate() + 7); d.setHours(23, 59, 0, 0); return isoDateTime(d)
+}
 
 export default function ConvitesCliente() {
   const { showNotification } = useNotification()
@@ -17,7 +29,7 @@ export default function ConvitesCliente() {
   const [copiedId, setCopiedId] = useState<number | null>(null)
   const [form, setForm] = useState<ConviteClienteCriar>({
     unidadeId: 0,
-    dataExpiracao: '',
+    dataExpiracao: defaultExp(),
   })
 
   const { data: perfil } = useQuery({
@@ -192,11 +204,12 @@ export default function ConvitesCliente() {
             </select>
           </FormField>
           <FormField label="Link válido até" required>
-            <input
-              type="datetime-local"
+            <DateTimeInput
               value={form.dataExpiracao}
-              onChange={(e) => setForm({ ...form, dataExpiracao: e.target.value })}
-              className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
+              onChange={(v) => setForm({ ...form, dataExpiracao: v })}
+              min={nowMinIso()}
+              required
+              className="mt-1"
             />
           </FormField>
           <div className="flex justify-end gap-2 pt-4">

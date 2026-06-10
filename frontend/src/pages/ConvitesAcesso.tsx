@@ -8,7 +8,42 @@ import Modal from '../components/Modal'
 import Button from '../components/Button'
 import FormField from '../components/FormField'
 import IntegerInput from '../components/forms/IntegerInput'
+import DateInput from '../components/forms/DateInput'
+import DateTimeInput from '../components/forms/DateTimeInput'
 import { useNotification } from '../contexts/NotificationContext'
+
+function pad(n: number) {
+  return String(n).padStart(2, '0')
+}
+function isoDate(d: Date) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+function isoDateTime(d: Date) {
+  return `${isoDate(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+function nowMinIso() {
+  // Min do datetime-local: agora arredondado pra cima no próximo minuto
+  const d = new Date()
+  d.setSeconds(0, 0)
+  d.setMinutes(d.getMinutes() + 1)
+  return isoDateTime(d)
+}
+function nowDateIso() {
+  return isoDate(new Date())
+}
+function defaultExpLink() {
+  // Amanhã às 23:59 — padrão razoável pro convite de venda
+  const d = new Date()
+  d.setDate(d.getDate() + 1)
+  d.setHours(23, 59, 0, 0)
+  return isoDateTime(d)
+}
+function defaultExpAcesso() {
+  // Hoje + 30 dias
+  const d = new Date()
+  d.setDate(d.getDate() + 30)
+  return isoDate(d)
+}
 
 export default function ConvitesAcesso() {
   const { showNotification } = useNotification()
@@ -17,8 +52,8 @@ export default function ConvitesAcesso() {
   const [copiedId, setCopiedId] = useState<number | null>(null)
   const [form, setForm] = useState<ConviteAcessoCriar>({
     maxUnidades: 1,
-    dataExpiracaoLink: '',
-    dataExpiracaoAcesso: '',
+    dataExpiracaoLink: defaultExpLink(),
+    dataExpiracaoAcesso: defaultExpAcesso(),
   })
 
   const { data: perfil } = useQuery({
@@ -40,7 +75,11 @@ export default function ConvitesAcesso() {
       queryClient.invalidateQueries({ queryKey: ['convites-acesso'] })
       showNotification('success', 'Link criado com sucesso!')
       setShowModal(false)
-      setForm({ maxUnidades: 1, dataExpiracaoLink: '', dataExpiracaoAcesso: '' })
+      setForm({
+        maxUnidades: 1,
+        dataExpiracaoLink: defaultExpLink(),
+        dataExpiracaoAcesso: defaultExpAcesso(),
+      })
     },
     onError: (error: any) => {
       showNotification('error', error.response?.data?.message || 'Erro ao criar link')
@@ -184,20 +223,28 @@ export default function ConvitesAcesso() {
             />
           </FormField>
           <FormField label="Link válido até" required>
-            <input
-              type="datetime-local"
+            <DateTimeInput
               value={form.dataExpiracaoLink}
-              onChange={(e) => setForm({ ...form, dataExpiracaoLink: e.target.value })}
-              className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
+              onChange={(v) => setForm({ ...form, dataExpiracaoLink: v })}
+              min={nowMinIso()}
+              required
+              className="mt-1"
             />
+            <p className="text-[11px] text-slate-500 mt-1">
+              Após essa data, o link para de funcionar (clientes não conseguem mais se cadastrar).
+            </p>
           </FormField>
           <FormField label="Acesso ao sistema válido até" required>
-            <input
-              type="date"
+            <DateInput
               value={form.dataExpiracaoAcesso}
-              onChange={(e) => setForm({ ...form, dataExpiracaoAcesso: e.target.value })}
-              className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
+              onChange={(v) => setForm({ ...form, dataExpiracaoAcesso: v })}
+              min={nowDateIso()}
+              required
+              className="mt-1"
             />
+            <p className="text-[11px] text-slate-500 mt-1">
+              Depois dessa data, a conta criada via esse link perde acesso ao sistema.
+            </p>
           </FormField>
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="secondary" onClick={() => setShowModal(false)}>
