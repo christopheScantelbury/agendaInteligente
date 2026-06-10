@@ -91,9 +91,11 @@ export default function DayTimeline({
   const nowOffset = (nowMinutes - startTotalMin) * pxPerMin
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-      {/* Header com nomes dos profissionais */}
-      <div className="flex border-b border-slate-200 bg-slate-50 sticky top-0 z-10">
+    <div className="bg-white rounded-2xl border border-slate-200">
+      {/* Header com nomes dos profissionais — sticky funciona porque o pai
+          NÃO tem mais overflow-hidden (esse era o motivo do scroll vertical
+          parecer travado em alguns layouts). */}
+      <div className="flex border-b border-slate-200 bg-slate-50 sticky top-0 z-10 rounded-t-2xl">
         <div className="w-10 flex-shrink-0" />
         {colunas.map((col) => (
           <div
