@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { startOfDay, endOfDay, isWithinInterval } from 'date-fns'
 import { agendamentoService, Agendamento } from '../../services/agendamentoService'
@@ -21,13 +21,16 @@ interface Props {
  *
  * Regras:
  * - 1 profissional disponível → chips ocultos, coluna única auto-selecionada.
- * - 2+ profissionais → chips com multi-seleção (até 2). Sem seleção = mostra
- *   automaticamente os 2 com mais agendamentos no dia.
+ * - 2+ profissionais → chips com multi-seleção (até 2). No 1º carregamento
+ *   (e ao trocar de dia sem ter feito ajuste manual), seleciona automaticamente
+ *   os 2 com mais agendamentos no dia. Os chips desses 2 ficam ATIVOS — sem
+ *   chip "Todos" mentiroso.
  * - Tap em slot vazio: abre wizard com data/hora + profissional pré-preenchidos.
  * - Tap em card: abre detalhes do agendamento.
  */
 export default function DayMode({ selectedDate, onDateChange }: Props) {
   const [profissionaisSelecionados, setProfissionaisSelecionados] = useState<number[]>([])
+  const touchedRef = useRef(false)
   const [novoSheetOpen, setNovoSheetOpen] = useState(false)
   const [novoInitial, setNovoInitial] = useState<{ date: Date; atendenteId?: number } | null>(null)
   const [detalhesId, setDetalhesId] = useState<number | null>(null)
@@ -55,13 +58,6 @@ export default function DayMode({ selectedDate, onDateChange }: Props) {
     [atendentes]
   )
 
-  // Auto-selecionar único profissional
-  useEffect(() => {
-    if (atendentesAtivos.length === 1 && profissionaisSelecionados.length === 0) {
-      setProfissionaisSelecionados([atendentesAtivos[0].id])
-    }
-  }, [atendentesAtivos, profissionaisSelecionados.length])
-
   // Agendamentos do dia (sem filtro de profissional ainda)
   const agendamentosDoDia = useMemo(() => {
     const inicio = startOfDay(selectedDate)
@@ -73,15 +69,12 @@ export default function DayMode({ selectedDate, onDateChange }: Props) {
     })
   }, [agendamentos, selectedDate])
 
-  // Define quais profissionais exibir (até 2 colunas)
-  const idsExibidos = useMemo<number[]>(() => {
+  // Top 2 do dia por nº de items (fallback alfabético).
+  // Conta cada item separadamente pra refletir atendentes que só aparecem como
+  // item em agendamentos cujo principal é outro (#155).
+  const top2DoDia = useMemo<number[]>(() => {
     if (atendentesAtivos.length === 0) return []
-    if (profissionaisSelecionados.length > 0) return profissionaisSelecionados.slice(0, 2)
     if (atendentesAtivos.length === 1) return [atendentesAtivos[0].id]
-
-    // Sem seleção e múltiplos profs: top 2 por nº de items do dia (fallback alfabético).
-    // Conta cada item separadamente pra refletir atendentes que só aparecem como
-    // item em agendamentos cujo principal é outro (#155).
     const contagem = new Map<number, number>()
     agendamentosDoDia.forEach((a) => {
       const items = (a.servicos ?? []) as any[]
@@ -94,17 +87,39 @@ export default function DayMode({ selectedDate, onDateChange }: Props) {
         if (eff) contagem.set(eff, (contagem.get(eff) ?? 0) + 1)
       })
     })
-    const ordenados = [...atendentesAtivos].sort((a, b) => {
-      const diff = (contagem.get(b.id) ?? 0) - (contagem.get(a.id) ?? 0)
-      if (diff !== 0) return diff
-      return a.nome.localeCompare(b.nome)
-    })
-    return ordenados.slice(0, 2).map((a) => a.id)
-  }, [profissionaisSelecionados, atendentesAtivos, agendamentosDoDia])
+    return [...atendentesAtivos]
+      .sort((a, b) => {
+        const diff = (contagem.get(b.id) ?? 0) - (contagem.get(a.id) ?? 0)
+        if (diff !== 0) return diff
+        return a.nome.localeCompare(b.nome)
+      })
+      .slice(0, 2)
+      .map((a) => a.id)
+  }, [atendentesAtivos, agendamentosDoDia])
+
+  // Sincroniza seleção com top 2 ENQUANTO o user não tocou nos chips.
+  // Após qualquer ajuste manual, a seleção é congelada e persiste entre
+  // navegações de dia. Reset acontece ao recarregar a página.
+  useEffect(() => {
+    if (touchedRef.current) return
+    if (top2DoDia.length === 0) return
+    const igual =
+      top2DoDia.length === profissionaisSelecionados.length &&
+      top2DoDia.every((id, i) => id === profissionaisSelecionados[i])
+    if (!igual) setProfissionaisSelecionados(top2DoDia)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [top2DoDia])
+
+  const handleProfChange = (ids: number[]) => {
+    touchedRef.current = true
+    setProfissionaisSelecionados(ids)
+  }
+
+  // O que vai pra timeline = exatamente o que está marcado nos chips
+  const idsExibidos = profissionaisSelecionados.slice(0, 2)
 
   // Monta colunas pra timeline. Issue #155: cada SERVICO do agendamento pode ter
   // atendente/horário próprios. Achatamos em "agendamentos virtuais" — 1 por item.
-  // Items sem atendente próprio herdam o do agendamento pai (compat).
   const colunas = useMemo<ColunaProfissional[]>(() => {
     const porColuna = new Map<number, any[]>()
     idsExibidos.forEach((id) => porColuna.set(id, []))
@@ -112,7 +127,6 @@ export default function DayMode({ selectedDate, onDateChange }: Props) {
     agendamentosDoDia.forEach((a) => {
       const servicos = (a.servicos ?? []) as any[]
       if (servicos.length === 0) {
-        // Sem serviços (raro) — usa agendamento direto na coluna do principal
         if (a.atendenteId && porColuna.has(a.atendenteId)) {
           porColuna.get(a.atendenteId)!.push(a)
         }
@@ -124,7 +138,6 @@ export default function DayMode({ selectedDate, onDateChange }: Props) {
 
         const inicioStr = (item.dataHoraInicio as string | undefined) ?? a.dataHoraInicio
         const fimStr = (item.dataHoraFim as string | undefined) ?? a.dataHoraFim
-        // Agendamento "virtual" — mesmo id pro click abrir o DetalhesSheet correto
         const virtual = {
           ...a,
           dataHoraInicio: inicioStr,
@@ -144,9 +157,11 @@ export default function DayMode({ selectedDate, onDateChange }: Props) {
       .filter((c): c is ColunaProfissional => c !== null)
   }, [idsExibidos, atendentesAtivos, agendamentosDoDia])
 
-  // Chips: "Todos" + atendentes ativos (escondidos automaticamente se ≤1 prof)
+  // Chips: apenas atendentes ativos. Sem "Todos" — quando todos estão ativos
+  // visualmente, fica claro pelo highlight. ProfissionalFilterChips se esconde
+  // sozinho se só houver 1 profissional.
   const chips = useMemo<ProfissionalChipItem[]>(
-    () => [{ id: null, nome: 'Todos' }, ...atendentesAtivos.map((a) => ({ id: a.id, nome: a.nome }))],
+    () => atendentesAtivos.map((a) => ({ id: a.id, nome: a.nome })),
     [atendentesAtivos]
   )
 
@@ -160,7 +175,6 @@ export default function DayMode({ selectedDate, onDateChange }: Props) {
   }
 
   const handleFabClick = () => {
-    // FAB usa o dia selecionado + 09:00 (ou próximo slot de 30min se for hoje)
     const now = new Date()
     const dt = new Date(selectedDate)
     const isHoje =
@@ -187,7 +201,7 @@ export default function DayMode({ selectedDate, onDateChange }: Props) {
         mode="multi"
         items={chips}
         selectedIds={profissionaisSelecionados}
-        onChange={setProfissionaisSelecionados}
+        onChange={handleProfChange}
         maxSelected={2}
       />
 
@@ -199,6 +213,10 @@ export default function DayMode({ selectedDate, onDateChange }: Props) {
             <CalendarOff className="h-5 w-5" />
           </div>
           <p className="text-sm text-slate-600">Nenhum profissional ativo cadastrado.</p>
+        </div>
+      ) : idsExibidos.length === 0 ? (
+        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
+          <p className="text-sm text-slate-600">Selecione ao menos 1 profissional para ver a agenda.</p>
         </div>
       ) : (
         <DayTimeline

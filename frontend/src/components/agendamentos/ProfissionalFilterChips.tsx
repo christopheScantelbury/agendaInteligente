@@ -37,7 +37,7 @@ type Props = SingleProps | MultiProps
  * Não renderiza nada quando só existe "Todos" + 1 profissional (não há o que filtrar).
  */
 export default function ProfissionalFilterChips(props: Props) {
-  if (props.items.length <= 2) return null  // "Todos" + 1 profissional → nada a filtrar
+  if (props.items.length <= 1) return null  // só 1 profissional → nada a filtrar
 
   if (props.mode === 'multi') {
     const { items, selectedIds, onChange, maxSelected = 2 } = props
