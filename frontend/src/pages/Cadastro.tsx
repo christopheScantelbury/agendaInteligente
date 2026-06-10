@@ -100,9 +100,15 @@ export default function Cadastro() {
               <div>
                 <label className={labelClass}>Unidades</label>
                 <input
-                  type="number" min={1} required
-                  value={quantidadeUnidades}
-                  onChange={(e) => setQuantidadeUnidades(e.target.value ? Number(e.target.value) : NaN)}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  required
+                  value={Number.isNaN(quantidadeUnidades) ? '' : String(quantidadeUnidades)}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.replace(/\D/g, '')
+                    setQuantidadeUnidades(cleaned === '' ? NaN : Math.max(1, Number(cleaned)))
+                  }}
                   className={inputClass}
                 />
               </div>

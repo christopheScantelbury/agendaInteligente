@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Edit, Trash2, Download, Tag, CheckCircle, AlertTriangle, Clock, Lock, Receipt } from 'lucide-react'
 import MoneyInput from '../components/forms/MoneyInput'
+import IntegerInput from '../components/forms/IntegerInput'
 import {
   despesaService,
   categoriaDespesaService,
@@ -607,8 +608,8 @@ function DespesaForm({
       {isCriando && tipoLancamento === 'PARCELADA' && (
         <div className="p-3 bg-violet-50/50 rounded-xl border border-violet-100">
           <FormField label="Quantidade de parcelas (2 a 60)" required>
-            <input required type="number" min={2} max={60} value={numeroParcelas}
-              onChange={(e) => setNumeroParcelas(Math.max(2, Math.min(60, Number(e.target.value) || 2)))}
+            <IntegerInput required min={2} max={60} value={numeroParcelas}
+              onChange={(v) => setNumeroParcelas(v ?? 2)}
               className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
           </FormField>
           {form.valor > 0 && numeroParcelas > 0 && (

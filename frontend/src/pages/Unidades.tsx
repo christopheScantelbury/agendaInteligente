@@ -12,6 +12,7 @@ import Modal from '../components/Modal'
 import Button from '../components/Button'
 import FormField from '../components/FormField'
 import FilterBar from '../components/FilterBar'
+import IntegerInput from '../components/forms/IntegerInput'
 import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { maskPhone, maskCEP, maskNumber } from '../utils/masks'
@@ -615,18 +616,11 @@ function UnidadeForm({
           {formData.cobraSinal && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormField label="Percentual sugerido (% do valor total)">
-                <input
-                  type="number"
+                <IntegerInput
                   min={0}
                   max={100}
-                  step={1}
-                  value={formData.percentualSinal ?? 30}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      percentualSinal: e.target.value === '' ? undefined : Number(e.target.value),
-                    })
-                  }
+                  value={formData.percentualSinal}
+                  onChange={(v) => setFormData({ ...formData, percentualSinal: v })}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
                 />
               </FormField>
@@ -698,19 +692,11 @@ function UnidadeForm({
           </label>
 
           <FormField label="Antecedência do lembrete automático (horas, 1–168)">
-            <input
-              type="number"
+            <IntegerInput
               min={1}
               max={168}
-              step={1}
-              value={formData.lembreteConfirmacaoHoras ?? 24}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  lembreteConfirmacaoHoras:
-                    e.target.value === '' ? undefined : Number(e.target.value),
-                })
-              }
+              value={formData.lembreteConfirmacaoHoras}
+              onChange={(v) => setFormData({ ...formData, lembreteConfirmacaoHoras: v })}
               className="mt-1 block w-full sm:w-40 rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>

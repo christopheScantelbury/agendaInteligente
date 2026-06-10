@@ -9,6 +9,7 @@ import { podeEditar } from '../utils/permissions'
 import { Plus, Trash2, Edit, Sparkles, Scissors } from 'lucide-react'
 import { useState, useMemo, useEffect } from 'react'
 import MoneyInput from '../components/forms/MoneyInput'
+import IntegerInput from '../components/forms/IntegerInput'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
 import FormField from '../components/FormField'
@@ -493,14 +494,11 @@ function ServicoForm({
         </FormField>
 
         <FormField label="Duração (minutos)" required>
-          <input
-            type="number"
-            min="1"
+          <IntegerInput
+            min={1}
             required
             value={formData.duracaoMinutos}
-            onChange={(e) =>
-              setFormData({ ...formData, duracaoMinutos: parseInt(e.target.value) || 30 })
-            }
+            onChange={(v) => setFormData({ ...formData, duracaoMinutos: v ?? 30 })}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
           />
         </FormField>

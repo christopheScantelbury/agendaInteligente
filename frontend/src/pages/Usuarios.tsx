@@ -796,18 +796,26 @@ function UsuarioForm({
           </FormField>
           <FormField label="Percentual de comissão (%)">
             <input
-              type="number"
-              min={0}
-              max={100}
-              step={0.01}
-              value={formData.atendentePercentualComissao ?? ''}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  atendentePercentualComissao: e.target.value === '' ? undefined : Number(e.target.value),
-                })
-              }
-              placeholder="0"
+              type="text"
+              inputMode="decimal"
+              value={formData.atendentePercentualComissao === undefined || formData.atendentePercentualComissao === null
+                ? ''
+                : String(formData.atendentePercentualComissao).replace('.', ',')}
+              onChange={(e) => {
+                const cleaned = e.target.value
+                  .replace(/[^\d,.]/g, '')
+                  .replace(/[.,]/g, ',')
+                  .replace(/(,.*?),/g, '$1')
+                if (cleaned === '') {
+                  setFormData({ ...formData, atendentePercentualComissao: undefined })
+                  return
+                }
+                const numValue = parseFloat(cleaned.replace(',', '.'))
+                if (!isNaN(numValue)) {
+                  setFormData({ ...formData, atendentePercentualComissao: Math.max(0, Math.min(100, numValue)) })
+                }
+              }}
+              placeholder="0,00"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
             />
           </FormField>

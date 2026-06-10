@@ -719,27 +719,29 @@ function AtendenteForm({
           <div className="md:col-span-2">
             <FormField label="Percentual de Comissão (%)">
               <input
-                type="number"
-                step="0.01"
-                min="0"
-                max="100"
+                type="text"
+                inputMode="decimal"
                 value={formData.percentualComissao !== undefined && formData.percentualComissao !== null && formData.percentualComissao !== 0
-                  ? formData.percentualComissao
+                  ? String(formData.percentualComissao).replace('.', ',')
                   : ''}
                 onChange={(e) => {
-                  const value = e.target.value
-                  if (value === '') {
+                  // aceita dígitos e UMA vírgula/ponto; bloqueia letras e múltiplos separadores
+                  const cleaned = e.target.value
+                    .replace(/[^\d,.]/g, '')
+                    .replace(/[.,]/g, ',')
+                    .replace(/(,.*?),/g, '$1')
+                  if (cleaned === '') {
                     setFormData({ ...formData, percentualComissao: 0 })
-                  } else {
-                    const numValue = parseFloat(value)
-                    setFormData({
-                      ...formData,
-                      percentualComissao: isNaN(numValue) ? 0 : numValue
-                    })
+                    return
+                  }
+                  const numValue = parseFloat(cleaned.replace(',', '.'))
+                  if (!isNaN(numValue)) {
+                    const clamped = Math.max(0, Math.min(100, numValue))
+                    setFormData({ ...formData, percentualComissao: clamped })
                   }
                 }}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
-                placeholder="0.00"
+                placeholder="0,00"
               />
               <p className="mt-1 text-xs text-gray-500">Percentual de comissão sobre os serviços prestados (0.00 a 100.00). Deixe vazio para 0%.</p>
             </FormField>

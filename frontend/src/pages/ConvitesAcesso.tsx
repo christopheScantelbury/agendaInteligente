@@ -7,6 +7,7 @@ import { useState } from 'react'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
 import FormField from '../components/FormField'
+import IntegerInput from '../components/forms/IntegerInput'
 import { useNotification } from '../contexts/NotificationContext'
 
 export default function ConvitesAcesso() {
@@ -174,12 +175,11 @@ export default function ConvitesAcesso() {
           className="space-y-4"
         >
           <FormField label="Máximo de unidades" required>
-            <input
-              type="number"
+            <IntegerInput
               min={1}
               max={100}
               value={form.maxUnidades}
-              onChange={(e) => setForm({ ...form, maxUnidades: parseInt(e.target.value, 10) || 1 })}
+              onChange={(v) => setForm({ ...form, maxUnidades: v ?? 1 })}
               className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
             />
           </FormField>
