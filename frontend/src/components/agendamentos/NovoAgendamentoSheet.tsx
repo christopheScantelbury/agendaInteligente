@@ -414,7 +414,7 @@ export default function NovoAgendamentoSheet({
           </div>
 
           {unidades.length > 1 && (
-            <div>
+            <div className="min-w-0">
               <label className="block text-xs font-semibold text-slate-600 mb-1">Unidade</label>
               <select
                 value={unidadeId ?? ''}
@@ -422,7 +422,7 @@ export default function NovoAgendamentoSheet({
                   setUnidadeId(Number(e.target.value) || null)
                   setBlocos([novoBloco(null, initialDateTimeStr)])
                 }}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                className="block w-full min-w-0 box-border px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
               >
                 <option value="">Selecione...</option>
                 {unidades.map((u) => (
@@ -447,7 +447,7 @@ export default function NovoAgendamentoSheet({
                 return (
                   <div
                     key={bloco.uid}
-                    className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 space-y-3"
+                    className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 space-y-3 overflow-hidden"
                   >
                     <div className="flex items-center justify-between">
                       <span className="inline-flex items-center gap-1.5 text-xs font-bold text-violet-700">
@@ -469,7 +469,7 @@ export default function NovoAgendamentoSheet({
                     </div>
 
                     {/* Profissional */}
-                    <div>
+                    <div className="min-w-0">
                       <label className="block text-xs font-semibold text-slate-600 mb-1">
                         Profissional
                       </label>
@@ -478,7 +478,7 @@ export default function NovoAgendamentoSheet({
                         onChange={(e) =>
                           updateBloco(bloco.uid, { atendenteId: Number(e.target.value) || null })
                         }
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                        className="block w-full min-w-0 box-border px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
                       >
                         <option value="">Selecione...</option>
                         {atendentes.map((a) => (
@@ -541,7 +541,7 @@ export default function NovoAgendamentoSheet({
                             const id = Number(e.target.value)
                             if (id) adicionarServicoAoBloco(bloco.uid, id)
                           }}
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                          className="block w-full min-w-0 box-border px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
                         >
                           <option value="">
                             {selecionados.length > 0
@@ -558,9 +558,11 @@ export default function NovoAgendamentoSheet({
                       )}
                     </div>
 
-                    {/* Data + Hora (separados pra ficar mais responsivo em mobile) */}
+                    {/* Data + Hora (separados pra ficar mais responsivo em mobile).
+                        iOS Safari: <input type=date/time> tem intrinsic min-width;
+                        precisa min-w-0 + box-border pra não estourar o grid. */}
                     <div className="grid grid-cols-2 gap-2">
-                      <div>
+                      <div className="min-w-0">
                         <label className="block text-xs font-semibold text-slate-600 mb-1">Data</label>
                         <input
                           type="date"
@@ -570,10 +572,10 @@ export default function NovoAgendamentoSheet({
                               dataHora: mergeDataHora(e.target.value, dh.hora || '09:00'),
                             })
                           }
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                          className="block w-full min-w-0 box-border px-3 py-2.5 rounded-xl border border-slate-200 text-sm appearance-none bg-white focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
                         />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <label className="block text-xs font-semibold text-slate-600 mb-1">Hora</label>
                         <input
                           type="time"
@@ -583,7 +585,7 @@ export default function NovoAgendamentoSheet({
                               dataHora: mergeDataHora(dh.data, e.target.value),
                             })
                           }
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                          className="block w-full min-w-0 box-border px-3 py-2.5 rounded-xl border border-slate-200 text-sm appearance-none bg-white focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
                         />
                       </div>
                     </div>
