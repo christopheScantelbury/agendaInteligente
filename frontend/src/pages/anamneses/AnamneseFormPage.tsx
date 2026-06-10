@@ -9,6 +9,7 @@ import Button from '../../components/Button'
 import SimNaoField from '../../components/anamneses/SimNaoField'
 import { useNotification } from '../../contexts/NotificationContext'
 import { matchSearch } from '../../utils/normalize'
+import DateInput from '../../components/forms/DateInput'
 
 const today = new Date().toISOString().split('T')[0]
 
@@ -300,12 +301,11 @@ export default function AnamneseFormPage() {
               <label className="block text-sm font-medium text-gray-700">
                 Data <span className="text-red-500">*</span>
               </label>
-              <input
-                type="date"
+              <DateInput
                 value={form.data}
-                onChange={(e) => setForm({ ...form, data: e.target.value })}
+                onChange={(v) => setForm({ ...form, data: v })}
                 disabled={isView}
-                className={fieldClass}
+                className="mt-1"
               />
             </div>
           </div>

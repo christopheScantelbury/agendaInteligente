@@ -18,6 +18,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import { useNotification } from '../contexts/NotificationContext'
 import { getApiErrorMessage } from '../utils/apiError'
 import MoneyInput from '../components/forms/MoneyInput'
+import DateInput from '../components/forms/DateInput'
 
 const formatMoeda = (v: number) =>
   (v ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -766,8 +767,8 @@ function ValesManager({ atendenteId, onClose: _onClose }: { atendenteId: number;
                 className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
             </FormField>
             <FormField label="Data" required>
-              <input type="date" value={dataVale} onChange={(e) => setDataVale(e.target.value)}
-                className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
+              <DateInput value={dataVale} onChange={setDataVale}
+                futuroDesabilitado className="mt-1" />
             </FormField>
           </div>
           <FormField label="Observação">

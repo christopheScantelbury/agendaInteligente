@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import FormField from './FormField'
 import { Repeat, X } from 'lucide-react'
 import IntegerInput from './forms/IntegerInput'
+import DateInput from './forms/DateInput'
 
 export interface RecorrenciaConfig {
   recorrente: boolean
@@ -240,17 +241,11 @@ export default function RecorrenciaConfig({ value, onChange, onClose }: Recorren
       {config.tipoTermino === 'DATA' && (
         <div className="mb-4">
           <FormField label="Data de Término">
-            <input
-              type="date"
+            <DateInput
               value={config.dataTermino || ''}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setConfig({
-                  ...config,
-                  dataTermino: e.target.value,
-                })
-              }
+              onChange={(v) => setConfig({ ...config, dataTermino: v })}
               min={new Date().toISOString().split('T')[0]}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              max="2099-12-31"
             />
           </FormField>
         </div>

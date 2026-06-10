@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Edit, Trash2, Download, Tag, CheckCircle, AlertTriangle, Clock, Lock, Receipt } from 'lucide-react'
 import MoneyInput from '../components/forms/MoneyInput'
 import IntegerInput from '../components/forms/IntegerInput'
+import DateInput from '../components/forms/DateInput'
 import {
   despesaService,
   categoriaDespesaService,
@@ -576,16 +577,16 @@ function DespesaForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <FormField label="Data competência" required>
-          <input required type="date" value={form.dataCompetencia}
+          <DateInput required value={form.dataCompetencia}
             min="2000-01-01" max="2099-12-31"
-            onChange={(e) => setForm({ ...form, dataCompetencia: e.target.value })}
-            className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
+            onChange={(v) => setForm({ ...form, dataCompetencia: v })}
+            className="mt-1" />
         </FormField>
         <FormField label={tipoLancamento === 'FIXA_MENSAL' ? 'Início (1º vencimento)' : 'Data vencimento'} required>
-          <input required type="date" value={form.dataVencimento}
+          <DateInput required value={form.dataVencimento}
             min="2000-01-01" max="2099-12-31"
-            onChange={(e) => setForm({ ...form, dataVencimento: e.target.value })}
-            className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
+            onChange={(v) => setForm({ ...form, dataVencimento: v })}
+            className="mt-1" />
         </FormField>
       </div>
 
@@ -593,8 +594,9 @@ function DespesaForm({
       {isCriando && tipoLancamento === 'FIXA_MENSAL' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-violet-50/50 rounded-xl border border-violet-100">
           <FormField label="Fim (opcional, default 12 meses)">
-            <input type="date" value={dataFimRec} onChange={(e) => setDataFimRec(e.target.value)}
-              className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
+            <DateInput value={dataFimRec} onChange={setDataFimRec}
+              min={new Date().toISOString().split('T')[0]} max="2099-12-31"
+              className="mt-1" />
           </FormField>
           <FormField label="Marcar como pago">
             <select value={modoPagamentoRec} onChange={(e) => setModoPagamentoRec(e.target.value as 'PRIMEIRA' | 'NENHUMA')}

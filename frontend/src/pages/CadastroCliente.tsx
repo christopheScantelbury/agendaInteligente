@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { clientePublicoService, ClienteCadastroRequest } from '../services/clientePublicoService'
 import { useNotification } from '../contexts/NotificationContext'
+import DateInput from '../components/forms/DateInput'
 
 function LogoMark({ size = 36 }: { size?: number }) {
   return (
@@ -152,14 +153,12 @@ export default function CadastroCliente() {
             </Field>
 
             <Field id="dataNascimento" label="Data de nascimento" required>
-              <input
+              <DateInput
                 id="dataNascimento"
-                type="date"
                 required
                 value={dataNascimento}
-                onChange={(e) => setDataNascimento(e.target.value)}
-                max={new Date().toISOString().split('T')[0]}
-                className={inputStyle}
+                onChange={setDataNascimento}
+                futuroDesabilitado
               />
             </Field>
 

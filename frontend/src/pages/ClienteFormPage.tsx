@@ -13,6 +13,13 @@ import { useNotification } from '../contexts/NotificationContext'
 import { maskCPF, maskCNPJ, maskPhone, maskEmail, maskCEP } from '../utils/masks'
 import { buscarEnderecoPorCep } from '../utils/viaCep'
 import DateInput from '../components/forms/DateInput'
+import DateTimeInput from '../components/forms/DateTimeInput'
+
+function pad2(n: number) { return String(n).padStart(2, '0') }
+function nowMinIso() {
+  const d = new Date(); d.setSeconds(0, 0); d.setMinutes(d.getMinutes() + 1)
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+}
 
 // Classes do input padrão (limpa) e do input com erro (borda vermelha + ring rosa).
 // Usa quando precisamos destacar campos que falharam validação local OU backend.
@@ -787,12 +794,10 @@ export default function ClienteFormPage() {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Data e hora</label>
-                  <input
-                    type="datetime-local"
+                  <DateTimeInput
                     value={agendamentoDataHoraInicio}
-                    onChange={(e) => setAgendamentoDataHoraInicio(e.target.value)}
-                    min={new Date().toISOString().slice(0, 16)}
-                    className="block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
+                    onChange={setAgendamentoDataHoraInicio}
+                    min={nowMinIso()}
                   />
                 </div>
 
