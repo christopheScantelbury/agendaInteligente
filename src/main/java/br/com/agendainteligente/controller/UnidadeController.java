@@ -1,6 +1,8 @@
 package br.com.agendainteligente.controller;
 
+import br.com.agendainteligente.dto.NotaFacilStatusDTO;
 import br.com.agendainteligente.dto.UnidadeDTO;
+import br.com.agendainteligente.service.NotaFacilProvisioningService;
 import br.com.agendainteligente.service.UnidadeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,6 +22,7 @@ import java.util.List;
 public class UnidadeController {
 
     private final UnidadeService unidadeService;
+    private final NotaFacilProvisioningService notaFacilProvisioningService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'PROFISSIONAL', 'CLIENTE')")
@@ -57,5 +60,27 @@ public class UnidadeController {
                                                  @Valid @RequestBody UnidadeDTO unidadeDTO) {
         return ResponseEntity.ok(unidadeService.atualizar(id, unidadeDTO));
     }
-}
 
+    // ── #159: NotaFácil ──────────────────────────────────────────────────────
+
+    @GetMapping("/{id}/notafacil/status")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('GERENTE')")
+    @Operation(summary = "Status do NotaFácil + checklist de pré-requisitos")
+    public ResponseEntity<NotaFacilStatusDTO> notaFacilStatus(@PathVariable Long id) {
+        return ResponseEntity.ok(notaFacilProvisioningService.status(id));
+    }
+
+    @PostMapping("/{id}/notafacil/provisionar")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('GERENTE')")
+    @Operation(summary = "Provisiona uma conta NotaFácil via gateway (gera api_key)")
+    public ResponseEntity<NotaFacilStatusDTO> notaFacilProvisionar(@PathVariable Long id) {
+        return ResponseEntity.ok(notaFacilProvisioningService.provisionar(id));
+    }
+
+    @DeleteMapping("/{id}/notafacil")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Revoga a emissão de NFS-e da unidade (limpa api_key)")
+    public ResponseEntity<NotaFacilStatusDTO> notaFacilRevogar(@PathVariable Long id) {
+        return ResponseEntity.ok(notaFacilProvisioningService.revogar(id));
+    }
+}

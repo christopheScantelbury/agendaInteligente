@@ -145,6 +145,10 @@ public class Unidade {
     @Builder.Default
     private Boolean notafacilAtivo = false;
 
+    /** #159: timestamp do provisionamento automático via NotaFacilProvisioningService. */
+    @Column(name = "notafacil_provisionado_em")
+    private LocalDateTime notafacilProvisionadoEm;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "empresa_id", nullable = false)
     private Empresa empresa;
