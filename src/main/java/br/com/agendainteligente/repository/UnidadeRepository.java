@@ -25,4 +25,7 @@ public interface UnidadeRepository extends JpaRepository<Unidade, Long> {
     /** Retorna unidades cujas empresas estejam no conjunto informado. */
     @Query("SELECT u FROM Unidade u WHERE u.empresa.id IN :empresaIds")
     List<Unidade> findByEmpresaIdIn(@Param("empresaIds") Collection<Long> empresaIds);
+
+    /** #158: KPIs do modal Editar Empresa. */
+    long countByEmpresaId(Long empresaId);
 }

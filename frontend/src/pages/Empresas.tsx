@@ -1,10 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { empresaService, Empresa } from '../services/empresaService'
+import { empresaService, Empresa, EmpresaEstatisticas } from '../services/empresaService'
+import { planoService, Plano } from '../services/planoService'
 import { authService } from '../services/authService'
 import { perfilService } from '../services/perfilService'
 import { podeEditar } from '../utils/permissions'
-import { Plus, Trash2, Edit, Briefcase, Loader2 } from 'lucide-react'
-import { useState, useEffect, useRef } from 'react'
+import {
+  Plus, Trash2, Edit, Briefcase, Loader2, IdCard, MapPin, Link2,
+  Crown, BarChart3, Copy, ExternalLink, Check, AlertCircle, Palette,
+} from 'lucide-react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
 import FormField from '../components/FormField'
@@ -12,6 +16,28 @@ import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { maskPhone, maskCEP, maskCNPJ, maskEmail } from '../utils/masks'
 import { buscarEnderecoPorCep } from '../utils/viaCep'
+
+const SLUG_REGEX = /^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])$/
+const SLUG_MIN = 3
+const SLUG_MAX = 60
+
+function baseUrlPublica(): string {
+  // Mesma lógica do LinkPublicoConfig: usa o origin do app, sem fallback de prod.
+  if (typeof window !== 'undefined' && window.location) {
+    return `${window.location.protocol}//${window.location.host}`
+  }
+  return ''
+}
+
+function fmtMoeda(v: number | undefined | null): string {
+  return (v ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+function fmtData(s: string | null | undefined): string {
+  if (!s) return '—'
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : s
+}
 
 export default function Empresas() {
   const { showNotification } = useNotification()
@@ -46,16 +72,6 @@ export default function Empresas() {
     },
   })
 
-  const handleDelete = (id: number) => {
-    setConfirmDelete({ isOpen: true, id })
-  }
-
-  const confirmDeleteAction = () => {
-    if (confirmDelete.id) {
-      deleteMutation.mutate(confirmDelete.id)
-    }
-  }
-
   if (isLoading) {
     return <div className="text-center py-8">Carregando...</div>
   }
@@ -69,7 +85,7 @@ export default function Empresas() {
             Empresas
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Dados cadastrais e identidade visual das empresas.
+            Dados cadastrais, plano comercial e link público de cada empresa.
           </p>
         </div>
         {podeEditarEmpresas && (
@@ -102,17 +118,9 @@ export default function Empresas() {
                 className="bg-white border border-slate-200 rounded-2xl p-4 hover:shadow-sm transition"
               >
                 <div className="flex items-start gap-3">
-                  {empresa.logo ? (
-                    <img
-                      src={empresa.logo}
-                      alt={empresa.nome}
-                      className="h-10 w-10 object-contain rounded-lg bg-slate-50 flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="h-10 w-10 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
-                      {inicial}
-                    </div>
-                  )}
+                  <div className="h-10 w-10 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                    {inicial}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-slate-900 truncate">{empresa.nome}</p>
                     {empresa.razaoSocial && (
@@ -122,18 +130,18 @@ export default function Empresas() {
                       {empresa.cnpj && <span>CNPJ {empresa.cnpj}</span>}
                       {empresa.cnpj && empresa.telefone && <span>·</span>}
                       {empresa.telefone && <span>{empresa.telefone}</span>}
+                      {empresa.planoNome && (
+                        <>
+                          <span>·</span>
+                          <span className="inline-flex items-center gap-1 text-violet-700">
+                            <Crown className="h-3 w-3" />
+                            {empresa.planoNome}
+                          </span>
+                        </>
+                      )}
                     </div>
                     {empresa.email && (
                       <p className="text-xs text-slate-500 truncate mt-0.5">{empresa.email}</p>
-                    )}
-                    {empresa.corApp && (
-                      <div className="flex items-center gap-1.5 mt-1.5">
-                        <span
-                          className="h-4 w-4 rounded-full border border-slate-200 flex-shrink-0"
-                          style={{ backgroundColor: empresa.corApp }}
-                        />
-                        <span className="text-[11px] font-mono text-slate-500">{empresa.corApp}</span>
-                      </div>
                     )}
                   </div>
                   {podeEditarEmpresas && (
@@ -150,7 +158,7 @@ export default function Empresas() {
                         <Edit className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(empresa.id!)}
+                        onClick={() => setConfirmDelete({ isOpen: true, id: empresa.id! })}
                         className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition"
                         aria-label="Excluir empresa"
                         title="Excluir"
@@ -191,22 +199,47 @@ export default function Empresas() {
         confirmText="Excluir"
         cancelText="Cancelar"
         variant="danger"
-        onConfirm={confirmDeleteAction}
+        onConfirm={() => { if (confirmDelete.id) deleteMutation.mutate(confirmDelete.id) }}
         onCancel={() => setConfirmDelete({ isOpen: false, id: null })}
       />
     </div>
   )
 }
 
-function EmpresaForm({
-  empresa,
-  onClose,
-}: {
-  empresa: Empresa | null
-  onClose: () => void
-}) {
+// ─────────────────────────────────────────────────────────────────────────────
+// EmpresaForm — 5 SectionCards (#158)
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface SectionCardProps {
+  icon: React.ComponentType<{ className?: string }>
+  title: string
+  description?: string
+  children: React.ReactNode
+}
+
+function SectionCard({ icon: Icon, title, description, children }: SectionCardProps) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="h-8 w-8 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center flex-shrink-0">
+          <Icon className="h-4 w-4" />
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-slate-900">{title}</h3>
+          {description && <p className="text-[11px] text-slate-500">{description}</p>}
+        </div>
+      </div>
+      <div className="space-y-3">{children}</div>
+    </div>
+  )
+}
+
+function EmpresaForm({ empresa, onClose }: { empresa: Empresa | null; onClose: () => void }) {
   const queryClient = useQueryClient()
   const { showNotification } = useNotification()
+  const usuario = authService.getUsuario()
+  const ehAdminPlataforma = (usuario?.perfil ?? '').toUpperCase() === 'ADMIN'
+
   const [formData, setFormData] = useState<Empresa>(
     empresa || {
       nome: '',
@@ -221,16 +254,40 @@ function EmpresaForm({
       cidade: '',
       uf: '',
       ativo: true,
+      slugPublico: '',
       logo: undefined,
-      corApp: '#2563EB',
+      corApp: '#7C3AED',
     }
   )
-  const [logoPreview, setLogoPreview] = useState<string | undefined>(empresa?.logo)
 
-  // ViaCEP: auto-preenche endereço/bairro/cidade/uf quando CEP completo.
+  const [logoPreview, setLogoPreview] = useState<string | undefined>(empresa?.logo)
+  useEffect(() => {
+    setLogoPreview(empresa?.logo)
+  }, [empresa?.id])
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 500_000) {
+      showNotification('error', 'Imagem maior que 500KB. Use uma menor.')
+      return
+    }
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const base64 = reader.result as string
+      setLogoPreview(base64)
+      setFormData((prev) => ({ ...prev, logo: base64 }))
+    }
+    reader.readAsDataURL(file)
+  }
+  const handleRemoveLogo = () => {
+    setLogoPreview(undefined)
+    setFormData((prev) => ({ ...prev, logo: undefined }))
+  }
+
+  // ViaCEP
   const [cepCarregando, setCepCarregando] = useState(false)
   const cepAbortRef = useRef<AbortController | null>(null)
-
   useEffect(() => {
     const cepDigits = (formData.cep ?? '').replace(/\D/g, '')
     if (cepDigits.length !== 8) {
@@ -264,93 +321,101 @@ function EmpresaForm({
   }, [formData.cep])
 
   useEffect(() => {
-    if (empresa) {
-      setFormData(empresa)
-      setLogoPreview(empresa.logo)
-    } else {
-      setFormData({
-        nome: '',
-        razaoSocial: '',
-        cnpj: '',
-        email: '',
-        telefone: '',
-        endereco: '',
-        numero: '',
-        bairro: '',
-        cep: '',
-        cidade: '',
-        uf: '',
-        ativo: true,
-        logo: undefined,
-        corApp: '#2563EB',
-      })
-      setLogoPreview(undefined)
-    }
+    if (empresa) setFormData(empresa)
   }, [empresa])
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        const base64String = reader.result as string
-        setLogoPreview(base64String)
-        setFormData((prev) => ({ ...prev, logo: base64String }))
-      }
-      reader.readAsDataURL(file)
-    }
-  }
+  // Estatísticas — só pra empresa existente
+  const { data: stats } = useQuery<EmpresaEstatisticas>({
+    queryKey: ['empresa', empresa?.id, 'stats'],
+    queryFn: () => empresaService.estatisticas(empresa!.id!),
+    enabled: !!empresa?.id,
+  })
 
-  const handleRemoveLogo = () => {
-    setLogoPreview(undefined)
-    setFormData((prev) => ({ ...prev, logo: undefined }))
+  // Catálogo de planos — só pra ADMIN global trocar
+  const { data: planos = [] } = useQuery<Plano[]>({
+    queryKey: ['planos'],
+    queryFn: planoService.listar,
+    enabled: ehAdminPlataforma && !!empresa?.id,
+  })
+
+  // ── Slug ──
+  const slugAtual = (formData.slugPublico ?? '').trim().toLowerCase()
+  const slugFormatoValido =
+    !slugAtual || (slugAtual.length >= SLUG_MIN && slugAtual.length <= SLUG_MAX && SLUG_REGEX.test(slugAtual))
+  const linkPreview = useMemo(
+    () => (slugAtual ? `${baseUrlPublica()}/e/${slugAtual}` : null),
+    [slugAtual]
+  )
+  const [copied, setCopied] = useState(false)
+  const handleCopiarLink = () => {
+    if (!linkPreview) return
+    navigator.clipboard.writeText(linkPreview)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
   }
 
   const saveMutation = useMutation({
     mutationFn: async (data: Empresa) => {
-      return empresa?.id
-        ? empresaService.atualizar(empresa.id, data)
-        : empresaService.criar(data)
+      return empresa?.id ? empresaService.atualizar(empresa.id, data) : empresaService.criar(data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['empresas'] })
-      showNotification('success', empresa ? 'Empresa atualizada com sucesso!' : 'Empresa criada com sucesso!')
+      if (empresa?.id) queryClient.invalidateQueries({ queryKey: ['empresa', empresa.id] })
+      showNotification('success', empresa ? 'Empresa atualizada!' : 'Empresa criada!')
       onClose()
     },
     onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || 'Erro ao salvar empresa'
-      showNotification('error', errorMessage)
+      showNotification('error', error.response?.data?.message || 'Erro ao salvar empresa')
+    },
+  })
+
+  const trocarPlanoMutation = useMutation({
+    mutationFn: (planoId: number) => empresaService.trocarPlano(empresa!.id!, planoId),
+    onSuccess: (atualizada) => {
+      setFormData((prev) => ({ ...prev, ...atualizada }))
+      queryClient.invalidateQueries({ queryKey: ['empresas'] })
+      queryClient.invalidateQueries({ queryKey: ['empresa', empresa?.id, 'stats'] })
+      showNotification('success', 'Plano atualizado!')
+    },
+    onError: (e: any) => {
+      showNotification('error', e.response?.data?.message || 'Erro ao trocar plano')
     },
   })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    saveMutation.mutate(formData)
+    if (!slugFormatoValido) {
+      showNotification('error', 'Link público inválido. Use letras minúsculas, números e hífen (3-60).')
+      return
+    }
+    saveMutation.mutate({ ...formData, slugPublico: slugAtual || undefined })
   }
 
+  const inputBase =
+    'block w-full min-w-0 box-border rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition'
+
   return (
-    <div className="space-y-6">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {/* ── 1. Identificação ── */}
+      <SectionCard icon={IdCard} title="Identificação" description="Dados cadastrais e fiscais da empresa">
         <FormField label="Nome da Empresa" required>
           <input
             type="text"
             required
             value={formData.nome}
             onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+            className={inputBase}
           />
         </FormField>
-
         <FormField label="Razão Social">
           <input
             type="text"
             value={formData.razaoSocial || ''}
             onChange={(e) => setFormData({ ...formData, razaoSocial: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+            className={inputBase}
           />
         </FormField>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <FormField label="CNPJ">
             <input
               type="text"
@@ -358,7 +423,7 @@ function EmpresaForm({
               onChange={(e) => setFormData({ ...formData, cnpj: maskCNPJ(e.target.value) })}
               maxLength={18}
               placeholder="00.000.000/0000-00"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+              className={inputBase}
             />
           </FormField>
           <FormField label="Telefone">
@@ -368,21 +433,23 @@ function EmpresaForm({
               onChange={(e) => setFormData({ ...formData, telefone: maskPhone(e.target.value) })}
               maxLength={15}
               placeholder="(00) 00000-0000"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+              className={inputBase}
             />
           </FormField>
         </div>
-
         <FormField label="Email">
           <input
             type="email"
             value={formData.email || ''}
             onChange={(e) => setFormData({ ...formData, email: maskEmail(e.target.value) })}
             placeholder="exemplo@email.com"
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+            className={inputBase}
           />
         </FormField>
+      </SectionCard>
 
+      {/* ── 2. Endereço ── */}
+      <SectionCard icon={MapPin} title="Endereço">
         <FormField label="CEP">
           <div className="relative">
             <input
@@ -392,34 +459,30 @@ function EmpresaForm({
               maxLength={9}
               placeholder="00000-000"
               inputMode="numeric"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 pr-9"
+              className={`${inputBase} pr-9`}
             />
             {cepCarregando && (
-              <Loader2
-                className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5 h-4 w-4 text-violet-600 animate-spin"
-                aria-label="Buscando endereço..."
-              />
+              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-violet-600 animate-spin" />
             )}
           </div>
           <p className="text-[11px] text-slate-400 mt-1">Auto-preenche o resto.</p>
         </FormField>
-
         <FormField label="Endereço">
           <input
             type="text"
             value={formData.endereco || ''}
             onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+            className={inputBase}
           />
         </FormField>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <FormField label="Número">
             <input
               type="text"
+              inputMode="numeric"
               value={formData.numero || ''}
               onChange={(e) => setFormData({ ...formData, numero: e.target.value.replace(/\D/g, '') })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+              className={inputBase}
             />
           </FormField>
           <FormField label="Bairro">
@@ -427,7 +490,7 @@ function EmpresaForm({
               type="text"
               value={formData.bairro || ''}
               onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+              className={inputBase}
             />
           </FormField>
           <FormField label="UF">
@@ -436,76 +499,274 @@ function EmpresaForm({
               maxLength={2}
               value={formData.uf || ''}
               onChange={(e) => setFormData({ ...formData, uf: e.target.value.toUpperCase() })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+              className={inputBase}
             />
           </FormField>
         </div>
-
         <FormField label="Cidade">
           <input
             type="text"
             value={formData.cidade || ''}
             onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+            className={inputBase}
           />
         </FormField>
+      </SectionCard>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-          <FormField label="Logo da Empresa">
+      {/* ── 3. Link público ── */}
+      <SectionCard
+        icon={Link2}
+        title="Link público"
+        description="URL que clientes usam pra ver os serviços e agendar"
+      >
+        <FormField label="Slug do link">
+          <div className="flex items-stretch gap-0 rounded-xl border border-slate-200 bg-slate-50 overflow-hidden focus-within:border-violet-400 focus-within:ring-2 focus-within:ring-violet-100 transition">
+            <span className="px-3 py-2.5 text-xs text-slate-500 bg-slate-100 border-r border-slate-200 select-none whitespace-nowrap">
+              /e/
+            </span>
+            <input
+              type="text"
+              value={formData.slugPublico || ''}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  slugPublico: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''),
+                })
+              }
+              maxLength={SLUG_MAX}
+              placeholder="seu-salao"
+              className="flex-1 min-w-0 px-3 py-2.5 text-sm bg-white focus:outline-none"
+            />
+          </div>
+          {!slugFormatoValido && (
+            <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              Use 3-60 caracteres: letras minúsculas, números e hífen.
+            </p>
+          )}
+        </FormField>
+
+        {linkPreview && slugFormatoValido && (
+          <div className="bg-violet-50 border border-violet-200 rounded-xl p-3 flex items-center gap-2">
+            <a
+              href={linkPreview}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 min-w-0 text-xs font-mono text-violet-900 truncate hover:underline"
+            >
+              {linkPreview}
+            </a>
+            <button
+              type="button"
+              onClick={handleCopiarLink}
+              className="p-1.5 rounded-lg text-violet-700 hover:bg-violet-100 transition flex-shrink-0"
+              title="Copiar"
+            >
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            </button>
+            <a
+              href={linkPreview}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 rounded-lg text-violet-700 hover:bg-violet-100 transition flex-shrink-0"
+              title="Abrir em nova aba"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          </div>
+        )}
+      </SectionCard>
+
+      {/* ── 4. Plano comercial ── (só pra empresa existente) */}
+      {empresa?.id && (
+        <SectionCard icon={Crown} title="Plano comercial">
+          <div className="bg-violet-50 border border-violet-100 rounded-xl p-3">
+            <div className="flex items-baseline justify-between gap-2">
+              <div>
+                <p className="text-sm font-bold text-violet-900">
+                  {formData.planoNome ?? 'Sem plano'}
+                </p>
+                {formData.planoPreco != null && (
+                  <p className="text-xs text-violet-700">{fmtMoeda(formData.planoPreco)} / mês</p>
+                )}
+              </div>
+              {formData.planoExpiracao && (
+                <span className="text-[11px] text-violet-700">
+                  Vence em {fmtData(formData.planoExpiracao)}
+                </span>
+              )}
+            </div>
+            {stats && stats.nfseLimiteMes != null && (
+              <div className="mt-3">
+                <div className="flex items-center justify-between text-[11px] text-violet-700 mb-1">
+                  <span>NFS-e do mês</span>
+                  <span>
+                    {stats.nfseMesAtual} / {stats.nfseLimiteMes}
+                  </span>
+                </div>
+                <div className="h-1.5 bg-violet-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-violet-600 rounded-full transition-all"
+                    style={{
+                      width: `${Math.min(100, (stats.nfseMesAtual / Math.max(1, stats.nfseLimiteMes)) * 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {ehAdminPlataforma && planos.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-slate-600 mb-2">Trocar plano (sem billing — só DB)</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {planos.filter((p) => p.ativo).map((p) => {
+                  const ehAtual = p.id === formData.planoId
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      disabled={ehAtual || trocarPlanoMutation.isPending}
+                      onClick={() => trocarPlanoMutation.mutate(p.id)}
+                      className={`text-xs p-2 rounded-xl border transition ${
+                        ehAtual
+                          ? 'border-violet-300 bg-violet-50 text-violet-900 cursor-default'
+                          : 'border-slate-200 bg-white hover:border-violet-300 hover:bg-violet-50 text-slate-700'
+                      }`}
+                    >
+                      <p className="font-bold">{p.nomePublico}</p>
+                      <p className="text-[10px] text-slate-500">{fmtMoeda(p.precoMensalBrl)}/mês</p>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </SectionCard>
+      )}
+
+      {/* ── 5. Estatísticas ── (só pra empresa existente) */}
+      {empresa?.id && stats && (
+        <SectionCard icon={BarChart3} title="Estatísticas">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <Kpi label="Unidades" valor={stats.unidades} />
+            <Kpi label="Profissionais" valor={stats.profissionais} />
+            <Kpi label="Agendamentos / mês" valor={stats.agendamentosMesAtual} />
+            <Kpi label="Clientes ativos" valor={stats.clientesAtivos} />
+          </div>
+        </SectionCard>
+      )}
+
+      {/* ── 6. Aparência da landing pública (#160) ── */}
+      <SectionCard
+        icon={Palette}
+        title="Aparência da landing pública"
+        description="Aplicado apenas em /e/{slug}. O painel administrativo continua com tema padrão."
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField label="Logo da empresa">
             <input
               type="file"
-              accept="image/png, image/jpeg"
-              onChange={handleImageChange}
-              className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+              accept="image/png,image/jpeg,image/svg+xml"
+              onChange={handleLogoChange}
+              className="mt-1 block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
             />
             {logoPreview && (
-              <div className="mt-4 flex items-center space-x-4">
-                <img src={logoPreview} alt="Logo Preview" className="h-20 w-20 object-contain border rounded-md" />
+              <div className="mt-2 flex items-center gap-2">
+                <img
+                  src={logoPreview}
+                  alt="Preview"
+                  className="h-14 w-14 rounded-lg border border-slate-200 object-contain bg-white p-1"
+                />
                 <button
                   type="button"
                   onClick={handleRemoveLogo}
-                  className="text-red-600 hover:text-red-800 text-sm"
+                  className="text-xs text-red-600 hover:text-red-700 font-semibold"
                 >
-                  Remover Logo
+                  Remover
                 </button>
               </div>
             )}
+            <p className="text-[11px] text-slate-400 mt-1">Máx 500 KB. PNG/JPG/SVG.</p>
           </FormField>
 
-          <FormField label="Cor Principal do App (Hexadecimal)">
-            <div className="flex items-center gap-2">
+          <FormField label="Cor principal (botões da landing)">
+            <div className="flex items-center gap-2 mt-1">
               <input
                 type="color"
-                value={formData.corApp || '#2563EB'}
+                value={formData.corApp || '#7C3AED'}
                 onChange={(e) => setFormData({ ...formData, corApp: e.target.value })}
-                className="mt-1 h-10 w-10 rounded-md border-gray-300 shadow-sm cursor-pointer"
+                className="h-10 w-12 rounded-lg border border-slate-200 cursor-pointer flex-shrink-0"
               />
               <input
                 type="text"
                 value={formData.corApp || ''}
                 onChange={(e) => {
-                  const value = e.target.value
-                  if (/^#[0-9A-Fa-f]{6}$/.test(value) || value === '') {
-                    setFormData({ ...formData, corApp: value || '#2563EB' })
+                  const v = e.target.value
+                  if (/^#[0-9A-Fa-f]{0,6}$/.test(v) || v === '') {
+                    setFormData({ ...formData, corApp: v || undefined })
                   }
                 }}
-                placeholder="#2563EB"
+                placeholder="#7C3AED"
                 maxLength={7}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+                className={inputBase + ' font-mono'}
               />
             </div>
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, corApp: '#7C3AED' })}
+              className="text-[11px] text-slate-500 hover:text-violet-700 mt-1"
+            >
+              Resetar pro violet padrão
+            </button>
           </FormField>
         </div>
 
-        <div className="flex justify-end space-x-2 pt-4 border-t">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button type="submit" isLoading={saveMutation.isPending}>
-            Salvar
-          </Button>
+        {/* Preview compacto */}
+        <div className="rounded-xl overflow-hidden border border-slate-200">
+          <div
+            className="px-4 py-4 text-white flex items-center gap-2"
+            style={{ background: formData.corApp || '#7C3AED' }}
+          >
+            {logoPreview ? (
+              <img src={logoPreview} alt="" className="h-8 w-8 rounded-lg bg-white p-0.5 object-contain" />
+            ) : (
+              <div className="h-8 w-8 rounded-lg bg-white/20 flex items-center justify-center text-xs font-black">
+                {(formData.nome || '?').charAt(0).toUpperCase()}
+              </div>
+            )}
+            <span className="text-sm font-bold">{formData.nome || 'Sua empresa'}</span>
+          </div>
+          <div className="bg-white px-4 py-3">
+            <button
+              type="button"
+              disabled
+              className="w-full py-2 rounded-lg text-white text-xs font-bold cursor-default"
+              style={{ backgroundColor: formData.corApp || '#7C3AED' }}
+            >
+              Agendar horário (preview)
+            </button>
+          </div>
         </div>
-      </form>
+      </SectionCard>
+
+      <div className="flex justify-end space-x-2 pt-2">
+        <Button type="button" variant="secondary" onClick={onClose}>
+          Cancelar
+        </Button>
+        <Button type="submit" isLoading={saveMutation.isPending} disabled={!slugFormatoValido}>
+          Salvar
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+function Kpi({ label, valor }: { label: string; valor: number }) {
+  return (
+    <div className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 text-center">
+      <p className="text-lg font-bold text-slate-900">{valor.toLocaleString('pt-BR')}</p>
+      <p className="text-[11px] text-slate-500 mt-0.5">{label}</p>
     </div>
   )
 }

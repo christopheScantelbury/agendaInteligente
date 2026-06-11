@@ -29,6 +29,24 @@ export interface Empresa {
   logo?: string
   corApp?: string
   categoria?: CategoriaEmpresa
+  // ── #158 ──
+  slugPublico?: string
+  planoId?: number
+  planoNome?: string
+  planoPreco?: number
+  planoInicio?: string
+  planoExpiracao?: string
+}
+
+export interface EmpresaEstatisticas {
+  unidades: number
+  profissionais: number
+  agendamentosMesAtual: number
+  clientesAtivos: number
+  nfseMesAtual: number
+  nfseLimiteMes: number | null
+  planoNome: string | null
+  planoVencimento: string | null
 }
 
 export const empresaService = {
@@ -59,5 +77,17 @@ export const empresaService = {
 
   excluir: async (id: number): Promise<void> => {
     await api.delete(`/empresas/${id}`)
+  },
+
+  /** #158: KPIs do modal Editar Empresa. */
+  estatisticas: async (id: number): Promise<EmpresaEstatisticas> => {
+    const { data } = await api.get<EmpresaEstatisticas>(`/empresas/${id}/estatisticas`)
+    return data
+  },
+
+  /** #158: trocar plano comercial (ADMIN global). */
+  trocarPlano: async (id: number, planoId: number): Promise<Empresa> => {
+    const { data } = await api.post<Empresa>(`/empresas/${id}/plano`, { planoId })
+    return data
   },
 }

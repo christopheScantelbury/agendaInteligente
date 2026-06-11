@@ -32,6 +32,7 @@ public class EmpresaService {
     private final ImageCompressionService imageCompressionService;
     private final UsuarioRepository usuarioRepository;
     private final UnidadeRepository unidadeRepository;
+    private final br.com.agendainteligente.repository.PlanoRepository planoRepository;
 
     @Transactional(readOnly = true)
     public List<EmpresaDTO> listarTodas() {
@@ -187,6 +188,25 @@ public class EmpresaService {
             empresaDTO.setCorApp(validateAndNormalizeColor(empresaDTO.getCorApp()));
         }
 
+        // #158: valida slug público (formato + unicidade) se alterado
+        if (empresaDTO.getSlugPublico() != null) {
+            String slug = empresaDTO.getSlugPublico().trim().toLowerCase();
+            if (slug.isEmpty()) {
+                empresaDTO.setSlugPublico(null);
+            } else {
+                if (!slug.matches("^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])$")) {
+                    throw new BusinessException(
+                            "Link público inválido: use só letras minúsculas, números e hífen (3-60 caracteres)");
+                }
+                empresaRepository.findBySlugPublico(slug).ifPresent(outra -> {
+                    if (!outra.getId().equals(id)) {
+                        throw new BusinessException("Este link público já está em uso por outra empresa");
+                    }
+                });
+                empresaDTO.setSlugPublico(slug);
+            }
+        }
+
         empresaMapper.updateEntityFromDTO(empresaDTO, empresa);
         if (usuarioLogado.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR) {
             empresa.setAdminUnicoId(usuarioLogado.getId());
@@ -196,6 +216,36 @@ public class EmpresaService {
             vincularUnidadesDoAdministradorNaEmpresa(usuarioLogado, empresa);
         }
         log.info("Empresa atualizada. ID: {}", id);
+        return empresaMapper.toDTO(empresa);
+    }
+
+    /**
+     * #158: troca o plano comercial da empresa. Só ADMIN global (sem billing real
+     * ainda — quando Stripe existir, isso vira efeito de webhook).
+     */
+    @Transactional
+    public EmpresaDTO trocarPlano(Long empresaId, Long planoId) {
+        Usuario usuarioLogado = getUsuarioLogado();
+        if (usuarioLogado.getPerfil() != Usuario.PerfilUsuario.ADMIN) {
+            throw new BusinessException("Apenas o administrador da plataforma pode alterar planos");
+        }
+        Empresa empresa = empresaRepository.findById(empresaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Empresa não encontrada"));
+        var plano = planoRepository.findById(planoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Plano não encontrado"));
+        if (!Boolean.TRUE.equals(plano.getAtivo())) {
+            throw new BusinessException("Plano não está ativo");
+        }
+
+        empresa.setPlano(plano);
+        empresa.setPlanoInicio(LocalDate.now());
+        // Trial expira em N dias; planos pagos não têm expiração local (billing externo)
+        empresa.setPlanoExpiracao(plano.getDuracaoTrialDias() != null
+                ? LocalDate.now().plusDays(plano.getDuracaoTrialDias())
+                : null);
+        empresa = empresaRepository.save(empresa);
+        log.info("[PLANO] Empresa {} agora no plano {} (por {})",
+                empresaId, plano.getNome(), usuarioLogado.getEmail());
         return empresaMapper.toDTO(empresa);
     }
 

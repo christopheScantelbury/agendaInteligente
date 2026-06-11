@@ -1,6 +1,8 @@
 package br.com.agendainteligente.controller;
 
 import br.com.agendainteligente.dto.EmpresaDTO;
+import br.com.agendainteligente.dto.EmpresaEstatisticasDTO;
+import br.com.agendainteligente.service.EmpresaEstatisticasService;
 import br.com.agendainteligente.service.EmpresaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,6 +22,7 @@ import java.util.List;
 public class EmpresaController {
 
     private final EmpresaService empresaService;
+    private final EmpresaEstatisticasService empresaEstatisticasService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -56,6 +59,25 @@ public class EmpresaController {
     public ResponseEntity<EmpresaDTO> atualizar(@PathVariable Long id,
                                                  @Valid @RequestBody EmpresaDTO empresaDTO) {
         return ResponseEntity.ok(empresaService.atualizar(id, empresaDTO));
+    }
+
+    /** #158: KPIs do modal Editar Empresa. ADMIN qualquer; ADMINISTRADOR a própria. */
+    @GetMapping("/{id}/estatisticas")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Estatísticas resumidas da empresa")
+    public ResponseEntity<EmpresaEstatisticasDTO> estatisticas(@PathVariable Long id) {
+        return ResponseEntity.ok(empresaEstatisticasService.estatisticas(id));
+    }
+
+    /** #158: troca de plano — só ADMIN global (service revalida o perfil). */
+    @PostMapping("/{id}/plano")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') and !hasAuthority('ROLE_ADMINISTRADOR')")
+    @Operation(summary = "Trocar plano comercial da empresa")
+    public ResponseEntity<EmpresaDTO> trocarPlano(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, Long> body) {
+        Long planoId = body.get("planoId");
+        return ResponseEntity.ok(empresaService.trocarPlano(id, planoId));
     }
 
     @DeleteMapping("/{id}")
