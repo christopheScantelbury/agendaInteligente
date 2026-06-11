@@ -80,11 +80,21 @@ export default function EmpresaPublica() {
     )
   }
 
+  // #160: corApp escopada via CSS var. NÃO vaza pro resto do app (sidebar, dash)
+  // que continua com identidade violet do Agenda Inteligente.
   const cor = data.corApp || '#7C3AED'
+  const corHover = ajustarBrilho(cor, -10)
+  const corClara = ajustarBrilho(cor, 35)
+
+  const themeStyle: React.CSSProperties = {
+    ['--cor-marca' as any]: cor,
+    ['--cor-marca-hover' as any]: corHover,
+    ['--cor-marca-clara' as any]: corClara,
+  }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header com cor da empresa */}
+    <div className="min-h-screen bg-slate-50" style={themeStyle}>
+      {/* Header com gradient da cor da empresa */}
       <header
         className="px-4 py-10 sm:py-14 text-white"
         style={{ background: `linear-gradient(135deg, ${cor} 0%, ${ajustarBrilho(cor, -20)} 100%)` }}
@@ -112,11 +122,17 @@ export default function EmpresaPublica() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-6 sm:py-8 space-y-6">
-        {/* CTA principal */}
+        {/* CTA principal — usa a cor da empresa (#160) */}
         <button
           type="button"
-          onClick={() => navigate('/cliente/agendar?guest=1')}
-          className="w-full flex items-center justify-center gap-2 py-3.5 px-5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-base font-bold shadow-md shadow-violet-200 transition"
+          onClick={() => navigate(`/cliente/agendar?guest=1${slug ? `&slug=${slug}` : ''}`)}
+          className="w-full flex items-center justify-center gap-2 py-3.5 px-5 rounded-xl text-white text-base font-bold shadow-md transition"
+          style={{
+            backgroundColor: cor,
+            boxShadow: `0 4px 12px ${corClara}55`,
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = corHover)}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = cor)}
         >
           <Calendar className="h-5 w-5" />
           Agendar horário
@@ -135,8 +151,11 @@ export default function EmpresaPublica() {
                   key={u.id}
                   className="bg-white border border-gray-200 rounded-xl p-4 flex items-start gap-3"
                 >
-                  <div className="h-10 w-10 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0">
-                    <MapPin className="h-5 w-5 text-violet-600" />
+                  <div
+                    className="h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: `${corClara}40` }}
+                  >
+                    <MapPin className="h-5 w-5" style={{ color: cor }} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-slate-900">{u.nome}</p>
