@@ -138,6 +138,29 @@ export default function NovoAgendamentoSheet({
     return servicos.filter((s) => (s.atendentesIds ?? []).includes(atId))
   }
 
+  // #161: helpers de duração e escalonamento ────────────────────────────────
+  const duracaoServico = (servicoId: number): number => {
+    const s = servicos.find((x) => x.id === servicoId)
+    return Number(s?.duracaoMinutos ?? 30) || 30
+  }
+  const duracaoBloco = (b: Bloco): number =>
+    b.servicoIds.reduce((acc, sid) => acc + duracaoServico(sid), 0)
+  const somarMinutos = (isoLocal: string, mins: number): string => {
+    if (!isoLocal || mins <= 0) return isoLocal
+    const d = new Date(isoLocal)
+    if (isNaN(d.getTime())) return isoLocal
+    d.setMinutes(d.getMinutes() + mins)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+  // #161: atendentes disponíveis pra bloco N=idx — exclui os já usados em blocos anteriores
+  const atendentesDisponiveisParaBloco = (idx: number) => {
+    const idsUsadosAntes = new Set(
+      blocos.slice(0, idx).map((b) => b.atendenteId).filter((id): id is number => id != null)
+    )
+    return atendentes.filter((a) => a.id != null && !idsUsadosAntes.has(a.id))
+  }
+
   const clientesFiltrados = useMemo(() => {
     if (!clienteSearch.trim()) return clientes.slice(0, 20)
     return clientes
@@ -191,7 +214,11 @@ export default function NovoAgendamentoSheet({
   const adicionarBloco = () => {
     setBlocos((prev) => {
       const ultimo = prev[prev.length - 1]
-      return [...prev, novoBloco(null, ultimo?.dataHora ?? initialDateTimeStr)]
+      // #161: novo bloco começa após o fim de todos os serviços do bloco anterior.
+      const inicio = ultimo?.dataHora ?? initialDateTimeStr
+      const dur = ultimo ? duracaoBloco(ultimo) : 0
+      const dataHoraSugerida = dur > 0 ? somarMinutos(inicio, dur) : inicio
+      return [...prev, novoBloco(null, dataHoraSugerida)]
     })
   }
 
@@ -248,20 +275,25 @@ export default function NovoAgendamentoSheet({
       .filter(Boolean)
       .sort()[0]
 
-    // Achata blocos em items: cada serviço vira 1 item com seu atendenteId + dataHora.
-    // Se TODO o agendamento tem 1 só atendente e 1 só dataHora, manda só servicoId
-    // (compat com endpoints/legado).
-    const todosMesmoAt = blocos.every((b) => b.atendenteId === principal.atendenteId)
-    const todosMesmaData = blocos.every((b) => b.dataHora === principal.dataHora)
-
-    const servicosPayload = blocos.flatMap((b) =>
-      b.servicoIds.map((sId) => {
-        const item: any = { servicoId: sId }
-        if (!todosMesmoAt && b.atendenteId != null) item.atendenteId = b.atendenteId
-        if (!todosMesmaData && b.dataHora) item.dataHoraInicio = b.dataHora
+    // #161: escalonamento de horários por item. Cada serviço dentro do mesmo
+    // bloco recebe inicio sequencial baseado na duracao do anterior:
+    //   item[0].inicio = bloco.dataHora
+    //   item[1].inicio = item[0].inicio + duracao(item[0].servico)
+    //   item[2].inicio = item[1].inicio + duracao(item[1].servico)
+    // Isso evita conflito de horário do backend quando o mesmo prof tem >1
+    // serviço no mesmo bloco. Pra blocos com 1 serviço, inicio = bloco.dataHora.
+    const servicosPayload = blocos.flatMap((b) => {
+      let cursor = b.dataHora
+      return b.servicoIds.map((sId) => {
+        const item: any = {
+          servicoId: sId,
+          atendenteId: b.atendenteId,
+          dataHoraInicio: cursor,
+        }
+        cursor = somarMinutos(cursor, duracaoServico(sId))
         return item
       })
-    )
+    })
 
     createMutation.mutate({
       clienteId,
@@ -449,14 +481,9 @@ export default function NovoAgendamentoSheet({
                     key={bloco.uid}
                     className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 space-y-3 overflow-hidden"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-violet-700">
-                        <span className="h-5 w-5 rounded-full bg-violet-100 flex items-center justify-center">
-                          {idx + 1}
-                        </span>
-                        Bloco {idx + 1}
-                      </span>
-                      {blocos.length > 1 && (
+                    {/* #161: sem rótulo "Bloco N" — só botão remover quando há >1 */}
+                    {blocos.length > 1 && (
+                      <div className="flex items-center justify-end">
                         <button
                           type="button"
                           onClick={() => removerBloco(bloco.uid)}
@@ -465,10 +492,10 @@ export default function NovoAgendamentoSheet({
                           <X className="h-3.5 w-3.5" />
                           Remover
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    )}
 
-                    {/* Profissional */}
+                    {/* Profissional — #161: filtra profissionais já usados em blocos anteriores */}
                     <div className="min-w-0">
                       <label className="block text-xs font-semibold text-slate-600 mb-1">
                         Profissional
@@ -481,7 +508,7 @@ export default function NovoAgendamentoSheet({
                         className="block w-full min-w-0 box-border px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
                       >
                         <option value="">Selecione...</option>
-                        {atendentes.map((a) => (
+                        {atendentesDisponiveisParaBloco(idx).map((a) => (
                           <option key={a.id} value={a.id}>
                             {a.nomeUsuario || `Profissional #${a.id}`}
                           </option>
@@ -599,7 +626,7 @@ export default function NovoAgendamentoSheet({
                 className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl border-2 border-dashed border-violet-200 text-violet-700 font-semibold text-sm hover:bg-violet-50 transition"
               >
                 <UserPlus className="h-4 w-4" />
-                Adicionar profissional
+                Adicionar procedimento com outra profissional
               </button>
 
               {valorTotal > 0 && (
@@ -667,8 +694,11 @@ export default function NovoAgendamentoSheet({
               const servs = servicos.filter((s) => bloco.servicoIds.includes(s.id))
               return (
                 <div key={bloco.uid} className="pt-1.5 border-t border-slate-200 mt-1.5 first:border-0 first:mt-0 first:pt-0">
+                  {/* #161: sem rótulo "Bloco N" — diferenciação por profissional */}
                   {blocos.length > 1 && (
-                    <p className="text-[11px] font-bold text-violet-700 mb-0.5">Bloco {idx + 1}</p>
+                    <p className="text-[11px] font-bold text-violet-700 mb-0.5">
+                      Atendimento {idx + 1}
+                    </p>
                   )}
                   <p className="text-slate-700">
                     <span className="text-slate-500">Profissional:</span>{' '}
