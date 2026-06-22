@@ -44,6 +44,8 @@ export interface Agendamento {
   sinalPago?: boolean
   sinalDataPagamento?: string
   sinalFormaPagamento?: string
+  /** #163: flag que esconde "Receber Sinal" após confirmação deliberada sem sinal. */
+  confirmadoSemSinal?: boolean
   status?: string
   servicos: AgendamentoServico[]
   cliente?: any
@@ -90,6 +92,12 @@ export const agendamentoService = {
     const response = await api.patch<Agendamento>(`/agendamentos/${id}/status`, null, {
       params: { status },
     })
+    return response.data
+  },
+
+  /** #163: confirmar agendamento. semSinal=true grava flag pra esconder Receber Sinal. */
+  confirmar: async (id: number, semSinal: boolean = false): Promise<Agendamento> => {
+    const response = await api.post<Agendamento>(`/agendamentos/${id}/confirmar`, { semSinal })
     return response.data
   },
 

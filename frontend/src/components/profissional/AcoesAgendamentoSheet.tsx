@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { agendamentoService, Agendamento } from '../../services/agendamentoService'
 import { useNotification } from '../../contexts/NotificationContext'
+import ConfirmDialog from '../ConfirmDialog'
 import { Events, track } from '../../lib/analytics'
 import BottomSheet from '../ui/BottomSheet'
 import ReciboModal from './ReciboModal'
@@ -83,6 +84,23 @@ export default function AcoesAgendamentoSheet({ agendamento, onClose }: AcoesAge
     },
   })
 
+  // #163: confirmar via endpoint dedicado pra gravar a flag confirmadoSemSinal.
+  const mutationConfirmar = useMutation({
+    mutationFn: ({ id, semSinal }: { id: number; semSinal: boolean }) =>
+      agendamentoService.confirmar(id, semSinal),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agendamentos'] })
+      showNotification('success', 'Agendamento confirmado')
+      resetEFecha()
+    },
+    onError: (err: any) => {
+      showNotification('error', err.response?.data?.message || 'Erro ao confirmar')
+    },
+  })
+
+  // #163: state pra modal "Confirmar mesmo assim?"
+  const [confirmSemSinalAberto, setConfirmSemSinalAberto] = useState(false)
+
   const mutationFinalizar = useMutation({
     mutationFn: ({ id, valorFinalNum, tipo }: { id: number; valorFinalNum: number; tipo: TipoPagamento }) =>
       agendamentoService.finalizar(id, { valorFinal: valorFinalNum, tipoPagamento: tipo }),
@@ -125,6 +143,17 @@ export default function AcoesAgendamentoSheet({ agendamento, onClose }: AcoesAge
     if (status === 'CONFIRMADO') track(Events.PROFISSIONAL_CHECKIN, { agendamentoId: agendamento.id })
     if (status === 'EM_ANDAMENTO') track(Events.PROFISSIONAL_INICIAR_ATENDIMENTO, { agendamentoId: agendamento.id })
     if (status === 'NO_SHOW') track(Events.PROFISSIONAL_NO_SHOW, { agendamentoId: agendamento.id })
+
+    // #163: confirmar passa por endpoint dedicado + modal "sem sinal" quando
+    // não há sinal pago. Mantém /status pros outros casos (no-show etc).
+    if (status === 'CONFIRMADO') {
+      if (agendamento.sinalPago) {
+        mutationConfirmar.mutate({ id: agendamento.id, semSinal: false })
+      } else {
+        setConfirmSemSinalAberto(true)
+      }
+      return
+    }
     mutationStatus.mutate({ id: agendamento.id, status })
   }
 
@@ -154,7 +183,7 @@ export default function AcoesAgendamentoSheet({ agendamento, onClose }: AcoesAge
     .join(', ')
   const valorBase = agendamento.valorFinal ?? agendamento.valorTotal ?? 0
 
-  const carregando = mutationStatus.isPending || mutationFinalizar.isPending
+  const carregando = mutationStatus.isPending || mutationFinalizar.isPending || mutationConfirmar.isPending
 
   return (
     <BottomSheet isOpen={isOpen} onClose={resetEFecha} title={
@@ -301,6 +330,22 @@ export default function AcoesAgendamentoSheet({ agendamento, onClose }: AcoesAge
           onClose={() => setVerRecibo(false)}
         />
       )}
+      {/* #163: modal "Confirmar sem sinal?" */}
+      <ConfirmDialog
+        isOpen={confirmSemSinalAberto}
+        title="Confirmar agendamento"
+        message="Este agendamento não possui sinal registrado. Deseja confirmar o agendamento mesmo assim?"
+        confirmText="Confirmar agendamento"
+        cancelText="Cancelar"
+        variant="warning"
+        onConfirm={() => {
+          setConfirmSemSinalAberto(false)
+          if (agendamento?.id) {
+            mutationConfirmar.mutate({ id: agendamento.id, semSinal: true })
+          }
+        }}
+        onCancel={() => setConfirmSemSinalAberto(false)}
+      />
     </BottomSheet>
   )
 }

@@ -49,6 +49,9 @@ public class AgendamentoDTO {
     private java.time.LocalDateTime sinalDataPagamento;
     private String sinalFormaPagamento;
 
+    /** #163: TRUE quando gestor confirmou via modal "Confirmar mesmo assim?" sem sinal. */
+    private Boolean confirmadoSemSinal;
+
     private ClienteDTO cliente;
     private UnidadeDTO unidade;
     private AtendenteDTO atendente;

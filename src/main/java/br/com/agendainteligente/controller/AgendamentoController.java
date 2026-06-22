@@ -118,4 +118,21 @@ public class AgendamentoController {
     }
 
     public record SinalPayload(java.math.BigDecimal valor, String formaPagamento) {}
+
+    // ── #163: confirmar agendamento (sem ou com sinal) ──────────────────────
+
+    /**
+     * Confirma agendamento (AGENDADO → CONFIRMADO). Quando `semSinal=true`, marca
+     * a flag `confirmadoSemSinal` pra esconder o botão "Receber Sinal" depois.
+     */
+    @PostMapping("/{id}/confirmar")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRADOR', 'GERENTE', 'PROFISSIONAL')")
+    @Operation(summary = "Confirmar agendamento (opcionalmente sem sinal)")
+    public ResponseEntity<AgendamentoDTO> confirmar(@PathVariable Long id,
+                                                     @RequestBody(required = false) ConfirmarPayload body) {
+        boolean semSinal = body != null && Boolean.TRUE.equals(body.semSinal());
+        return ResponseEntity.ok(agendamentoService.confirmar(id, semSinal));
+    }
+
+    public record ConfirmarPayload(Boolean semSinal) {}
 }

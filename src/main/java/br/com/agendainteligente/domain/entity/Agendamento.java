@@ -77,6 +77,11 @@ public class Agendamento {
     @Column(name = "sinal_forma_pagamento", length = 40)
     private String sinalFormaPagamento;
 
+    /** #163: gestor confirmou explicitamente sem sinal — esconde botão "Receber Sinal". */
+    @Column(name = "confirmado_sem_sinal", nullable = false)
+    @Builder.Default
+    private Boolean confirmadoSemSinal = false;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default

@@ -638,6 +638,8 @@ public class AgendamentoService {
         // V76: sinalPago tem default false na entity (@Builder.Default), mas MapStruct
         // não respeita defaults — toEntity copia null do DTO. Garante false aqui.
         if (agendamento.getSinalPago() == null) agendamento.setSinalPago(false);
+        // #163: mesma armadilha do sinalPago — MapStruct ignora @Builder.Default.
+        if (agendamento.getConfirmadoSemSinal() == null) agendamento.setConfirmadoSemSinal(false);
         agendamento.setServicos(new ArrayList<>());
 
         agendamento = agendamentoRepository.save(agendamento);
@@ -854,6 +856,27 @@ public class AgendamentoService {
         agendamento = agendamentoRepository.save(agendamento);
         log.info("Agendamento {} reaberto por {}: {}", id, agendamento.getReabertoPor(), motivo);
         return agendamentoMapper.toDTO(agendamento);
+    }
+
+    /**
+     * #163: confirma agendamento (AGENDADO → CONFIRMADO). Quando semSinal=true,
+     * marca `confirmadoSemSinal` pra esconder o botão "Receber Sinal" depois.
+     * Reaproveita a validação de transição/sincronização do atualizarStatus.
+     */
+    @Transactional
+    public AgendamentoDTO confirmar(Long id, boolean semSinal) {
+        Agendamento agendamento = agendamentoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Agendamento não encontrado"));
+        validarPermissaoVisualizarAgendamento(agendamento);
+        if (semSinal && !Boolean.TRUE.equals(agendamento.getConfirmadoSemSinal())) {
+            agendamento.setConfirmadoSemSinal(true);
+            agendamentoRepository.save(agendamento);
+        }
+        // Caso já esteja confirmado, só persiste a flag e retorna
+        if (agendamento.getStatus() == StatusAgendamento.CONFIRMADO) {
+            return agendamentoMapper.toDTO(agendamento);
+        }
+        return atualizarStatus(id, StatusAgendamento.CONFIRMADO);
     }
 
     /**

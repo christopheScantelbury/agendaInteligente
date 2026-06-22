@@ -97,17 +97,21 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
   // A configuração `cobraSinal` da unidade só controla a sugestão/ênfase;
   // mesmo unidade sem cobraSinal pode receber sinal voluntário pra qualquer agendamento.
   const sinalPago = Boolean(agendamento?.sinalPago)
+  // #163: esconder "Receber Sinal" depois de uma confirmação deliberada sem sinal.
+  const confirmadoSemSinal = Boolean((agendamento as any)?.confirmadoSemSinal)
   const podeReceberSinal =
     !!agendamento?.id &&
     !sinalPago &&
+    !confirmadoSemSinal &&
     !['CANCELADO', 'CONCLUIDO', 'FINALIZADO'].includes(status)
   const percentualSinalUnidade = Number(agendamento?.unidade?.percentualSinal ?? 30)
 
   const inicio = agendamento?.dataHoraInicio ? new Date(agendamento.dataHoraInicio) : null
   const valorPadrao = agendamento?.valorTotal ?? agendamento?.valorFinal ?? 0
 
+  // #163: confirmar via endpoint dedicado; semSinal=true grava flag pra esconder Receber Sinal.
   const confirmarMutation = useMutation({
-    mutationFn: () => agendamentoService.atualizarStatus(agendamentoId!, 'CONFIRMADO'),
+    mutationFn: (semSinal: boolean) => agendamentoService.confirmar(agendamentoId!, semSinal),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agendamentos'] })
       queryClient.invalidateQueries({ queryKey: ['agendamento', agendamentoId] })
@@ -115,6 +119,17 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
     },
     onError: (e: any) => showNotification('error', getApiErrorMessage(e, 'Erro ao confirmar')),
   })
+
+  // #163: modal "Confirmar mesmo assim?" — abre quando user clica em confirmar
+  // num agendamento que não tem sinal pago. Se sinal já está pago, confirma direto.
+  const [confirmSemSinalAberto, setConfirmSemSinalAberto] = useState(false)
+  const handleConfirmarClick = () => {
+    if (sinalPago) {
+      confirmarMutation.mutate(false)
+    } else {
+      setConfirmSemSinalAberto(true)
+    }
+  }
 
   const cancelarMutation = useMutation({
     mutationFn: () => agendamentoService.cancelar(agendamentoId!),
@@ -303,7 +318,7 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
 
                 {podeConfirmar && (
                   <button
-                    onClick={() => confirmarMutation.mutate()}
+                    onClick={handleConfirmarClick}
                     disabled={confirmarMutation.isPending}
                     className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 shadow-sm shadow-violet-200 disabled:bg-slate-300 transition"
                   >
@@ -382,6 +397,21 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
         variant="danger"
         onConfirm={() => cancelarMutation.mutate()}
         onCancel={() => setConfirmCancelar(false)}
+      />
+
+      {/* #163: confirmar sem sinal */}
+      <ConfirmDialog
+        isOpen={confirmSemSinalAberto}
+        title="Confirmar agendamento"
+        message="Este agendamento não possui sinal registrado. Deseja confirmar o agendamento mesmo assim?"
+        confirmText="Confirmar agendamento"
+        cancelText="Cancelar"
+        variant="warning"
+        onConfirm={() => {
+          setConfirmSemSinalAberto(false)
+          confirmarMutation.mutate(true)
+        }}
+        onCancel={() => setConfirmSemSinalAberto(false)}
       />
 
       {/* Modal compartilhado de reabertura — z-[200] acima do BottomSheet */}
