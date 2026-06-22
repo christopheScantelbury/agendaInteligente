@@ -92,13 +92,18 @@ export default function HojeProfissional() {
     retry: false,
   })
 
-  // Buscar todos os agendamentos (só se tem atendente)
+  // #162: agenda do profissional precisa ver agendamentos criados por outros
+  // perfis em tempo quase real. Override do staleTime/refetchOnWindowFocus do
+  // QueryClient global pra essa query especificamente.
   const { data: agendamentos = [], isLoading: loadingAgendamentos, error: errorAgendamentos } = useQuery({
     queryKey: ['agendamentos', 'todos'],
     queryFn: () => agendamentoService.listar(),
-    refetchInterval: 60_000,
     enabled: !!meuAtendente,
     retry: false,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: 60_000,
   })
 
   const isLoading = loadingAtendente || (!!meuAtendente && loadingAgendamentos)

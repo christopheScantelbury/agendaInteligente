@@ -29,11 +29,18 @@ export default function AgendaProfissional() {
     retry: false,
   })
 
+  // #162: agenda do profissional precisa ver agendamentos criados por outros
+  // perfis em tempo quase real. Override do staleTime/refetchOnWindowFocus do
+  // QueryClient global (que prioriza performance pros perfis com pouca escrita).
   const { data: agendamentos = [], isLoading: loadingAgendamentos } = useQuery({
     queryKey: ['agendamentos', 'todos'],
     queryFn: () => agendamentoService.listar(),
     enabled: !!meuAtendente,
     retry: false,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: 60_000,
   })
 
   const isLoading = loadingAtendente || (!!meuAtendente && loadingAgendamentos)
