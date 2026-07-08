@@ -246,14 +246,20 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
                 {agendamento.servicos && agendamento.servicos.length > 0 ? (
                   <div className="space-y-1">
                     {agendamento.servicos.map((s: any, i: number) => {
-                      const nomeServico = s.servico?.nome ?? s.descricao ?? 'Serviço'
-                      // #155: mostra nome do profissional do item quando diverge do principal
-                      const nomeAt = s.nomeAtendente
+                      const nomeServico = s.nomeServico ?? s.servico?.nome ?? s.descricao ?? 'Serviço'
+                      // #164: sempre mostrar QUAL profissional realiza o serviço.
+                      // Se o item tem atendente próprio (#155), usa nomeAtendente.
+                      // Senão, herda do atendente principal do agendamento.
+                      const nomeAt =
+                        s.nomeAtendente
+                        ?? agendamento.atendente?.nomeUsuario
+                        ?? agendamento.atendente?.usuario?.nome
+                        ?? null
                       return (
-                        <div key={i} className="text-sm">
+                        <div key={i} className="text-sm flex items-center flex-wrap gap-1.5">
                           <span className="text-slate-800">{nomeServico}</span>
                           {nomeAt && (
-                            <span className="ml-1.5 text-[11px] text-violet-700 bg-violet-50 border border-violet-100 rounded px-1.5 py-0.5">
+                            <span className="text-[11px] text-violet-700 bg-violet-50 border border-violet-100 rounded px-1.5 py-0.5">
                               {nomeAt.split(' ')[0]}
                             </span>
                           )}

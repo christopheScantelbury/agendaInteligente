@@ -261,7 +261,7 @@ function AgendamentoCard({
   const duracaoMin = fim ? Math.max(0, differenceInMinutes(fim, inicio)) : null
   const clienteNome = agendamento.cliente?.nome ?? 'Cliente'
   const servicos = agendamento.servicos
-    ?.map((s: any) => s.servico?.nome ?? s.descricao)
+    ?.map((s: any) => s.nomeServico ?? s.servico?.nome ?? s.descricao)
     .filter(Boolean)
     .join(', ')
 

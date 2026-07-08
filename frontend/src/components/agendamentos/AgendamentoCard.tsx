@@ -45,7 +45,7 @@ export default function AgendamentoCard({ agendamento, showProfissionalChip = fa
 
   const servicos = agendamento.servicos ?? []
   const servicosLabel = servicos
-    .map((s: any) => s.servico?.nome ?? s.descricao ?? 'Serviço')
+    .map((s: any) => s.nomeServico ?? s.servico?.nome ?? s.descricao ?? 'Serviço')
     .filter(Boolean)
     .join(' · ')
   const valorTotal = agendamento.valorTotal ?? agendamento.valorFinal ?? null

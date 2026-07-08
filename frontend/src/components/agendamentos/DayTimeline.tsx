@@ -185,7 +185,7 @@ export default function DayTimeline({
               const clienteNome = a.cliente?.nome ?? `Cliente #${a.clienteId}`
               const servicos: any[] = a.servicos ?? []
               const servicosLabel = servicos
-                .map((s) => s.servico?.nome ?? s.descricao ?? '')
+                .map((s: any) => s.nomeServico ?? s.servico?.nome ?? s.descricao ?? '')
                 .filter(Boolean)
                 .join(' · ')
 

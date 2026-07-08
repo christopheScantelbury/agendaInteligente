@@ -178,7 +178,7 @@ export default function AcoesAgendamentoSheet({ agendamento, onClose }: AcoesAge
   const status = agendamento.status ?? 'AGENDADO'
   const clienteNome = agendamento.cliente?.nome ?? 'Cliente'
   const servicos = agendamento.servicos
-    ?.map((s: any) => s.servico?.nome ?? s.descricao)
+    ?.map((s: any) => s.nomeServico ?? s.servico?.nome ?? s.descricao)
     .filter(Boolean)
     .join(', ')
   const valorBase = agendamento.valorFinal ?? agendamento.valorTotal ?? 0
