@@ -5,6 +5,7 @@ import DayMode from './DayMode'
 import WeekMode from './WeekMode'
 import MonthMode from './MonthMode'
 import { authService } from '../../services/authService'
+import { useIsWebLayout } from '../../hooks/useIsWebLayout'
 
 type Modo = 'dia' | 'semana' | 'mes'
 
@@ -22,6 +23,7 @@ const MODES: Array<{ id: Modo; label: string; icon: React.ComponentType<{ classN
  * Estado por URL (?modo=dia&data=2026-05-29) habilita deep link e back nativo.
  */
 export default function AgendamentosPage() {
+  const isWeb = useIsWebLayout()
   const [searchParams, setSearchParams] = useSearchParams()
   // #137: PROFISSIONAL tem foco em visão de calendário (mês) por padrão.
   // Demais perfis seguem em Dia (timeline) como antes.
@@ -50,8 +52,13 @@ export default function AgendamentosPage() {
     setSearchParams(next, { replace: true })
   }
 
+  // #167: no layout web, expande max-width e ajusta padding pra usar melhor a tela
+  const containerCls = isWeb
+    ? 'max-w-7xl mx-auto p-6 xl:p-8 space-y-5 pb-16'
+    : 'max-w-3xl mx-auto p-4 sm:p-6 space-y-5 pb-32'
+
   return (
-    <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-5 pb-32">
+    <div className={containerCls}>
       {/* Header */}
       <header>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">

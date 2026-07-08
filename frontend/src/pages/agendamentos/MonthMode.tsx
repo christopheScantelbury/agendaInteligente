@@ -13,8 +13,9 @@ import {
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
-import { agendamentoService } from '../../services/agendamentoService'
+import { agendamentoService, Agendamento } from '../../services/agendamentoService'
 import { dotClass } from '../../utils/statusAgendamento'
+import { useIsWebLayout } from '../../hooks/useIsWebLayout'
 
 interface Props {
   selectedDate: Date
@@ -32,6 +33,7 @@ const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
  * Mobile-first: cell ~44px (toque confortável).
  */
 export default function MonthMode({ selectedDate, onDateChange, onJumpToDayMode }: Props) {
+  const isWeb = useIsWebLayout()
   const inicioMes = startOfMonth(selectedDate)
   const fimMes = endOfMonth(selectedDate)
 
@@ -63,20 +65,24 @@ export default function MonthMode({ selectedDate, onDateChange, onJumpToDayMode 
   }, [inicioMes, fimMes])
 
   const agendamentosPorDia = useMemo(() => {
-    const mapa = new Map<string, Array<{ status?: string }>>()
+    const mapa = new Map<string, Agendamento[]>()
     agendamentos.forEach((a) => {
       if (!a.dataHoraInicio) return
       const key = format(new Date(a.dataHoraInicio), 'yyyy-MM-dd')
       const lista = mapa.get(key) ?? []
-      lista.push({ status: a.status })
+      lista.push(a)
       mapa.set(key, lista)
     })
+    // ordena por hora dentro do dia
+    mapa.forEach((lista) =>
+      lista.sort((a, b) => new Date(a.dataHoraInicio).getTime() - new Date(b.dataHoraInicio).getTime())
+    )
     return mapa
   }, [agendamentos])
 
   const totalMes = useMemo(() => {
     let count = 0
-    agendamentosPorDia.forEach((lista, key) => {
+    agendamentosPorDia.forEach((lista: Agendamento[], key: string) => {
       const d = new Date(key + 'T00:00:00')
       if (isSameMonth(d, selectedDate)) count += lista.length
     })
@@ -156,7 +162,7 @@ export default function MonthMode({ selectedDate, onDateChange, onJumpToDayMode 
                   key={idx}
                   onClick={() => onJumpToDayMode(dia)}
                   disabled={!noMes}
-                  className={`aspect-square flex flex-col items-center justify-start py-1.5 rounded-lg transition relative ${
+                  className={`${isWeb ? 'min-h-[110px]' : 'aspect-square'} flex flex-col items-stretch justify-start py-1.5 px-1 rounded-lg transition relative ${
                     !noMes
                       ? 'text-slate-300 cursor-default'
                       : isSelected
@@ -164,18 +170,49 @@ export default function MonthMode({ selectedDate, onDateChange, onJumpToDayMode 
                         : hoje
                           ? 'bg-violet-50 text-violet-900 hover:bg-violet-100'
                           : 'text-slate-700 hover:bg-slate-100'
-                  }`}
+                  } ${isWeb ? 'text-left' : 'items-center'}`}
                 >
                   <span
                     className={`text-xs sm:text-sm font-semibold leading-tight ${
                       hoje && noMes ? 'text-violet-700' : ''
-                    }`}
+                    } ${isWeb ? 'pl-0.5' : ''}`}
                   >
                     {format(dia, 'd')}
                   </span>
-                  {noMes && ags.length > 0 && (
+
+                  {/* #167: no web, mostra até 3 preview de agendamentos (Google Cal style) */}
+                  {isWeb && noMes && ags.length > 0 && (
+                    <div className="mt-1 space-y-0.5 overflow-hidden flex-1">
+                      {ags.slice(0, 3).map((a) => {
+                        const s = a.servicos?.[0] as any
+                        const nomeSvc = s?.nomeServico ?? s?.servico?.nome ?? s?.descricao ?? ''
+                        return (
+                          <div
+                            key={a.id}
+                            className="flex items-center gap-1 text-[10px] leading-tight px-1 py-0.5 rounded bg-white/60"
+                          >
+                            <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${dotClass(a.status)}`} />
+                            <span className="font-mono font-semibold text-slate-700">
+                              {format(new Date(a.dataHoraInicio), 'HH:mm')}
+                            </span>
+                            <span className="truncate text-slate-700">
+                              {a.cliente?.nome ?? nomeSvc ?? '—'}
+                            </span>
+                          </div>
+                        )
+                      })}
+                      {ags.length > 3 && (
+                        <div className="text-[10px] font-semibold text-violet-700 px-1">
+                          + {ags.length - 3} mais
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Mobile: dots + contagem (comportamento original) */}
+                  {!isWeb && noMes && ags.length > 0 && (
                     <>
-                      <div className="flex items-center gap-0.5 mt-1">
+                      <div className="flex items-center gap-0.5 mt-1 self-center">
                         {statusUnicos.map((s, i) => (
                           <span
                             key={i}
@@ -183,7 +220,7 @@ export default function MonthMode({ selectedDate, onDateChange, onJumpToDayMode 
                           />
                         ))}
                       </div>
-                      <span className="text-[9px] font-bold text-slate-500 mt-0.5">
+                      <span className="text-[9px] font-bold text-slate-500 mt-0.5 self-center">
                         {ags.length}
                       </span>
                     </>

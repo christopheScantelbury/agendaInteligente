@@ -10,6 +10,7 @@ import AgendamentoFab from '../../components/agendamentos/AgendamentoFab'
 import NovoAgendamentoSheet from '../../components/agendamentos/NovoAgendamentoSheet'
 import DetalhesSheet from '../../components/agendamentos/DetalhesSheet'
 import DayTimeline, { ColunaProfissional } from '../../components/agendamentos/DayTimeline'
+import { useIsWebLayout } from '../../hooks/useIsWebLayout'
 import ProfissionalPickerSheet, { PickerItem } from '../../components/agendamentos/ProfissionalPickerSheet'
 
 interface Props {
@@ -30,6 +31,7 @@ interface Props {
  * - Tap em card: abre detalhes do agendamento.
  */
 export default function DayMode({ selectedDate, onDateChange }: Props) {
+  const isWeb = useIsWebLayout()
   const [profissionaisSelecionados, setProfissionaisSelecionados] = useState<number[]>([])
   const touchedRef = useRef(false)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -264,6 +266,7 @@ export default function DayMode({ selectedDate, onDateChange }: Props) {
           colunas={colunas}
           onSlotClick={handleSlotClick}
           onAgendamentoClick={handleCardClick}
+          pxPerMin={isWeb ? 1.6 : 1.2}
         />
       )}
 
