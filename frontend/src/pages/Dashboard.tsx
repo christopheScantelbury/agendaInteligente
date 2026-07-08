@@ -24,8 +24,11 @@ import { inteligenciaService } from '../services/inteligenciaService'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { useIsWebLayout } from '../hooks/useIsWebLayout'
+import WebPageShell from '../components/layout/WebPageShell'
 
 export default function Dashboard() {
+    const isWeb = useIsWebLayout()
     const usuario = authService.getUsuario()
     const perfilNorm = (usuario?.perfil ?? '').toUpperCase().replace('-', '_')
     const isAdmin = perfilNorm === 'ADMIN' || perfilNorm === 'ADMINISTRADOR'
@@ -151,6 +154,214 @@ export default function Dashboard() {
         }
     ]
 
+    // #166: Versão WEB (ADMIN/ADMINISTRADOR/GERENTE em ≥lg) — layout 2 colunas
+    // com KPIs full-width no topo + main (agenda + status) + sidebar (IA panels)
+    if (isWeb) {
+        return (
+            <WebPageShell titulo="Dashboard" descricao="Visão geral do negócio" icone={LayoutDashboard}>
+                {/* KPI Cards — 4 cols + card reclamações inline */}
+                <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+                    {kpiCards.map((card, index) => (
+                        <div key={index} className="bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-md transition-shadow">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className={`${card.bgColor} p-2.5 rounded-xl`}>
+                                    <card.icon className={`h-5 w-5 ${card.textColor}`} />
+                                </div>
+                                <h3 className="text-slate-500 text-xs font-medium uppercase tracking-wider">{card.title}</h3>
+                            </div>
+                            <p className="text-3xl font-black text-slate-900">{card.value}</p>
+                            {card.sub && <p className="text-xs text-slate-400 mt-1">{card.sub}</p>}
+                        </div>
+                    ))}
+                </div>
+
+                {/* Grid 3 cols: main (2/3) + sidebar (1/3) */}
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    {/* Coluna principal — Agenda de hoje ampliada */}
+                    <div className="xl:col-span-2 space-y-6">
+                        {/* Agenda de Hoje (grande) */}
+                        {!authService.isPerfilCliente() && (
+                            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                        <Calendar className="h-5 w-5 text-violet-500" />
+                                        Agenda de Hoje
+                                        <span className="ml-2 text-sm font-normal text-slate-500">
+                                            {format(new Date(), "dd 'de' MMMM", { locale: ptBR })}
+                                        </span>
+                                    </h2>
+                                    <div className="flex gap-4 text-sm">
+                                        <span className="text-slate-500">{agendamentosHoje} agendamento{agendamentosHoje !== 1 ? 's' : ''}</span>
+                                        {agendamentosHojeConcluidos > 0 && (
+                                            <span className="text-violet-600 font-semibold">{moneyFmt.format(faturamentoHoje)}</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {proximoAgendamento && (
+                                    <div className="mb-4 p-4 rounded-2xl bg-violet-50 border border-violet-100 flex items-center gap-3">
+                                        <Clock className="h-6 w-6 text-violet-500 shrink-0" />
+                                        <div>
+                                            <p className="text-xs font-semibold text-violet-600 uppercase tracking-wide">Próximo</p>
+                                            <p className="text-base font-semibold text-slate-900">
+                                                {format(new Date(proximoAgendamento.dataHoraInicio), 'HH:mm')} · {proximoAgendamento.cliente?.nome} — {(proximoAgendamento.servicos?.[0] as any)?.nomeServico ?? proximoAgendamento.servicos?.[0]?.descricao ?? 'Serviço'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {agendamentosHojeList.length === 0 ? (
+                                    <p className="text-sm text-slate-400 text-center py-8">Nenhum agendamento para hoje.</p>
+                                ) : (
+                                    <div className="relative max-h-[520px] overflow-y-auto pr-2">
+                                        <div className="absolute left-[7px] top-0 bottom-0 w-px bg-gray-200" />
+                                        <div className="space-y-3">
+                                            {agendamentosHojeList.map(a => {
+                                                const statusColors: Record<string, string> = {
+                                                    AGENDADO: 'bg-slate-800', CONFIRMADO: 'bg-violet-500',
+                                                    EM_ANDAMENTO: 'bg-violet-500', PROCEDIMENTO_FIM: 'bg-violet-700',
+                                                    CONCLUIDO: 'bg-green-500', FINALIZADO: 'bg-green-500',
+                                                    CANCELADO: 'bg-red-400', NO_SHOW: 'bg-orange-400',
+                                                }
+                                                const dot = statusColors[a.status ?? ''] ?? 'bg-gray-400'
+                                                const s = a.servicos?.[0] as any
+                                                return (
+                                                    <div key={a.id} className="flex items-start gap-4 pl-1">
+                                                        <div className={`mt-1.5 h-3 w-3 rounded-full shrink-0 ${dot} ring-2 ring-white z-10`} />
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-baseline justify-between gap-2">
+                                                                <p className="text-sm font-semibold text-gray-800 truncate">
+                                                                    {format(new Date(a.dataHoraInicio), 'HH:mm')} · {a.cliente?.nome || '—'}
+                                                                </p>
+                                                                <span className="text-xs text-slate-400 shrink-0">
+                                                                    {a.atendente?.nomeUsuario ?? a.atendente?.usuario?.nome ?? a.atendente?.nome ?? ''}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-xs text-slate-500 truncate">
+                                                                {s?.nomeServico ?? s?.descricao ?? 'Serviço'}
+                                                                {a.valorTotal ? ` · ${moneyFmt.format(a.valorTotal)}` : ''}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Status Distribution */}
+                        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+                            <h2 className="text-lg font-bold text-slate-900 mb-4">Status dos Agendamentos</h2>
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="text-center p-4 bg-green-50 rounded-xl">
+                                    <CheckCircle2 className="h-6 w-6 text-green-500 mx-auto mb-2" />
+                                    <p className="text-2xl font-bold text-slate-900">{agendamentosFinalizados}</p>
+                                    <p className="text-xs text-slate-500 mt-1">Finalizados</p>
+                                </div>
+                                <div className="text-center p-4 bg-blue-50 rounded-xl">
+                                    <Clock className="h-6 w-6 text-blue-500 mx-auto mb-2" />
+                                    <p className="text-2xl font-bold text-slate-900">{totalAgendamentos - agendamentosFinalizados - agendamentosCancelados}</p>
+                                    <p className="text-xs text-slate-500 mt-1">Pendentes</p>
+                                </div>
+                                <div className="text-center p-4 bg-red-50 rounded-xl">
+                                    <XCircle className="h-6 w-6 text-red-500 mx-auto mb-2" />
+                                    <p className="text-2xl font-bold text-slate-900">{agendamentosCancelados}</p>
+                                    <p className="text-xs text-slate-500 mt-1">Cancelados</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Sidebar direita — IA + reclamações */}
+                    <div className="space-y-4">
+                        {podeVerReclamacoes && (
+                            <Link to="/notificacoes" className="block bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-md transition-shadow">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className={`p-2.5 rounded-xl ${contadorReclamacoes > 0 ? 'bg-red-50' : 'bg-slate-50'}`}>
+                                        <Bell className={`h-5 w-5 ${contadorReclamacoes > 0 ? 'text-red-600' : 'text-slate-600'}`} />
+                                    </div>
+                                    <h3 className="text-slate-500 text-xs font-medium uppercase tracking-wider">Reclamações</h3>
+                                    {contadorReclamacoes > 0 && (
+                                        <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full h-6 min-w-6 px-1.5 flex items-center justify-center">
+                                            {contadorReclamacoes > 99 ? '99+' : contadorReclamacoes}
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="text-xl font-bold text-slate-900">
+                                    {contadorReclamacoes > 0 ? `${contadorReclamacoes} não lida${contadorReclamacoes !== 1 ? 's' : ''}` : 'Nenhuma'}
+                                </p>
+                            </Link>
+                        )}
+
+                        <div className="bg-gradient-to-br from-violet-50 to-white rounded-2xl shadow-sm p-5 border border-violet-100">
+                            <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+                                <Sparkles className="h-4 w-4 text-violet-500" /> Insight Semanal
+                            </h2>
+                            {insightsSemanal.length > 0 ? (
+                                <div className="space-y-2">
+                                    {insightsSemanal.slice(0, 2).map(insight => (
+                                        <div key={insight.id} className="rounded-xl bg-white border border-violet-100 p-3">
+                                            <p className="text-[10px] text-violet-500 font-medium mb-1 uppercase tracking-wider">
+                                                {format(new Date(insight.semana), "dd 'de' MMMM", { locale: ptBR })}
+                                            </p>
+                                            <p className="text-xs text-slate-700 leading-snug">{insight.texto}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-slate-400">Os insights são gerados toda segunda-feira.</p>
+                            )}
+                        </div>
+
+                        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+                            <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+                                <UserX className="h-4 w-4 text-amber-500" /> Clientes em Risco
+                                {clientesRisco.length > 0 && (
+                                    <span className="ml-auto text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">
+                                        {clientesRisco.length}
+                                    </span>
+                                )}
+                            </h2>
+                            {clientesRisco.length > 0 ? (
+                                <div className="space-y-2">
+                                    {clientesRisco.slice(0, 5).map(c => <ClienteRiscoItem key={c.clienteId} cliente={c} />)}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-slate-400">Nenhum cliente ausente há +30 dias. 🎉</p>
+                            )}
+                        </div>
+
+                        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+                            <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+                                <AlertCircle className="h-4 w-4 text-rose-500" /> Alerta de Churn
+                                {churnProfissional.length > 0 && (
+                                    <span className="ml-auto text-[10px] bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full font-semibold">
+                                        {churnProfissional.length}
+                                    </span>
+                                )}
+                            </h2>
+                            {churnProfissional.length > 0 ? (
+                                <div className="space-y-2">
+                                    {churnProfissional.slice(0, 4).map(p => (
+                                        <div key={p.atendenteId} className="flex items-center justify-between p-2 rounded-lg bg-rose-50">
+                                            <span className="text-xs font-medium text-gray-800 truncate max-w-[60%]">{p.atendenteNome}</span>
+                                            <span className="text-[10px] font-bold text-rose-600">{p.taxaChurn.toFixed(0)}% churn</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-slate-400">Nenhuma perda significativa.</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </WebPageShell>
+        )
+    }
+
+    // Layout MOBILE / não-gestão — layout original mantido
     return (
         <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6 animate-fadeIn">
             <header className="flex items-center gap-3">
