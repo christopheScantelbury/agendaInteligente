@@ -235,20 +235,13 @@ export default function MonthMode({ selectedDate, onDateChange, onJumpToDayMode 
         )}
       </div>
 
-      {/* Legenda */}
+      {/* Legenda — mesma paleta consolidada de Dia/Semana */}
       <div className={`flex items-center gap-3 text-[11px] text-slate-500 flex-wrap justify-center ${isWeb ? 'flex-shrink-0' : ''}`}>
-        <span className="inline-flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-slate-900" /> Agendado
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-blue-500" /> Confirmado
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-emerald-500" /> Finalizado
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-red-500" /> Cancelado
-        </span>
+        <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-slate-400" /> Agendado</span>
+        <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Confirmado</span>
+        <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-violet-500" /> Em atendimento</span>
+        <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-600" /> Concluído</span>
+        <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" /> Cancelado</span>
       </div>
     </div>
   )

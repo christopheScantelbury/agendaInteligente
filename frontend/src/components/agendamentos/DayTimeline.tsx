@@ -1,28 +1,7 @@
 import { useMemo, useEffect, useState, useRef } from 'react'
 import { format, isSameDay } from 'date-fns'
 import { Agendamento } from '../../services/agendamentoService'
-
-const STATUS_BARRA: Record<string, string> = {
-  AGENDADO: 'bg-slate-900',
-  CONFIRMADO: 'bg-blue-500',
-  EM_ANDAMENTO: 'bg-blue-500',
-  PROCEDIMENTO_FIM: 'bg-blue-600',
-  CONCLUIDO: 'bg-emerald-500',
-  FINALIZADO: 'bg-emerald-500',
-  CANCELADO: 'bg-red-500',
-  NO_SHOW: 'bg-orange-500',
-}
-
-const STATUS_BG: Record<string, string> = {
-  AGENDADO: 'bg-slate-50 border-slate-200',
-  CONFIRMADO: 'bg-blue-50 border-blue-200',
-  EM_ANDAMENTO: 'bg-blue-50 border-blue-200',
-  PROCEDIMENTO_FIM: 'bg-blue-50 border-blue-200',
-  CONCLUIDO: 'bg-emerald-50 border-emerald-200',
-  FINALIZADO: 'bg-emerald-50 border-emerald-200',
-  CANCELADO: 'bg-red-50 border-red-200',
-  NO_SHOW: 'bg-orange-50 border-orange-200',
-}
+import { barClass, cardClass } from '../../utils/statusAgendamento'
 
 export interface ColunaProfissional {
   id: number
@@ -199,9 +178,9 @@ export default function DayTimeline({
               const clampedStart = Math.max(minStart, startTotalMin)
               const clampedEnd = Math.min(minEnd, endTotalMin)
               const top = (clampedStart - startTotalMin) * pxPerMin
-              const height = Math.max((clampedEnd - clampedStart) * pxPerMin, 22)
-              const barra = STATUS_BARRA[a.status ?? ''] ?? 'bg-amber-400'
-              const bg = STATUS_BG[a.status ?? ''] ?? 'bg-amber-50 border-amber-200'
+              const height = Math.max((clampedEnd - clampedStart) * pxPerMin, 26)
+              const barra = barClass(a.status)
+              const bg = cardClass(a.status)
               const clienteNome = a.cliente?.nome ?? `Cliente #${a.clienteId}`
               const servicos: any[] = a.servicos ?? []
               const servicosLabel = servicos
@@ -217,20 +196,17 @@ export default function DayTimeline({
                   className={`absolute left-1 right-1 z-10 text-left rounded-lg border ${bg} overflow-hidden flex hover:shadow-sm transition`}
                   style={{ top: `${top}px`, height: `${height}px` }}
                 >
-                  <div className={`w-1 ${barra} flex-shrink-0`} aria-hidden />
-                  <div className="flex-1 min-w-0 px-1.5 py-1">
-                    <p className="text-[10px] font-bold text-slate-900 leading-tight">
-                      {format(inicio, 'HH:mm')}
-                      {fim && ` – ${format(fim, 'HH:mm')}`}
-                    </p>
-                    <p className="text-[11px] font-semibold text-slate-800 truncate leading-tight">
+                  <div className={`w-1.5 ${barra} flex-shrink-0`} aria-hidden />
+                  <div className="flex-1 min-w-0 px-1.5 py-0.5">
+                    {/* Cliente em destaque — é o "o que é" do agendamento */}
+                    <p className="text-[11px] font-bold text-slate-900 truncate leading-tight">
                       {clienteNome}
                     </p>
-                    {height > 40 && servicosLabel && (
-                      <p className="text-[10px] text-slate-500 truncate leading-tight">
-                        {servicosLabel}
-                      </p>
-                    )}
+                    <p className="text-[10px] text-slate-500 truncate leading-tight">
+                      {format(inicio, 'HH:mm')}
+                      {fim && `–${format(fim, 'HH:mm')}`}
+                      {servicosLabel && ` · ${servicosLabel}`}
+                    </p>
                   </div>
                 </button>
               )

@@ -26,7 +26,7 @@ export type StatusKey =
 
 /** Cor de fundo sólida (dots, badges sólidos). */
 export const STATUS_DOT: Record<string, string> = {
-  AGENDADO: 'bg-slate-700',
+  AGENDADO: 'bg-slate-400',
   CONFIRMADO: 'bg-emerald-500',
   EM_ANDAMENTO: 'bg-violet-500',
   PROCEDIMENTO_FIM: 'bg-violet-600',
@@ -60,6 +60,30 @@ export const STATUS_BADGE: Record<string, string> = {
   NO_SHOW: 'bg-orange-50 text-orange-700',
 }
 
+/** Barra vertical colorida do card de timeline (Day/Week). */
+export const STATUS_BAR: Record<string, string> = {
+  AGENDADO: 'bg-slate-400',
+  CONFIRMADO: 'bg-emerald-500',
+  EM_ANDAMENTO: 'bg-violet-500',
+  PROCEDIMENTO_FIM: 'bg-violet-600',
+  CONCLUIDO: 'bg-emerald-600',
+  FINALIZADO: 'bg-emerald-600',
+  CANCELADO: 'bg-red-500',
+  NO_SHOW: 'bg-orange-500',
+}
+
+/** Fundo + borda do card de timeline (bg-XX-50 border-XX-200). */
+export const STATUS_CARD: Record<string, string> = {
+  AGENDADO: 'bg-slate-50 border-slate-200',
+  CONFIRMADO: 'bg-emerald-50 border-emerald-200',
+  EM_ANDAMENTO: 'bg-violet-50 border-violet-200',
+  PROCEDIMENTO_FIM: 'bg-violet-50 border-violet-200',
+  CONCLUIDO: 'bg-emerald-50 border-emerald-200',
+  FINALIZADO: 'bg-emerald-50 border-emerald-200',
+  CANCELADO: 'bg-red-50 border-red-200',
+  NO_SHOW: 'bg-orange-50 border-orange-200',
+}
+
 /** Label pt-BR humano para exibir ao usuário. */
 export const STATUS_LABEL: Record<string, string> = {
   AGENDADO: 'Agendado',
@@ -75,6 +99,12 @@ export const STATUS_LABEL: Record<string, string> = {
 /** Acessor seguro. Default usado quando status desconhecido (futuro-prof). */
 export const dotClass = (status?: string | null): string =>
   STATUS_DOT[status ?? ''] ?? 'bg-amber-400'
+
+export const barClass = (status?: string | null): string =>
+  STATUS_BAR[status ?? ''] ?? 'bg-amber-400'
+
+export const cardClass = (status?: string | null): string =>
+  STATUS_CARD[status ?? ''] ?? 'bg-amber-50 border-amber-200'
 
 export const badgeClass = (status?: string | null): string =>
   STATUS_BADGE[status ?? ''] ?? 'bg-amber-50 text-amber-700'

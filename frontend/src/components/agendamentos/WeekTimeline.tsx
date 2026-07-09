@@ -3,6 +3,7 @@ import { format, addDays, isWithinInterval, startOfDay, endOfDay, isToday } from
 import { ptBR } from 'date-fns/locale'
 import { Users, Plus } from 'lucide-react'
 import { Agendamento } from '../../services/agendamentoService'
+import { barClass, cardClass } from '../../utils/statusAgendamento'
 import ProfissionalPickerSheet, { PickerItem } from './ProfissionalPickerSheet'
 
 /**
@@ -347,23 +348,33 @@ export default function WeekTimeline({
                   (Math.min(minEnd, endTotalMin) - Math.max(minStart, startTotalMin)) * pxPerMin,
                   24
                 )
-                const cor = corDoProf(it.atendenteId)
+                // #164: cor por STATUS (mesmo padrão de Dia/Mês). O profissional
+                // é identificado pelo nome no card (dot da cor do prof + 1º nome).
+                const status = it.agendamento.status
+                const corProf = corDoProf(it.atendenteId)
+                const profNome =
+                  profissionaisAtivos.find((p) => p.id === it.atendenteId)?.nome ?? ''
                 return (
                   <button
                     key={`${it.agendamento.id}-${idx}`}
                     type="button"
                     onClick={() => onAgendamentoClick?.(it.agendamento)}
-                    className={`absolute left-1 right-1 z-10 text-left rounded-lg border ${cor.card} overflow-hidden flex hover:shadow-md transition`}
+                    className={`absolute left-1 right-1 z-10 text-left rounded-lg border ${cardClass(status)} overflow-hidden flex hover:shadow-md transition`}
                     style={{ top: `${top}px`, height: `${height}px` }}
                   >
-                    <div className={`w-1 ${cor.barra} flex-shrink-0`} aria-hidden />
-                    <div className="flex-1 min-w-0 px-1.5 py-1">
-                      <p className="text-[11px] font-bold leading-tight truncate">{it.cliente}</p>
-                      <p className="text-[10px] leading-tight truncate opacity-80">{it.servicoNome}</p>
-                      {height > 40 && (
-                        <p className="text-[10px] leading-tight opacity-70 mt-0.5">
-                          {format(it.inicio, 'HH:mm')} – {format(it.fim, 'HH:mm')}
-                        </p>
+                    <div className={`w-1.5 ${barClass(status)} flex-shrink-0`} aria-hidden />
+                    <div className="flex-1 min-w-0 px-1.5 py-0.5">
+                      <p className="text-[11px] font-bold text-slate-900 leading-tight truncate">
+                        {it.cliente}
+                      </p>
+                      <p className="text-[10px] text-slate-500 leading-tight truncate">
+                        {format(it.inicio, 'HH:mm')} · {it.servicoNome}
+                      </p>
+                      {profNome && (
+                        <span className="inline-flex items-center gap-1 text-[9px] text-slate-500 leading-tight">
+                          <span className={`h-1.5 w-1.5 rounded-full ${corProf.dot}`} />
+                          {profNome}
+                        </span>
                       )}
                     </div>
                   </button>
@@ -373,6 +384,15 @@ export default function WeekTimeline({
           )
         })}
       </div>
+      </div>
+
+      {/* Legenda de status — mesma de Dia/Mês */}
+      <div className="flex items-center gap-3 text-[11px] text-slate-500 flex-wrap justify-center px-4 py-2 border-t border-slate-200 flex-shrink-0">
+        <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-slate-400" /> Agendado</span>
+        <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Confirmado</span>
+        <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-violet-500" /> Em atendimento</span>
+        <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-600" /> Concluído</span>
+        <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" /> Cancelado</span>
       </div>
 
       <ProfissionalPickerSheet
