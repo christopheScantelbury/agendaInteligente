@@ -90,9 +90,9 @@ export default function MonthMode({ selectedDate, onDateChange, onJumpToDayMode 
   }, [agendamentosPorDia, selectedDate])
 
   return (
-    <div className="space-y-4">
+    <div className={isWeb ? 'h-full flex flex-col gap-3' : 'space-y-4'}>
       {/* Header mês */}
-      <div className="flex items-center gap-2">
+      <div className={`flex items-center gap-2 ${isWeb ? 'flex-shrink-0' : ''}`}>
         <button
           onClick={() => onDateChange(addMonths(selectedDate, -1))}
           className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition"
@@ -128,9 +128,9 @@ export default function MonthMode({ selectedDate, onDateChange, onJumpToDayMode 
         </button>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-2xl p-2 sm:p-3">
+      <div className={`bg-white border border-slate-200 rounded-2xl p-2 sm:p-3 ${isWeb ? 'flex-1 min-h-0 flex flex-col' : ''}`}>
         {/* Cabeçalho de dias da semana */}
-        <div className="grid grid-cols-7 gap-1 mb-1">
+        <div className="grid grid-cols-7 gap-1 mb-1 flex-shrink-0">
           {WEEKDAYS.map((label, idx) => (
             <div
               key={idx}
@@ -145,7 +145,7 @@ export default function MonthMode({ selectedDate, onDateChange, onJumpToDayMode 
         {isLoading ? (
           <div className="text-center py-12 text-slate-400 text-sm">Carregando mês...</div>
         ) : (
-          <div className="grid grid-cols-7 gap-1">
+          <div className={`grid grid-cols-7 gap-1 ${isWeb ? 'flex-1 min-h-0 auto-rows-fr' : ''}`}>
             {cells.map((dia, idx) => {
               const key = format(dia, 'yyyy-MM-dd')
               const ags = agendamentosPorDia.get(key) ?? []
@@ -162,7 +162,7 @@ export default function MonthMode({ selectedDate, onDateChange, onJumpToDayMode 
                   key={idx}
                   onClick={() => onJumpToDayMode(dia)}
                   disabled={!noMes}
-                  className={`${isWeb ? 'min-h-[110px]' : 'aspect-square'} flex flex-col items-stretch justify-start py-1.5 px-1 rounded-lg transition relative ${
+                  className={`${isWeb ? 'min-h-0 border border-slate-100' : 'aspect-square'} flex flex-col items-stretch justify-start py-1.5 px-1 rounded-lg transition relative overflow-hidden ${
                     !noMes
                       ? 'text-slate-300 cursor-default'
                       : isSelected
@@ -180,10 +180,13 @@ export default function MonthMode({ selectedDate, onDateChange, onJumpToDayMode 
                     {format(dia, 'd')}
                   </span>
 
-                  {/* #167: no web, mostra até 3 preview de agendamentos (Google Cal style) */}
+                  {/* #167: no web, mostra preview de agendamentos (Google Cal style).
+                      Mostra quantos couberem; excedente vira "+N mais". A altura da
+                      célula é fracionária (auto-rows-fr) então overflow-hidden corta
+                      o que não cabe sem quebrar o grid. */}
                   {isWeb && noMes && ags.length > 0 && (
-                    <div className="mt-1 space-y-0.5 overflow-hidden flex-1">
-                      {ags.slice(0, 3).map((a) => {
+                    <div className="mt-1 space-y-0.5 overflow-hidden flex-1 min-h-0">
+                      {ags.slice(0, 4).map((a) => {
                         const s = a.servicos?.[0] as any
                         const nomeSvc = s?.nomeServico ?? s?.servico?.nome ?? s?.descricao ?? ''
                         return (
@@ -201,9 +204,9 @@ export default function MonthMode({ selectedDate, onDateChange, onJumpToDayMode 
                           </div>
                         )
                       })}
-                      {ags.length > 3 && (
+                      {ags.length > 4 && (
                         <div className="text-[10px] font-semibold text-violet-700 px-1">
-                          + {ags.length - 3} mais
+                          + {ags.length - 4} mais
                         </div>
                       )}
                     </div>
@@ -233,7 +236,7 @@ export default function MonthMode({ selectedDate, onDateChange, onJumpToDayMode 
       </div>
 
       {/* Legenda */}
-      <div className="flex items-center gap-3 text-[11px] text-slate-500 flex-wrap justify-center">
+      <div className={`flex items-center gap-3 text-[11px] text-slate-500 flex-wrap justify-center ${isWeb ? 'flex-shrink-0' : ''}`}>
         <span className="inline-flex items-center gap-1">
           <span className="h-2 w-2 rounded-full bg-slate-900" /> Agendado
         </span>

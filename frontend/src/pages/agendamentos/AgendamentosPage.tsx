@@ -52,27 +52,55 @@ export default function AgendamentosPage() {
     setSearchParams(next, { replace: true })
   }
 
-  // #167: no layout web, ocupa a largura toda (cap 1920 pra ultrawide) — app
-  // de gestão desktop deve preencher a tela, não ficar centralizado numa faixa.
+  // #167: no layout web, a página ocupa a ALTURA da viewport (menos o padding do
+  // <main>, lg:p-8 = 4rem) e o calendário preenche o espaço restante — nada de
+  // rolar a página. Mobile mantém fluxo natural com scroll.
   const containerCls = isWeb
-    ? 'max-w-[1920px] w-full mx-auto p-6 xl:p-8 space-y-5 pb-16'
+    ? 'max-w-[1920px] w-full mx-auto flex flex-col h-[calc(100dvh-4rem)] gap-3'
     : 'max-w-3xl mx-auto p-4 sm:p-6 space-y-5 pb-32'
+
+  // O modo ativo (Dia/Semana/Mês) — no web vive num flex-item que rola por
+  // dentro (Dia/Semana têm timeline alta) ou preenche exato (Mês).
+  const modoContent =
+    modoUrl === 'dia' ? (
+      <DayMode selectedDate={selectedDate} onDateChange={handleDateChange} />
+    ) : modoUrl === 'semana' ? (
+      <WeekMode
+        selectedDate={selectedDate}
+        onDateChange={handleDateChange}
+        onJumpToDayMode={(date) => {
+          handleDateChange(date)
+          handleModoChange('dia')
+        }}
+      />
+    ) : (
+      <MonthMode
+        selectedDate={selectedDate}
+        onDateChange={handleDateChange}
+        onJumpToDayMode={(date) => {
+          handleDateChange(date)
+          handleModoChange('dia')
+        }}
+      />
+    )
 
   return (
     <div className={containerCls}>
-      {/* Header */}
-      <header>
+      {/* Header — compacto no web pra sobrar altura pro calendário */}
+      <header className={isWeb ? 'flex-shrink-0' : ''}>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <CalendarDays className="h-6 w-6 text-violet-600" />
           Agendamentos
         </h1>
-        <p className="text-sm text-slate-500 mt-0.5">
-          Veja o dia, navegue pela semana ou tenha visão do mês.
-        </p>
+        {!isWeb && (
+          <p className="text-sm text-slate-500 mt-0.5">
+            Veja o dia, navegue pela semana ou tenha visão do mês.
+          </p>
+        )}
       </header>
 
       {/* Mode Switcher (chips) */}
-      <div className="inline-flex p-1 rounded-2xl bg-slate-100 border border-slate-200 w-full sm:w-auto">
+      <div className={`inline-flex p-1 rounded-2xl bg-slate-100 border border-slate-200 w-full sm:w-auto ${isWeb ? 'flex-shrink-0' : ''}`}>
         {MODES.map((mode) => {
           const Icon = mode.icon
           const isActive = modoUrl === mode.id
@@ -94,30 +122,10 @@ export default function AgendamentosPage() {
       </div>
 
       {/* Modo ativo */}
-      {modoUrl === 'dia' && (
-        <DayMode selectedDate={selectedDate} onDateChange={handleDateChange} />
-      )}
-
-      {modoUrl === 'semana' && (
-        <WeekMode
-          selectedDate={selectedDate}
-          onDateChange={handleDateChange}
-          onJumpToDayMode={(date) => {
-            handleDateChange(date)
-            handleModoChange('dia')
-          }}
-        />
-      )}
-
-      {modoUrl === 'mes' && (
-        <MonthMode
-          selectedDate={selectedDate}
-          onDateChange={handleDateChange}
-          onJumpToDayMode={(date) => {
-            handleDateChange(date)
-            handleModoChange('dia')
-          }}
-        />
+      {isWeb ? (
+        <div className="flex-1 min-h-0 overflow-y-auto">{modoContent}</div>
+      ) : (
+        modoContent
       )}
     </div>
   )
