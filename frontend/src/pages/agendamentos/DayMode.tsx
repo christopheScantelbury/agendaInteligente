@@ -10,6 +10,7 @@ import AgendamentoFab from '../../components/agendamentos/AgendamentoFab'
 import NovoAgendamentoSheet from '../../components/agendamentos/NovoAgendamentoSheet'
 import DetalhesSheet from '../../components/agendamentos/DetalhesSheet'
 import DayTimeline, { ColunaProfissional } from '../../components/agendamentos/DayTimeline'
+import AgendamentoCard from '../../components/agendamentos/AgendamentoCard'
 import { useIsWebLayout } from '../../hooks/useIsWebLayout'
 import ProfissionalPickerSheet, { PickerItem } from '../../components/agendamentos/ProfissionalPickerSheet'
 
@@ -225,19 +226,32 @@ export default function DayMode({ selectedDate, onDateChange }: Props) {
 
   const totalDia = agendamentosDoDia.length
 
+  // Mobile: lista vertical cronológica do dia (padrão de app de calendário).
+  const agendamentosOrdenados = useMemo(
+    () =>
+      [...agendamentosDoDia].sort(
+        (a, b) => new Date(a.dataHoraInicio).getTime() - new Date(b.dataHoraInicio).getTime()
+      ),
+    [agendamentosDoDia]
+  )
+
   return (
     <div className={isWeb ? 'h-full flex flex-col gap-3' : 'space-y-4'}>
-      <div className={isWeb ? 'flex-shrink-0 space-y-3' : 'space-y-4'}>
+      <div className={isWeb ? 'flex-shrink-0 space-y-3' : 'space-y-3'}>
         <DiaHeader selectedDate={selectedDate} onChange={onDateChange} />
 
-        <ProfissionalFilterChips
-          mode="multi"
-          items={chips}
-          selectedIds={profissionaisSelecionados}
-          onChange={handleProfChange}
-          maxSelected={2}
-          onOpenPicker={() => setPickerOpen(true)}
-        />
+        {/* Chips de seleção de profissional dirigem as COLUNAS da timeline (web).
+            No mobile a agenda é uma lista cronológica única, sem colunas. */}
+        {isWeb && (
+          <ProfissionalFilterChips
+            mode="multi"
+            items={chips}
+            selectedIds={profissionaisSelecionados}
+            onChange={handleProfChange}
+            maxSelected={2}
+            onOpenPicker={() => setPickerOpen(true)}
+          />
+        )}
       </div>
 
       <ProfissionalPickerSheet
@@ -251,38 +265,59 @@ export default function DayMode({ selectedDate, onDateChange }: Props) {
 
       {isLoading ? (
         <div className="text-center py-12 text-slate-400 text-sm">Carregando agenda...</div>
-      ) : atendentesAtivos.length === 0 ? (
-        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
-          <div className="mx-auto h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mb-3">
-            <CalendarOff className="h-5 w-5" />
+      ) : isWeb ? (
+        // ─── DESKTOP: timeline de colunas ───
+        atendentesAtivos.length === 0 ? (
+          <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
+            <div className="mx-auto h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mb-3">
+              <CalendarOff className="h-5 w-5" />
+            </div>
+            <p className="text-sm text-slate-600">Nenhum profissional ativo cadastrado.</p>
           </div>
-          <p className="text-sm text-slate-600">Nenhum profissional ativo cadastrado.</p>
-        </div>
-      ) : idsExibidos.length === 0 ? (
-        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
-          <p className="text-sm text-slate-600">Selecione ao menos 1 profissional para ver a agenda.</p>
-        </div>
+        ) : idsExibidos.length === 0 ? (
+          <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
+            <p className="text-sm text-slate-600">Selecione ao menos 1 profissional para ver a agenda.</p>
+          </div>
+        ) : (
+          <div className="flex-1 min-h-0">
+            <DayTimeline
+              selectedDate={selectedDate}
+              colunas={colunas}
+              onSlotClick={handleSlotClick}
+              onAgendamentoClick={handleCardClick}
+              pxPerMin={1.6}
+              fillHeight
+            />
+          </div>
+        )
       ) : (
-        <div className={isWeb ? 'flex-1 min-h-0' : ''}>
-          <DayTimeline
-            selectedDate={selectedDate}
-            colunas={colunas}
-            onSlotClick={handleSlotClick}
-            onAgendamentoClick={handleCardClick}
-            pxPerMin={isWeb ? 1.6 : 1.2}
-            fillHeight={isWeb}
-          />
-        </div>
+        // ─── MOBILE: lista vertical cronológica ───
+        agendamentosOrdenados.length === 0 ? (
+          <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
+            <div className="mx-auto h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mb-3">
+              <CalendarOff className="h-5 w-5" />
+            </div>
+            <p className="text-sm text-slate-600">Nenhum agendamento neste dia.</p>
+            <p className="text-xs text-slate-400 mt-1">Toque no + para criar um.</p>
+          </div>
+        ) : (
+          <ul className="space-y-2">
+            {agendamentosOrdenados.map((a) => (
+              <li key={a.id}>
+                <AgendamentoCard
+                  agendamento={a}
+                  showProfissionalChip
+                  onClick={() => handleCardClick(a)}
+                />
+              </li>
+            ))}
+          </ul>
+        )
       )}
 
       {totalDia > 0 && !isWeb && (
         <p className="text-xs text-slate-500 text-center pt-1">
-          {totalDia} agendamento{totalDia !== 1 ? 's' : ''} no dia
-          {colunas.length < atendentesAtivos.length && (
-            <span className="text-slate-400">
-              {' '}· mostrando {colunas.length} de {atendentesAtivos.length} profissionais
-            </span>
-          )}
+          {totalDia} agendamento{totalDia !== 1 ? 's' : ''} neste dia
         </p>
       )}
 
