@@ -65,9 +65,16 @@ export default function DayTimeline({
     return () => ro.disconnect()
   }, [fillHeight])
 
-  // pxPerMin efetivo: quando fillHeight e já medimos, distribui a altura toda.
-  const pxPerMin = fillHeight && bodyH > 0 ? bodyH / totalMinutes : pxPerMinProp
-  const totalHeight = fillHeight && bodyH > 0 ? bodyH : totalMinutes * pxPerMinProp
+  // pxPerMin efetivo. Com fillHeight, preenche a altura MAS respeita um mínimo
+  // legível (30min ≈ 42px) — se a timeline toda não couber, o corpo rola por
+  // dentro (padrão de app de calendário). Sem isso, comprimir 15h na tela
+  // deixava os cards ilegíveis.
+  const MIN_PX_PER_MIN = 1.4
+  const pxPerMin =
+    fillHeight && bodyH > 0
+      ? Math.max(bodyH / totalMinutes, MIN_PX_PER_MIN)
+      : pxPerMinProp
+  const totalHeight = totalMinutes * pxPerMin
 
   const hours = useMemo(() => {
     const arr: number[] = []
@@ -76,6 +83,30 @@ export default function DayTimeline({
   }, [startHour, endHour])
 
   const slotsPerColumn = totalMinutes / slotMinutes
+  const startTotalMinEarly = startHour * 60
+
+  // Auto-scroll pro 1º agendamento do dia (fallback 8h) — 1x por dia, quando
+  // fillHeight e o corpo já foi medido. Evita abrir mostrando 7h vazio.
+  const scrolledKeyRef = useRef<string>('')
+  useEffect(() => {
+    if (!fillHeight) return
+    const el = bodyRef.current
+    if (!el || bodyH === 0) return
+    const key = format(selectedDate, 'yyyy-MM-dd')
+    if (scrolledKeyRef.current === key) return
+    let earliest = Infinity
+    colunas.forEach((c) =>
+      c.agendamentos.forEach((a) => {
+        if (a.dataHoraInicio) {
+          const d = new Date(a.dataHoraInicio)
+          earliest = Math.min(earliest, d.getHours() * 60 + d.getMinutes())
+        }
+      })
+    )
+    const targetMin = earliest === Infinity ? 8 * 60 : earliest
+    el.scrollTop = Math.max(0, (targetMin - startTotalMinEarly) * pxPerMin - 16)
+    scrolledKeyRef.current = key
+  }, [fillHeight, bodyH, selectedDate, colunas, pxPerMin, startTotalMinEarly])
 
   // Now line — atualiza a cada minuto
   const [now, setNow] = useState(() => new Date())
@@ -109,8 +140,8 @@ export default function DayTimeline({
         ))}
       </div>
 
-      {/* Corpo */}
-      <div ref={bodyRef} className={`flex relative overflow-x-auto ${fillHeight ? 'flex-1 min-h-0 overflow-y-hidden' : ''}`}>
+      {/* Corpo — rola por dentro quando a timeline não cabe (mantém header fixo) */}
+      <div ref={bodyRef} className={`flex relative overflow-x-auto ${fillHeight ? 'flex-1 min-h-0 overflow-y-auto' : ''}`}>
         {/* Eixo de horas */}
         <div className="w-10 flex-shrink-0 relative" style={{ height: `${totalHeight}px` }}>
           {hours.map((h) => (
