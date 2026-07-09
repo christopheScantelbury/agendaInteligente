@@ -176,7 +176,7 @@ export default function WeekMode({ selectedDate, onDateChange, onJumpToDayMode }
       {isLoading ? (
         <div className="text-center py-12 text-slate-400 text-sm">Carregando semana...</div>
       ) : (
-        <div className={isWeb ? 'flex-1 min-h-0 flex flex-col' : 'contents'}>
+        <div className={isWeb ? 'flex-1 min-h-0 flex flex-col' : ''}>
           {/* Mobile: layout vertical clássico (mantido) */}
           <ul className="space-y-2 lg:hidden">
             {dias.map((dia) => {
