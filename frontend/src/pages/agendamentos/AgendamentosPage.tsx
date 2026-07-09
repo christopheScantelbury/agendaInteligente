@@ -52,9 +52,10 @@ export default function AgendamentosPage() {
     setSearchParams(next, { replace: true })
   }
 
-  // #167: no layout web, expande max-width e ajusta padding pra usar melhor a tela
+  // #167: no layout web, ocupa a largura toda (cap 1920 pra ultrawide) — app
+  // de gestão desktop deve preencher a tela, não ficar centralizado numa faixa.
   const containerCls = isWeb
-    ? 'max-w-7xl mx-auto p-6 xl:p-8 space-y-5 pb-16'
+    ? 'max-w-[1920px] w-full mx-auto p-6 xl:p-8 space-y-5 pb-16'
     : 'max-w-3xl mx-auto p-4 sm:p-6 space-y-5 pb-32'
 
   return (

@@ -131,7 +131,7 @@ export default function Comissoes() {
   }
 
   return (
-    <div className={`${isWeb ? 'max-w-7xl p-6 xl:p-8' : 'max-w-5xl p-4 sm:p-6'} mx-auto space-y-5`}>
+    <div className={`${isWeb ? 'max-w-[1920px] w-full p-6 xl:p-8' : 'max-w-5xl p-4 sm:p-6'} mx-auto space-y-5`}>
       <header className="flex items-center gap-3">
         <div className="h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center flex-shrink-0">
           <DollarSign className="h-6 w-6" />

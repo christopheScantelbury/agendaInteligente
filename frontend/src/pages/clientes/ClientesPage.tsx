@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Search, Users } from 'lucide-react'
 import { useCategoria } from '../../hooks/useCategoria'
+import { useIsWebLayout } from '../../hooks/useIsWebLayout'
 import ClienteGerenciamento from './tabs/ClienteGerenciamento'
 import ClienteRetornos from './tabs/ClienteRetornos'
 import ClienteSumidos from './tabs/ClienteSumidos'
@@ -16,12 +17,13 @@ const TABS = [
 type TabId = typeof TABS[number]['id']
 
 export default function ClientesPage() {
+  const isWeb = useIsWebLayout()
   const { dict } = useCategoria()
   const [activeTab, setActiveTab] = useState<TabId>('gerenciamento')
   const [searchTerm, setSearchTerm] = useState('')
 
   return (
-    <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
+    <div className={`${isWeb ? 'max-w-[1920px] w-full p-6 xl:p-8' : 'max-w-3xl p-4 sm:p-6'} mx-auto space-y-6`}>
       {/* Header */}
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>

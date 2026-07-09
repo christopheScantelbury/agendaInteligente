@@ -31,10 +31,12 @@ export default function WebPageShell({
   icone: Icone,
   acoes,
   children,
-  maxWidth = 'max-w-7xl',
+  // Full width por padrão — layout de gestão desktop deve preencher a tela.
+  // Cap em 1920px só evita esticar demais em monitores ultrawide 4K.
+  maxWidth = 'max-w-[1920px]',
 }: Props) {
   return (
-    <div className={`${maxWidth} mx-auto p-6 xl:p-8 space-y-6`}>
+    <div className={`${maxWidth} w-full mx-auto p-6 xl:p-8 space-y-6`}>
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-start gap-3 min-w-0">
           {Icone && (
