@@ -16,6 +16,7 @@ import { agendamentoService, Agendamento } from '../../services/agendamentoServi
 import { atendenteService } from '../../services/atendenteService'
 import { dotClass } from '../../utils/statusAgendamento'
 import WeekTimeline, { Prof } from '../../components/agendamentos/WeekTimeline'
+import { useIsWebLayout } from '../../hooks/useIsWebLayout'
 import NovoAgendamentoSheet from '../../components/agendamentos/NovoAgendamentoSheet'
 import DetalhesSheet from '../../components/agendamentos/DetalhesSheet'
 
@@ -33,6 +34,7 @@ interface Props {
  *                  cores por profissional + granularidade 15/30/60m.
  */
 export default function WeekMode({ selectedDate, onDateChange, onJumpToDayMode }: Props) {
+  const isWeb = useIsWebLayout()
   const inicioSemana = startOfWeek(selectedDate, { weekStartsOn: 0 })
   const fimSemana = addDays(inicioSemana, 6)
 
@@ -133,9 +135,9 @@ export default function WeekMode({ selectedDate, onDateChange, onJumpToDayMode }
   }
 
   return (
-    <div className="space-y-4">
+    <div className={isWeb ? 'h-full flex flex-col gap-3' : 'space-y-4'}>
       {/* Header semana — comum a mobile+desktop */}
-      <div className="flex items-center gap-2">
+      <div className={`flex items-center gap-2 ${isWeb ? 'flex-shrink-0' : ''}`}>
         <button
           onClick={() => onDateChange(addDays(selectedDate, -7))}
           className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition"
@@ -174,7 +176,7 @@ export default function WeekMode({ selectedDate, onDateChange, onJumpToDayMode }
       {isLoading ? (
         <div className="text-center py-12 text-slate-400 text-sm">Carregando semana...</div>
       ) : (
-        <>
+        <div className={isWeb ? 'flex-1 min-h-0 flex flex-col' : 'contents'}>
           {/* Mobile: layout vertical clássico (mantido) */}
           <ul className="space-y-2 lg:hidden">
             {dias.map((dia) => {
@@ -253,8 +255,9 @@ export default function WeekMode({ selectedDate, onDateChange, onJumpToDayMode }
             onGranularidadeChange={setGranularidade}
             onSlotClick={handleSlotClick}
             onAgendamentoClick={handleAgendamentoClick}
+            fillHeight={isWeb}
           />
-        </>
+        </div>
       )}
 
       {/* Sheets — reusa mesmos do DayMode */}

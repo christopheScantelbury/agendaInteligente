@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState } from 'react'
+import { useMemo, useEffect, useState, useRef } from 'react'
 import { format, isSameDay } from 'date-fns'
 import { Agendamento } from '../../services/agendamentoService'
 
@@ -37,10 +37,13 @@ interface Props {
   startHour?: number
   /** Hora final do range — exclusiva (default 22) */
   endHour?: number
-  /** Pixels por minuto. Default 1.2 (ex.: 30min = 36px) */
+  /** Pixels por minuto. Default 1.2 (ex.: 30min = 36px). Ignorado se fillHeight. */
   pxPerMin?: number
   /** Granularidade de slots clicáveis em minutos. Default 30. */
   slotMinutes?: number
+  /** Quando true, a timeline mede a altura disponível e calcula pxPerMin pra
+   *  caber exatamente na tela (fit-to-viewport no desktop). */
+  fillHeight?: boolean
   onSlotClick?: (date: Date, atendenteId: number) => void
   onAgendamentoClick?: (a: Agendamento) => void
 }
@@ -60,13 +63,32 @@ export default function DayTimeline({
   colunas,
   startHour = 7,
   endHour = 22,
-  pxPerMin = 1.2,
+  pxPerMin: pxPerMinProp = 1.2,
   slotMinutes = 30,
+  fillHeight = false,
   onSlotClick,
   onAgendamentoClick,
 }: Props) {
   const totalMinutes = (endHour - startHour) * 60
-  const totalHeight = totalMinutes * pxPerMin
+
+  // fillHeight: mede o corpo e calcula pxPerMin pra caber na altura disponível.
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const [bodyH, setBodyH] = useState(0)
+  useEffect(() => {
+    if (!fillHeight) return
+    const el = bodyRef.current
+    if (!el) return
+    const ro = new ResizeObserver((entries) => {
+      const h = entries[0]?.contentRect.height ?? 0
+      if (h > 0) setBodyH(h)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [fillHeight])
+
+  // pxPerMin efetivo: quando fillHeight e já medimos, distribui a altura toda.
+  const pxPerMin = fillHeight && bodyH > 0 ? bodyH / totalMinutes : pxPerMinProp
+  const totalHeight = fillHeight && bodyH > 0 ? bodyH : totalMinutes * pxPerMinProp
 
   const hours = useMemo(() => {
     const arr: number[] = []
@@ -91,11 +113,9 @@ export default function DayTimeline({
   const nowOffset = (nowMinutes - startTotalMin) * pxPerMin
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200">
-      {/* Header com nomes dos profissionais — sticky funciona porque o pai
-          NÃO tem mais overflow-hidden (esse era o motivo do scroll vertical
-          parecer travado em alguns layouts). */}
-      <div className="flex border-b border-slate-200 bg-slate-50 sticky top-0 z-10 rounded-t-2xl">
+    <div className={`bg-white rounded-2xl border border-slate-200 ${fillHeight ? 'h-full flex flex-col overflow-hidden' : ''}`}>
+      {/* Header com nomes dos profissionais */}
+      <div className={`flex border-b border-slate-200 bg-slate-50 z-10 rounded-t-2xl ${fillHeight ? 'flex-shrink-0' : 'sticky top-0'}`}>
         <div className="w-10 flex-shrink-0" />
         {colunas.map((col) => (
           <div
@@ -111,7 +131,7 @@ export default function DayTimeline({
       </div>
 
       {/* Corpo */}
-      <div className="flex relative overflow-x-auto">
+      <div ref={bodyRef} className={`flex relative overflow-x-auto ${fillHeight ? 'flex-1 min-h-0 overflow-y-hidden' : ''}`}>
         {/* Eixo de horas */}
         <div className="w-10 flex-shrink-0 relative" style={{ height: `${totalHeight}px` }}>
           {hours.map((h) => (

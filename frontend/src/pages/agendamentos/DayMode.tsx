@@ -226,17 +226,19 @@ export default function DayMode({ selectedDate, onDateChange }: Props) {
   const totalDia = agendamentosDoDia.length
 
   return (
-    <div className="space-y-4">
-      <DiaHeader selectedDate={selectedDate} onChange={onDateChange} />
+    <div className={isWeb ? 'h-full flex flex-col gap-3' : 'space-y-4'}>
+      <div className={isWeb ? 'flex-shrink-0 space-y-3' : 'space-y-4'}>
+        <DiaHeader selectedDate={selectedDate} onChange={onDateChange} />
 
-      <ProfissionalFilterChips
-        mode="multi"
-        items={chips}
-        selectedIds={profissionaisSelecionados}
-        onChange={handleProfChange}
-        maxSelected={2}
-        onOpenPicker={() => setPickerOpen(true)}
-      />
+        <ProfissionalFilterChips
+          mode="multi"
+          items={chips}
+          selectedIds={profissionaisSelecionados}
+          onChange={handleProfChange}
+          maxSelected={2}
+          onOpenPicker={() => setPickerOpen(true)}
+        />
+      </div>
 
       <ProfissionalPickerSheet
         isOpen={pickerOpen}
@@ -261,16 +263,19 @@ export default function DayMode({ selectedDate, onDateChange }: Props) {
           <p className="text-sm text-slate-600">Selecione ao menos 1 profissional para ver a agenda.</p>
         </div>
       ) : (
-        <DayTimeline
-          selectedDate={selectedDate}
-          colunas={colunas}
-          onSlotClick={handleSlotClick}
-          onAgendamentoClick={handleCardClick}
-          pxPerMin={isWeb ? 1.6 : 1.2}
-        />
+        <div className={isWeb ? 'flex-1 min-h-0' : ''}>
+          <DayTimeline
+            selectedDate={selectedDate}
+            colunas={colunas}
+            onSlotClick={handleSlotClick}
+            onAgendamentoClick={handleCardClick}
+            pxPerMin={isWeb ? 1.6 : 1.2}
+            fillHeight={isWeb}
+          />
+        </div>
       )}
 
-      {totalDia > 0 && (
+      {totalDia > 0 && !isWeb && (
         <p className="text-xs text-slate-500 text-center pt-1">
           {totalDia} agendamento{totalDia !== 1 ? 's' : ''} no dia
           {colunas.length < atendentesAtivos.length && (

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { format, addDays, isWithinInterval, startOfDay, endOfDay, isToday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Users, Plus } from 'lucide-react'
@@ -34,6 +34,8 @@ interface Props {
   startHour?: number
   /** Hora final exclusiva (default 20). */
   endHour?: number
+  /** Preenche a altura disponível (fit-to-viewport no desktop). */
+  fillHeight?: boolean
 }
 
 // Paleta fixa por índice do prof selecionado (base do Google Cal).
@@ -57,6 +59,7 @@ export default function WeekTimeline({
   onGranularidadeChange,
   startHour = 7,
   endHour = 20,
+  fillHeight = false,
 }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false)
 
@@ -66,8 +69,25 @@ export default function WeekTimeline({
   )
 
   const totalMinutes = (endHour - startHour) * 60
-  const pxPerMin = granularidade === 15 ? 1.4 : granularidade === 30 ? 1.0 : 0.7
-  const totalHeight = totalMinutes * pxPerMin
+
+  // fillHeight: mede o corpo e calcula pxPerMin pra caber na altura da tela.
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const [bodyH, setBodyH] = useState(0)
+  useEffect(() => {
+    if (!fillHeight) return
+    const el = bodyRef.current
+    if (!el) return
+    const ro = new ResizeObserver((entries) => {
+      const h = entries[0]?.contentRect.height ?? 0
+      if (h > 0) setBodyH(h)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [fillHeight])
+
+  const pxPerMinBase = granularidade === 15 ? 1.4 : granularidade === 30 ? 1.0 : 0.7
+  const pxPerMin = fillHeight && bodyH > 0 ? bodyH / totalMinutes : pxPerMinBase
+  const totalHeight = fillHeight && bodyH > 0 ? bodyH : totalMinutes * pxPerMinBase
   const slotsPorDia = totalMinutes / granularidade
   const startTotalMin = startHour * 60
   const endTotalMin = endHour * 60
@@ -145,9 +165,9 @@ export default function WeekTimeline({
   )
 
   return (
-    <div className="hidden lg:block bg-white rounded-2xl border border-slate-200">
+    <div className={`hidden lg:flex bg-white rounded-2xl border border-slate-200 ${fillHeight ? 'h-full flex-col overflow-hidden' : 'lg:flex-col'}`}>
       {/* Barra de controles */}
-      <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-slate-200">
+      <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-slate-200 flex-shrink-0">
         {/* Chips de profs selecionados */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500">
@@ -211,7 +231,7 @@ export default function WeekTimeline({
       </div>
 
       {/* Header dos dias */}
-      <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-slate-200 bg-slate-50">
+      <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-slate-200 bg-slate-50 flex-shrink-0">
         <div className="border-r border-slate-200" />
         {dias.map((d) => {
           const hoje = isToday(d)
@@ -253,7 +273,8 @@ export default function WeekTimeline({
         })}
       </div>
 
-      {/* Corpo — grid com eixo Y + 7 colunas */}
+      {/* Corpo — wrapper mede a altura disponível (fillHeight); grid usa ela */}
+      <div ref={bodyRef} className={fillHeight ? 'flex-1 min-h-0 overflow-hidden' : ''}>
       <div
         className="grid grid-cols-[60px_repeat(7,1fr)] relative"
         style={{ height: `${totalHeight}px` }}
@@ -351,6 +372,7 @@ export default function WeekTimeline({
             </div>
           )
         })}
+      </div>
       </div>
 
       <ProfissionalPickerSheet
