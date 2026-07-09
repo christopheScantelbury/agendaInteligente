@@ -162,7 +162,7 @@ export default function MonthMode({ selectedDate, onDateChange, onJumpToDayMode 
                   key={idx}
                   onClick={() => onJumpToDayMode(dia)}
                   disabled={!noMes}
-                  className={`${isWeb ? 'min-h-0 border border-slate-100' : 'aspect-square'} flex flex-col items-stretch justify-start py-1.5 px-1 rounded-lg transition relative overflow-hidden ${
+                  className={`${isWeb ? 'min-h-0 border border-slate-100 overflow-hidden' : 'aspect-square'} flex flex-col items-stretch justify-start py-1.5 px-1 rounded-lg transition relative ${
                     !noMes
                       ? 'text-slate-300 cursor-default'
                       : isSelected
