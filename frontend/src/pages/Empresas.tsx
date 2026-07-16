@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { empresaService, Empresa, EmpresaEstatisticas } from '../services/empresaService'
+import { empresaService, Empresa, EmpresaEstatisticas, CategoriaEmpresa } from '../services/empresaService'
 import { planoService, Plano } from '../services/planoService'
 import { authService } from '../services/authService'
 import { perfilService } from '../services/perfilService'
@@ -16,6 +16,21 @@ import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { maskPhone, maskCEP, maskCNPJ, maskEmail } from '../utils/masks'
 import { buscarEnderecoPorCep } from '../utils/viaCep'
+
+// Categoria define a terminologia do sistema (ver lib/categoria/dictionary.ts)
+// e é NOT NULL no banco — precisa estar no form.
+const CATEGORIAS: Array<{ value: CategoriaEmpresa; label: string }> = [
+  { value: 'SALAO_BELEZA', label: 'Salão de beleza' },
+  { value: 'ESTETICA', label: 'Estética' },
+  { value: 'ACADEMIA', label: 'Academia' },
+  { value: 'CONSULTORIO_MEDICO', label: 'Consultório médico' },
+  { value: 'CONSULTORIO_DENTARIO', label: 'Consultório odontológico' },
+  { value: 'FISIOTERAPIA', label: 'Fisioterapia' },
+  { value: 'PSICOLOGIA', label: 'Psicologia' },
+  { value: 'NUTRICIONISTA', label: 'Nutrição' },
+  { value: 'VETERINARIA', label: 'Veterinária' },
+  { value: 'OUTROS', label: 'Outros' },
+]
 
 const SLUG_REGEX = /^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])$/
 const SLUG_MIN = 3
@@ -257,6 +272,7 @@ function EmpresaForm({ empresa, onClose }: { empresa: Empresa | null; onClose: (
       slugPublico: '',
       logo: undefined,
       corApp: '#7C3AED',
+      categoria: 'OUTROS',
     }
   )
 
@@ -414,6 +430,25 @@ function EmpresaForm({ empresa, onClose }: { empresa: Empresa | null; onClose: (
             onChange={(e) => setFormData({ ...formData, razaoSocial: e.target.value })}
             className={inputBase}
           />
+        </FormField>
+        <FormField label="Categoria" required>
+          <select
+            required
+            value={formData.categoria ?? 'OUTROS'}
+            onChange={(e) =>
+              setFormData({ ...formData, categoria: e.target.value as CategoriaEmpresa })
+            }
+            className={inputBase}
+          >
+            {CATEGORIAS.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] text-slate-400 mt-1">
+            Define os termos usados no sistema (ex.: "cliente" x "paciente").
+          </p>
         </FormField>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <FormField label="CNPJ">

@@ -105,6 +105,10 @@ public class Empresa {
     protected void onCreate() {
         dataCriacao = LocalDateTime.now();
         dataAtualizacao = LocalDateTime.now();
+        // Rede de segurança: categoria é NOT NULL, mas o MapStruct (toEntity)
+        // ignora o @Builder.Default e grava null quando o DTO não manda o campo.
+        if (categoria == null) categoria = CategoriaEmpresa.OUTROS;
+        if (ativo == null) ativo = true;
     }
 
     @PreUpdate
