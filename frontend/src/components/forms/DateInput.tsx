@@ -1,4 +1,25 @@
-import { useId, useMemo } from 'react'
+import { useId, useMemo, useState, useEffect } from 'react'
+
+/**
+ * Renderiza APENAS a variante visível (mobile OU desktop) em vez de esconder
+ * uma por CSS. Motivo: o browser valida controles com display:none também —
+ * um input escondido inválido (required vazio ou fora do min/max) não pode ser
+ * focado pra mostrar o balão de erro, então o submit é bloqueado em SILÊNCIO.
+ */
+function useIsSmUp(): boolean {
+  const query = '(min-width: 640px)'
+  const [isSmUp, setIsSmUp] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(query).matches
+  )
+  useEffect(() => {
+    const mq = window.matchMedia(query)
+    const onChange = (e: MediaQueryListEvent) => setIsSmUp(e.matches)
+    setIsSmUp(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  return isSmUp
+}
 
 type Props = {
   /** Valor no formato ISO yyyy-MM-dd (ou '' / null pra vazio). */
@@ -65,6 +86,7 @@ export default function DateInput({
 }: Props) {
   const reactId = useId()
   const baseId = id ?? `date-${reactId}`
+  const isSmUp = useIsSmUp()
   const today = todayIso()
   const minIso = min ?? '1900-01-01'
   const maxIso = max ?? (futuroDesabilitado ? today : '2099-12-31')
@@ -107,16 +129,21 @@ export default function DateInput({
     }
     const maxDia = diasNoMes(Number(y), Number(m))
     const diaNorm = Math.min(Number(d), maxDia)
-    const iso = `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(diaNorm).padStart(2, '0')}`
+    let iso = `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(diaNorm).padStart(2, '0')}`
+    // Os selects não têm como impedir escolher fora do range (só o ano é
+    // limitado), então fazemos o clamp aqui — sem isso dava pra emitir uma
+    // data antes do `min` (ex.: expiração no passado) e o backend recusava.
+    if (iso < minIso) iso = minIso
+    if (iso > maxIso) iso = maxIso
     onChange(iso)
   }
 
   const baseInput =
     'rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition disabled:bg-slate-50 disabled:text-slate-400'
 
-  return (
-    <>
-      {/* Mobile: input nativo — picker do SO é excelente e familiar */}
+  // Mobile: input nativo — picker do SO é excelente e familiar.
+  if (!isSmUp) {
+    return (
       <input
         type="date"
         value={value || ''}
@@ -126,11 +153,15 @@ export default function DateInput({
         required={required}
         disabled={disabled}
         id={baseId}
-        className={`block w-full sm:hidden ${baseInput} ${className}`}
+        className={`block w-full ${baseInput} ${className}`}
       />
+    )
+  }
 
+  return (
+    <>
       {/* Desktop: 3 selects compactos — escolha por dia/mês/ano sem abrir calendário */}
-      <div className={`hidden sm:grid grid-cols-3 gap-2 ${className}`} role="group" aria-labelledby={baseId}>
+      <div className={`grid grid-cols-3 gap-2 ${className}`} role="group" aria-labelledby={baseId}>
         <select
           id={`${baseId}-dia`}
           value={diaSel}
