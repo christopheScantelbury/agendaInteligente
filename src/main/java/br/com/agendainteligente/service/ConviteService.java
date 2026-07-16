@@ -257,6 +257,10 @@ public class ConviteService {
             Unidade un = Unidade.builder()
                     .nome(u.getNome().trim())
                     .ativo(true)
+                    // V70: horários são NOT NULL. Default comercial 08:00–18:00;
+                    // o admin ajusta depois em Configurações > Unidades.
+                    .horarioAbertura(java.time.LocalTime.of(8, 0))
+                    .horarioFechamento(java.time.LocalTime.of(18, 0))
                     .empresa(empresa)
                     .build();
             un = unidadeRepository.save(un);

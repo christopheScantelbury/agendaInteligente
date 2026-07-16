@@ -58,11 +58,15 @@ public class Unidade {
 
     // Obrigatório (V70) — necessário pra fallback de slots automáticos no agendamento.
     // Migration faz backfill 08-18 pra registros antigos antes de aplicar NOT NULL.
+    // @Builder.Default + guard no onCreate: qualquer caminho que crie Unidade sem
+    // informar horário recebe o padrão comercial em vez de estourar NOT NULL.
     @Column(name = "horario_abertura", nullable = false)
-    private java.time.LocalTime horarioAbertura;
+    @Builder.Default
+    private java.time.LocalTime horarioAbertura = java.time.LocalTime.of(8, 0);
 
     @Column(name = "horario_fechamento", nullable = false)
-    private java.time.LocalTime horarioFechamento;
+    @Builder.Default
+    private java.time.LocalTime horarioFechamento = java.time.LocalTime.of(18, 0);
 
     @Column(length = 14)
     private String cnpj;
@@ -163,6 +167,10 @@ public class Unidade {
     protected void onCreate() {
         dataCriacao = LocalDateTime.now();
         dataAtualizacao = LocalDateTime.now();
+        // Rede de segurança: MapStruct/new Unidade() ignoram @Builder.Default e
+        // deixariam os horários null → violação de NOT NULL (V70) no INSERT.
+        if (horarioAbertura == null) horarioAbertura = java.time.LocalTime.of(8, 0);
+        if (horarioFechamento == null) horarioFechamento = java.time.LocalTime.of(18, 0);
     }
 
     @PreUpdate

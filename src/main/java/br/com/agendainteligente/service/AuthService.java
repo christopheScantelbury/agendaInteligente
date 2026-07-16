@@ -187,6 +187,11 @@ public class AuthService {
                 .email(usuario.getEmail())
                 .telefone(usuario.getTelefone())
                 .ativo(true)
+                // V70 tornou horários NOT NULL — sem isso o cadastro quebra com
+                // DataIntegrityViolation. Default comercial 08:00–18:00; o admin
+                // ajusta depois em Configurações > Unidades.
+                .horarioAbertura(java.time.LocalTime.of(8, 0))
+                .horarioFechamento(java.time.LocalTime.of(18, 0))
                 .empresa(empresa)
                 .adminUnicoId(usuario.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR ? usuario.getId() : null)
                 .build();
