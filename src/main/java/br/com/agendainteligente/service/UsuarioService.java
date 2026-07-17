@@ -219,6 +219,7 @@ public class UsuarioService {
         if (usuarioDTO.getPerfilId() != null) {
             Perfil perfil = perfilRepository.findById(usuarioDTO.getPerfilId())
                     .orElseThrow(() -> new ResourceNotFoundException("Perfil não encontrado"));
+            validarCargoDoTenant(perfil);
             usuario.setPerfil(perfil);
         }
 
@@ -296,6 +297,7 @@ public class UsuarioService {
         if (usuarioDTO.getPerfilId() != null) {
             Perfil perfil = perfilRepository.findById(usuarioDTO.getPerfilId())
                     .orElseThrow(() -> new ResourceNotFoundException("Perfil não encontrado"));
+            validarCargoDoTenant(perfil);
             usuario.setPerfil(perfil);
         } else if (usuarioDTO.getPerfilId() == null && usuarioDTO.getPerfilSistema() != null) {
             // Se perfilSistema foi fornecido mas perfilId não, limpar perfil customizado
@@ -411,6 +413,23 @@ public class UsuarioService {
         validarAcessoAdminUnico(usuarioLogado, usuario);
         usuarioRepository.deleteById(id);
         log.info("Usuário excluído com sucesso. ID: {}", id);
+    }
+
+    /**
+     * #171: cargo é do tenant. Sem isto, uma empresa consegue carimbar no próprio
+     * usuário um cargo de OUTRA empresa passando o perfilId — as permissões do
+     * usuário passariam a depender de um cargo que ele não controla (e some se a
+     * outra empresa excluir). 404 em vez de 403: não revela recurso alheio.
+     */
+    private void validarCargoDoTenant(Perfil perfil) {
+        if (perfil == null || perfil.getAdminUnicoId() == null) return; // cargo global de sistema
+        Usuario logado = getUsuarioLogado();
+        // ADMIN global (sem tenant) administra qualquer empresa
+        if (logado.getPerfil() == Usuario.PerfilUsuario.ADMIN && logado.getAdminUnicoId() == null) return;
+        Long tenant = logado.getAdminUnicoId() != null ? logado.getAdminUnicoId() : logado.getId();
+        if (!perfil.getAdminUnicoId().equals(tenant)) {
+            throw new ResourceNotFoundException("Perfil não encontrado");
+        }
     }
 
     private Usuario getUsuarioLogado() {

@@ -152,6 +152,10 @@ public class Usuario implements UserDetails {
     protected void onCreate() {
         dataCriacao = LocalDateTime.now();
         dataAtualizacao = LocalDateTime.now();
+        // Guard: MapStruct (usuarioMapper.toEntity) ignora @Builder.Default e
+        // deixaria ativo=null, violando o NOT NULL — mesma armadilha que quebrou
+        // Empresa (categoria) e Unidade (horario_abertura).
+        if (ativo == null) ativo = true;
     }
 
     @PreUpdate
