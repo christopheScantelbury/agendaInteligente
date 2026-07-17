@@ -91,7 +91,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_perfis_global_nome
 CREATE INDEX IF NOT EXISTS idx_perfis_admin_unico ON perfis (admin_unico_id);
 
 -- ── 4. Convite aponta pro cargo escolhido ───────────────────────────────────
-ALTER TABLE convites_acesso
+ALTER TABLE convite_acesso
     ADD COLUMN IF NOT EXISTS perfil_id BIGINT;
 
 DO $$
@@ -100,12 +100,12 @@ BEGIN
         SELECT 1 FROM information_schema.table_constraints
         WHERE constraint_name = 'fk_convite_acesso_perfil'
     ) THEN
-        ALTER TABLE convites_acesso
+        ALTER TABLE convite_acesso
             ADD CONSTRAINT fk_convite_acesso_perfil
             FOREIGN KEY (perfil_id) REFERENCES perfis(id)
             ON DELETE SET NULL;
     END IF;
 END $$;
 
-COMMENT ON COLUMN convites_acesso.perfil_id IS
+COMMENT ON COLUMN convite_acesso.perfil_id IS
     'Cargo que o convidado assume ao se cadastrar (#171). NULL = comportamento legado (perfil pelo tipo do link).';
