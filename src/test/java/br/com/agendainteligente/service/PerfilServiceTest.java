@@ -1,6 +1,7 @@
 package br.com.agendainteligente.service;
 
 import br.com.agendainteligente.domain.entity.Perfil;
+import br.com.agendainteligente.domain.entity.Usuario;
 import br.com.agendainteligente.dto.PerfilDTO;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
@@ -24,6 +25,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,18 +44,30 @@ class PerfilServiceTest {
     @InjectMocks
     private PerfilService perfilService;
 
+    private static final Long TENANT_ID = 99L;
+
     private Perfil perfil;
     private PerfilDTO perfilDTO;
+    private Usuario usuarioLogado;
 
     @BeforeEach
     void setUp() {
-        // Autenticar como ADMIN — bypass da validarPermissaoEditarPerfis
+        // #171: PerfilService escopa por tenant — o service resolve o Usuario
+        // pelo e-mail do SecurityContext, então o mock precisa devolvê-lo.
         TestSecurityContext.authenticateAs("admin@test.com", "ROLE_ADMIN");
+        usuarioLogado = Usuario.builder()
+                .id(TENANT_ID)
+                .email("admin@test.com")
+                .perfilSistema(Usuario.PerfilUsuario.ADMINISTRADOR)
+                .build();
+        when(usuarioRepository.findByEmail("admin@test.com")).thenReturn(Optional.of(usuarioLogado));
 
         perfil = Perfil.builder()
                 .id(1L)
                 .nome("VENDEDOR")
                 .descricao("Perfil de vendedor")
+                .adminUnicoId(TENANT_ID)
+                .perfilSistemaBase(Usuario.PerfilUsuario.PROFISSIONAL)
                 .sistema(false)
                 .ativo(true)
                 .permissoesMenu("[\"/\", \"/clientes\", \"/vendas\"]")
@@ -63,6 +77,7 @@ class PerfilServiceTest {
                 .id(1L)
                 .nome("VENDEDOR")
                 .descricao("Perfil de vendedor")
+                .perfilSistemaBase(Usuario.PerfilUsuario.PROFISSIONAL)
                 .sistema(false)
                 .ativo(true)
                 .permissoesMenu(Arrays.asList("/", "/clientes", "/vendas"))
@@ -78,7 +93,7 @@ class PerfilServiceTest {
     void testListarTodos() {
         // Arrange
         List<Perfil> perfis = Arrays.asList(perfil);
-        when(perfilRepository.findAll()).thenReturn(perfis);
+        when(perfilRepository.findVisiveisPorTenant(TENANT_ID)).thenReturn(perfis);
         when(perfilMapper.toDTO(any(Perfil.class))).thenReturn(perfilDTO);
 
         // Act
@@ -88,14 +103,16 @@ class PerfilServiceTest {
         assertNotNull(result);
         assertEquals(1, result.size());
         assertEquals("VENDEDOR", result.get(0).getNome());
-        verify(perfilRepository, times(1)).findAll();
+        // #171 SEC: nunca findAll() — vazaria cargos de outros tenants
+        verify(perfilRepository, never()).findAll();
+        verify(perfilRepository, times(1)).findVisiveisPorTenant(TENANT_ID);
     }
 
     @Test
     void testListarAtivos() {
         // Arrange
         List<Perfil> perfis = Arrays.asList(perfil);
-        when(perfilRepository.findByAtivoTrue()).thenReturn(perfis);
+        when(perfilRepository.findVisiveisPorTenant(TENANT_ID)).thenReturn(perfis);
         when(perfilMapper.toDTO(any(Perfil.class))).thenReturn(perfilDTO);
 
         // Act
@@ -104,14 +121,15 @@ class PerfilServiceTest {
         // Assert
         assertNotNull(result);
         assertEquals(1, result.size());
-        verify(perfilRepository, times(1)).findByAtivoTrue();
+        verify(perfilRepository, never()).findByAtivoTrue();
+        verify(perfilRepository, times(1)).findVisiveisPorTenant(TENANT_ID);
     }
 
     @Test
     void testListarCustomizados() {
         // Arrange
         List<Perfil> perfis = Arrays.asList(perfil);
-        when(perfilRepository.findBySistemaFalse()).thenReturn(perfis);
+        when(perfilRepository.findByAdminUnicoIdAndAtivoTrueOrderByNomeAsc(TENANT_ID)).thenReturn(perfis);
         when(perfilMapper.toDTO(any(Perfil.class))).thenReturn(perfilDTO);
 
         // Act
@@ -120,7 +138,8 @@ class PerfilServiceTest {
         // Assert
         assertNotNull(result);
         assertEquals(1, result.size());
-        verify(perfilRepository, times(1)).findBySistemaFalse();
+        verify(perfilRepository, never()).findBySistemaFalse();
+        verify(perfilRepository, times(1)).findByAdminUnicoIdAndAtivoTrueOrderByNomeAsc(TENANT_ID);
     }
 
     @Test
@@ -191,7 +210,7 @@ class PerfilServiceTest {
                 .ativo(true)
                 .build();
 
-        when(perfilRepository.existsByNome("NOVO_PERFIL")).thenReturn(false);
+        when(perfilRepository.existsByAdminUnicoIdAndNomeIgnoreCase(TENANT_ID, "NOVO_PERFIL")).thenReturn(false);
         when(perfilMapper.toEntity(any(PerfilDTO.class))).thenReturn(perfilSalvo);
         when(perfilRepository.save(any(Perfil.class))).thenReturn(perfilSalvo);
         when(perfilMapper.toDTO(perfilSalvo)).thenReturn(dtoCriacao);
@@ -202,7 +221,7 @@ class PerfilServiceTest {
         // Assert
         assertNotNull(result);
         assertFalse(result.getSistema()); // Deve ser false para perfis customizados
-        verify(perfilRepository, times(1)).existsByNome("NOVO_PERFIL");
+        verify(perfilRepository, times(1)).existsByAdminUnicoIdAndNomeIgnoreCase(TENANT_ID, "NOVO_PERFIL");
         verify(perfilRepository, times(1)).save(any(Perfil.class));
     }
 
@@ -213,11 +232,11 @@ class PerfilServiceTest {
                 .nome("VENDEDOR")
                 .build();
 
-        when(perfilRepository.existsByNome("VENDEDOR")).thenReturn(true);
+        when(perfilRepository.existsByAdminUnicoIdAndNomeIgnoreCase(TENANT_ID, "VENDEDOR")).thenReturn(true);
 
         // Act & Assert
         assertThrows(BusinessException.class, () -> perfilService.criar(dtoCriacao));
-        verify(perfilRepository, times(1)).existsByNome("VENDEDOR");
+        verify(perfilRepository, times(1)).existsByAdminUnicoIdAndNomeIgnoreCase(TENANT_ID, "VENDEDOR");
         verify(perfilRepository, never()).save(any(Perfil.class));
     }
 
@@ -280,7 +299,8 @@ class PerfilServiceTest {
                 .build();
 
         when(perfilRepository.findById(1L)).thenReturn(Optional.of(perfil));
-        when(perfilRepository.existsByNome("OUTRO_PERFIL")).thenReturn(true);
+        // #171: unicidade é por tenant, não global
+        when(perfilRepository.existsByAdminUnicoIdAndNomeIgnoreCase(TENANT_ID, "OUTRO_PERFIL")).thenReturn(true);
 
         // Act & Assert
         assertThrows(BusinessException.class, () -> perfilService.atualizar(1L, dtoAtualizacao));
@@ -332,5 +352,53 @@ class PerfilServiceTest {
         assertThrows(BusinessException.class, () -> perfilService.excluir(1L));
         verify(perfilRepository, times(1)).findById(1L);
         verify(perfilRepository, never()).delete(any(Perfil.class));
+    }
+
+    // ── #171 SEC ────────────────────────────────────────────────────────────
+
+    @Test
+    void buscarPorId_cargoDeOutroTenant_naoVaza() {
+        // Cargo pertencente a OUTRA empresa
+        Perfil deOutroTenant = Perfil.builder()
+                .id(50L)
+                .nome("Cabeleireiro(a)")
+                .adminUnicoId(TENANT_ID + 1)
+                .perfilSistemaBase(Usuario.PerfilUsuario.PROFISSIONAL)
+                .sistema(false)
+                .ativo(true)
+                .build();
+        when(perfilRepository.findById(50L)).thenReturn(Optional.of(deOutroTenant));
+
+        // 404 em vez de 403: não revela que o recurso existe
+        assertThrows(ResourceNotFoundException.class, () -> perfilService.buscarPorId(50L));
+    }
+
+    @Test
+    void excluir_cargoDeOutroTenant_naoApaga() {
+        Perfil deOutroTenant = Perfil.builder()
+                .id(51L)
+                .nome("Recepção")
+                .adminUnicoId(TENANT_ID + 1)
+                .perfilSistemaBase(Usuario.PerfilUsuario.PROFISSIONAL)
+                .sistema(false)
+                .ativo(true)
+                .build();
+        when(perfilRepository.findById(51L)).thenReturn(Optional.of(deOutroTenant));
+
+        assertThrows(ResourceNotFoundException.class, () -> perfilService.excluir(51L));
+        verify(perfilRepository, never()).delete(any(Perfil.class));
+        verify(perfilRepository, never()).deleteById(anyLong());
+    }
+
+    @Test
+    void criar_cargoComBaseAdmin_bloqueiaEscalada() {
+        // ADMINISTRADOR tentando fabricar um cargo com poder de ADMIN da plataforma
+        PerfilDTO escalada = PerfilDTO.builder()
+                .nome("SuperUser")
+                .perfilSistemaBase(Usuario.PerfilUsuario.ADMIN)
+                .build();
+
+        assertThrows(BusinessException.class, () -> perfilService.criar(escalada));
+        verify(perfilRepository, never()).save(any(Perfil.class));
     }
 }

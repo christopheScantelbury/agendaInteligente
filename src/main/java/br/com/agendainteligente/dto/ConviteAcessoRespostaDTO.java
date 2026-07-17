@@ -21,4 +21,7 @@ public class ConviteAcessoRespostaDTO {
     private LocalDate dataExpiracaoAcesso;
     private LocalDateTime usadoEm;
     private LocalDateTime dataCriacao;
+    /** #171: cargo do convidado (exibido na lista de links). */
+    private Long perfilId;
+    private String perfilNome;
 }

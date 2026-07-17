@@ -6,6 +6,7 @@ import br.com.agendainteligente.domain.entity.Usuario;
 import br.com.agendainteligente.repository.AgendamentoRepository;
 import br.com.agendainteligente.repository.AtendenteRepository;
 import br.com.agendainteligente.repository.EmpresaRepository;
+import br.com.agendainteligente.repository.PerfilRepository;
 import br.com.agendainteligente.repository.ServicoRepository;
 import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.repository.UsuarioRepository;
@@ -51,6 +52,7 @@ public class DashboardGerenteController {
     private final UsuarioRepository usuarioRepository;
     private final ConviteAcessoRepository conviteAcessoRepository;
     private final EmpresaRepository empresaRepository;
+    private final PerfilRepository perfilRepository;
     private final SecurityHelper securityHelper;
 
     @GetMapping("/kpis")
@@ -231,6 +233,9 @@ public class DashboardGerenteController {
                     return true;
                 });
         boolean convidouEquipe = !conviteAcessoRepository.findByCriadoPorIdOrderByDataCriacaoDesc(usuario.getId()).isEmpty();
+        // #171: cargos são pré-requisito de convidar equipe — sem eles, não há o
+        // que escolher no link e a pessoa entrava com perfil errado.
+        boolean definiuCargos = !perfilRepository.findByAdminUnicoIdAndAtivoTrueOrderByNomeAsc(adminId).isEmpty();
 
         List<Map<String, Object>> tarefas = new ArrayList<>();
         tarefas.add(tarefa("servico", "Cadastrar primeiro serviço", "/configuracoes/servicos", temServico));
@@ -238,7 +243,8 @@ public class DashboardGerenteController {
         tarefas.add(tarefa("horarios", "Definir horários de funcionamento", "/configuracoes/horarios", temHorarios));
         tarefas.add(tarefa("publico", "Personalizar link público", "/configuracoes/link-publico", personalizouPublico));
         tarefas.add(tarefa("fiscal", "Configurar emissão de NFS-e (opcional)", "/configuracoes/nfse", configurouFiscal));
-        tarefas.add(tarefa("equipe", "Convidar atendentes para a equipe", "/configuracoes/equipe", convidouEquipe));
+        tarefas.add(tarefa("cargos", "Definir os cargos da sua equipe", "/perfis", definiuCargos));
+        tarefas.add(tarefa("equipe", "Convidar sua equipe", "/configuracoes/equipe", convidouEquipe));
 
         long concluidas = tarefas.stream().filter(t -> Boolean.TRUE.equals(t.get("concluida"))).count();
         Map<String, Object> response = new LinkedHashMap<>();

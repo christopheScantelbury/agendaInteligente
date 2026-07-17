@@ -1,9 +1,15 @@
 import api from './api'
 
+/** #171: define as permissões REAIS do cargo. O nome é livre; o poder vem daqui. */
+export type PerfilSistemaBase = 'ADMINISTRADOR' | 'GERENTE' | 'PROFISSIONAL' | 'CLIENTE'
+
 export interface Perfil {
   id?: number
   nome: string
   descricao?: string
+  perfilSistemaBase?: PerfilSistemaBase
+  /** null = cargo global do sistema (read-only pra empresa) */
+  adminUnicoId?: number | null
   sistema?: boolean
   ativo?: boolean
   atendente?: boolean // perfil de atendente/profissional (presta serviços)

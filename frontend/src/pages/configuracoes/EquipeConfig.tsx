@@ -13,6 +13,8 @@ import {
   Mail,
 } from 'lucide-react'
 import { conviteService } from '../../services/conviteService'
+import { perfilService } from '../../services/perfilService'
+import { authService } from '../../services/authService'
 import { useNotification } from '../../contexts/NotificationContext'
 import ConfigPageHeader from '../../components/configuracoes/ConfigPageHeader'
 import ProximaEtapaCard from '../../components/configuracoes/ProximaEtapaCard'
@@ -63,10 +65,26 @@ export default function EquipeConfig() {
     maxUnidades: number | undefined
     diasExpiracaoLink: number | undefined
     diasExpiracaoAcesso: number | undefined
+    perfilId: number | null
   }>({
     maxUnidades: 1,
     diasExpiracaoLink: 7,
     diasExpiracaoAcesso: 365,
+    perfilId: null,
+  })
+
+  // #171: sem cargo, todo convidado virava GERENTE (a rota do link decidia o
+  // perfil). Agora o cargo é obrigatório e define o acesso da pessoa.
+  const perfilLogado = (authService.getUsuario()?.perfil ?? '').toUpperCase()
+  const { data: cargos = [] } = useQuery({
+    queryKey: ['perfis', 'ativos'],
+    queryFn: () => perfilService.listarAtivos(),
+  })
+  const cargosDisponiveis = cargos.filter((c) => {
+    const base = c.perfilSistemaBase
+    if (!base || base === 'CLIENTE' || base === 'ADMINISTRADOR') return false
+    if (perfilLogado === 'GERENTE') return base === 'PROFISSIONAL'
+    return true
   })
 
   const criarMutation = useMutation({
@@ -75,10 +93,12 @@ export default function EquipeConfig() {
         maxUnidades: form.maxUnidades ?? 1,
         dataExpiracaoLink: emDiasDateTime(form.diasExpiracaoLink ?? 7),
         dataExpiracaoAcesso: emDiasDate(form.diasExpiracaoAcesso ?? 365),
+        perfilId: form.perfilId,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['configuracoes', 'convites-acesso'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'gerente', 'checklist'] })
+      queryClient.invalidateQueries({ queryKey: ['perfis', 'ativos'] })
       setCriou(true)
       showNotification('success', 'Convite criado! Compartilhe o link com a pessoa.')
     },
@@ -120,6 +140,38 @@ export default function EquipeConfig() {
         <h2 className="text-base font-semibold text-slate-900 mb-3 flex items-center gap-1.5">
           <Plus className="h-4 w-4 text-violet-600" /> Criar convite de acesso
         </h2>
+
+        <div className="mb-4">
+          <label htmlFor="cargo" className="block text-xs font-medium text-slate-700 mb-1.5">
+            Cargo da pessoa <span className="text-rose-500">*</span>
+          </label>
+          <select
+            id="cargo"
+            value={form.perfilId ?? ''}
+            onChange={(e) =>
+              setForm({ ...form, perfilId: e.target.value ? Number(e.target.value) : null })
+            }
+            className="w-full min-w-0 box-border px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+          >
+            <option value="">Selecione o cargo…</option>
+            {cargosDisponiveis.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nome}
+                {c.perfilSistemaBase === 'GERENTE' ? ' — acesso de gestão' : ''}
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] text-slate-500 mt-1">
+            Define o que a pessoa vê no sistema.{' '}
+            <button
+              type="button"
+              onClick={() => navigate('/perfis')}
+              className="font-semibold text-violet-700 hover:text-violet-900 underline"
+            >
+              Criar ou editar cargos
+            </button>
+          </p>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
           <div>
@@ -163,10 +215,32 @@ export default function EquipeConfig() {
           </div>
         </div>
 
+        {cargosDisponiveis.length === 0 && (
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+            <p className="text-xs text-amber-800">
+              Você ainda não tem cargos cadastrados. Crie os cargos da sua equipe antes de
+              convidar — é isso que define o acesso de cada pessoa.
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate('/perfis')}
+              className="mt-2 text-xs font-semibold text-amber-900 underline hover:text-amber-950"
+            >
+              Definir cargos agora
+            </button>
+          </div>
+        )}
+
         <button
           type="button"
-          onClick={() => criarMutation.mutate()}
-          disabled={criarMutation.isPending}
+          onClick={() => {
+            if (!form.perfilId) {
+              showNotification('error', 'Escolha o cargo da pessoa convidada.')
+              return
+            }
+            criarMutation.mutate()
+          }}
+          disabled={criarMutation.isPending || cargosDisponiveis.length === 0}
           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-sm font-semibold transition shadow-sm"
         >
           {criarMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -212,7 +286,12 @@ export default function EquipeConfig() {
                 key={c.id}
                 className="bg-white border border-gray-200 rounded-xl p-3 flex items-center gap-2"
               >
-                <code className="flex-1 text-xs text-slate-700 font-mono truncate">{c.link}</code>
+                <div className="flex-1 min-w-0">
+                  {c.perfilNome && (
+                    <p className="text-xs font-semibold text-slate-800 truncate">{c.perfilNome}</p>
+                  )}
+                  <code className="block text-xs text-slate-500 font-mono truncate">{c.link}</code>
+                </div>
                 <span className="text-[10px] text-slate-500 whitespace-nowrap flex items-center gap-0.5">
                   <Clock className="h-3 w-3" /> {formatarData(c.dataExpiracaoLink)}
                 </span>
@@ -260,7 +339,7 @@ export default function EquipeConfig() {
               >
                 <Check className="h-3.5 w-3.5 text-emerald-600 flex-shrink-0" />
                 <span className="text-slate-500 truncate flex-1">
-                  Usado em {formatarData(c.usadoEm)}
+                  {c.perfilNome ? `${c.perfilNome} · ` : ''}Usado em {formatarData(c.usadoEm)}
                 </span>
               </li>
             ))}

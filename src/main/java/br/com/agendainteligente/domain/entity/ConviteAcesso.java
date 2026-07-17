@@ -41,6 +41,14 @@ public class ConviteAcesso {
     @JoinColumn(name = "criado_por_id")
     private Usuario criadoPor;
 
+    /**
+     * #171: cargo que o convidado assume ao se cadastrar. Define o perfilSistema
+     * via perfilSistemaBase. NULL = convite legado (perfil vinha do tipo do link).
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "perfil_id")
+    private Perfil perfil;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataCriacao;
 

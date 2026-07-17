@@ -30,6 +30,7 @@ public class AuthService {
     private final br.com.agendainteligente.repository.AtendenteRepository atendenteRepository;
     private final EmpresaRepository empresaRepository;
     private final UnidadeRepository unidadeRepository;
+    private final CargoSeedService cargoSeedService;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
@@ -196,6 +197,12 @@ public class AuthService {
                 .adminUnicoId(usuario.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR ? usuario.getId() : null)
                 .build();
         unidadeRepository.save(unidade);
+
+        // #171: sem cargos, o dono não tem o que escolher ao convidar o primeiro
+        // funcionário — e ele acabava virando GERENTE por default da rota.
+        if (usuario.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR) {
+            cargoSeedService.seedCargosDoTenant(usuario.getId(), empresa.getCategoria());
+        }
     }
 
     private String normalizarTexto(String valor) {

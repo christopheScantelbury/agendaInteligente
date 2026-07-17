@@ -5,6 +5,7 @@ import br.com.agendainteligente.domain.entity.ConviteCliente;
 import br.com.agendainteligente.domain.entity.Empresa;
 import br.com.agendainteligente.domain.entity.Atendente;
 import br.com.agendainteligente.domain.entity.Gerente;
+import br.com.agendainteligente.domain.entity.Perfil;
 import br.com.agendainteligente.domain.entity.Unidade;
 import br.com.agendainteligente.domain.entity.Usuario;
 import br.com.agendainteligente.dto.*;
@@ -42,6 +43,8 @@ public class ConviteService {
     private final ConviteClienteRepository conviteClienteRepository;
     private final UsuarioRepository usuarioRepository;
     private final EmpresaRepository empresaRepository;
+    private final PerfilRepository perfilRepository;
+    private final CargoSeedService cargoSeedService;
     private final UnidadeRepository unidadeRepository;
     private final GerenteRepository gerenteRepository;
     private final AtendenteRepository atendenteRepository;
@@ -95,19 +98,21 @@ public class ConviteService {
         }
         String token = UUID.randomUUID().toString().replace("-", "");
         Usuario criador = obterUsuarioLogado();
+        Perfil cargo = resolverCargoDoConvite(dto.getPerfilId(), criador);
         ConviteAcesso convite = ConviteAcesso.builder()
                 .token(token)
                 .maxUnidades(dto.getMaxUnidades())
                 .dataExpiracaoLink(dto.getDataExpiracaoLink())
                 .dataExpiracaoAcesso(dto.getDataExpiracaoAcesso())
                 .criadoPor(criador)
+                .perfil(cargo)
                 .build();
         convite = conviteAcessoRepository.save(convite);
         // Rota do link depende de QUEM criou (e o que vai ser criado pelo destinatário):
         // - ADMIN global         → /cadastro-administrador (nova empresa + plano)
         // - ADMINISTRADOR        → /cadastro-gerente (vincula à empresa do criador)
         // - GERENTE / outros     → /cadastro-atendente (vira PROFISSIONAL na empresa)
-        String rota = rotaCadastroDoConvidador(criador);
+        String rota = rotaCadastroDoConvidador(criador, cargo);
         String link = urlBase + rota + "?token=" + token;
         return ConviteAcessoRespostaDTO.builder()
                 .id(convite.getId())
@@ -118,6 +123,8 @@ public class ConviteService {
                 .dataExpiracaoAcesso(convite.getDataExpiracaoAcesso())
                 .usadoEm(convite.getUsadoEm())
                 .dataCriacao(convite.getDataCriacao())
+                .perfilId(cargo != null ? cargo.getId() : null)
+                .perfilNome(cargo != null ? cargo.getNome() : null)
                 .build();
     }
 
@@ -195,8 +202,62 @@ public class ConviteService {
         return builder.build();
     }
 
-    /** Define a rota de cadastro do convite com base no perfil do criador. */
-    private String rotaCadastroDoConvidador(Usuario criador) {
+    /**
+     * #171: resolve e valida o cargo escolhido pro convite.
+     * - Precisa pertencer ao tenant do criador (ou ser perfil global de sistema)
+     * - SEC: impede escalada — ninguém convida alguém com poder acima do seu
+     */
+    private Perfil resolverCargoDoConvite(Long perfilId, Usuario criador) {
+        if (perfilId == null) return null; // legado: rota decide o perfil
+        Perfil cargo = perfilRepository.findById(perfilId)
+                .orElseThrow(() -> new BusinessException("Cargo não encontrado"));
+
+        boolean criadorEhAdminGlobal = criador != null
+                && criador.getPerfil() == Usuario.PerfilUsuario.ADMIN
+                && criador.getAdminUnicoId() == null;
+
+        if (!criadorEhAdminGlobal) {
+            Long tenantCriador = criador.getAdminUnicoId() != null
+                    ? criador.getAdminUnicoId() : criador.getId();
+            // Cargo de outro tenant → 404 (não revela existência)
+            if (cargo.getAdminUnicoId() != null && !cargo.getAdminUnicoId().equals(tenantCriador)) {
+                throw new BusinessException("Cargo não encontrado");
+            }
+            // SEC: ADMINISTRADOR não convida ADMIN/ADMINISTRADOR; GERENTE só
+            // convida PROFISSIONAL.
+            Usuario.PerfilUsuario base = cargo.getPerfilSistemaBase();
+            Usuario.PerfilUsuario doCriador = criador.getPerfil();
+            if (base == Usuario.PerfilUsuario.ADMIN) {
+                throw new BusinessException("Você não pode convidar um administrador da plataforma");
+            }
+            if (doCriador == Usuario.PerfilUsuario.ADMINISTRADOR
+                    && base == Usuario.PerfilUsuario.ADMINISTRADOR) {
+                throw new BusinessException("Você não pode convidar outro administrador da empresa");
+            }
+            if (doCriador == Usuario.PerfilUsuario.GERENTE
+                    && base != Usuario.PerfilUsuario.PROFISSIONAL) {
+                throw new BusinessException("Gerente só pode convidar profissionais");
+            }
+        }
+        return cargo;
+    }
+
+    /**
+     * Define a rota de cadastro do convite.
+     *
+     * #171: quando o convite tem cargo (perfil), a rota vem da BASE do cargo —
+     * assim um ADMINISTRADOR consegue convidar PROFISSIONAL, o que antes era
+     * impossível (a rota vinha só do perfil do criador e caía sempre em
+     * /cadastro-gerente). Sem cargo, mantém o comportamento legado.
+     */
+    private String rotaCadastroDoConvidador(Usuario criador, Perfil cargo) {
+        if (cargo != null && cargo.getPerfilSistemaBase() != null) {
+            return switch (cargo.getPerfilSistemaBase()) {
+                case ADMIN, ADMINISTRADOR -> "/cadastro-administrador";
+                case GERENTE -> "/cadastro-gerente";
+                default -> "/cadastro-atendente";
+            };
+        }
         if (criador == null) return "/cadastro-atendente";
         if (criador.getPerfil() == Usuario.PerfilUsuario.ADMIN
                 && criador.getAdminUnicoId() == null) {
@@ -206,6 +267,26 @@ public class ConviteService {
             return "/cadastro-gerente";
         }
         return "/cadastro-atendente";
+    }
+
+    /**
+     * #171 SEC: o convidado escolhe a ROTA que chama (/cadastro-gerente vs
+     * /cadastro-atendente), então a rota sozinha não pode definir o poder do
+     * usuário criado. Amarra o token ao cargo emitido: se o convite tem cargo,
+     * a base dele TEM que bater com a rota finalizada.
+     */
+    private void validarCargoDaRota(ConviteAcesso convite, Usuario.PerfilUsuario esperado) {
+        Perfil cargo = convite.getPerfil();
+        if (cargo == null || cargo.getPerfilSistemaBase() == null) return; // legado
+        Usuario.PerfilUsuario base = cargo.getPerfilSistemaBase();
+        boolean ok = base == esperado
+                // ADMIN e ADMINISTRADOR compartilham /cadastro-administrador
+                || (esperado == Usuario.PerfilUsuario.ADMINISTRADOR && base == Usuario.PerfilUsuario.ADMIN);
+        if (!ok) {
+            log.warn("Convite {} emitido para base {} tentou finalizar como {}",
+                    convite.getId(), base, esperado);
+            throw new BusinessException("Este link não é válido para este tipo de cadastro.");
+        }
     }
 
     /**
@@ -241,6 +322,7 @@ public class ConviteService {
         if (dto.getUnidades().size() > convite.getMaxUnidades()) {
             throw new BusinessException("Número de unidades excede o permitido para este link (" + convite.getMaxUnidades() + ").");
         }
+        validarCargoDaRota(convite, Usuario.PerfilUsuario.ADMINISTRADOR);
         if (usuarioRepository.existsByEmail(dto.getEmail())) {
             throw new BusinessException("Já existe um usuário cadastrado com este e-mail.");
         }
@@ -275,6 +357,8 @@ public class ConviteService {
                 // Promovido a ADMINISTRADOR (dono do novo tenant) — era GERENTE,
                 // mas o convite do ADMIN global cria de fato um administrador.
                 .perfilSistema(Usuario.PerfilUsuario.ADMINISTRADOR)
+                // #171: dono do tenant NÃO recebe cargo — tem acesso total por
+                // perfilSistema, e o cargo do convite pode ser de outro tenant.
                 .perfil(null)
                 .unidades(unidades)
                 .build();
@@ -316,6 +400,9 @@ public class ConviteService {
         log.info("Plano aplicado à empresa {}: {} (expira em {})",
                 empresa.getId(), plano.getNome(), empresa.getPlanoExpiracao());
 
+        // #171: cargos iniciais do tenant, pra ter o que escolher ao convidar equipe
+        cargoSeedService.seedCargosDoTenant(tenantRootId, empresa.getCategoria());
+
         convite.setUsadoEm(LocalDateTime.now());
         conviteAcessoRepository.save(convite);
         log.info("Cadastro ADMINISTRADOR finalizado via convite. Empresa: {}, Usuario: {}", empresa.getNome(), usuario.getEmail());
@@ -339,6 +426,7 @@ public class ConviteService {
         if (convite.getCriadoPor() == null) {
             throw new BusinessException("Convite sem criador — não dá pra resolver a empresa.");
         }
+        validarCargoDaRota(convite, Usuario.PerfilUsuario.GERENTE);
         if (usuarioRepository.existsByEmail(dto.getEmail())) {
             throw new BusinessException("Já existe um usuário cadastrado com este e-mail.");
         }
@@ -370,7 +458,7 @@ public class ConviteService {
                 .telefone(dto.getTelefone() != null ? dto.getTelefone().trim() : null)
                 .ativo(true)
                 .perfilSistema(Usuario.PerfilUsuario.GERENTE)
-                .perfil(null)
+                .perfil(convite.getPerfil())
                 .adminUnicoId(adminUnicoIdHerdado)
                 .unidades(unidadesEscolhidas)
                 .build();
@@ -408,6 +496,7 @@ public class ConviteService {
         if (convite.getCriadoPor() == null) {
             throw new BusinessException("Convite sem criador — não dá pra resolver a empresa.");
         }
+        validarCargoDaRota(convite, Usuario.PerfilUsuario.PROFISSIONAL);
         if (usuarioRepository.existsByEmail(dto.getEmail())) {
             throw new BusinessException("Já existe um usuário cadastrado com este e-mail.");
         }
@@ -441,7 +530,7 @@ public class ConviteService {
                 .telefone(dto.getTelefone() != null ? dto.getTelefone().trim() : null)
                 .ativo(true)
                 .perfilSistema(Usuario.PerfilUsuario.PROFISSIONAL)
-                .perfil(null)
+                .perfil(convite.getPerfil())
                 .adminUnicoId(adminUnicoIdHerdado)
                 .unidades(unidadesEscolhidas)
                 .build();
@@ -612,17 +701,19 @@ public class ConviteService {
             throw new BusinessException("Sem permissão para listar links de acesso. Verifique o perfil em Perfis e Permissões.");
         }
         Usuario admin = obterUsuarioLogado();
-        String rota = rotaCadastroDoConvidador(admin);
         return conviteAcessoRepository.findByCriadoPorIdOrderByDataCriacaoDesc(admin.getId()).stream()
                 .map(c -> ConviteAcessoRespostaDTO.builder()
                         .id(c.getId())
                         .token(c.getToken())
-                        .link(urlBase + rota + "?token=" + c.getToken())
+                        // #171: rota depende do cargo DO CONVITE, não do perfil de quem lista
+                        .link(urlBase + rotaCadastroDoConvidador(admin, c.getPerfil()) + "?token=" + c.getToken())
                         .maxUnidades(c.getMaxUnidades())
                         .dataExpiracaoLink(c.getDataExpiracaoLink())
                         .dataExpiracaoAcesso(c.getDataExpiracaoAcesso())
                         .usadoEm(c.getUsadoEm())
                         .dataCriacao(c.getDataCriacao())
+                        .perfilId(c.getPerfil() != null ? c.getPerfil().getId() : null)
+                        .perfilNome(c.getPerfil() != null ? c.getPerfil().getNome() : null)
                         .build())
                 .toList();
     }

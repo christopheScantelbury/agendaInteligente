@@ -4,6 +4,8 @@ export interface ConviteAcessoCriar {
   maxUnidades: number
   dataExpiracaoLink: string
   dataExpiracaoAcesso: string
+  /** #171: cargo que o convidado assume. Sem isso, o backend cai no legado. */
+  perfilId?: number | null
 }
 
 export interface ConviteAcessoResposta {
@@ -15,6 +17,8 @@ export interface ConviteAcessoResposta {
   dataExpiracaoAcesso: string
   usadoEm: string | null
   dataCriacao: string
+  perfilId?: number | null
+  perfilNome?: string | null
 }
 
 export interface ConviteClienteCriar {

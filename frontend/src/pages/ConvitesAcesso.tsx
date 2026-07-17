@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { conviteService, ConviteAcessoResposta, ConviteAcessoCriar } from '../services/conviteService'
 import { perfilService } from '../services/perfilService'
+import { authService } from '../services/authService'
 import { podeEditar } from '../utils/permissions'
 import { Plus, Copy, Check, Link2, KeyRound } from 'lucide-react'
 import { useState } from 'react'
@@ -54,6 +55,7 @@ export default function ConvitesAcesso() {
     maxUnidades: 1,
     dataExpiracaoLink: defaultExpLink(),
     dataExpiracaoAcesso: defaultExpAcesso(),
+    perfilId: null,
   })
 
   const { data: perfil } = useQuery({
@@ -61,6 +63,24 @@ export default function ConvitesAcesso() {
     queryFn: () => perfilService.buscarMeuPerfil(),
   })
   const podeCriar = podeEditar(perfil, '/convites-acesso')
+
+  // #171: ADMIN global cria empresa NOVA (o convidado vira dono, sem cargo).
+  // Os demais convidam funcionários — aí o cargo é obrigatório.
+  const perfilLogado = (authService.getUsuario()?.perfil ?? '').toUpperCase()
+  const criaEmpresaNova = perfilLogado === 'ADMIN'
+
+  const { data: cargos = [] } = useQuery({
+    queryKey: ['perfis', 'ativos'],
+    queryFn: () => perfilService.listarAtivos(),
+    enabled: !criaEmpresaNova,
+  })
+  // Só cargos que o convidador pode conceder (GERENTE não promove ninguém).
+  const cargosDisponiveis = cargos.filter((c) => {
+    const base = c.perfilSistemaBase
+    if (!base || base === 'CLIENTE' || base === 'ADMINISTRADOR') return false
+    if (perfilLogado === 'GERENTE') return base === 'PROFISSIONAL'
+    return true
+  })
 
   const { data: convites = [], isLoading, error: convitesError } = useQuery({
     queryKey: ['convites-acesso'],
@@ -79,6 +99,7 @@ export default function ConvitesAcesso() {
         maxUnidades: 1,
         dataExpiracaoLink: defaultExpLink(),
         dataExpiracaoAcesso: defaultExpAcesso(),
+        perfilId: null,
       })
     },
     onError: (error: any) => {
@@ -126,7 +147,9 @@ export default function ConvitesAcesso() {
             Links de venda de acesso
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Gere links para novos gerentes finalizarem o cadastro (empresa + unidade + usuário).
+            {criaEmpresaNova
+              ? 'Gere links para novos clientes criarem a empresa deles (empresa + unidade + usuário).'
+              : 'Gere links para a sua equipe se cadastrar. O cargo escolhido define o que a pessoa vê no sistema.'}
           </p>
         </div>
         {podeCriar && (
@@ -167,7 +190,7 @@ export default function ConvitesAcesso() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-semibold text-slate-900">
-                      Até {item.maxUnidades} unidade{item.maxUnidades !== 1 ? 's' : ''}
+                      {item.perfilNome ?? `Até ${item.maxUnidades} unidade${item.maxUnidades !== 1 ? 's' : ''}`}
                     </p>
                     {item.usadoEm && (
                       <span className="inline-flex items-center rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
@@ -209,10 +232,41 @@ export default function ConvitesAcesso() {
               showNotification('error', 'Preencha data de expiração do link e do acesso.')
               return
             }
+            if (!criaEmpresaNova && !form.perfilId) {
+              showNotification('error', 'Escolha o cargo da pessoa convidada.')
+              return
+            }
             criarMutation.mutate(form)
           }}
           className="space-y-4"
         >
+          {!criaEmpresaNova && (
+            <FormField label="Cargo da pessoa convidada" required>
+              <select
+                value={form.perfilId ?? ''}
+                onChange={(e) =>
+                  setForm({ ...form, perfilId: e.target.value ? Number(e.target.value) : null })
+                }
+                required
+                className="mt-1 block w-full min-w-0 box-border rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
+              >
+                <option value="">Selecione o cargo…</option>
+                {cargosDisponiveis.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
+                    {c.perfilSistemaBase === 'GERENTE' ? ' — acesso de gestão' : ''}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Não achou o cargo? Crie em{' '}
+                <a href="/perfis" className="font-semibold text-violet-700 hover:text-violet-900">
+                  Perfis e Permissões
+                </a>
+                .
+              </p>
+            </FormField>
+          )}
           <FormField label="Máximo de unidades" required>
             <IntegerInput
               min={1}

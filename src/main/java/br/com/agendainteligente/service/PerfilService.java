@@ -31,23 +31,70 @@ public class PerfilService {
     private final PerfilMapper perfilMapper;
     private final UsuarioRepository usuarioRepository;
 
+    // ── #171 SEC: escopo por tenant ─────────────────────────────────────────
+
+    /**
+     * Tenant do usuário logado. ADMIN global → null (enxerga tudo).
+     * Ver feedback-isolamento-administrador: NUNCA agrupar ADMIN+ADMINISTRADOR.
+     */
+    private Long tenantDoLogado() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new BusinessException("Não autorizado");
+        }
+        Usuario u = usuarioRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+        if (u.getPerfil() == Usuario.PerfilUsuario.ADMIN) return null;
+        return u.getAdminUnicoId() != null ? u.getAdminUnicoId() : u.getId();
+    }
+
+    private boolean ehAdminGlobal() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) return false;
+        return usuarioRepository.findByEmail(auth.getName())
+                .map(u -> u.getPerfil() == Usuario.PerfilUsuario.ADMIN)
+                .orElse(false);
+    }
+
+    /** Garante que o cargo pertence ao tenant do logado (ou é ADMIN global). */
+    private void validarAcesso(Perfil perfil) {
+        if (ehAdminGlobal()) return;
+        Long tenant = tenantDoLogado();
+        // Perfil global de sistema: visível a todos, mas não editável (checado à parte).
+        if (perfil.getAdminUnicoId() == null) return;
+        if (!perfil.getAdminUnicoId().equals(tenant)) {
+            // 404 em vez de 403 — não revela existência de recurso de outro tenant.
+            throw new ResourceNotFoundException("Perfil não encontrado");
+        }
+    }
+
     @Transactional(readOnly = true)
     public List<PerfilDTO> listarTodos() {
-        return perfilRepository.findAll().stream()
+        // #171 SEC: era findAll() → vazava cargos de outros tenants.
+        if (ehAdminGlobal()) {
+            return perfilRepository.findAll().stream().map(perfilMapper::toDTO).collect(Collectors.toList());
+        }
+        return perfilRepository.findVisiveisPorTenant(tenantDoLogado()).stream()
                 .map(perfilMapper::toDTO)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<PerfilDTO> listarAtivos() {
-        return perfilRepository.findByAtivoTrue().stream()
+        if (ehAdminGlobal()) {
+            return perfilRepository.findByAtivoTrue().stream().map(perfilMapper::toDTO).collect(Collectors.toList());
+        }
+        return perfilRepository.findVisiveisPorTenant(tenantDoLogado()).stream()
                 .map(perfilMapper::toDTO)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<PerfilDTO> listarCustomizados() {
-        return perfilRepository.findBySistemaFalse().stream()
+        if (ehAdminGlobal()) {
+            return perfilRepository.findBySistemaFalse().stream().map(perfilMapper::toDTO).collect(Collectors.toList());
+        }
+        return perfilRepository.findByAdminUnicoIdAndAtivoTrueOrderByNomeAsc(tenantDoLogado()).stream()
                 .map(perfilMapper::toDTO)
                 .collect(Collectors.toList());
     }
@@ -56,6 +103,7 @@ public class PerfilService {
     public PerfilDTO buscarPorId(Long id) {
         Perfil perfil = perfilRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Perfil não encontrado"));
+        validarAcesso(perfil);
         return perfilMapper.toDTO(perfil);
     }
 
@@ -110,20 +158,53 @@ public class PerfilService {
         throw new AccessDeniedException("Sem permissão para editar perfis. Apenas visualização permitida.");
     }
 
+    /**
+     * #171 SEC: impede escalada de privilégio — ninguém cria cargo com base
+     * acima do próprio nível. ADMINISTRADOR não pode fabricar um cargo ADMIN.
+     */
+    private void validarBasePermitida(Usuario.PerfilUsuario base) {
+        if (base == null) return;
+        if (ehAdminGlobal()) return; // ADMIN global pode tudo
+        if (base == Usuario.PerfilUsuario.ADMIN) {
+            throw new BusinessException("Não é possível criar cargo com permissões de administrador da plataforma");
+        }
+    }
+
     @Transactional
     public PerfilDTO criar(PerfilDTO perfilDTO) {
         validarPermissaoEditarPerfis();
-        if (perfilRepository.existsByNome(perfilDTO.getNome())) {
-            throw new BusinessException("Já existe um perfil com este nome");
+        validarBasePermitida(perfilDTO.getPerfilSistemaBase());
+
+        // #171: nome é único DENTRO do tenant (antes era global — impedia duas
+        // empresas de terem "Recepção").
+        Long tenant = tenantDoLogado();
+        if (tenant != null && perfilRepository.existsByAdminUnicoIdAndNomeIgnoreCase(tenant, perfilDTO.getNome())) {
+            throw new BusinessException("Já existe um cargo com este nome na sua empresa");
         }
 
         // Perfis customizados não podem ser do sistema
         perfilDTO.setSistema(false);
 
         Perfil perfil = perfilMapper.toEntity(perfilDTO);
+        perfil.setSistema(false);
+        perfil.setAdminUnicoId(tenant); // ADMIN global (null) cria perfil global
+        if (perfil.getPerfilSistemaBase() == null) {
+            perfil.setPerfilSistemaBase(Usuario.PerfilUsuario.PROFISSIONAL);
+        }
+        // Mantém as flags legadas coerentes com a base escolhida.
+        sincronizarFlagsLegadas(perfil);
         perfil = perfilRepository.save(perfil);
-        log.info("Perfil criado. ID: {}, Nome: {}", perfil.getId(), perfil.getNome());
+        log.info("Cargo criado. ID: {}, Nome: {}, base: {}, tenant: {}",
+                perfil.getId(), perfil.getNome(), perfil.getPerfilSistemaBase(), tenant);
         return perfilMapper.toDTO(perfil);
+    }
+
+    /** Flags booleanas antigas (atendente/gerente/cliente) derivam da base. */
+    private void sincronizarFlagsLegadas(Perfil p) {
+        Usuario.PerfilUsuario base = p.getPerfilSistemaBase();
+        p.setAtendente(base == Usuario.PerfilUsuario.PROFISSIONAL);
+        p.setGerente(base == Usuario.PerfilUsuario.GERENTE);
+        p.setCliente(base == Usuario.PerfilUsuario.CLIENTE);
     }
 
     @Transactional
@@ -131,6 +212,8 @@ public class PerfilService {
         validarPermissaoEditarPerfis();
         Perfil perfil = perfilRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Perfil não encontrado"));
+        validarAcesso(perfil);
+        validarBasePermitida(perfilDTO.getPerfilSistemaBase());
 
         // Se for perfil do sistema, permitir editar apenas permissões de acesso
         // (mantendo nome/descrição/sistema fixos).
@@ -154,20 +237,29 @@ public class PerfilService {
             return perfilMapper.toDTO(perfil);
         }
 
-        // Para perfis customizados, permitir editar tudo exceto sistema
-        // Validar nome único se mudou
+        // Para perfis customizados, permitir editar tudo exceto sistema/tenant.
+        // #171: nome único DENTRO do tenant.
         if (!perfil.getNome().equals(perfilDTO.getNome())) {
-            if (perfilRepository.existsByNome(perfilDTO.getNome())) {
-                throw new BusinessException("Já existe um perfil com este nome");
+            Long tenantAtual = perfil.getAdminUnicoId();
+            if (tenantAtual != null
+                    && perfilRepository.existsByAdminUnicoIdAndNomeIgnoreCase(tenantAtual, perfilDTO.getNome())) {
+                throw new BusinessException("Já existe um cargo com este nome na sua empresa");
             }
         }
 
         // Garantir que não vire perfil do sistema
         perfilDTO.setSistema(false);
 
+        Long tenantOriginal = perfil.getAdminUnicoId();
         perfilMapper.updateEntityFromDTO(perfilDTO, perfil);
+        perfil.setSistema(false);
+        perfil.setAdminUnicoId(tenantOriginal); // #171: dono nunca muda por payload
+        if (perfil.getPerfilSistemaBase() == null) {
+            perfil.setPerfilSistemaBase(Usuario.PerfilUsuario.PROFISSIONAL);
+        }
+        sincronizarFlagsLegadas(perfil);
         perfil = perfilRepository.save(perfil);
-        log.info("Perfil atualizado. ID: {}", id);
+        log.info("Cargo atualizado. ID: {}, base: {}", id, perfil.getPerfilSistemaBase());
         return perfilMapper.toDTO(perfil);
     }
 
@@ -176,6 +268,7 @@ public class PerfilService {
         validarPermissaoEditarPerfis();
         Perfil perfil = perfilRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Perfil não encontrado"));
+        validarAcesso(perfil);
 
         // Não permitir excluir perfis do sistema
         if (perfil.getSistema()) {

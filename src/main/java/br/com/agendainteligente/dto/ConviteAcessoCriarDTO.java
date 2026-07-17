@@ -27,4 +27,10 @@ public class ConviteAcessoCriarDTO {
 
     @NotNull
     private LocalDate dataExpiracaoAcesso;
+
+    /**
+     * #171: cargo que o convidado assume. Define o perfilSistema via
+     * perfilSistemaBase. NULL = legado (perfil decidido pelo tipo do link).
+     */
+    private Long perfilId;
 }

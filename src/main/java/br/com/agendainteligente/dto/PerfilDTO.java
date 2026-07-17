@@ -20,6 +20,10 @@ public class PerfilDTO {
     private String nome;
 
     private String descricao;
+    /** #171: permissões reais do cargo (ADMINISTRADOR|GERENTE|PROFISSIONAL|CLIENTE). */
+    private br.com.agendainteligente.domain.entity.Usuario.PerfilUsuario perfilSistemaBase;
+    /** #171: tenant dono. NULL = perfil de sistema global (read-only). */
+    private Long adminUnicoId;
     private Boolean sistema;
     private Boolean ativo;
     private Boolean atendente; // true = perfil de atendente/profissional

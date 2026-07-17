@@ -13,6 +13,7 @@ import br.com.agendainteligente.dto.ConviteClienteCriarDTO;
 import br.com.agendainteligente.dto.ConviteClienteInfoDTO;
 import br.com.agendainteligente.dto.ConviteClienteRespostaDTO;
 import br.com.agendainteligente.dto.FinalizarCadastroAdministradorDTO;
+import br.com.agendainteligente.dto.FinalizarCadastroGerenteDTO;
 import br.com.agendainteligente.dto.UnidadeMinimaDTO;
 import br.com.agendainteligente.exception.BusinessException;
 import br.com.agendainteligente.repository.ClienteRepository;
@@ -57,6 +58,8 @@ class ConviteServiceTest {
     @Mock private ClienteRepository clienteRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private PerfilService perfilService;
+    @Mock private br.com.agendainteligente.repository.PerfilRepository perfilRepository;
+    @Mock private CargoSeedService cargoSeedService;
     @Mock private br.com.agendainteligente.repository.PlanoRepository planoRepository;
 
     @InjectMocks private ConviteService service;
@@ -349,5 +352,86 @@ class ConviteServiceTest {
         assertTrue(info.isValido());
         assertEquals(10L, info.getUnidadeId());
         assertEquals("E", info.getEmpresaNome());
+    }
+
+    // ── #171: cargo do convite ───────────────────────────────────────────────
+
+    @Test
+    void criarConviteAcesso_comCargo_rotaVemDaBaseDoCargo() {
+        // Bug do relato: ADMINISTRADOR convidava funcionário e ele virava GERENTE,
+        // porque a rota saía do perfil do CRIADOR e não do cargo escolhido.
+        Usuario dono = Usuario.builder()
+                .id(5L).email("dono@test.com").nome("Dono")
+                .perfilSistema(PerfilUsuario.ADMINISTRADOR).ativo(true).build();
+        TestSecurityContext.authenticateAs("dono@test.com", "ROLE_ADMINISTRADOR");
+        when(usuarioRepository.findByEmail("dono@test.com")).thenReturn(Optional.of(dono));
+
+        br.com.agendainteligente.domain.entity.Perfil cabeleireiro =
+                br.com.agendainteligente.domain.entity.Perfil.builder()
+                        .id(7L).nome("Cabeleireiro(a)").adminUnicoId(5L)
+                        .perfilSistemaBase(PerfilUsuario.PROFISSIONAL).ativo(true).build();
+        when(perfilRepository.findById(7L)).thenReturn(Optional.of(cabeleireiro));
+        when(conviteAcessoRepository.save(any(ConviteAcesso.class))).thenAnswer(i -> {
+            ConviteAcesso c = i.getArgument(0);
+            c.setId(101L);
+            return c;
+        });
+
+        ConviteAcessoRespostaDTO out = service.criarConviteAcesso(ConviteAcessoCriarDTO.builder()
+                .maxUnidades(1)
+                .dataExpiracaoLink(LocalDateTime.now().plusDays(7))
+                .dataExpiracaoAcesso(LocalDate.now().plusYears(1))
+                .perfilId(7L)
+                .build());
+
+        assertTrue(out.getLink().contains("/cadastro-atendente"), "link deveria levar ao cadastro de profissional");
+        assertFalse(out.getLink().contains("/cadastro-gerente"));
+        assertEquals("Cabeleireiro(a)", out.getPerfilNome());
+    }
+
+    @Test
+    void criarConviteAcesso_cargoDeOutroTenant_lanca() {
+        Usuario dono = Usuario.builder()
+                .id(5L).email("dono@test.com").nome("Dono")
+                .perfilSistema(PerfilUsuario.ADMINISTRADOR).ativo(true).build();
+        TestSecurityContext.authenticateAs("dono@test.com", "ROLE_ADMINISTRADOR");
+        when(usuarioRepository.findByEmail("dono@test.com")).thenReturn(Optional.of(dono));
+
+        br.com.agendainteligente.domain.entity.Perfil deOutraEmpresa =
+                br.com.agendainteligente.domain.entity.Perfil.builder()
+                        .id(8L).nome("Dentista").adminUnicoId(999L)
+                        .perfilSistemaBase(PerfilUsuario.PROFISSIONAL).ativo(true).build();
+        when(perfilRepository.findById(8L)).thenReturn(Optional.of(deOutraEmpresa));
+
+        assertThrows(BusinessException.class, () -> service.criarConviteAcesso(ConviteAcessoCriarDTO.builder()
+                .maxUnidades(1)
+                .dataExpiracaoLink(LocalDateTime.now().plusDays(7))
+                .dataExpiracaoAcesso(LocalDate.now().plusYears(1))
+                .perfilId(8L)
+                .build()));
+        verify(conviteAcessoRepository, never()).save(any(ConviteAcesso.class));
+    }
+
+    @Test
+    void finalizarCadastroGerente_comTokenDeProfissional_bloqueiaEscalada() {
+        // O convidado escolhe a ROTA, então o token precisa estar amarrado ao cargo.
+        br.com.agendainteligente.domain.entity.Perfil cargoProfissional =
+                br.com.agendainteligente.domain.entity.Perfil.builder()
+                        .id(7L).nome("Cabeleireiro(a)").adminUnicoId(5L)
+                        .perfilSistemaBase(PerfilUsuario.PROFISSIONAL).ativo(true).build();
+        ConviteAcesso convite = ConviteAcesso.builder()
+                .id(1L).token("tok").maxUnidades(1)
+                .dataExpiracaoLink(LocalDateTime.now().plusDays(1))
+                .dataExpiracaoAcesso(LocalDate.now().plusYears(1))
+                .criadoPor(gerente)
+                .perfil(cargoProfissional)
+                .build();
+        when(conviteAcessoRepository.findByToken("tok")).thenReturn(Optional.of(convite));
+
+        FinalizarCadastroGerenteDTO dto = new FinalizarCadastroGerenteDTO();
+        dto.setNome("Fulano"); dto.setEmail("f@x.com"); dto.setSenha("123456"); dto.setCpf("12345678900");
+
+        assertThrows(BusinessException.class, () -> service.finalizarCadastroGerente("tok", dto));
+        verify(usuarioRepository, never()).save(any(Usuario.class));
     }
 }

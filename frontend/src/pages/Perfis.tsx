@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { perfilService, Perfil } from '../services/perfilService'
+import { perfilService, Perfil, PerfilSistemaBase } from '../services/perfilService'
 import { authService } from '../services/authService'
 import { Plus, Trash2, Edit, Shield, Lock, Eye, Pencil, X } from 'lucide-react'
 import { useState, useEffect } from 'react'
@@ -10,6 +10,39 @@ import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { podeEditar } from '../utils/permissions'
 import { MENUS_CONFIG } from '../constants/menusPermissoes'
+
+/**
+ * #171: o nome do cargo é da empresa ("Cabeleireiro(a)"), mas o poder vem da
+ * base. Sem ADMINISTRADOR aqui — dono do tenant não é cargo que se concede.
+ */
+const BASES_CARGO: { valor: PerfilSistemaBase; rotulo: string; ajuda: string }[] = [
+  {
+    valor: 'PROFISSIONAL',
+    rotulo: 'Atende clientes',
+    ajuda: 'Vê a própria agenda e realiza os atendimentos. Ex: cabeleireiro, dentista, personal.',
+  },
+  {
+    valor: 'GERENTE',
+    rotulo: 'Administra a unidade',
+    ajuda: 'Além de atender, gerencia equipe, serviços e financeiro da unidade.',
+  },
+  {
+    valor: 'CLIENTE',
+    rotulo: 'É cliente',
+    ajuda: 'Só agenda e vê os próprios agendamentos pelo app.',
+  },
+]
+
+function rotuloBase(base?: PerfilSistemaBase) {
+  return BASES_CARGO.find((b) => b.valor === base)?.rotulo
+}
+
+const CORES_BASE: Record<string, string> = {
+  PROFISSIONAL: 'bg-emerald-50 text-emerald-700',
+  GERENTE: 'bg-violet-50 text-violet-700',
+  CLIENTE: 'bg-sky-50 text-sky-700',
+  ADMINISTRADOR: 'bg-amber-50 text-amber-700',
+}
 import { getApiErrorMessage } from '../utils/apiError'
 
 type TipoPermissao = 'EDITAR' | 'VISUALIZAR' | 'SEM_ACESSO'
@@ -142,19 +175,13 @@ export default function Perfis() {
                           Sistema
                         </span>
                       )}
-                      {perfil.atendente && (
-                        <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
-                          Profissional/Secretaria
-                        </span>
-                      )}
-                      {perfil.cliente && (
-                        <span className="inline-flex items-center rounded-full bg-sky-50 text-sky-700 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
-                          Cliente
-                        </span>
-                      )}
-                      {perfil.gerente && (
-                        <span className="inline-flex items-center rounded-full bg-violet-50 text-violet-700 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
-                          Gerente
+                      {perfil.perfilSistemaBase && (
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                            CORES_BASE[perfil.perfilSistemaBase] ?? 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          {rotuloBase(perfil.perfilSistemaBase) ?? perfil.perfilSistemaBase}
                         </span>
                       )}
                     </div>
@@ -244,6 +271,7 @@ function PerfilForm({
     perfil || {
       nome: '',
       descricao: '',
+      perfilSistemaBase: 'PROFISSIONAL',
       sistema: false,
       ativo: true,
       atendente: false,
@@ -258,6 +286,7 @@ function PerfilForm({
     if (perfil) {
       setFormData({
         ...perfil,
+        perfilSistemaBase: perfil.perfilSistemaBase ?? 'PROFISSIONAL',
         atendente: perfil.atendente ?? false,
         cliente: perfil.cliente ?? false,
         gerente: perfil.gerente ?? false,
@@ -268,6 +297,7 @@ function PerfilForm({
       setFormData({
         nome: '',
         descricao: '',
+        perfilSistemaBase: 'PROFISSIONAL',
         sistema: false,
         ativo: true,
         atendente: false,
@@ -329,11 +359,9 @@ function PerfilForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const temTipo = (formData.atendente || formData.cliente || formData.gerente) === true
-    if (!perfil?.sistema && !temTipo && formData.nome?.trim()) {
-      if (!window.confirm('Este perfil não está marcado como Atendente, Cliente ou Gerente. Deseja mesmo salvar?')) {
-        return
-      }
+    if (!perfil?.sistema && !formData.perfilSistemaBase) {
+      showNotification('error', 'Escolha o que este cargo pode fazer.')
+      return
     }
     saveMutation.mutate(formData)
   }
@@ -346,8 +374,8 @@ function PerfilForm({
             type="text"
             required
             value={formData.nome}
-            onChange={(e) => setFormData({ ...formData, nome: e.target.value.toUpperCase() })}
-            placeholder="Ex: VENDEDOR, SUPERVISOR"
+            onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+            placeholder="Ex: Cabeleireiro(a), Recepção, Personal Trainer"
             disabled={perfil?.sistema || false}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
@@ -364,39 +392,35 @@ function PerfilForm({
           />
         </FormField>
 
-        <FormField label="Tipo de perfil">
-          <p className="text-xs text-gray-500 mb-2">Marque para identificar este perfil (permite usar qualquer nome acima)</p>
+        <FormField label="O que este cargo pode fazer" required>
+          <p className="text-xs text-gray-500 mb-2">
+            O nome do cargo é livre — isto define o acesso real dele no sistema.
+          </p>
           <div className="mt-2 space-y-2">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.atendente ?? false}
-                onChange={(e) => setFormData({ ...formData, atendente: e.target.checked })}
-                disabled={perfil?.sistema || false}
-                className="rounded border-gray-300 text-violet-600 focus:ring-violet-500 disabled:opacity-50"
-              />
-              <span className="text-sm text-gray-700">Secretaria / Profissional</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.cliente ?? false}
-                onChange={(e) => setFormData({ ...formData, cliente: e.target.checked })}
-                disabled={perfil?.sistema || false}
-                className="rounded border-gray-300 text-violet-600 focus:ring-violet-500 disabled:opacity-50"
-              />
-              <span className="text-sm text-gray-700">Cliente</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.gerente ?? false}
-                onChange={(e) => setFormData({ ...formData, gerente: e.target.checked })}
-                disabled={perfil?.sistema || false}
-                className="rounded border-gray-300 text-violet-600 focus:ring-violet-500 disabled:opacity-50"
-              />
-              <span className="text-sm text-gray-700">Gerente</span>
-            </label>
+            {BASES_CARGO.map((b) => (
+              <label
+                key={b.valor}
+                className={`flex items-start gap-2 rounded-xl border p-3 cursor-pointer transition ${
+                  formData.perfilSistemaBase === b.valor
+                    ? 'border-violet-400 bg-violet-50'
+                    : 'border-slate-200 bg-white hover:border-violet-200'
+                } ${perfil?.sistema ? 'opacity-60 cursor-not-allowed' : ''}`}
+              >
+                <input
+                  type="radio"
+                  name="perfilSistemaBase"
+                  value={b.valor}
+                  checked={formData.perfilSistemaBase === b.valor}
+                  onChange={() => setFormData({ ...formData, perfilSistemaBase: b.valor })}
+                  disabled={perfil?.sistema || false}
+                  className="mt-0.5 border-gray-300 text-violet-600 focus:ring-violet-500 disabled:opacity-50"
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium text-gray-800">{b.rotulo}</span>
+                  <span className="block text-xs text-gray-500">{b.ajuda}</span>
+                </span>
+              </label>
+            ))}
           </div>
         </FormField>
 

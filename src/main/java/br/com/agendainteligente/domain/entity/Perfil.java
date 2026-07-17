@@ -21,8 +21,29 @@ public class Perfil {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 50)
+    /**
+     * Nome livre do cargo ("Cabeleireira", "Recepção"). Único DENTRO do tenant
+     * (V81) — duas empresas podem ter cargos de mesmo nome.
+     */
+    @Column(nullable = false, length = 50)
     private String nome;
+
+    /**
+     * #171: tenant dono do cargo. NULL = perfil de sistema global.
+     * Toda listagem DEVE filtrar por isto — ver feedback-isolamento-administrador.
+     */
+    @Column(name = "admin_unico_id")
+    private Long adminUnicoId;
+
+    /**
+     * #171: enum que define as PERMISSÕES REAIS do cargo. O nome é livre, mas o
+     * comportamento no backend (isolamento multi-tenant, comissões, NF-e) vem
+     * daqui — por isso continua sendo enum fechado.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "perfil_sistema_base", nullable = false, length = 20)
+    @Builder.Default
+    private Usuario.PerfilUsuario perfilSistemaBase = Usuario.PerfilUsuario.PROFISSIONAL;
 
     @Column(length = 200)
     private String descricao;
@@ -71,6 +92,14 @@ public class Perfil {
     protected void onCreate() {
         dataCriacao = LocalDateTime.now();
         dataAtualizacao = LocalDateTime.now();
+        // Guard: MapStruct/new Perfil() ignoram @Builder.Default e deixariam
+        // NOT NULL como null (mesma armadilha que quebrou Unidade e Empresa).
+        if (perfilSistemaBase == null) perfilSistemaBase = Usuario.PerfilUsuario.PROFISSIONAL;
+        if (sistema == null) sistema = false;
+        if (ativo == null) ativo = true;
+        if (atendente == null) atendente = false;
+        if (cliente == null) cliente = false;
+        if (gerente == null) gerente = false;
     }
 
     @PreUpdate
