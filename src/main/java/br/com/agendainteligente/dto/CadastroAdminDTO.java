@@ -25,6 +25,13 @@ public class CadastroAdminDTO {
     @NotBlank(message = "Área de atuação é obrigatória")
     private String areaAtuacao;
 
+    /**
+     * #171: categoria do negócio. Define os cargos sugeridos no seed
+     * (Cabeleireiro(a), Dentista...). Opcional — sem ela, cai em OUTROS e os
+     * cargos nascem com nomes genéricos.
+     */
+    private br.com.agendainteligente.domain.enums.CategoriaEmpresa categoria;
+
     @NotNull(message = "Quantidade de unidades é obrigatória")
     @Min(value = 1, message = "Quantidade de unidades deve ser maior que zero")
     private Integer quantidadeUnidades;

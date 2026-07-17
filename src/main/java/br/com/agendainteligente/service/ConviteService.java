@@ -747,9 +747,14 @@ public class ConviteService {
                 .orElseThrow(() -> new BusinessException("Usuário não encontrado."));
     }
 
+    /**
+     * #172: usa o MESMO fallback do convite de acesso (unidadesDoUsuario). Antes
+     * olhava só o vínculo usuario_unidades, que o auto-cadastro nunca criava —
+     * então quem se cadastrou pelo formulário público não conseguia gerar link
+     * de convite de cliente ("Unidade não pertence às suas unidades").
+     */
     private boolean pertenceAoGerente(Usuario gerente, Unidade unidade) {
-        if (gerente.getUnidades() == null) return false;
-        return gerente.getUnidades().stream().anyMatch(u -> u.getId().equals(unidade.getId()));
+        return unidadesDoUsuario(gerente).stream().anyMatch(u -> u.getId().equals(unidade.getId()));
     }
 
     private static String normalizeCpfCnpj(String value) {

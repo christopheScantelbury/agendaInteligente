@@ -1,3 +1,4 @@
+import { CategoriaEmpresa } from './empresaService'
 import api from './api'
 import { Events, resetAnalytics, track } from '../lib/analytics'
 import { isJwtExpired } from '../utils/jwt'
@@ -11,6 +12,8 @@ export interface CadastroRequest {
   nome: string
   email: string
   areaAtuacao: string
+  /** #171: define os cargos sugeridos criados junto com a empresa. */
+  categoria?: CategoriaEmpresa
   quantidadeUnidades: number
   telefone?: string
   senha: string

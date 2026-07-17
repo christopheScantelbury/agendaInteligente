@@ -66,7 +66,7 @@ public class AuthService {
             usuario = usuarioRepository.save(usuario);
         }
 
-        criarEstruturaInicialEmpresaEUnidade(usuario, cadastroDTO.getAreaAtuacao());
+        criarEstruturaInicialEmpresaEUnidade(usuario, cadastroDTO.getAreaAtuacao(), cadastroDTO.getCategoria());
 
         log.info("Usuário cadastrado via /auth/cadastro. Email: {}, Perfil: {}", usuario.getEmail(), perfil);
     }
@@ -161,7 +161,8 @@ public class AuthService {
         return digits.length() > 20 ? digits.substring(0, 20) : digits;
     }
 
-    private void criarEstruturaInicialEmpresaEUnidade(Usuario usuario, String areaAtuacao) {
+    private void criarEstruturaInicialEmpresaEUnidade(Usuario usuario, String areaAtuacao,
+            br.com.agendainteligente.domain.enums.CategoriaEmpresa categoria) {
         if (usuario == null) {
             return;
         }
@@ -178,6 +179,11 @@ public class AuthService {
                 .telefone(usuario.getTelefone())
                 .ativo(true)
                 .corApp("#2563EB")
+                // #171: sem isto a empresa nascia sempre OUTROS e os cargos
+                // sugeridos por categoria nunca disparavam.
+                .categoria(categoria != null
+                        ? categoria
+                        : br.com.agendainteligente.domain.enums.CategoriaEmpresa.OUTROS)
                 .adminUnicoId(usuario.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR ? usuario.getId() : null)
                 .build();
         empresa = empresaRepository.save(empresa);
@@ -196,7 +202,12 @@ public class AuthService {
                 .empresa(empresa)
                 .adminUnicoId(usuario.getPerfil() == Usuario.PerfilUsuario.ADMINISTRADOR ? usuario.getId() : null)
                 .build();
-        unidadeRepository.save(unidade);
+        unidade = unidadeRepository.save(unidade);
+
+        // #172: vincula o dono à unidade. Sem isto ele não conseguia gerar link
+        // de convite de cliente — pertenceAoGerente() só olha usuario.unidades.
+        usuario.setUnidades(new java.util.ArrayList<>(java.util.List.of(unidade)));
+        usuarioRepository.save(usuario);
 
         // #171: sem cargos, o dono não tem o que escolher ao convidar o primeiro
         // funcionário — e ele acabava virando GERENTE por default da rota.

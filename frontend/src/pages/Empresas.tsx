@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { empresaService, Empresa, EmpresaEstatisticas, CategoriaEmpresa } from '../services/empresaService'
+import { empresaService, Empresa, EmpresaEstatisticas, CategoriaEmpresa, CATEGORIAS_EMPRESA as CATEGORIAS } from '../services/empresaService'
 import { planoService, Plano } from '../services/planoService'
 import { authService } from '../services/authService'
 import { perfilService } from '../services/perfilService'
@@ -19,18 +19,6 @@ import { buscarEnderecoPorCep } from '../utils/viaCep'
 
 // Categoria define a terminologia do sistema (ver lib/categoria/dictionary.ts)
 // e é NOT NULL no banco — precisa estar no form.
-const CATEGORIAS: Array<{ value: CategoriaEmpresa; label: string }> = [
-  { value: 'SALAO_BELEZA', label: 'Salão de beleza' },
-  { value: 'ESTETICA', label: 'Estética' },
-  { value: 'ACADEMIA', label: 'Academia' },
-  { value: 'CONSULTORIO_MEDICO', label: 'Consultório médico' },
-  { value: 'CONSULTORIO_DENTARIO', label: 'Consultório odontológico' },
-  { value: 'FISIOTERAPIA', label: 'Fisioterapia' },
-  { value: 'PSICOLOGIA', label: 'Psicologia' },
-  { value: 'NUTRICIONISTA', label: 'Nutrição' },
-  { value: 'VETERINARIA', label: 'Veterinária' },
-  { value: 'OUTROS', label: 'Outros' },
-]
 
 const SLUG_REGEX = /^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])$/
 const SLUG_MIN = 3

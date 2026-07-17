@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { authService } from '../services/authService'
+import { CATEGORIAS_EMPRESA, CategoriaEmpresa } from '../services/empresaService'
 
 function LogoMark({ size = 36 }: { size?: number }) {
   return (
@@ -27,7 +28,7 @@ export default function Cadastro() {
   const navigate = useNavigate()
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
-  const [areaAtuacao, setAreaAtuacao] = useState('')
+  const [categoria, setCategoria] = useState<CategoriaEmpresa | ''>('')
   const [quantidadeUnidades, setQuantidadeUnidades] = useState(1)
   const [telefone, setTelefone] = useState('')
   const [senha, setSenha] = useState('')
@@ -42,7 +43,8 @@ export default function Cadastro() {
     if (!Number.isFinite(quantidadeUnidades) || quantidadeUnidades < 1) { setErro('Informe uma quantidade de unidades válida'); return }
     setLoading(true)
     try {
-      await authService.cadastrar({ nome, email, areaAtuacao, quantidadeUnidades, telefone: telefone.trim() || undefined, senha })
+      const areaLabel = CATEGORIAS_EMPRESA.find((c) => c.value === categoria)?.label ?? 'Geral'
+      await authService.cadastrar({ nome, email, areaAtuacao: areaLabel, categoria: categoria || undefined, quantidadeUnidades, telefone: telefone.trim() || undefined, senha })
       navigate('/login')
     } catch (error: any) {
       setErro(error.response?.data?.message || 'Erro ao realizar cadastro')
@@ -93,7 +95,22 @@ export default function Cadastro() {
 
             <div>
               <label className={labelClass}>Área de atuação</label>
-              <input type="text" required value={areaAtuacao} onChange={(e) => setAreaAtuacao(e.target.value)} placeholder="Ex.: Clínica odontológica" className={inputClass} />
+              <select
+                required
+                value={categoria}
+                onChange={(e) => setCategoria(e.target.value as CategoriaEmpresa)}
+                className={inputClass}
+              >
+                <option value="">Selecione…</option>
+                {CATEGORIAS_EMPRESA.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-slate-500">
+                Usamos isso para já criar os cargos da sua equipe com os nomes do seu ramo.
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

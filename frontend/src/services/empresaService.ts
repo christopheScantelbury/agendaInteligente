@@ -12,6 +12,20 @@ export type CategoriaEmpresa =
   | 'VETERINARIA'
   | 'OUTROS'
 
+/** Rótulos das categorias — fonte única (cadastro público + tela de Empresas). */
+export const CATEGORIAS_EMPRESA: Array<{ value: CategoriaEmpresa; label: string }> = [
+  { value: 'SALAO_BELEZA', label: 'Salão de beleza' },
+  { value: 'ESTETICA', label: 'Estética' },
+  { value: 'ACADEMIA', label: 'Academia' },
+  { value: 'CONSULTORIO_MEDICO', label: 'Consultório médico' },
+  { value: 'CONSULTORIO_DENTARIO', label: 'Consultório odontológico' },
+  { value: 'FISIOTERAPIA', label: 'Fisioterapia' },
+  { value: 'PSICOLOGIA', label: 'Psicologia' },
+  { value: 'NUTRICIONISTA', label: 'Nutrição' },
+  { value: 'VETERINARIA', label: 'Veterinária' },
+  { value: 'OUTROS', label: 'Outros' },
+]
+
 export interface Empresa {
   id?: number
   nome: string
