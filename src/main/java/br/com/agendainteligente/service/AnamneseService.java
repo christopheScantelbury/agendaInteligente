@@ -132,47 +132,88 @@ public class AnamneseService {
 
         Unidade unidade = resolverUnidadeDoUsuarioLogado();
 
-        Anamnese anamnese = Anamnese.builder()
-                .cliente(cliente)
-                .servico(servico)
-                .servicoNome(dto.getServicoNome())
-                .template(template)
-                .data(dto.getData())
-                .usaRimel(dto.getUsaRimel())
-                .usaRimelObs(dto.getUsaRimelObs())
-                .procedimentosRecentesOlhos(dto.getProcedimentosRecentesOlhos())
-                .procedimentosRecentesOlhosObs(dto.getProcedimentosRecentesOlhosObs())
-                .alergias(dto.getAlergias())
-                .alergiasObs(dto.getAlergiasObs())
-                .problemasOculares(dto.getProblemasOculares())
-                .problemasOcularesObs(dto.getProblemasOcularesObs())
-                .tratamentoOncologico(dto.getTratamentoOncologico())
-                .tratamentoOncologicoObs(dto.getTratamentoOncologicoObs())
-                .tireoide(dto.getTireoide())
-                .tireoidedObs(dto.getTireoidedObs())
-                .dormeDeLado(dto.getDormeDeLado())
-                .dormeDeLadoObs(dto.getDormeDeLadoObs())
-                .gravidez(dto.getGravidez())
-                .gravidezObs(dto.getGravidezObs())
-                .outrosProblemas(dto.getOutrosProblemas())
-                .outrosProblemasDescricao(dto.getOutrosProblemasDescricao())
-                .mapping(dto.getMapping())
-                .marcaFios(dto.getMarcaFios())
-                .espessura(dto.getEspessura())
-                .curvatura(dto.getCurvatura())
-                .adesivo(dto.getAdesivo())
-                .usoImagem(dto.getUsoImagem() != null ? dto.getUsoImagem() : false)
-                .observacoes(dto.getObservacoes())
-                .unidade(unidade)
-                .build();
-
-        if (dto.getRespostas() != null && !dto.getRespostas().isEmpty()) {
-            anamnese.setRespostas(dto.getRespostas());
-        }
+        Anamnese anamnese = new Anamnese();
+        anamnese.setCliente(cliente);
+        anamnese.setUnidade(unidade);
+        aplicarCampos(anamnese, dto, servico, template);
 
         anamnese = anamneseRepository.save(anamnese);
         log.info("Anamnese criada com sucesso. ID: {}", anamnese.getId());
         return toDTO(anamnese);
+    }
+
+    /**
+     * #173: edita uma ficha existente sem recriar o registro. Preserva o cliente
+     * e a unidade originais (identidade/tenant da ficha não mudam por payload) e
+     * valida que o usuário logado tem acesso à unidade dela (mesmo filtro da
+     * listagem). @PreUpdate atualiza data_atualizacao automaticamente.
+     */
+    @Transactional
+    public AnamneseDTO atualizar(Long id, AnamneseDTO dto) {
+        Anamnese anamnese = anamneseRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Anamnese não encontrada com id: " + id));
+        validarAcessoAnamnese(anamnese);
+
+        Servico servico = null;
+        if (dto.getServicoId() != null) {
+            servico = servicoRepository.findById(dto.getServicoId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Serviço não encontrado com id: " + dto.getServicoId()));
+        }
+        AnamneseTemplate template = null;
+        if (dto.getTemplateId() != null) {
+            template = anamneseTemplateRepository.findById(dto.getTemplateId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Template não encontrado com id: " + dto.getTemplateId()));
+        }
+
+        // cliente e unidade NÃO mudam (identidade e tenant da ficha)
+        aplicarCampos(anamnese, dto, servico, template);
+        anamnese = anamneseRepository.save(anamnese);
+        log.info("Anamnese atualizada. ID: {}", anamnese.getId());
+        return toDTO(anamnese);
+    }
+
+    /** SEC: a ficha tem que estar numa unidade que o usuário logado pode acessar. */
+    private void validarAcessoAnamnese(Anamnese anamnese) {
+        java.util.Set<Long> permitidas = obterUnidadesIdsPermitidas();
+        if (permitidas == null) return; // ADMIN global
+        Long unidadeId = anamnese.getUnidade() != null ? anamnese.getUnidade().getId() : null;
+        if (unidadeId == null || !permitidas.contains(unidadeId)) {
+            throw new ResourceNotFoundException("Anamnese não encontrada");
+        }
+    }
+
+    /** Aplica os campos editáveis do DTO na entity (compartilhado por salvar/atualizar). */
+    private void aplicarCampos(Anamnese a, AnamneseDTO dto, Servico servico, AnamneseTemplate template) {
+        a.setServico(servico);
+        a.setServicoNome(dto.getServicoNome());
+        a.setTemplate(template);
+        a.setData(dto.getData());
+        a.setUsaRimel(dto.getUsaRimel());
+        a.setUsaRimelObs(dto.getUsaRimelObs());
+        a.setProcedimentosRecentesOlhos(dto.getProcedimentosRecentesOlhos());
+        a.setProcedimentosRecentesOlhosObs(dto.getProcedimentosRecentesOlhosObs());
+        a.setAlergias(dto.getAlergias());
+        a.setAlergiasObs(dto.getAlergiasObs());
+        a.setProblemasOculares(dto.getProblemasOculares());
+        a.setProblemasOcularesObs(dto.getProblemasOcularesObs());
+        a.setTratamentoOncologico(dto.getTratamentoOncologico());
+        a.setTratamentoOncologicoObs(dto.getTratamentoOncologicoObs());
+        a.setTireoide(dto.getTireoide());
+        a.setTireoidedObs(dto.getTireoidedObs());
+        a.setDormeDeLado(dto.getDormeDeLado());
+        a.setDormeDeLadoObs(dto.getDormeDeLadoObs());
+        a.setGravidez(dto.getGravidez());
+        a.setGravidezObs(dto.getGravidezObs());
+        a.setOutrosProblemas(dto.getOutrosProblemas());
+        a.setOutrosProblemasDescricao(dto.getOutrosProblemasDescricao());
+        a.setMapping(dto.getMapping());
+        a.setMarcaFios(dto.getMarcaFios());
+        a.setEspessura(dto.getEspessura());
+        a.setCurvatura(dto.getCurvatura());
+        a.setAdesivo(dto.getAdesivo());
+        a.setUsoImagem(dto.getUsoImagem() != null ? dto.getUsoImagem() : false);
+        a.setObservacoes(dto.getObservacoes());
+        a.setRespostas(dto.getRespostas() != null && !dto.getRespostas().isEmpty() ? dto.getRespostas() : null);
     }
 
     @Transactional

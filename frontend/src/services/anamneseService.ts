@@ -96,6 +96,11 @@ export const anamneseService = {
     return response.data
   },
 
+  atualizar: async (id: number, data: AnamneseFormData): Promise<Anamnese> => {
+    const response = await api.put<Anamnese>(`/anamneses/${id}`, data)
+    return response.data
+  },
+
   excluir: async (id: number): Promise<void> => {
     await api.delete(`/anamneses/${id}`)
   },

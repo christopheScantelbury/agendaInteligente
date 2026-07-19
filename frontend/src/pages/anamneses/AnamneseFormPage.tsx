@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Pencil } from 'lucide-react'
 import { anamneseService, type AnamneseFormData } from '../../services/anamneseService'
 import { clienteService, type Cliente } from '../../services/clienteService'
 import { servicoService, type Servico } from '../../services/servicoService'
@@ -49,11 +49,17 @@ const emptyForm: AnamneseFormData = {
 export default function AnamneseFormPage() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
+  const [searchParams] = useSearchParams()
   const { showNotification } = useNotification()
   const queryClient = useQueryClient()
 
-  const isView = !!id
   const anamneseId = id ? Number(id) : undefined
+  // #173: ficha existente abre em leitura; entra em edição pelo botão "Editar"
+  // ou já direto quando vem da listagem com ?editar=1.
+  const [editing, setEditing] = useState(searchParams.get('editar') === '1')
+  const isView = !!id && !editing
+  // Cliente é a identidade da ficha — não se troca ao editar, só na criação.
+  const clienteBloqueado = !!id
 
   const [form, setForm] = useState<AnamneseFormData>(emptyForm)
   const [respostasDinamicas, setRespostasDinamicas] = useState<Record<string, { valor?: boolean | string | number | null; obs?: string }>>({})
@@ -200,11 +206,18 @@ export default function AnamneseFormPage() {
   }
 
   const saveMutation = useMutation({
-    mutationFn: anamneseService.criar,
+    mutationFn: (data: AnamneseFormData) =>
+      anamneseId ? anamneseService.atualizar(anamneseId, data) : anamneseService.criar(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['anamneses'] })
-      showNotification('success', 'Ficha salva com sucesso!')
-      navigate('/anamneses')
+      if (anamneseId) {
+        queryClient.invalidateQueries({ queryKey: ['anamnese', anamneseId] })
+        showNotification('success', 'Ficha atualizada com sucesso!')
+        setEditing(false) // volta pra visualização, sem sair da tela
+      } else {
+        showNotification('success', 'Ficha salva com sucesso!')
+        navigate('/anamneses')
+      }
     },
     onError: (error: any) => {
       const msg = error.response?.data?.message || 'Erro ao salvar ficha'
@@ -244,16 +257,34 @@ export default function AnamneseFormPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            {isView ? 'Ficha de Anamnese' : 'Nova Ficha de Anamnese'}
+            {!anamneseId ? 'Nova Ficha de Anamnese' : editing ? 'Editar Ficha de Anamnese' : 'Ficha de Anamnese'}
           </h1>
           <p className="text-sm text-gray-600 mt-1">
-            {isView ? 'Visualização da ficha.' : 'Preencha os dados da ficha de anamnese.'}
+            {!anamneseId
+              ? 'Preencha os dados da ficha de anamnese.'
+              : editing
+                ? 'Altere os dados e salve no mesmo cadastro.'
+                : 'Visualização da ficha.'}
           </p>
+          {isView && anamneseExistente?.dataAtualizacao && (
+            <p className="text-xs text-gray-400 mt-1">
+              Última atualização:{' '}
+              {new Date(anamneseExistente.dataAtualizacao).toLocaleString('pt-BR')}
+            </p>
+          )}
         </div>
-        <Button variant="secondary" onClick={() => navigate('/anamneses')}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar
-        </Button>
+        <div className="flex gap-2">
+          {isView && (
+            <Button onClick={() => setEditing(true)}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Editar
+            </Button>
+          )}
+          <Button variant="secondary" onClick={() => navigate('/anamneses')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar
+          </Button>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -274,7 +305,7 @@ export default function AnamneseFormPage() {
                 onChange={(e) => handleClienteSearchChange(e.target.value)}
                 onBlur={() => setTimeout(() => setShowClienteDropdown(false), 200)}
                 placeholder="Digite para buscar cliente..."
-                disabled={isView}
+                disabled={clienteBloqueado}
                 className={fieldClass}
               />
               {showClienteDropdown && clienteDropdown.length > 0 && (
@@ -553,11 +584,27 @@ export default function AnamneseFormPage() {
 
         {!isView && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-5 flex flex-col-reverse sm:flex-row justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => navigate('/anamneses')}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                if (editing && anamneseId) {
+                  // cancela a edição: descarta alterações recarregando a ficha e volta pra leitura
+                  setEditing(false)
+                  queryClient.invalidateQueries({ queryKey: ['anamnese', anamneseId] })
+                } else {
+                  navigate('/anamneses')
+                }
+              }}
+            >
               Cancelar
             </Button>
             <Button type="submit" isLoading={saveMutation.isPending}>
-              {saveMutation.isPending ? 'Salvando...' : 'Salvar ficha'}
+              {saveMutation.isPending
+                ? 'Salvando...'
+                : anamneseId
+                  ? 'Salvar alterações'
+                  : 'Salvar ficha'}
             </Button>
           </div>
         )}

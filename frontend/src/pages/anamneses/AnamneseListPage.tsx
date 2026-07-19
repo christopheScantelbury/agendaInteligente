@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Trash2, Eye, ClipboardList, FileText } from 'lucide-react'
+import { Plus, Trash2, Eye, Pencil, ClipboardList, FileText } from 'lucide-react'
 import { anamneseService } from '../../services/anamneseService'
 import { useNotification } from '../../contexts/NotificationContext'
 import ConfirmDialog from '../../components/ConfirmDialog'
@@ -128,6 +128,14 @@ export default function AnamneseListPage() {
                       title="Visualizar"
                     >
                       <Eye className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => navigate(`/anamneses/${a.id}?editar=1`)}
+                      className="p-2 rounded-lg text-slate-500 hover:bg-violet-50 hover:text-violet-700 transition"
+                      aria-label="Editar ficha"
+                      title="Editar"
+                    >
+                      <Pencil className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => setConfirmDelete({ isOpen: true, id: a.id })}

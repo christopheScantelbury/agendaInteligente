@@ -46,6 +46,13 @@ public class AnamneseController {
                 .body(anamneseService.salvar(anamneseDTO));
     }
 
+    @PutMapping("/api/anamneses/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'PROFISSIONAL')")
+    @Operation(summary = "Editar ficha de anamnese existente")
+    public ResponseEntity<AnamneseDTO> atualizar(@PathVariable Long id, @Valid @RequestBody AnamneseDTO anamneseDTO) {
+        return ResponseEntity.ok(anamneseService.atualizar(id, anamneseDTO));
+    }
+
     @DeleteMapping("/api/anamneses/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE')")
     @Operation(summary = "Excluir ficha de anamnese")
