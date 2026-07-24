@@ -11,7 +11,7 @@ import {
   isToday,
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Calendar, ChevronDown } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Calendar, ChevronDown, CalendarDays, LayoutGrid, CalendarRange } from 'lucide-react'
 import { agendamentoService, Agendamento } from '../../services/agendamentoService'
 import { atendenteService } from '../../services/atendenteService'
 import { dotClass } from '../../utils/statusAgendamento'
@@ -19,11 +19,14 @@ import WeekTimeline, { Prof } from '../../components/agendamentos/WeekTimeline'
 import { useIsWebLayout } from '../../hooks/useIsWebLayout'
 import NovoAgendamentoSheet from '../../components/agendamentos/NovoAgendamentoSheet'
 import DetalhesSheet from '../../components/agendamentos/DetalhesSheet'
+import { authService } from '../../services/authService'
 
 interface Props {
   selectedDate: Date
   onDateChange: (date: Date) => void
   onJumpToDayMode: (date: Date) => void
+  modoAtual: 'dia' | 'semana' | 'mes'
+  onModoChange: (modo: 'dia' | 'semana' | 'mes') => void
 }
 
 /**
@@ -33,10 +36,15 @@ interface Props {
  * Web (≥lg, #164): timeline horizontal — 7 colunas dia + eixo Y hora +
  *                  cores por profissional + granularidade 15/30/60m.
  */
-export default function WeekMode({ selectedDate, onDateChange, onJumpToDayMode }: Props) {
+export default function WeekMode({ selectedDate, onDateChange, onJumpToDayMode, modoAtual, onModoChange }: Props) {
   const isWeb = useIsWebLayout()
   const inicioSemana = startOfWeek(selectedDate, { weekStartsOn: 0 })
   const fimSemana = addDays(inicioSemana, 6)
+  const storageKey = useMemo(() => {
+    const usuario = authService.getUsuario()
+    const usuarioKey = usuario?.usuarioId ?? usuario?.nome ?? 'anon'
+    return `agenda:week:selected-profissionais:${usuarioKey}`
+  }, [])
 
   const { data: agendamentos = [], isLoading } = useQuery({
     queryKey: ['agendamentos'],
@@ -98,33 +106,89 @@ export default function WeekMode({ selectedDate, onDateChange, onJumpToDayMode }
   }, [atendentes, agendamentosPorDia])
 
   const [profissionaisSelecionados, setProfissionaisSelecionados] = useState<number[]>([])
-  const touchedRef = useRef(false)
+  const initialSelectionAppliedRef = useRef(false)
 
-  // Auto-seleção inicial: top 2 por count. Mesmo padrão do DayMode.
+  // Semana: restaura seleção salva; se não houver, usa os 2 com mais agendamentos.
   useEffect(() => {
-    if (touchedRef.current || profissionaisAtivos.length === 0) return
-    const top = [...profissionaisAtivos]
-      .sort((a, b) => (b.countSemana ?? 0) - (a.countSemana ?? 0) || a.nome.localeCompare(b.nome))
-      .slice(0, 2)
-      .map((p) => p.id)
-    if (
-      top.length !== profissionaisSelecionados.length ||
-      !top.every((id, i) => id === profissionaisSelecionados[i])
-    ) {
-      setProfissionaisSelecionados(top)
+    if (initialSelectionAppliedRef.current) return
+    if (profissionaisAtivos.length === 0) return
+
+    const temSalvo = localStorage.getItem(storageKey) !== null
+    let initialIds: number[] | null = null
+
+    try {
+      const raw = temSalvo ? localStorage.getItem(storageKey) : null
+      if (raw !== null) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) {
+          const validIds = new Set(profissionaisAtivos.map((p) => p.id))
+          initialIds = parsed
+            .filter((id): id is number => typeof id === 'number' && validIds.has(id))
+            .slice(0, 2)
+        } else {
+          initialIds = []
+        }
+      }
+    } catch {
+      initialIds = null
     }
+
+    if (initialIds === null) {
+      initialIds = [...profissionaisAtivos]
+        .sort((a, b) => (b.countSemana ?? 0) - (a.countSemana ?? 0) || a.nome.localeCompare(b.nome))
+        .slice(0, 2)
+        .map((p) => p.id)
+    }
+
+    setProfissionaisSelecionados(initialIds.slice(0, 2))
+    initialSelectionAppliedRef.current = true
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profissionaisAtivos])
+  }, [profissionaisAtivos, storageKey])
+
+  useEffect(() => {
+    if (!initialSelectionAppliedRef.current) return
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(profissionaisSelecionados.slice(0, 2)))
+    } catch {
+      // Storage indisponível: segue sem persistência.
+    }
+  }, [profissionaisSelecionados, storageKey])
 
   const handleProfsChange = (ids: number[]) => {
-    touchedRef.current = true
-    setProfissionaisSelecionados(ids)
+    setProfissionaisSelecionados(ids.slice(0, 2))
   }
 
   const [granularidade, setGranularidade] = useState<15 | 30 | 60>(30)
   const [novoSheetOpen, setNovoSheetOpen] = useState(false)
   const [novoInitial, setNovoInitial] = useState<{ date: Date; atendenteId?: number } | null>(null)
   const [detalhesId, setDetalhesId] = useState<number | null>(null)
+
+  const modoSwitcher = isWeb ? (
+    <div className="inline-flex p-1 rounded-2xl bg-slate-100 border border-slate-200 w-full sm:w-auto flex-shrink-0">
+      {([
+        { id: 'dia', label: 'Dia', icon: CalendarDays },
+        { id: 'semana', label: 'Semana', icon: CalendarRange },
+        { id: 'mes', label: 'Mês', icon: LayoutGrid },
+      ] as const).map((mode) => {
+        const Icon = mode.icon
+        const isActive = modoAtual === mode.id
+        return (
+          <button
+            key={mode.id}
+            onClick={() => onModoChange(mode.id)}
+            className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+              isActive
+                ? 'bg-white text-violet-700 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            {mode.label}
+          </button>
+        )
+      })}
+    </div>
+  ) : null
 
   const handleSlotClick = (date: Date, atendenteId: number) => {
     setNovoInitial({ date, atendenteId })
@@ -253,6 +317,7 @@ export default function WeekMode({ selectedDate, onDateChange, onJumpToDayMode }
             onProfissionaisChange={handleProfsChange}
             granularidade={granularidade}
             onGranularidadeChange={setGranularidade}
+            modoSwitcher={modoSwitcher}
             onSlotClick={handleSlotClick}
             onAgendamentoClick={handleAgendamentoClick}
             fillHeight={isWeb}

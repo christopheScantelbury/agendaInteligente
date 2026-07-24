@@ -1,10 +1,12 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
-import { format, addDays, isWithinInterval, startOfDay, endOfDay, isToday } from 'date-fns'
+import { format, addDays, startOfDay, endOfDay, isToday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Users, Plus } from 'lucide-react'
 import { Agendamento } from '../../services/agendamentoService'
 import { barClass, cardClass } from '../../utils/statusAgendamento'
 import ProfissionalPickerSheet, { PickerItem } from './ProfissionalPickerSheet'
+import AgendamentoCardContent from './AgendamentoCardContent'
+import { agendamentoOcupaIntervalo } from '../../utils/agendamentoOcorrencias'
 
 /**
  * #164: WeekMode versão web — timeline horizontal com 7 colunas (dias) + eixo Y
@@ -31,6 +33,7 @@ interface Props {
   /** Minutos por slot: 15, 30 ou 60. */
   granularidade?: 15 | 30 | 60
   onGranularidadeChange?: (g: 15 | 30 | 60) => void
+  modoSwitcher?: React.ReactNode
   /** Hora inicial (default 7). */
   startHour?: number
   /** Hora final exclusiva (default 20). */
@@ -51,7 +54,8 @@ export default function WeekTimeline({
   onAgendamentoClick,
   granularidade = 30,
   onGranularidadeChange,
-  startHour = 7,
+  modoSwitcher,
+  startHour = 8,
   endHour = 20,
   fillHeight = false,
 }: Props) {
@@ -61,8 +65,6 @@ export default function WeekTimeline({
     () => Array.from({ length: 7 }, (_, i) => addDays(inicioSemana, i)),
     [inicioSemana]
   )
-
-  const totalMinutes = (endHour - startHour) * 60
 
   // fillHeight: mede o corpo e calcula pxPerMin pra caber na altura da tela.
   const bodyRef = useRef<HTMLDivElement>(null)
@@ -82,26 +84,12 @@ export default function WeekTimeline({
   // Mínimo legível por granularidade; se a semana não couber, o corpo rola.
   const MIN_PX = granularidade === 15 ? 1.2 : granularidade === 30 ? 1.0 : 0.7
   const pxPerMinBase = granularidade === 15 ? 1.4 : granularidade === 30 ? 1.0 : 0.7
-  const pxPerMin =
-    fillHeight && bodyH > 0 ? Math.max(bodyH / totalMinutes, MIN_PX) : pxPerMinBase
-  const totalHeight = totalMinutes * pxPerMin
-  const slotsPorDia = totalMinutes / granularidade
-  const startTotalMin = startHour * 60
-  const endTotalMin = endHour * 60
-
-  const hours = useMemo(() => {
-    const arr: number[] = []
-    for (let h = startHour; h < endHour; h++) arr.push(h)
-    return arr
-  }, [startHour, endHour])
 
   // Filtra agendamentos da semana + só dos profs selecionados (efetivo do item)
   const agsDaSemana = useMemo(
     () =>
       agendamentos.filter((a) => {
-        if (!a.dataHoraInicio) return false
-        const dt = new Date(a.dataHoraInicio)
-        return isWithinInterval(dt, { start: startOfDay(inicioSemana), end: endOfDay(fimSemana) })
+        return agendamentoOcupaIntervalo(a, startOfDay(inicioSemana), endOfDay(fimSemana))
       }),
     [agendamentos, inicioSemana, fimSemana]
   )
@@ -115,15 +103,50 @@ export default function WeekTimeline({
     servicoNome: string
     cliente: string
   }
-  const itensPorDia = useMemo(() => {
-    const mapa = new Map<string, Item[]>()
-    dias.forEach((d) => mapa.set(format(d, 'yyyy-MM-dd'), []))
+  const profissionaisVisiveis = useMemo(
+    () =>
+      profissionaisSelecionados
+        .map((id) => profissionaisAtivos.find((p) => p.id === id))
+        .filter((p): p is Prof => !!p),
+    [profissionaisSelecionados, profissionaisAtivos]
+  )
+
+  const itensPorDiaProf = useMemo(() => {
+    const mapa = new Map<string, Map<number, Item[]>>()
+    dias.forEach((d) => {
+      const porProf = new Map<number, Item[]>()
+      profissionaisVisiveis.forEach((p) => porProf.set(p.id, []))
+      mapa.set(format(d, 'yyyy-MM-dd'), porProf)
+    })
+
+    const profIds = new Set(profissionaisVisiveis.map((p) => p.id))
+
     agsDaSemana.forEach((a) => {
       const servicos = (a.servicos ?? []) as any[]
-      if (servicos.length === 0) return
+
+      if (servicos.length === 0) {
+        if (!a.dataHoraInicio) return
+        const atendenteEfetivo = a.atendenteId
+        if (!atendenteEfetivo || !profIds.has(atendenteEfetivo)) return
+        const inicio = new Date(a.dataHoraInicio)
+        const fim = a.dataHoraFim ? new Date(a.dataHoraFim) : new Date(inicio.getTime() + 30 * 60_000)
+        const key = format(inicio, 'yyyy-MM-dd')
+        const porProf = mapa.get(key)
+        if (!porProf?.has(atendenteEfetivo)) return
+        porProf.get(atendenteEfetivo)!.push({
+          agendamento: a,
+          inicio,
+          fim,
+          atendenteId: atendenteEfetivo,
+          servicoNome: a.servico?.nome ?? a.servico?.descricao ?? 'Serviço',
+          cliente: a.cliente?.nome ?? `Cliente #${a.clienteId}`,
+        })
+        return
+      }
+
       servicos.forEach((s) => {
         const atendenteEfetivo = (s.atendenteId as number | undefined) ?? a.atendenteId
-        if (!atendenteEfetivo || !profissionaisSelecionados.includes(atendenteEfetivo)) return
+        if (!atendenteEfetivo || !profIds.has(atendenteEfetivo)) return
 
         const inicioStr = (s.dataHoraInicio as string | undefined) ?? a.dataHoraInicio
         const fimStr = (s.dataHoraFim as string | undefined) ?? a.dataHoraFim
@@ -131,8 +154,9 @@ export default function WeekTimeline({
         const inicio = new Date(inicioStr)
         const fim = fimStr ? new Date(fimStr) : new Date(inicio.getTime() + 30 * 60_000)
         const key = format(inicio, 'yyyy-MM-dd')
-        if (!mapa.has(key)) return
-        mapa.get(key)!.push({
+        const porProf = mapa.get(key)
+        if (!porProf?.has(atendenteEfetivo)) return
+        porProf.get(atendenteEfetivo)!.push({
           agendamento: a,
           inicio,
           fim,
@@ -142,8 +166,43 @@ export default function WeekTimeline({
         })
       })
     })
+
+    mapa.forEach((porProf) => {
+      porProf.forEach((lista) => {
+        lista.sort((x, y) => x.inicio.getTime() - y.inicio.getTime())
+      })
+    })
+
     return mapa
-  }, [agsDaSemana, dias, profissionaisSelecionados])
+  }, [agsDaSemana, dias, profissionaisVisiveis])
+
+  const effectiveEndHour = useMemo(() => {
+    let latestEndMin = startHour * 60
+    itensPorDiaProf.forEach((porProf) => {
+      porProf.forEach((lista) => {
+        lista.forEach((item) => {
+          const endMin = item.fim.getHours() * 60 + item.fim.getMinutes()
+          latestEndMin = Math.max(latestEndMin, endMin)
+        })
+      })
+    })
+
+    return Math.max(endHour, Math.ceil(latestEndMin / 60))
+  }, [endHour, itensPorDiaProf, startHour])
+
+  const totalMinutes = (effectiveEndHour - startHour) * 60
+  const pxPerMin =
+    fillHeight && bodyH > 0 ? Math.max(bodyH / totalMinutes, MIN_PX) : pxPerMinBase
+  const totalHeight = totalMinutes * pxPerMin
+  const slotsPorDia = totalMinutes / granularidade
+  const startTotalMin = startHour * 60
+  const endTotalMin = effectiveEndHour * 60
+
+  const hours = useMemo(() => {
+    const arr: number[] = []
+    for (let h = startHour; h < effectiveEndHour; h++) arr.push(h)
+    return arr
+  }, [startHour, effectiveEndHour])
 
   const pickerItems = useMemo<PickerItem[]>(
     () =>
@@ -155,15 +214,26 @@ export default function WeekTimeline({
     [profissionaisAtivos]
   )
 
+  const profissionaisCabecalho = useMemo(() => {
+    const selecionados = profissionaisSelecionados
+      .map((id) => profissionaisAtivos.find((p) => p.id === id))
+      .filter((p): p is Prof => !!p)
+
+    return {
+      visiveis: selecionados.slice(0, 2),
+      excedentes: Math.max(0, selecionados.length - 2),
+    }
+  }, [profissionaisSelecionados, profissionaisAtivos])
+
   return (
     <div className={`hidden lg:flex bg-white rounded-2xl border border-slate-200 ${fillHeight ? 'h-full flex-col overflow-hidden' : 'lg:flex-col'}`}>
       {/* Barra de controles */}
       <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-slate-200 flex-shrink-0">
         {/* Chips de profs selecionados */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500">
+        <div className="flex flex-1 min-w-0 items-center gap-2 flex-nowrap overflow-x-auto scrollbar-none">
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 whitespace-nowrap">
             <Users className="h-3.5 w-3.5" />
-            Profissionais ({profissionaisSelecionados.length}/{profissionaisAtivos.length})
+            Profissionais ({profissionaisSelecionados.length}/2)
           </span>
           {/* Chips neutros violet — mesmo estilo do modo Dia (cor do card é por
               status; profissional se identifica pelo nome). */}
@@ -200,26 +270,29 @@ export default function WeekTimeline({
           </button>
         </div>
 
-        {/* Granularidade */}
-        {onGranularidadeChange && (
-          <div className="ml-auto inline-flex p-0.5 rounded-lg bg-slate-100 border border-slate-200">
-            {([15, 30, 60] as const).map((g) => {
-              const ativo = g === granularidade
-              return (
-                <button
-                  key={g}
-                  type="button"
-                  onClick={() => onGranularidadeChange(g)}
-                  className={`px-3 py-1 rounded-md text-xs font-semibold transition ${
-                    ativo ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  {g}m
-                </button>
-              )
-            })}
-          </div>
-        )}
+        <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+          {/* Granularidade */}
+          {onGranularidadeChange && (
+            <div className="inline-flex p-0.5 rounded-lg bg-slate-100 border border-slate-200">
+              {([15, 30, 60] as const).map((g) => {
+                const ativo = g === granularidade
+                return (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => onGranularidadeChange(g)}
+                    className={`px-3 py-1 rounded-md text-xs font-semibold transition ${
+                      ativo ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {g}m
+                  </button>
+                )
+              })}
+            </div>
+          )}
+          {modoSwitcher}
+        </div>
       </div>
 
       {/* Header dos dias */}
@@ -236,11 +309,28 @@ export default function WeekTimeline({
               }`}
             >
               <p className={`text-[10px] font-bold uppercase ${hoje ? 'text-violet-700' : 'text-slate-500'}`}>
-                {format(d, 'EEE', { locale: ptBR }).slice(0, 3)}
+                {`${format(d, 'EEE', { locale: ptBR }).slice(0, 3)} ${format(d, 'dd/MM')}`}
               </p>
-              <p className={`text-lg font-black ${hoje ? 'text-violet-700' : 'text-slate-900'}`}>
-                {format(d, 'd')}
-              </p>
+              <div className="mt-1 flex flex-wrap items-center justify-center gap-x-1 gap-y-0.5 min-h-[18px] text-[10px] text-slate-500 leading-none">
+                {profissionaisCabecalho.visiveis.length > 0 ? (
+                  <>
+                    {profissionaisCabecalho.visiveis.map((p, idx) => (
+                      <span key={p.id} className="inline-flex items-center gap-1 min-w-0">
+                        <span className="h-1.5 w-1.5 rounded-full bg-slate-400 flex-shrink-0" aria-hidden />
+                        <span className="truncate max-w-[64px]">{p.nome}</span>
+                        {idx < profissionaisCabecalho.visiveis.length - 1 && (
+                          <span className="text-slate-300">•</span>
+                        )}
+                      </span>
+                    ))}
+                    {profissionaisCabecalho.excedentes > 0 && (
+                      <span className="text-slate-400">+{profissionaisCabecalho.excedentes}</span>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-slate-300">Selecione profissionais</span>
+                )}
+              </div>
             </div>
           )
         })}
@@ -248,110 +338,122 @@ export default function WeekTimeline({
 
       {/* Corpo — wrapper mede a altura disponível; rola por dentro se não couber */}
       <div ref={bodyRef} className={fillHeight ? 'flex-1 min-h-0 overflow-y-auto overflow-x-hidden' : ''}>
-      <div
-        className="grid grid-cols-[60px_repeat(7,1fr)] relative"
-        style={{ height: `${totalHeight}px` }}
-      >
-        {/* Eixo Y */}
-        <div className="relative border-r border-slate-200">
-          {hours.map((h) => (
-            <div
-              key={h}
-              className="absolute right-1 text-[10px] font-medium text-slate-400 -translate-y-1.5"
-              style={{ top: `${(h - startHour) * 60 * pxPerMin}px` }}
-            >
-              {String(h).padStart(2, '0')}h
-            </div>
-          ))}
-        </div>
+        <div
+          className="grid grid-cols-[60px_repeat(7,1fr)] relative"
+          style={{ height: `${totalHeight}px` }}
+        >
+          {/* Eixo Y */}
+          <div className="relative border-r border-slate-200">
+            {hours.map((h) => (
+              <div
+                key={h}
+                className={`absolute right-1 text-[10px] font-medium text-slate-400 ${
+                  h === startHour ? 'translate-y-0' : '-translate-y-1.5'
+                }`}
+                style={{ top: `${(h - startHour) * 60 * pxPerMin + (h === startHour ? 2 : 0)}px` }}
+              >
+                {String(h).padStart(2, '0')}h
+              </div>
+            ))}
+          </div>
 
-        {/* Colunas dos dias */}
-        {dias.map((dia) => {
-          const key = format(dia, 'yyyy-MM-dd')
-          const itens = itensPorDia.get(key) ?? []
-          const hoje = isToday(dia)
-          return (
-            <div
-              key={key}
-              className={`relative border-r border-slate-200 last:border-r-0 ${
-                hoje ? 'bg-violet-50/30' : ''
-              }`}
-            >
-              {/* Linhas de hora */}
-              {hours.map((h) => (
+          {/* Colunas dos dias */}
+          {dias.map((dia) => {
+            const key = format(dia, 'yyyy-MM-dd')
+            const porProf = itensPorDiaProf.get(key) ?? new Map<number, Item[]>()
+            const hoje = isToday(dia)
+            return (
+              <div
+                key={key}
+                className={`relative border-r border-slate-200 last:border-r-0 ${hoje ? 'bg-violet-50/30' : ''}`}
+              >
                 <div
-                  key={h}
-                  className="absolute left-0 right-0 border-t border-slate-100"
-                  style={{ top: `${(h - startHour) * 60 * pxPerMin}px` }}
-                />
-              ))}
+                  className="grid h-full"
+                  style={{
+                    gridTemplateColumns: `repeat(${Math.max(profissionaisVisiveis.length, 1)}, minmax(0, 1fr))`,
+                  }}
+                >
+                  {profissionaisVisiveis.length > 0 ? (
+                    profissionaisVisiveis.map((prof, profIdx) => {
+                      const itens = porProf.get(prof.id) ?? []
+                      return (
+                        <div
+                          key={prof.id}
+                          className={`relative min-w-0 overflow-hidden border-r border-slate-100 last:border-r-0 ${
+                            profIdx % 2 === 1 ? 'bg-white/40' : ''
+                          }`}
+                        >
+                          {/* Linhas de hora */}
+                          {hours.map((h) => (
+                            <div
+                              key={h}
+                              className="absolute left-0 right-0 border-t border-slate-100"
+                              style={{ top: `${(h - startHour) * 60 * pxPerMin}px` }}
+                            />
+                          ))}
 
-              {/* Slots clicáveis */}
-              {Array.from({ length: slotsPorDia }).map((_, i) => {
-                const slotStart = startTotalMin + i * granularidade
-                const d = new Date(dia)
-                d.setHours(Math.floor(slotStart / 60), slotStart % 60, 0, 0)
-                return (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => {
-                      if (!onSlotClick || profissionaisSelecionados.length === 0) return
-                      // Slot vazio abre wizard pra 1º prof selecionado (mais simples pra web)
-                      onSlotClick(d, profissionaisSelecionados[0])
-                    }}
-                    className="absolute left-0 right-0 z-0 hover:bg-violet-50/60 active:bg-violet-100/60 transition"
-                    style={{
-                      top: `${i * granularidade * pxPerMin}px`,
-                      height: `${granularidade * pxPerMin}px`,
-                    }}
-                    aria-label={`Criar agendamento ${format(d, 'HH:mm')}`}
-                  />
-                )
-              })}
+                          {/* Slots clicáveis */}
+                          {Array.from({ length: slotsPorDia }).map((_, i) => {
+                            const slotStart = startTotalMin + i * granularidade
+                            const d = new Date(dia)
+                            d.setHours(Math.floor(slotStart / 60), slotStart % 60, 0, 0)
+                            return (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={() => onSlotClick?.(d, prof.id)}
+                                className="absolute left-0 right-0 z-0 hover:bg-violet-50/60 active:bg-violet-100/60 transition"
+                                style={{
+                                  top: `${i * granularidade * pxPerMin}px`,
+                                  height: `${granularidade * pxPerMin}px`,
+                                }}
+                                aria-label={`Criar agendamento ${format(d, 'HH:mm')} para ${prof.nome}`}
+                              />
+                            )
+                          })}
 
-              {/* Cards de agendamento */}
-              {itens.map((it, idx) => {
-                const minStart = it.inicio.getHours() * 60 + it.inicio.getMinutes()
-                const minEnd = it.fim.getHours() * 60 + it.fim.getMinutes()
-                if (minEnd <= startTotalMin || minStart >= endTotalMin) return null
-                const top = (Math.max(minStart, startTotalMin) - startTotalMin) * pxPerMin
-                const height = Math.max(
-                  (Math.min(minEnd, endTotalMin) - Math.max(minStart, startTotalMin)) * pxPerMin,
-                  24
-                )
-                // #164: cor por STATUS (mesmo padrão de Dia/Mês). O profissional
-                // é identificado pelo nome no card.
-                const status = it.agendamento.status
-                const profNome =
-                  profissionaisAtivos.find((p) => p.id === it.atendenteId)?.nome ?? ''
-                return (
-                  <button
-                    key={`${it.agendamento.id}-${idx}`}
-                    type="button"
-                    onClick={() => onAgendamentoClick?.(it.agendamento)}
-                    className={`absolute left-1 right-1 z-10 text-left rounded-lg border ${cardClass(status)} overflow-hidden flex hover:shadow-md transition`}
-                    style={{ top: `${top}px`, height: `${height}px` }}
-                  >
-                    <div className={`w-1.5 ${barClass(status)} flex-shrink-0`} aria-hidden />
-                    <div className="flex-1 min-w-0 px-1.5 py-0.5">
-                      <p className="text-[11px] font-bold text-slate-900 leading-tight truncate">
-                        {it.cliente}
-                      </p>
-                      <p className="text-[10px] text-slate-500 leading-tight truncate">
-                        {format(it.inicio, 'HH:mm')} · {it.servicoNome}
-                      </p>
-                      {profNome && (
-                        <p className="text-[9px] text-slate-400 leading-tight truncate">{profNome}</p>
-                      )}
+                          {/* Cards de agendamento */}
+                          {itens.map((it, idx) => {
+                            const minStart = it.inicio.getHours() * 60 + it.inicio.getMinutes()
+                            const minEnd = it.fim.getHours() * 60 + it.fim.getMinutes()
+                            if (minEnd <= startTotalMin || minStart >= endTotalMin) return null
+                            const top = (Math.max(minStart, startTotalMin) - startTotalMin) * pxPerMin
+                            const height = Math.max(
+                              (Math.min(minEnd, endTotalMin) - Math.max(minStart, startTotalMin)) * pxPerMin,
+                              24
+                            )
+                            const status = it.agendamento.status
+                            return (
+                              <button
+                                key={`${it.agendamento.id}-${prof.id}-${idx}`}
+                                type="button"
+                                onClick={() => onAgendamentoClick?.(it.agendamento)}
+                                className={`absolute left-1 right-1 z-10 text-left rounded-lg border ${cardClass(status)} overflow-hidden flex hover:shadow-md transition`}
+                                style={{ top: `${top}px`, height: `${height}px` }}
+                              >
+                                <div className={`w-1.5 ${barClass(status)} flex-shrink-0`} aria-hidden />
+                                <AgendamentoCardContent
+                                  agendamento={it.agendamento}
+                                  inicio={it.inicio}
+                                  fim={it.fim}
+                                  compact
+                                />
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )
+                    })
+                  ) : (
+                    <div className="col-span-full flex items-center justify-center text-sm text-slate-400">
+                      Selecione profissionais
                     </div>
-                  </button>
-                )
-              })}
-            </div>
-          )
-        })}
-      </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       {/* Legenda de status — mesma de Dia/Mês */}
@@ -368,9 +470,9 @@ export default function WeekTimeline({
         onClose={() => setPickerOpen(false)}
         items={pickerItems}
         initialSelectedIds={profissionaisSelecionados}
-        maxSelected={4}
+        maxSelected={2}
         onConfirm={(ids) => onProfissionaisChange(ids)}
-        title="Selecionar profissionais (máx 4)"
+        title="Selecionar profissionais (máx 2)"
       />
     </div>
   )

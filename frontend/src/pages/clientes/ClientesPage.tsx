@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Search, Users } from 'lucide-react'
 import { useCategoria } from '../../hooks/useCategoria'
 import { useIsWebLayout } from '../../hooks/useIsWebLayout'
@@ -21,6 +21,16 @@ export default function ClientesPage() {
   const { dict } = useCategoria()
   const [activeTab, setActiveTab] = useState<TabId>('gerenciamento')
   const [searchTerm, setSearchTerm] = useState('')
+  const visibleTabs = useMemo(
+    () => (isWeb ? TABS : TABS.filter((tab) => tab.id !== 'unificar')),
+    [isWeb]
+  )
+
+  useEffect(() => {
+    if (!isWeb && activeTab === 'unificar') {
+      setActiveTab('gerenciamento')
+    }
+  }, [isWeb, activeTab])
 
   return (
     <div className={`${isWeb ? 'max-w-[1920px] w-full p-6 xl:p-8' : 'max-w-3xl p-4 sm:p-6'} mx-auto space-y-6`}>
@@ -35,7 +45,7 @@ export default function ClientesPage() {
             Cadastro, retornos e clientes inativos.
           </p>
         </div>
-        {activeTab === 'gerenciamento' && (
+        {isWeb && activeTab === 'gerenciamento' && (
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
             <input
@@ -52,7 +62,7 @@ export default function ClientesPage() {
       {/* Tabs */}
       <div className="border-b border-slate-200">
         <nav className="-mb-px flex gap-0 overflow-x-auto">
-          {TABS.map((tab) => (
+          {visibleTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}

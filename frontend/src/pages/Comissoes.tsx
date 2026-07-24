@@ -25,6 +25,11 @@ const formatMoeda = (v: number) =>
   (v ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 const formatDataHora = (s?: string) =>
   s ? new Date(s).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'
+const hojeIso = () => {
+  const agora = new Date()
+  const local = new Date(agora.getTime() - agora.getTimezoneOffset() * 60000)
+  return local.toISOString().slice(0, 10)
+}
 
 export default function Comissoes() {
   const isWeb = useIsWebLayout()
@@ -79,8 +84,20 @@ export default function Comissoes() {
   })
 
   const pagarMutation = useMutation({
-    mutationFn: ({ ids, forma, obs, valesIds }: { ids: number[]; forma?: string; obs?: string; valesIds?: number[] }) =>
-      comissaoService.pagar(atendenteId!, ids, forma, obs, valesIds ?? []),
+    mutationFn: ({
+      ids,
+      forma,
+      obs,
+      valesIds,
+      dataPagamento,
+    }: {
+      ids: number[]
+      forma?: string
+      obs?: string
+      valesIds?: number[]
+      dataPagamento?: string
+    }) =>
+      comissaoService.pagar(atendenteId!, ids, forma, obs, valesIds ?? [], dataPagamento),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comissoes'] })
       setSelecionados(new Set())
@@ -131,18 +148,22 @@ export default function Comissoes() {
   }
 
   return (
-    <div className={`${isWeb ? 'max-w-[1920px] w-full p-6 xl:p-8' : 'max-w-5xl p-4 sm:p-6'} mx-auto space-y-5`}>
+    <div className={`${isWeb ? 'max-w-[1920px] w-full p-6 xl:p-8' : 'max-w-5xl w-full px-1.5 pt-0.5 pb-2.5 sm:p-6'} mx-auto space-y-3.5 sm:space-y-5`}>
       <header className="flex items-center gap-3">
-        <div className="h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center flex-shrink-0">
-          <DollarSign className="h-6 w-6" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Comissões</h1>
-          <p className="text-sm text-slate-500">Regras, pendências e pagamento por profissional</p>
-        </div>
+        {isWeb && (
+          <div className="h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center flex-shrink-0">
+            <DollarSign className="h-6 w-6" />
+          </div>
+        )}
+        {isWeb && (
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Comissões</h1>
+            <p className="text-sm text-slate-500">Regras, pendências e pagamento por profissional</p>
+          </div>
+        )}
       </header>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
+      <div className="bg-white rounded-2xl border border-slate-200 p-2.5 space-y-3">
         <FormField label="Profissional">
           <select
             value={atendenteId ?? ''}
@@ -160,11 +181,11 @@ export default function Comissoes() {
         </FormField>
 
         {atendenteId && resumo && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+          <div className="grid grid-cols-4 gap-2 pt-2">
             <ResumoCard titulo="Comissão pendente" valor={formatMoeda(resumo.pendente)} cor="text-yellow-700" />
             <ResumoCard titulo="Comissão paga" valor={formatMoeda(resumo.pago)} cor="text-green-700" />
-            <ResumoCard titulo="Atendimentos pendentes" valor={String(resumo.quantidadePendente)} cor="text-blue-700" />
-            <ResumoCard titulo="Atendimentos pagos" valor={String(resumo.quantidadePaga)} cor="text-slate-700" />
+            <ResumoCard titulo="Atend. pendentes" valor={String(resumo.quantidadePendente)} cor="text-blue-700" />
+            <ResumoCard titulo="Atend. pagos" valor={String(resumo.quantidadePaga)} cor="text-slate-700" />
           </div>
         )}
       </div>
@@ -188,29 +209,56 @@ export default function Comissoes() {
           {aba === 'pendentes' && (
             <div className="bg-white rounded-2xl border border-slate-200">
               <div className="px-4 py-3 border-b flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={selecionarTodos}
-                    className="text-sm text-violet-700 hover:text-violet-900 flex items-center gap-1"
-                  >
-                    {selecionados.size === pendentes.length && pendentes.length > 0 ? (
-                      <CheckSquare className="h-4 w-4" />
-                    ) : (
-                      <Square className="h-4 w-4" />
+                <div className="flex items-start gap-3">
+                  <div className="flex flex-col items-start gap-1">
+                    <button
+                      onClick={selecionarTodos}
+                      className="text-sm text-violet-700 hover:text-violet-900 flex items-center gap-1"
+                    >
+                      {selecionados.size === pendentes.length && pendentes.length > 0 ? (
+                        <CheckSquare className="h-4 w-4" />
+                      ) : (
+                        <Square className="h-4 w-4" />
+                      )}
+                      {selecionados.size === 0
+                        ? 'Selecione registros'
+                        : isWeb && selecionados.size === pendentes.length && pendentes.length > 0
+                          ? 'Desmarcar todos'
+                          : `${selecionados.size} de ${pendentes.length} selecionados`}
+                    </button>
+                    {!isWeb && selecionados.size > 0 && (
+                      <div className="text-xs text-slate-500 pl-5">
+                        Total a pagar: <span className="font-bold text-violet-700">{formatMoeda(totalSelecionado)}</span>
+                      </div>
                     )}
-                    {selecionados.size === pendentes.length && pendentes.length > 0 ? 'Desmarcar todos' : 'Selecionar todos'}
-                  </button>
-                  {selecionados.size > 0 && (
+                  </div>
+                  {isWeb && selecionados.size > 0 && (
                     <button onClick={() => setSelecionados(new Set())} className="text-xs text-slate-500 hover:text-slate-700">
                       Limpar seleção
                     </button>
                   )}
                 </div>
-                <div className="text-sm">
-                  Selecionado: <span className="font-bold text-violet-700">{formatMoeda(totalSelecionado)}</span>
-                  <span className="text-slate-500 ml-2">({selecionados.size} de {pendentes.length})</span>
-                </div>
-                {podeGerir && (
+                {isWeb && (
+                  <div className="text-sm">
+                    Selecionado: <span className="font-bold text-violet-700">{formatMoeda(totalSelecionado)}</span>
+                    <span className="text-slate-500 ml-2">({selecionados.size} de {pendentes.length})</span>
+                  </div>
+                )}
+                {!isWeb && podeGerir && (
+                  <div className="grid w-full grid-cols-2 gap-2">
+                    <Button variant="secondary" className="w-full justify-start" onClick={() => setShowVales(true)}>
+                      Vales
+                    </Button>
+                    <Button
+                      disabled={selecionados.size === 0}
+                      className="w-full"
+                      onClick={() => setShowPagar(true)}
+                    >
+                      Pagar comissão
+                    </Button>
+                  </div>
+                )}
+                {isWeb && podeGerir && (
                   <>
                     <Button variant="secondary" onClick={() => setShowVales(true)}>
                       <Receipt className="h-4 w-4 mr-1" /> Vales
@@ -474,13 +522,23 @@ export default function Comissoes() {
         </>
       )}
 
-      <Modal isOpen={showPagar} onClose={() => setShowPagar(false)} title="Pagamento de comissão">
+      <Modal
+        isOpen={showPagar}
+        onClose={() => setShowPagar(false)}
+        title="Pagamento de comissão"
+        showCloseButton={false}
+        headerContent={
+          <div className="w-full text-center">
+            <h2 className="text-lg font-semibold text-slate-900">Pagamento de comissão</h2>
+          </div>
+        }
+      >
         <PagarForm
           quantidade={selecionados.size}
           total={totalSelecionado}
           valesPendentes={valesPendentes}
-          onConfirmar={(forma, obs, valesIds) =>
-            pagarMutation.mutate({ ids: Array.from(selecionados), forma, obs, valesIds })
+          onConfirmar={(forma, obs, valesIds, dataPagamento) =>
+            pagarMutation.mutate({ ids: Array.from(selecionados), forma, obs, valesIds, dataPagamento })
           }
           onCancelar={() => setShowPagar(false)}
           isLoading={pagarMutation.isPending}
@@ -521,9 +579,11 @@ export default function Comissoes() {
 
 function ResumoCard({ titulo, valor, cor }: { titulo: string; valor: string; cor: string }) {
   return (
-    <div className="bg-slate-50 rounded p-3">
-      <div className="text-xs uppercase tracking-wide text-slate-500">{titulo}</div>
-      <div className={`text-lg font-bold mt-1 ${cor}`}>{valor}</div>
+    <div className="bg-slate-50 rounded-xl p-2.5 sm:p-3 min-h-[72px] sm:min-h-0">
+      <div className="text-[10px] sm:text-xs uppercase tracking-wide text-slate-500 leading-tight">
+        {titulo}
+      </div>
+      <div className={`text-sm sm:text-lg font-bold mt-1 leading-tight ${cor}`}>{valor}</div>
     </div>
   )
 }
@@ -560,12 +620,13 @@ function PagarForm({
   quantidade: number
   total: number
   valesPendentes: ComissaoVale[]
-  onConfirmar: (forma?: string, obs?: string, valesIds?: number[]) => void
+  onConfirmar: (forma?: string, obs?: string, valesIds?: number[], dataPagamento?: string) => void
   onCancelar: () => void
   isLoading: boolean
 }) {
   const [forma, setForma] = useState('')
   const [obs, setObs] = useState('')
+  const [dataPagamento, setDataPagamento] = useState(hojeIso())
   // #141: vales selecionados para abater
   const [valesSelecionados, setValesSelecionados] = useState<Set<number>>(new Set())
 
@@ -625,13 +686,47 @@ function PagarForm({
         )}
       </div>
 
-      {/* Lista de vales */}
+      <div className="grid grid-cols-2 gap-2">
+        <FormField label="Forma de pagamento" required>
+          <select
+            value={forma}
+            onChange={(e) => setForma(e.target.value)}
+            className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
+          >
+            <option value="">Selecione…</option>
+            <option value="DINHEIRO">Dinheiro</option>
+            <option value="PIX">PIX</option>
+            <option value="TRANSFERENCIA">Transferência</option>
+            <option value="OUTRO">Outro</option>
+          </select>
+        </FormField>
+        <FormField label="Data do pagamento" required>
+          <DateInput
+            value={dataPagamento}
+            onChange={setDataPagamento}
+            className="w-full"
+            futuroDesabilitado
+          />
+        </FormField>
+      </div>
+      <FormField label="Observação">
+        <input
+          type="text"
+          value={obs}
+          onChange={(e) => setObs(e.target.value)}
+          className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
+          placeholder="Adicionar observação"
+        />
+      </FormField>
+
+      {/* Vales */}
       {valesPendentes.length > 0 && (
-        <div className="rounded-xl border border-slate-200 bg-white p-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Vales disponíveis
-            </span>
+        <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <div className="text-sm font-semibold text-slate-900">Vales</div>
+              <div className="text-xs text-slate-500">Selecione os vales para descontar do total.</div>
+            </div>
             <span className="text-xs text-slate-500">
               {valesSelecionados.size} de {valesPendentes.length} selecionado{valesSelecionados.size !== 1 ? 's' : ''}
             </span>
@@ -669,24 +764,10 @@ function PagarForm({
         </div>
       )}
 
-      <FormField label="Forma de pagamento" required>
-        <select value={forma} onChange={(e) => setForma(e.target.value)}
-          className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition">
-          <option value="">Selecione…</option>
-          <option value="DINHEIRO">Dinheiro</option>
-          <option value="PIX">PIX</option>
-          <option value="TRANSFERENCIA">Transferência</option>
-          <option value="OUTRO">Outro</option>
-        </select>
-      </FormField>
-      <FormField label="Observação">
-        <textarea rows={2} value={obs} onChange={(e) => setObs(e.target.value)}
-          className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition" />
-      </FormField>
       <div className="flex justify-end gap-2 pt-4 border-t">
         <Button variant="secondary" onClick={onCancelar}>Cancelar</Button>
         <Button
-          onClick={() => onConfirmar(forma || undefined, obs || undefined, Array.from(valesSelecionados))}
+          onClick={() => onConfirmar(forma || undefined, obs || undefined, Array.from(valesSelecionados), dataPagamento)}
           isLoading={isLoading}
           disabled={formaInvalida || excedeu}
         >

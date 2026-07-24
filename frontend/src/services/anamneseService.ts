@@ -18,10 +18,13 @@ export interface AnamneseTemplate {
 
 export interface AnamneseResumo {
   id: number
+  clienteId?: number
   clienteNome: string
   servicoNome?: string
   templateNome?: string
   data: string
+  primeiroAtendimento?: string | null
+  ultimoAtendimento?: string | null
 }
 
 export interface Anamnese {

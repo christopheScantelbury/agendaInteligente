@@ -38,6 +38,7 @@ const Servicos = lazy(() => import('./pages/Servicos'))
 const Usuarios = lazy(() => import('./pages/Usuarios'))
 const Clientes = lazy(() => import('./pages/Clientes'))
 const ClienteFormPage = lazy(() => import('./pages/ClienteFormPage'))
+const ClienteInformacoesPage = lazy(() => import('./pages/clientes/ClienteInformacoesPage'))
 const AgendamentosPageV2 = lazy(() => import('./pages/agendamentos/AgendamentosPage'))
 const Notificacoes = lazy(() => import('./pages/Notificacoes'))
 const Empresas = lazy(() => import('./pages/Empresas'))
@@ -54,6 +55,7 @@ const ResumoFinanceiro = lazy(() => import('./pages/relatorios/ResumoFinanceiro'
 const AnamneseListPage = lazy(() => import('./pages/anamneses/AnamneseListPage'))
 const AnamneseFormPage = lazy(() => import('./pages/anamneses/AnamneseFormPage'))
 const AnamneseTemplatesPage = lazy(() => import('./pages/anamneses/AnamneseTemplatesPage'))
+const ClienteAnamnesesPage = lazy(() => import('./pages/clientes/ClienteAnamnesesPage'))
 const AgendarCliente = lazy(() => import('./pages/AgendarCliente'))
 const MeusAgendamentosCliente = lazy(() => import('./pages/MeusAgendamentosCliente'))
 const HomeCliente = lazy(() => import('./pages/cliente/HomeCliente'))
@@ -71,6 +73,7 @@ const LinkPublicoConfig = lazy(() => import('./pages/configuracoes/LinkPublicoCo
 const NfseConfig = lazy(() => import('./pages/configuracoes/NfseConfig'))
 const NfseEditarUnidade = lazy(() => import('./pages/configuracoes/NfseEditarUnidade'))
 const HorariosConfig = lazy(() => import('./pages/configuracoes/HorariosConfig'))
+const FluxoAtendimentoConfig = lazy(() => import('./pages/configuracoes/FluxoAtendimentoConfig'))
 const ServicosConfig = lazy(() => import('./pages/configuracoes/ServicosConfig'))
 const ProfissionaisConfig = lazy(() => import('./pages/configuracoes/ProfissionaisConfig'))
 const EquipeConfig = lazy(() => import('./pages/configuracoes/EquipeConfig'))
@@ -404,6 +407,16 @@ function App() {
                 }
               />
 
+              {/* Configuração do fluxo de atendimento (admin) */}
+              <Route
+                path="/configuracoes/fluxo-atendimento"
+                element={
+                  authService.isAuthenticated() && (authService.getUsuario()?.perfil ?? '').toUpperCase() === 'ADMINISTRADOR'
+                    ? <Layout><FluxoAtendimentoConfig /></Layout>
+                    : <Navigate to="/login" replace />
+                }
+              />
+
               {/* Quick-start de serviços (porta de entrada do checklist) */}
               <Route
                 path="/configuracoes/servicos"
@@ -460,6 +473,8 @@ function App() {
                         <Route path="/clientes" element={<RequirePermissao path="/clientes" fallbackPaths={['/usuarios']}><Clientes /></RequirePermissao>} />
                         <Route path="/clientes/novo" element={<RequirePermissao path="/clientes" fallbackPaths={['/usuarios']}><ClienteFormPage /></RequirePermissao>} />
                         <Route path="/clientes/:id/editar" element={<RequirePermissao path="/clientes" fallbackPaths={['/usuarios']}><ClienteFormPage /></RequirePermissao>} />
+                        <Route path="/clientes/:id/informacoes" element={<RequirePermissao path="/clientes" fallbackPaths={['/usuarios']}><ClienteInformacoesPage /></RequirePermissao>} />
+                        <Route path="/clientes/:id/anamneses" element={<RequirePermissao path="/clientes" fallbackPaths={['/usuarios']}><ClienteAnamnesesPage /></RequirePermissao>} />
                         <Route path="/anamneses" element={<RequirePermissao path="/clientes" fallbackPaths={['/usuarios']}><AnamneseListPage /></RequirePermissao>} />
                         <Route path="/anamneses/templates" element={<RequirePermissao path="/clientes" fallbackPaths={['/usuarios']}><AnamneseTemplatesPage /></RequirePermissao>} />
                         <Route path="/anamneses/nova" element={<RequirePermissao path="/clientes" fallbackPaths={['/usuarios']}><AnamneseFormPage /></RequirePermissao>} />

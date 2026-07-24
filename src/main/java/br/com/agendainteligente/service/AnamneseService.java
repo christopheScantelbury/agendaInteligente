@@ -12,10 +12,13 @@ import br.com.agendainteligente.dto.AnamneseTemplateDTO;
 import br.com.agendainteligente.exception.ResourceNotFoundException;
 import br.com.agendainteligente.repository.AnamneseRepository;
 import br.com.agendainteligente.repository.AnamneseTemplateRepository;
+import br.com.agendainteligente.repository.AgendamentoRepository;
 import br.com.agendainteligente.repository.ClienteRepository;
 import br.com.agendainteligente.repository.ServicoRepository;
 import br.com.agendainteligente.repository.UnidadeRepository;
 import br.com.agendainteligente.repository.UsuarioRepository;
+import br.com.agendainteligente.domain.enums.StatusAgendamento;
+import br.com.agendainteligente.domain.entity.Agendamento;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,7 +31,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import br.com.agendainteligente.exception.BusinessException;
 
+import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -38,6 +47,7 @@ public class AnamneseService {
 
     private final AnamneseRepository anamneseRepository;
     private final AnamneseTemplateRepository anamneseTemplateRepository;
+    private final AgendamentoRepository agendamentoRepository;
     private final ClienteRepository clienteRepository;
     private final ServicoRepository servicoRepository;
     private final UnidadeRepository unidadeRepository;
@@ -64,7 +74,11 @@ public class AnamneseService {
                     .filter(a -> a.getUnidade() != null && unidadesPermitidas.contains(a.getUnidade().getId()))
                     .collect(Collectors.toList());
         }
-        return anamneses.stream().map(this::toResumoDTO).collect(Collectors.toList());
+
+        Map<Long, JanelaAtendimento> janelasAtendimentoPorCliente = carregarJanelasAtendimento(anamneses);
+        return anamneses.stream()
+                .map(anamnese -> toResumoDTO(anamnese, janelasAtendimentoPorCliente.get(clienteIdDa(anamnese))))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -397,14 +411,46 @@ public class AnamneseService {
     }
 
     private AnamneseResumoDTO toResumoDTO(Anamnese a) {
+        return toResumoDTO(a, null);
+    }
+
+    private AnamneseResumoDTO toResumoDTO(Anamnese a, JanelaAtendimento janelaAtendimento) {
         String servicoNome = a.getServico() != null ? a.getServico().getNome() : a.getServicoNome();
         String templateNome = a.getTemplate() != null ? a.getTemplate().getNome() : null;
         return AnamneseResumoDTO.builder()
                 .id(a.getId())
+                .clienteId(clienteIdDa(a))
                 .clienteNome(a.getCliente() != null ? a.getCliente().getNome() : null)
                 .servicoNome(servicoNome)
                 .templateNome(templateNome)
                 .data(a.getData())
+                .primeiroAtendimento(janelaAtendimento != null ? janelaAtendimento.primeiroAtendimento() : null)
+                .ultimoAtendimento(janelaAtendimento != null ? janelaAtendimento.ultimoAtendimento() : null)
                 .build();
     }
+
+    private Map<Long, JanelaAtendimento> carregarJanelasAtendimento(List<Anamnese> anamneses) {
+        Set<Long> clienteIds = anamneses.stream()
+                .map(this::clienteIdDa)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Long, JanelaAtendimento> resultado = new HashMap<>();
+        for (Long clienteId : clienteIds) {
+            List<Agendamento> concluidos = agendamentoRepository
+                    .findByClienteIdAndStatusOrderByDataHoraInicioDesc(clienteId, StatusAgendamento.CONCLUIDO);
+            LocalDateTime ultimoAtendimento = concluidos.isEmpty() ? null : concluidos.get(0).getDataHoraInicio();
+            LocalDateTime primeiroAtendimento = concluidos.isEmpty()
+                    ? null
+                    : concluidos.get(concluidos.size() - 1).getDataHoraInicio();
+            resultado.put(clienteId, new JanelaAtendimento(primeiroAtendimento, ultimoAtendimento));
+        }
+        return resultado;
+    }
+
+    private Long clienteIdDa(Anamnese anamnese) {
+        return anamnese.getCliente() != null ? anamnese.getCliente().getId() : null;
+    }
+
+    private record JanelaAtendimento(LocalDateTime primeiroAtendimento, LocalDateTime ultimoAtendimento) {}
 }

@@ -4,7 +4,7 @@ import { atendenteService, Atendente } from '../services/atendenteService'
 import { unidadeService } from '../services/unidadeService'
 import { usuarioService, Usuario } from '../services/usuarioService'
 import { servicoService } from '../services/servicoService'
-import { Plus, Trash2, Edit } from 'lucide-react'
+import { Plus, Trash2, Edit, Search, X } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
@@ -19,6 +19,7 @@ import { perfilService } from '../services/perfilService'
 import { podeEditar } from '../utils/permissions'
 import { getApiErrorMessage } from '../utils/apiError'
 import { useCategoria } from '../hooks/useCategoria'
+import { useIsWebLayout } from '../hooks/useIsWebLayout'
 
 type ProfissionalListItem = Atendente & {
   itemKey: string
@@ -28,6 +29,7 @@ type ProfissionalListItem = Atendente & {
 export default function Atendentes() {
   const { showNotification } = useNotification()
   const { dict } = useCategoria()
+  const isWeb = useIsWebLayout()
   const [showModal, setShowModal] = useState(false)
   const [editingAtendente, setEditingAtendente] = useState<Atendente | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null })
@@ -155,152 +157,329 @@ export default function Atendentes() {
     return <div className="text-center py-8">Carregando...</div>
   }
 
+  const pageClassName = `${isWeb ? 'max-w-[1920px] w-full p-6 xl:p-8' : 'max-w-3xl p-4 sm:p-6'} mx-auto space-y-6`
+  const hasActiveFilters = searchTerm || Object.values(filters).some((v) => v !== '' && v !== undefined)
+
   return (
-    <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
-      {/* Header */}
-      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">{dict.rotuloAtendentePlural}</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Gerencie sua equipe de profissionais.
-          </p>
-        </div>
-        {podeEditarProfissionais && (
-          <Button
-            onClick={() => {
-              setInitialUnidadeId(undefined)
-              setEditingAtendente(null)
-              setShowModal(true)
-            }}
-          >
-            <Plus className="h-4 w-4" />
-            Novo {dict.rotuloAtendente}
-          </Button>
-        )}
-      </header>
-
-      {/* Barra de Filtros */}
-      <FilterBar
-        onSearchChange={setSearchTerm}
-        onFilterChange={setFilters}
-        searchPlaceholder="Buscar por nome ou email..."
-        filters={[
-          {
-            key: 'ativo',
-            label: 'Status',
-            type: 'select',
-            options: [
-              { value: 'true', label: 'Ativos' },
-              { value: 'false', label: 'Inativos' },
-            ],
-          },
-        ]}
-      />
-
-      {/* Lista de profissionais como cards */}
-      {atendentesFiltrados.length === 0 ? (
-        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
-          <div className="mx-auto h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mb-3">
-            <Plus className="h-5 w-5" />
-          </div>
-          <p className="text-sm text-slate-600">
-            {searchTerm || Object.values(filters).some(v => v !== '' && v !== undefined)
-              ? 'Nenhum profissional encontrado com os filtros aplicados.'
-              : 'Nenhum profissional cadastrado ainda.'}
-          </p>
-        </div>
-      ) : (
-        <ul className="space-y-2">
-          {atendentesFiltrados.map((atendente) => {
-            const isAdmin = atendente.tipoRegistro === 'ADMINISTRADOR'
-            const nome = atendente.nomeUsuario || 'Profissional'
-            const email = atendente.emailUsuario || emailPorUsuarioId.get(atendente.usuarioId)
-            const inicial = nome.charAt(0).toUpperCase()
-            const comissaoNum = atendente.percentualComissao != null
-              ? (typeof atendente.percentualComissao === 'number'
-                  ? atendente.percentualComissao
-                  : parseFloat(String(atendente.percentualComissao)))
-              : 0
-            return (
-              <li
-                key={atendente.itemKey}
-                className="bg-white border border-slate-200 rounded-2xl p-4 hover:shadow-sm transition"
+    <div className={pageClassName}>
+      {isWeb ? (
+        <>
+          <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">{dict.rotuloAtendentePlural}</h1>
+              <p className="text-sm text-slate-500 mt-0.5">
+                Gerencie sua equipe de profissionais.
+              </p>
+            </div>
+            {podeEditarProfissionais && (
+              <Button
+                onClick={() => {
+                  setInitialUnidadeId(undefined)
+                  setEditingAtendente(null)
+                  setShowModal(true)
+                }}
               >
-                <div className="flex items-start gap-3">
-                  {/* Avatar */}
-                  <div className="h-10 w-10 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
-                    {inicial}
-                  </div>
+                <Plus className="h-4 w-4" />
+                Novo {dict.rotuloAtendente}
+              </Button>
+            )}
+          </header>
 
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-semibold text-slate-900 truncate">{nome}</p>
-                      {isAdmin && (
-                        <span className="inline-flex items-center rounded-full bg-violet-50 text-violet-700 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
-                          Administrador
-                        </span>
-                      )}
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                          atendente.ativo
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : 'bg-slate-100 text-slate-500'
-                        }`}
-                      >
-                        {atendente.ativo ? 'Ativo' : 'Inativo'}
-                      </span>
-                    </div>
-                    {email && (
-                      <p className="text-xs text-slate-500 truncate mt-0.5">{email}</p>
-                    )}
-                    {!isAdmin && (
-                      <p className="text-xs text-slate-500 mt-1">
-                        Comissão:{' '}
-                        <span className="font-semibold text-slate-700">
-                          {comissaoNum.toFixed(2).replace('.', ',')}%
-                        </span>
-                      </p>
-                    )}
-                  </div>
+          <div className="flex justify-start">
+            <div className="relative w-full sm:w-96">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar por nome ou email..."
+                className="block w-full bg-white text-slate-900 border border-slate-200 rounded-xl pl-9 pr-9 py-2 text-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  aria-label="Limpar busca"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
 
-                  {/* Ações */}
-                  {podeEditarProfissionais && !isAdmin && (
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <button
-                        onClick={() => {
-                          setEditingAtendente(atendente)
-                          setShowModal(true)
-                        }}
-                        className="p-2 rounded-lg text-slate-500 hover:bg-violet-50 hover:text-violet-700 transition"
-                        aria-label="Editar profissional"
-                        title="Editar"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(atendente.id!)}
-                        className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition"
-                        aria-label="Excluir profissional"
-                        title="Excluir"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )}
+          <div className="space-y-3">
+            {atendentesFiltrados.length === 0 ? (
+              <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
+                <div className="mx-auto h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mb-3">
+                  <Plus className="h-5 w-5" />
                 </div>
-              </li>
-            )
-          })}
-        </ul>
-      )}
+                <p className="text-sm text-slate-600">
+                  {hasActiveFilters
+                    ? 'Nenhum profissional encontrado com os filtros aplicados.'
+                    : 'Nenhum profissional cadastrado ainda.'}
+                </p>
+              </div>
+            ) : (
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                <table className="w-full table-fixed border-collapse">
+                  <colgroup>
+                    <col className="w-[34%]" />
+                    <col className="w-[30%]" />
+                    <col className="w-[14%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[10%]" />
+                  </colgroup>
+                  <thead className="bg-slate-50">
+                    <tr className="border-b border-slate-200 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      <th scope="col" className="px-4 py-3 text-left">Nome</th>
+                      <th scope="col" className="px-4 py-3 text-left">Email</th>
+                      <th scope="col" className="px-4 py-3 text-left">Comissão</th>
+                      <th scope="col" className="px-4 py-3 text-left">Status</th>
+                      <th scope="col" className="px-4 py-3 text-right">Ações</th>
+                    </tr>
+                  </thead>
 
-      {/* Rodapé com contagem */}
-      {atendentesFiltrados.length > 0 && (
-        <p className="text-xs text-slate-500 text-center">
-          Mostrando {atendentesFiltrados.length} de {profissionaisNaTela.length}{' '}
-          {profissionaisNaTela.length !== 1 ? 'profissionais' : 'profissional'}
-        </p>
+                  <tbody className="divide-y divide-slate-100">
+                    {atendentesFiltrados.map((atendente) => {
+                      const isAdmin = atendente.tipoRegistro === 'ADMINISTRADOR'
+                      const nome = atendente.nomeUsuario || 'Profissional'
+                      const email = atendente.emailUsuario || emailPorUsuarioId.get(atendente.usuarioId) || '—'
+                      const comissaoNum = atendente.percentualComissao != null
+                        ? (typeof atendente.percentualComissao === 'number'
+                            ? atendente.percentualComissao
+                            : parseFloat(String(atendente.percentualComissao)))
+                        : 0
+                      return (
+                        <tr
+                          key={atendente.itemKey}
+                          className="hover:bg-slate-50 transition align-middle"
+                        >
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="h-9 w-9 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center flex-shrink-0">
+                                {nome.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-slate-900 truncate">{nome}</p>
+                                {isAdmin && (
+                                  <p className="text-xs text-violet-600 font-medium">Administrador</p>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="px-4 py-4 text-sm text-slate-700 truncate">
+                            {email}
+                          </td>
+
+                          <td className="px-4 py-4 text-sm text-slate-700 whitespace-nowrap">
+                            {isAdmin ? '—' : `${comissaoNum.toFixed(2).replace('.', ',')}%`}
+                          </td>
+
+                          <td className="px-4 py-4">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                                atendente.ativo
+                                  ? 'bg-emerald-50 text-emerald-700'
+                                  : 'bg-slate-100 text-slate-500'
+                              }`}
+                            >
+                              {atendente.ativo ? 'Ativo' : 'Inativo'}
+                            </span>
+                          </td>
+
+                          <td className="px-4 py-4 text-right whitespace-nowrap">
+                            {podeEditarProfissionais && !isAdmin ? (
+                              <div className="inline-flex items-center gap-1">
+                                <button
+                                  onClick={() => {
+                                    setEditingAtendente(atendente)
+                                    setShowModal(true)
+                                  }}
+                                  className="p-2 rounded-lg text-slate-500 hover:bg-violet-50 hover:text-violet-700 transition"
+                                  aria-label="Editar profissional"
+                                  title="Editar"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(atendente.id!)}
+                                  className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition"
+                                  aria-label="Excluir profissional"
+                                  title="Excluir"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <span />
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {atendentesFiltrados.length > 0 && (
+              <p className="text-xs text-slate-500 text-center">
+                Mostrando {atendentesFiltrados.length} de {profissionaisNaTela.length}{' '}
+                {profissionaisNaTela.length !== 1 ? 'profissionais' : 'profissional'}
+              </p>
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Header */}
+          <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">{dict.rotuloAtendentePlural}</h1>
+              <p className="text-sm text-slate-500 mt-0.5">
+                Gerencie sua equipe de profissionais.
+              </p>
+            </div>
+            {podeEditarProfissionais && (
+              <Button
+                onClick={() => {
+                  setInitialUnidadeId(undefined)
+                  setEditingAtendente(null)
+                  setShowModal(true)
+                }}
+              >
+                <Plus className="h-4 w-4" />
+                Novo {dict.rotuloAtendente}
+              </Button>
+            )}
+          </header>
+
+          {/* Barra de Filtros */}
+          <FilterBar
+            onSearchChange={setSearchTerm}
+            onFilterChange={setFilters}
+            searchPlaceholder="Buscar por nome ou email..."
+            filters={[
+              {
+                key: 'ativo',
+                label: 'Status',
+                type: 'select',
+                options: [
+                  { value: 'true', label: 'Ativos' },
+                  { value: 'false', label: 'Inativos' },
+                ],
+              },
+            ]}
+          />
+
+          {/* Lista de profissionais como cards */}
+          {atendentesFiltrados.length === 0 ? (
+            <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
+              <div className="mx-auto h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mb-3">
+                <Plus className="h-5 w-5" />
+              </div>
+              <p className="text-sm text-slate-600">
+                {searchTerm || Object.values(filters).some(v => v !== '' && v !== undefined)
+                  ? 'Nenhum profissional encontrado com os filtros aplicados.'
+                  : 'Nenhum profissional cadastrado ainda.'}
+              </p>
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {atendentesFiltrados.map((atendente) => {
+                const isAdmin = atendente.tipoRegistro === 'ADMINISTRADOR'
+                const nome = atendente.nomeUsuario || 'Profissional'
+                const email = atendente.emailUsuario || emailPorUsuarioId.get(atendente.usuarioId)
+                const inicial = nome.charAt(0).toUpperCase()
+                const comissaoNum = atendente.percentualComissao != null
+                  ? (typeof atendente.percentualComissao === 'number'
+                      ? atendente.percentualComissao
+                      : parseFloat(String(atendente.percentualComissao)))
+                  : 0
+                return (
+                  <li
+                    key={atendente.itemKey}
+                    className="bg-white border border-slate-200 rounded-2xl p-4 hover:shadow-sm transition"
+                  >
+                    <div className="flex items-start gap-3">
+                      {/* Avatar */}
+                      <div className="h-10 w-10 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                        {inicial}
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold text-slate-900 truncate">{nome}</p>
+                          {isAdmin && (
+                            <span className="inline-flex items-center rounded-full bg-violet-50 text-violet-700 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+                              Administrador
+                            </span>
+                          )}
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                              atendente.ativo
+                                ? 'bg-emerald-50 text-emerald-700'
+                                : 'bg-slate-100 text-slate-500'
+                            }`}
+                          >
+                            {atendente.ativo ? 'Ativo' : 'Inativo'}
+                          </span>
+                        </div>
+                        {email && (
+                          <p className="text-xs text-slate-500 truncate mt-0.5">{email}</p>
+                        )}
+                        {!isAdmin && (
+                          <p className="text-xs text-slate-500 mt-1">
+                            Comissão:{' '}
+                            <span className="font-semibold text-slate-700">
+                              {comissaoNum.toFixed(2).replace('.', ',')}%
+                            </span>
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Ações */}
+                      {podeEditarProfissionais && !isAdmin && (
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <button
+                            onClick={() => {
+                              setEditingAtendente(atendente)
+                              setShowModal(true)
+                            }}
+                            className="p-2 rounded-lg text-slate-500 hover:bg-violet-50 hover:text-violet-700 transition"
+                            aria-label="Editar profissional"
+                            title="Editar"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(atendente.id!)}
+                            className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition"
+                            aria-label="Excluir profissional"
+                            title="Excluir"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+
+          {/* Rodapé com contagem */}
+          {atendentesFiltrados.length > 0 && (
+            <p className="text-xs text-slate-500 text-center">
+              Mostrando {atendentesFiltrados.length} de {profissionaisNaTela.length}{' '}
+              {profissionaisNaTela.length !== 1 ? 'profissionais' : 'profissional'}
+            </p>
+          )}
+        </>
       )}
 
       {podeEditarProfissionais && (
@@ -485,9 +664,19 @@ function AtendenteForm({
       setUsuarioNovo({ nome: '', email: '', senha: '', perfilId: perfilPadraoId })
       setServicosIdsSelecionados([])
     }
-    // Dep: atendente?.id apenas — evita reset acidental quando perfis/unidades terminam de carregar
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [atendente?.id])
+    // Reidrata os dados quando o usuário vinculado chega/refresca do cache.
+  }, [
+    atendente?.id,
+    atendente?.usuarioId,
+    usuarioEdicaoResolvido?.id,
+    usuarioEdicaoResolvido?.nome,
+    usuarioEdicaoResolvido?.email,
+    usuarioEdicaoResolvido?.perfilId,
+    perfilPadraoId,
+    initialUnidadeId,
+    isAdministrador,
+    unidadePadraoAdministradorId,
+  ])
 
 
   const saveMutation = useMutation({
@@ -595,6 +784,7 @@ function AtendenteForm({
 
       await saveMutation.mutateAsync({ ...dataToSave, usuarioId } as any)
       queryClient.invalidateQueries({ queryKey: ['atendentes'] })
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] })
       showNotification('success', atendente ? 'Profissional atualizado com sucesso!' : 'Profissional criado com sucesso!')
       onClose()
     } catch (error: any) {

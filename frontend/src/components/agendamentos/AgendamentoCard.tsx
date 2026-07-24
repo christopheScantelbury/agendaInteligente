@@ -1,26 +1,61 @@
-import { format } from 'date-fns'
+import { useQuery } from '@tanstack/react-query'
+import { differenceInCalendarDays, differenceInMinutes, format, parseISO } from 'date-fns'
 import { Agendamento } from '../../services/agendamentoService'
+import { clienteService } from '../../services/clienteService'
+import AgendamentoCardContent from './AgendamentoCardContent'
 
-const STATUS_CONFIG: Record<string, { label: string; badge: string; barra: string }> = {
-  AGENDADO: { label: 'Agendado', badge: 'bg-slate-100 text-slate-700', barra: 'bg-slate-900' },
-  CONFIRMADO: { label: 'Confirmado', badge: 'bg-blue-50 text-blue-700', barra: 'bg-blue-500' },
-  EM_ANDAMENTO: { label: 'Em procedimento', badge: 'bg-blue-50 text-blue-700', barra: 'bg-blue-500' },
-  PROCEDIMENTO_FIM: { label: 'Procedimento OK', badge: 'bg-blue-50 text-blue-700', barra: 'bg-blue-600' },
-  CONCLUIDO: { label: 'Finalizado', badge: 'bg-emerald-50 text-emerald-700', barra: 'bg-emerald-500' },
-  FINALIZADO: { label: 'Finalizado', badge: 'bg-emerald-50 text-emerald-700', barra: 'bg-emerald-500' },
-  CANCELADO: { label: 'Cancelado', badge: 'bg-red-50 text-red-700', barra: 'bg-red-500' },
-  NO_SHOW: { label: 'Não compareceu', badge: 'bg-orange-50 text-orange-700', barra: 'bg-orange-500' },
+function statusInfo(status?: string, dataHoraInicio?: string) {
+  const agora = new Date()
+  const inicio = dataHoraInicio ? parseISO(dataHoraInicio) : null
+  const proximo = inicio && differenceInMinutes(inicio, agora) >= 0 && differenceInMinutes(inicio, agora) <= 30
+  switch (status) {
+    case 'CONFIRMADO':
+      return { label: 'Cliente chegou', bar: 'bg-blue-500', tag: 'bg-blue-100 text-blue-800', dot: 'bg-blue-500' }
+    case 'EM_ANDAMENTO':
+      return { label: 'Em andamento', bar: 'bg-blue-500', tag: 'bg-blue-100 text-blue-800', dot: 'bg-blue-500' }
+    case 'PROCEDIMENTO_FIM':
+    case 'CONCLUIDO':
+    case 'FINALIZADO':
+      return { label: 'Concluído', bar: 'bg-slate-400', tag: 'bg-slate-200 text-slate-700', dot: 'bg-slate-400' }
+    case 'NO_SHOW':
+      return { label: 'Não compareceu', bar: 'bg-red-500', tag: 'bg-red-100 text-red-800', dot: 'bg-red-500' }
+    case 'CANCELADO':
+      return { label: 'Cancelado', bar: 'bg-red-300', tag: 'bg-red-50 text-red-700', dot: 'bg-red-300' }
+    default:
+      if (proximo) {
+        return { label: 'Próximo', bar: 'bg-violet-500', tag: 'bg-violet-100 text-violet-800', dot: 'bg-violet-500' }
+      }
+      return { label: 'Agendado', bar: 'bg-slate-300', tag: 'bg-slate-100 text-slate-700', dot: 'bg-slate-300' }
+  }
 }
 
-function getStatus(status?: string) {
-  if (!status) return { label: 'Pendente', badge: 'bg-amber-50 text-amber-700', barra: 'bg-amber-400' }
-  return STATUS_CONFIG[status] ?? { label: status, badge: 'bg-amber-50 text-amber-700', barra: 'bg-amber-400' }
+function iniciaisCliente(nome?: string): string {
+  if (!nome) return '?'
+  const partes = nome.trim().split(/\s+/)
+  if (partes.length === 1) return partes[0][0]?.toUpperCase() ?? '?'
+  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase()
+}
+
+function formatDiasDesdeUltimoAtendimento(
+  ultimoAtendimento?: string,
+  referenceDate?: Date | null,
+): string {
+  if (!ultimoAtendimento) return 'Cliente nova'
+  if (!referenceDate) return '—'
+  const ultimo = parseISO(ultimoAtendimento)
+  const dias = differenceInCalendarDays(referenceDate, ultimo)
+  if (dias < 0) return '—'
+  return `há ${dias} dia${dias === 1 ? '' : 's'}`
 }
 
 interface Props {
   agendamento: Agendamento
   /** Quando true, mostra chip do profissional no canto (usado quando filtro = Todos) */
   showProfissionalChip?: boolean
+  /** Ocorrência efetiva quando a timeline "achata" um agendamento com itens por serviço. */
+  inicioOverride?: Date | null
+  /** Fim efetivo da ocorrência quando a timeline "achata" o agendamento. */
+  fimOverride?: Date | null
   onClick?: () => void
 }
 
@@ -28,90 +63,84 @@ interface Props {
  * Card de agendamento no padrão UX violet, otimizado pra mobile (430px).
  * Barra vertical colorida = status. Hora destacada. Cliente + serviço.
  */
-export default function AgendamentoCard({ agendamento, showProfissionalChip = false, onClick }: Props) {
-  const status = getStatus(agendamento.status)
-  const inicio = agendamento.dataHoraInicio ? new Date(agendamento.dataHoraInicio) : null
-  const fim = agendamento.dataHoraFim ? new Date(agendamento.dataHoraFim) : null
-  const hora = inicio ? format(inicio, 'HH:mm') : '—'
-  const duracao = inicio && fim ? Math.round((fim.getTime() - inicio.getTime()) / 60000) : null
+export default function AgendamentoCard({
+  agendamento,
+  showProfissionalChip,
+  inicioOverride,
+  fimOverride,
+  onClick,
+}: Props) {
+  const status = statusInfo(agendamento.status, agendamento.dataHoraInicio)
+  const inicio = inicioOverride ?? (agendamento.dataHoraInicio ? new Date(agendamento.dataHoraInicio) : null)
+  const fim = fimOverride ?? (agendamento.dataHoraFim ? new Date(agendamento.dataHoraFim) : null)
+  const duracaoMin = inicio && fim ? Math.max(0, differenceInMinutes(fim, inicio)) : null
+  const clienteNome = agendamento.cliente?.nome ?? 'Cliente'
+  const primeiroServico = (agendamento.servicos ?? [])[0] as any
+  const servicoNome =
+    primeiroServico?.nomeServico
+    ?? primeiroServico?.servico?.nome
+    ?? primeiroServico?.descricao
+    ?? 'Procedimento'
 
-  const clienteNome = agendamento.cliente?.nome ?? `Cliente #${agendamento.clienteId}`
-  const profissionalNome =
-    agendamento.atendente?.nomeUsuario
-    ?? agendamento.atendente?.usuario?.nome
-    ?? agendamento.atendente?.nome
-    ?? null
-  const profissionalInicial = profissionalNome ? profissionalNome.charAt(0).toUpperCase() : null
+  const { data: resumo, isLoading: loadingResumo } = useQuery({
+    queryKey: ['cliente-resumo', agendamento.clienteId],
+    queryFn: () => clienteService.buscarResumo(agendamento.clienteId),
+    enabled: !!agendamento.clienteId,
+    staleTime: 5 * 60_000,
+  })
 
-  const servicos = agendamento.servicos ?? []
-  const servicosLabel = servicos
-    .map((s: any) => s.nomeServico ?? s.servico?.nome ?? s.descricao ?? 'Serviço')
-    .filter(Boolean)
-    .join(' · ')
-  const valorTotal = agendamento.valorTotal ?? agendamento.valorFinal ?? null
-  // #155: agendamento pode ter outros profissionais nos itens
-  const principalId = (agendamento as any).atendente?.id ?? agendamento.atendenteId
-  const outrosProfs = new Set(
-    servicos
-      .map((s: any) => s.atendenteId)
-      .filter((id: any) => id != null && id !== principalId)
-  )
+  const diasLabel = loadingResumo
+    ? '...'
+    : formatDiasDesdeUltimoAtendimento(resumo?.ultimoAtendimento, inicio)
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="w-full text-left bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-sm transition flex"
-    >
-      {/* Barra de status vertical */}
-      <div className={`w-1.5 ${status.barra} flex-shrink-0`} aria-hidden />
+    showProfissionalChip ? (
+      <button
+        type="button"
+        onClick={onClick}
+        className="w-full text-left bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-violet-300 active:scale-[0.99] transition overflow-hidden flex"
+      >
+        <div className="flex flex-col items-center justify-center bg-slate-50 px-3 py-3 w-16 flex-shrink-0 border-r border-gray-100">
+          <span className="text-[11px] font-bold text-slate-900 leading-tight">
+            {inicio ? format(inicio, 'HH:mm') : '—'}
+          </span>
+          {duracaoMin != null && duracaoMin > 0 && (
+            <span className="text-[9px] text-gray-500 mt-0.5">{duracaoMin} min</span>
+          )}
+        </div>
 
-      <div className="flex-1 min-w-0 p-3 sm:p-4">
-        <div className="flex items-start gap-3">
-          {/* Hora */}
-          <div className="flex flex-col items-center text-center flex-shrink-0 pt-0.5">
-            <p className="text-base font-bold text-slate-900 leading-tight">{hora}</p>
-            {duracao && (
-              <p className="text-[10px] text-slate-400 font-medium mt-0.5">{duracao}min</p>
-            )}
+        <div className={`w-1 ${status.bar} flex-shrink-0`} aria-hidden />
+
+        <div className="flex-1 px-3 py-3 min-w-0 flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+            {iniciaisCliente(clienteNome)}
           </div>
-
-          {/* Info */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-sm font-semibold text-slate-900 truncate">{clienteNome}</p>
-              <span
-                className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${status.badge}`}
-              >
+            <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+              <p className="text-[11px] font-semibold text-slate-900 truncate">{clienteNome}</p>
+              <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded ${status.tag} whitespace-nowrap`}>
                 {status.label}
               </span>
             </div>
-            {servicosLabel && (
-              <p className="text-xs text-slate-500 truncate mt-0.5">{servicosLabel}</p>
-            )}
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
-              {showProfissionalChip && profissionalNome && (
-                <span className="inline-flex items-center gap-1 text-[11px] text-slate-600 bg-violet-50 border border-violet-100 rounded-full px-2 py-0.5">
-                  <span className="h-3.5 w-3.5 rounded-full bg-violet-200 text-violet-800 flex items-center justify-center text-[9px] font-bold">
-                    {profissionalInicial}
-                  </span>
-                  <span className="font-medium">{profissionalNome.split(' ')[0]}</span>
-                  {outrosProfs.size > 0 && (
-                    <span className="ml-1 text-[10px] font-bold text-violet-700">
-                      +{outrosProfs.size}
-                    </span>
-                  )}
-                </span>
-              )}
-              {valorTotal != null && (
-                <span className="text-[11px] text-slate-500">
-                  R$ {Number(valorTotal).toFixed(2).replace('.', ',')}
-                </span>
-              )}
-            </div>
+            <p className="text-[11px] text-gray-500 truncate">{servicoNome}</p>
+            <p className="text-[9px] text-slate-400 mt-0.5 truncate">{diasLabel}</p>
           </div>
         </div>
-      </div>
-    </button>
+      </button>
+    ) : (
+      <button
+        type="button"
+        onClick={onClick}
+        className="w-full text-left bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-sm transition flex"
+      >
+        <div className={`w-1.5 ${status.bar} flex-shrink-0`} aria-hidden />
+        <AgendamentoCardContent
+          agendamento={agendamento}
+          inicio={inicio}
+          fim={fim}
+          referenceDate={inicio}
+        />
+      </button>
+    )
   )
 }

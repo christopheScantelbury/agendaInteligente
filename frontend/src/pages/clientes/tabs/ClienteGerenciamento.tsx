@@ -1,12 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Edit, Trash2, ChevronLeft, ChevronRight, ArrowUpDown, UserPlus } from 'lucide-react'
+import { Plus, Edit, Trash2, ChevronLeft, ChevronRight, ArrowUpDown, UserPlus, Info } from 'lucide-react'
 import { clienteService } from '../../../services/clienteService'
 import { authService } from '../../../services/authService'
 import { perfilService } from '../../../services/perfilService'
 import { podeEditar } from '../../../utils/permissions'
 import { matchSearch } from '../../../utils/normalize'
+import { maskPhone } from '../../../utils/masks'
 import { useNotification } from '../../../contexts/NotificationContext'
 import { useCategoria } from '../../../hooks/useCategoria'
 import ConfirmDialog from '../../../components/ConfirmDialog'
@@ -104,25 +105,27 @@ export default function ClienteGerenciamento({ searchTerm }: Props) {
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <select
-            value={filterAtivo}
-            onChange={(e) => setFilterAtivo(e.target.value)}
-            className="bg-white text-slate-900 border border-slate-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-          >
-            <option value="">Todos os status</option>
-            <option value="true">Ativos</option>
-            <option value="false">Inativos</option>
-          </select>
-          <button
-            onClick={() => setSortAsc((v) => !v)}
-            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition"
-            title={`Ordenar por nome (${sortAsc ? 'A-Z' : 'Z-A'})`}
-          >
-            Nome <ArrowUpDown className="h-3 w-3" />
-          </button>
-          <span className="text-slate-500 text-sm">{clientesFiltrados.length} cliente{clientesFiltrados.length !== 1 ? 's' : ''}</span>
-        </div>
+        {isWeb && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={filterAtivo}
+              onChange={(e) => setFilterAtivo(e.target.value)}
+              className="bg-white text-slate-900 border border-slate-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+            >
+              <option value="">Todos os status</option>
+              <option value="true">Ativos</option>
+              <option value="false">Inativos</option>
+            </select>
+            <button
+              onClick={() => setSortAsc((v) => !v)}
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition"
+              title={`Ordenar por nome (${sortAsc ? 'A-Z' : 'Z-A'})`}
+            >
+              Nome <ArrowUpDown className="h-3 w-3" />
+            </button>
+            <span className="text-slate-500 text-sm">{clientesFiltrados.length} cliente{clientesFiltrados.length !== 1 ? 's' : ''}</span>
+          </div>
+        )}
         {podeEditarClientes && (
           <button
             onClick={() => navigate('/clientes/novo')}
@@ -166,17 +169,27 @@ export default function ClienteGerenciamento({ searchTerm }: Props) {
                   const ativo = cliente.ativo ?? true
                   const inicial = (cliente.nome || '?').charAt(0).toUpperCase()
                   return (
-                    <tr key={cliente.id} className="hover:bg-slate-50 transition">
+                    <tr
+                      key={cliente.id}
+                      className="hover:bg-slate-50 transition cursor-pointer"
+                      onClick={() => setQuickModalId(cliente.id!)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          setQuickModalId(cliente.id!)
+                        }
+                      }}
+                      aria-label={`Ver detalhes de ${cliente.nome}`}
+                    >
                       <td className="px-4 py-3">
-                        <button
-                          onClick={() => setQuickModalId(cliente.id!)}
-                          className="flex items-center gap-3 min-w-0 text-left hover:text-violet-700"
-                        >
+                        <div className="flex items-center gap-3 min-w-0 text-left">
                           <span className="h-9 w-9 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
                             {inicial}
                           </span>
                           <span className="font-semibold text-slate-900 truncate">{cliente.nome}</span>
-                        </button>
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-slate-600">
                         <div className="min-w-0">
@@ -204,14 +217,20 @@ export default function ClienteGerenciamento({ searchTerm }: Props) {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1 justify-end">
                             <button
-                              onClick={() => navigate(`/clientes/${cliente.id}/editar`)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                navigate(`/clientes/${cliente.id}/editar`)
+                              }}
                               className="p-2 rounded-lg text-slate-500 hover:bg-violet-50 hover:text-violet-700 transition"
                               title="Editar"
                             >
                               <Edit className="h-4 w-4" />
                             </button>
                             <button
-                              onClick={() => setConfirmDelete({ isOpen: true, id: cliente.id! })}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setConfirmDelete({ isOpen: true, id: cliente.id! })
+                              }}
                               className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition"
                               title="Excluir"
                             >
@@ -232,60 +251,27 @@ export default function ClienteGerenciamento({ searchTerm }: Props) {
           {/* Mobile: layout original de cards */}
           <ul className="space-y-2">
             {clientesPaginados.map((cliente) => {
-              const ativo = cliente.ativo ?? true
-              const inicial = (cliente.nome || '?').charAt(0).toUpperCase()
+              const telefoneMascarado = cliente.telefone ? maskPhone(cliente.telefone) : '—'
               return (
-                <li key={cliente.id} className="bg-white border border-slate-200 rounded-2xl p-4 hover:shadow-sm transition">
-                  <div className="flex items-start gap-3">
-                    <button
-                      onClick={() => setQuickModalId(cliente.id!)}
-                      className="h-10 w-10 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-sm font-bold flex-shrink-0 hover:bg-violet-200 transition"
-                      title="Ver detalhes"
-                    >
-                      {inicial}
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <button
-                          onClick={() => setQuickModalId(cliente.id!)}
-                          className="text-sm font-semibold text-slate-900 truncate hover:text-violet-700 text-left"
-                        >
+                <li key={cliente.id}>
+                  <button
+                    type="button"
+                    onClick={() => setQuickModalId(cliente.id!)}
+                    className="w-full bg-white border border-slate-200 rounded-2xl p-4 hover:shadow-sm transition text-left"
+                    aria-label={`Ver informações de ${cliente.nome}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-semibold text-slate-900 truncate block">
                           {cliente.nome}
-                        </button>
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                            ativo ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
-                          }`}
-                        >
-                          {ativo ? 'Ativo' : 'Inativo'}
                         </span>
+                        <p className="text-xs text-slate-500 truncate mt-0.5">{telefoneMascarado}</p>
                       </div>
-                      {cliente.telefone && <p className="text-xs text-slate-500 truncate mt-0.5">{cliente.telefone}</p>}
-                      <div className="flex items-center gap-2 text-xs text-slate-400 mt-1 flex-wrap">
-                        {cliente.endereco && <span className="truncate max-w-[200px]">{cliente.endereco}</span>}
-                        {cliente.endereco && cliente.dataNascimento && <span>·</span>}
-                        {cliente.dataNascimento && <span>Nasc. {formatDate(cliente.dataNascimento)}</span>}
-                      </div>
+                      <span className="shrink-0 h-8 w-8 rounded-full bg-violet-50 text-violet-600 flex items-center justify-center">
+                        <Info className="h-4 w-4" />
+                      </span>
                     </div>
-                    {podeEditarClientes && (
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        <button
-                          onClick={() => navigate(`/clientes/${cliente.id}/editar`)}
-                          className="p-2 rounded-lg text-slate-500 hover:bg-violet-50 hover:text-violet-700 transition"
-                          title="Editar"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => setConfirmDelete({ isOpen: true, id: cliente.id! })}
-                          className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition"
-                          title="Excluir"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  </button>
                 </li>
               )
             })}

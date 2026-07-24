@@ -25,9 +25,13 @@ const MODES: Array<{ id: Modo; label: string; icon: React.ComponentType<{ classN
 export default function AgendamentosPage() {
   const isWeb = useIsWebLayout()
   const [searchParams, setSearchParams] = useSearchParams()
-  // #137: PROFISSIONAL tem foco em visão de calendário (mês) por padrão.
-  // Demais perfis seguem em Dia (timeline) como antes.
-  const modoDefault: Modo = authService.isPerfilProfissional() ? 'mes' : 'dia'
+  // No web, a navegação de Agendamentos abre na semana por padrão.
+  // No mobile, mantemos o comportamento anterior.
+  const modoDefault: Modo = isWeb
+    ? 'semana'
+    : authService.isPerfilProfissional()
+      ? 'mes'
+      : 'dia'
   const modoUrl = (searchParams.get('modo') as Modo) || modoDefault
   const dataUrl = searchParams.get('data')
 
@@ -59,15 +63,45 @@ export default function AgendamentosPage() {
     ? 'max-w-[1920px] w-full mx-auto flex flex-col h-[calc(100dvh-4rem)] gap-3'
     : 'max-w-3xl mx-auto p-4 sm:p-6 space-y-5 pb-32'
 
+  const modoSwitcher = (
+    <div className="inline-flex p-1 rounded-2xl bg-slate-100 border border-slate-200 w-full sm:w-auto flex-shrink-0">
+      {MODES.map((mode) => {
+        const Icon = mode.icon
+        const isActive = modoUrl === mode.id
+        return (
+          <button
+            key={mode.id}
+            onClick={() => handleModoChange(mode.id)}
+            className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+              isActive
+                ? 'bg-white text-violet-700 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            {mode.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+
   // O modo ativo (Dia/Semana/Mês) — no web vive num flex-item que rola por
   // dentro (Dia/Semana têm timeline alta) ou preenche exato (Mês).
   const modoContent =
     modoUrl === 'dia' ? (
-      <DayMode selectedDate={selectedDate} onDateChange={handleDateChange} />
+      <DayMode
+        selectedDate={selectedDate}
+        onDateChange={handleDateChange}
+        modoAtual={modoUrl}
+        onModoChange={handleModoChange}
+      />
     ) : modoUrl === 'semana' ? (
       <WeekMode
         selectedDate={selectedDate}
         onDateChange={handleDateChange}
+        modoAtual={modoUrl}
+        onModoChange={handleModoChange}
         onJumpToDayMode={(date) => {
           handleDateChange(date)
           handleModoChange('dia')
@@ -100,26 +134,7 @@ export default function AgendamentosPage() {
       </header>
 
       {/* Mode Switcher (chips) */}
-      <div className={`inline-flex p-1 rounded-2xl bg-slate-100 border border-slate-200 w-full sm:w-auto ${isWeb ? 'flex-shrink-0' : ''}`}>
-        {MODES.map((mode) => {
-          const Icon = mode.icon
-          const isActive = modoUrl === mode.id
-          return (
-            <button
-              key={mode.id}
-              onClick={() => handleModoChange(mode.id)}
-              className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition ${
-                isActive
-                  ? 'bg-white text-violet-700 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-              {mode.label}
-            </button>
-          )
-        })}
-      </div>
+      {!(isWeb && (modoUrl === 'dia' || modoUrl === 'semana')) && modoSwitcher}
 
       {/* Modo ativo — no web preenche a altura restante (cada modo se ajusta). */}
       {isWeb ? (

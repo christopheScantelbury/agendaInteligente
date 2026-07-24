@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Pencil } from 'lucide-react'
-import { anamneseService, type AnamneseFormData } from '../../services/anamneseService'
+import { anamneseService, type Anamnese, type AnamneseFormData, type PerguntaTemplate } from '../../services/anamneseService'
 import { clienteService, type Cliente } from '../../services/clienteService'
 import { servicoService, type Servico } from '../../services/servicoService'
 import Button from '../../components/Button'
@@ -46,6 +46,234 @@ const emptyForm: AnamneseFormData = {
   observacoes: '',
 }
 
+const QUESTIONARIO_PADRAO: Array<{
+  key: keyof Pick<
+    Anamnese,
+    | 'usaRimel'
+    | 'procedimentosRecentesOlhos'
+    | 'alergias'
+    | 'problemasOculares'
+    | 'tratamentoOncologico'
+    | 'tireoide'
+    | 'dormeDeLado'
+    | 'gravidez'
+    | 'outrosProblemas'
+  >
+  label: string
+  obsKey?: keyof Pick<
+    Anamnese,
+    | 'usaRimelObs'
+    | 'procedimentosRecentesOlhosObs'
+    | 'alergiasObs'
+    | 'problemasOcularesObs'
+    | 'tratamentoOncologicoObs'
+    | 'tireoidedObs'
+    | 'dormeDeLadoObs'
+    | 'gravidezObs'
+    | 'outrosProblemasDescricao'
+  >
+  tipo?: 'sim_nao' | 'texto'
+}> = [
+  { key: 'usaRimel', label: 'Usa rímel?', obsKey: 'usaRimelObs' },
+  { key: 'procedimentosRecentesOlhos', label: 'Realizou algum procedimento recente nos olhos?', obsKey: 'procedimentosRecentesOlhosObs' },
+  { key: 'alergias', label: 'Possui alergias?', obsKey: 'alergiasObs' },
+  { key: 'problemasOculares', label: 'Problemas oculares?', obsKey: 'problemasOcularesObs' },
+  { key: 'tratamentoOncologico', label: 'Está em tratamento oncológico?', obsKey: 'tratamentoOncologicoObs' },
+  { key: 'tireoide', label: 'Tem problema de tireoide?', obsKey: 'tireoidedObs' },
+  { key: 'dormeDeLado', label: 'Dorme de lado?', obsKey: 'dormeDeLadoObs' },
+  { key: 'gravidez', label: 'Está grávida?', obsKey: 'gravidezObs' },
+  { key: 'outrosProblemas', label: 'Outros problemas?', obsKey: 'outrosProblemasDescricao' },
+]
+
+function formatarDataBR(data?: string | null) {
+  if (!data) return '—'
+  const dataNormalizada = data.length <= 10 ? `${data}T00:00:00` : data
+  const parsed = new Date(dataNormalizada)
+  if (Number.isNaN(parsed.getTime())) return '—'
+  return new Intl.DateTimeFormat('pt-BR').format(parsed)
+}
+
+function formatarDataHoraBR(data?: string | null) {
+  if (!data) return '—'
+  const parsed = new Date(data)
+  if (Number.isNaN(parsed.getTime())) return '—'
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(parsed)
+}
+
+function formatarTelefone(telefone?: string | null) {
+  if (!telefone) return '—'
+  const digits = telefone.replace(/\D/g, '')
+  if (digits.length === 11) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+  }
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+  }
+  return telefone
+}
+
+function formatarResposta(valor?: boolean | string | number | null) {
+  if (valor === true) return 'Sim'
+  if (valor === false) return 'Não'
+  if (valor === 0) return '0'
+  if (valor) return String(valor)
+  return '—'
+}
+
+function formatarPerguntasTemplate(perguntas?: PerguntaTemplate[]) {
+  return perguntas ?? []
+}
+
+function VisualizacaoSecao({
+  titulo,
+  children,
+}: {
+  titulo: string
+  children: ReactNode
+}) {
+  return (
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <div className="bg-slate-200/80 px-3 py-1.5 text-sm font-medium text-slate-500">
+        {titulo}
+      </div>
+      <div className="px-3 py-3">
+        {children}
+      </div>
+    </section>
+  )
+}
+
+function VisualizacaoLinha({
+  label,
+  value,
+}: {
+  label: string
+  value?: ReactNode
+}) {
+  return (
+    <div className="space-y-0.5">
+      <p className="text-xs text-slate-400">{label}</p>
+      <div className="text-sm text-slate-900 whitespace-pre-wrap">{value ?? '—'}</div>
+    </div>
+  )
+}
+
+function AnamneseReadOnlyView({
+  anamnese,
+  cliente,
+  template,
+  onEdit,
+  onBack,
+}: {
+  anamnese: Anamnese
+  cliente?: Cliente | null
+  template?: { id: number; nome: string; perguntas?: PerguntaTemplate[] } | null
+  onEdit: () => void
+  onBack: () => void
+}) {
+  const perguntasDinamicas = formatarPerguntasTemplate(template?.perguntas)
+  const usarPerguntasDinamicas = perguntasDinamicas.length > 0
+
+  const perguntasVisualizacao = usarPerguntasDinamicas
+    ? perguntasDinamicas.map((pergunta, index) => {
+      const resposta = anamnese.respostas?.[pergunta.id] ?? anamnese.respostas?.[`pergunta_${index}`] ?? {}
+      return {
+        label: pergunta.label,
+        valor: formatarResposta(resposta.valor as boolean | string | number | null | undefined),
+        obs: typeof resposta.obs === 'string' && resposta.obs.trim() ? resposta.obs.trim() : '',
+        mostraObs: pergunta.comObservacao !== false,
+      }
+    })
+    : QUESTIONARIO_PADRAO.map((campo) => ({
+      label: campo.label,
+      valor: formatarResposta(anamnese[campo.key] as boolean | string | number | null | undefined),
+      obs: campo.obsKey ? String(anamnese[campo.obsKey] ?? '').trim() : '',
+      mostraObs: true,
+    }))
+
+  return (
+    <div className="mx-auto w-full max-w-5xl px-4 py-4 sm:py-6 space-y-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex-1 text-center sm:text-left">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Ficha de anamnese</p>
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold text-slate-900">
+            {anamnese.templateNome || template?.nome || 'Anamnese'}
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            {formatarDataBR(anamnese.data)}
+            {anamnese.dataAtualizacao ? ` · Atualizado em ${formatarDataHoraBR(anamnese.dataAtualizacao)}` : ''}
+          </p>
+        </div>
+        <div className="flex justify-center gap-2 sm:justify-end">
+          <Button onClick={onEdit}>
+            <Pencil className="h-4 w-4 mr-2" />
+            Editar
+          </Button>
+          <Button variant="secondary" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar
+          </Button>
+        </div>
+      </div>
+
+      <VisualizacaoSecao titulo="Identificação">
+        <div className="space-y-3">
+          <VisualizacaoLinha label="Cliente:" value={cliente?.nome || anamnese.clienteNome || '—'} />
+          <VisualizacaoLinha label="Telefone:" value={formatarTelefone(cliente?.telefone)} />
+          <VisualizacaoLinha label="Data:" value={formatarDataBR(anamnese.data)} />
+          {anamnese.templateNome && (
+            <VisualizacaoLinha label="Template:" value={anamnese.templateNome} />
+          )}
+        </div>
+      </VisualizacaoSecao>
+
+      <VisualizacaoSecao titulo="Questionário Anamnese">
+        <div className="space-y-4">
+          {perguntasVisualizacao.map((item, index) => (
+            <div key={`${item.label}-${index}`} className="space-y-1.5">
+              <p className="text-sm font-medium text-slate-900">{item.label}</p>
+              <p className="text-sm text-slate-600">{item.valor}</p>
+              {item.mostraObs && item.obs ? (
+                <p className="text-xs text-slate-500">Obs: {item.obs}</p>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      </VisualizacaoSecao>
+
+      <VisualizacaoSecao titulo="Avaliação">
+        <div className="space-y-3">
+          <VisualizacaoLinha label="Procedimento:" value={anamnese.servicoNome || '—'} />
+          <VisualizacaoLinha label="Mapping:" value={anamnese.mapping || '—'} />
+          <VisualizacaoLinha label="Marca dos fios:" value={anamnese.marcaFios || '—'} />
+          <VisualizacaoLinha label="Espessura:" value={anamnese.espessura || '—'} />
+          <VisualizacaoLinha label="Curvatura:" value={anamnese.curvatura || '—'} />
+          <VisualizacaoLinha label="Adesivo/Cola:" value={anamnese.adesivo || '—'} />
+        </div>
+      </VisualizacaoSecao>
+
+      <VisualizacaoSecao titulo="Uso de imagem">
+        <VisualizacaoLinha
+          label="Permissão:"
+          value={anamnese.usoImagem ? 'Autoriza uso de imagem' : 'Não autoriza'}
+        />
+      </VisualizacaoSecao>
+
+      <VisualizacaoSecao titulo="Observações">
+        <div className="text-sm text-slate-700 whitespace-pre-wrap">
+          {anamnese.observacoes?.trim() || '—'}
+        </div>
+      </VisualizacaoSecao>
+    </div>
+  )
+}
+
 export default function AnamneseFormPage() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
@@ -84,6 +312,21 @@ export default function AnamneseFormPage() {
 
   const templateSelecionado = templates.find((t) => t.id === form.templateId)
   const usarPerguntasDinamicas = !!(templateSelecionado?.perguntas && templateSelecionado.perguntas.length > 0)
+  const perguntasComChaveUnica = useMemo(() => {
+    const perguntas = templateSelecionado?.perguntas ?? []
+    const contagem = perguntas.reduce<Record<string, number>>((acc, pergunta) => {
+      const id = (pergunta.id || '').trim()
+      if (!id) return acc
+      acc[id] = (acc[id] ?? 0) + 1
+      return acc
+    }, {})
+
+    return perguntas.map((pergunta, index) => {
+      const id = (pergunta.id || '').trim()
+      const chave = id && contagem[id] === 1 ? id : `pergunta_${index}`
+      return { pergunta, chave }
+    })
+  }, [templateSelecionado?.perguntas])
 
   const { data: todosServicos = [] } = useQuery({
     queryKey: ['servicos'],
@@ -93,7 +336,13 @@ export default function AnamneseFormPage() {
   const { data: anamneseExistente, isLoading: isLoadingAnamnese } = useQuery({
     queryKey: ['anamnese', anamneseId],
     queryFn: () => anamneseService.buscarPorId(anamneseId!),
-    enabled: isView && !!anamneseId,
+    enabled: !!anamneseId,
+  })
+
+  const { data: clienteVisualizacao } = useQuery({
+    queryKey: ['cliente', anamneseExistente?.clienteId],
+    queryFn: () => clienteService.buscarPorId(anamneseExistente!.clienteId!),
+    enabled: isView && !!anamneseExistente?.clienteId,
   })
 
   useEffect(() => {
@@ -213,7 +462,7 @@ export default function AnamneseFormPage() {
       if (anamneseId) {
         queryClient.invalidateQueries({ queryKey: ['anamnese', anamneseId] })
         showNotification('success', 'Ficha atualizada com sucesso!')
-        setEditing(false) // volta pra visualização, sem sair da tela
+        navigate('/anamneses')
       } else {
         showNotification('success', 'Ficha salva com sucesso!')
         navigate('/anamneses')
@@ -244,6 +493,24 @@ export default function AnamneseFormPage() {
 
   if (isView && isLoadingAnamnese) {
     return <div className="text-center py-8">Carregando...</div>
+  }
+
+  if (isView && anamneseExistente) {
+    const templateDaFicha =
+      templates.find((t) => t.id === anamneseExistente.templateId) ??
+      (anamneseExistente.templateId
+        ? { id: anamneseExistente.templateId, nome: anamneseExistente.templateNome || '', perguntas: [] }
+        : null)
+
+    return (
+      <AnamneseReadOnlyView
+        anamnese={anamneseExistente}
+        cliente={clienteVisualizacao}
+        template={templateDaFicha}
+        onEdit={() => setEditing(true)}
+        onBack={() => navigate('/anamneses')}
+      />
+    )
   }
 
   const fieldClass =
@@ -350,7 +617,7 @@ export default function AnamneseFormPage() {
               disabled={isView}
               className={fieldClass}
             >
-              <option value="">Selecione um template...</option>
+              <option value="">Template padrão</option>
               {templates.map((t) => (
                 <option key={t.id} value={t.id}>{t.nome}</option>
               ))}
@@ -370,29 +637,31 @@ export default function AnamneseFormPage() {
           </h2>
           {usarPerguntasDinamicas ? (
             <div className="space-y-5">
-              {templateSelecionado!.perguntas!.map((pergunta) => {
-                const resposta = respostasDinamicas[pergunta.id] ?? {}
+              {perguntasComChaveUnica.map(({ pergunta, chave }) => {
+                const resposta = respostasDinamicas[chave] ?? respostasDinamicas[pergunta.id] ?? {}
                 const setResposta = (patch: { valor?: boolean | string | null; obs?: string }) => {
                   setRespostasDinamicas((prev) => ({
                     ...prev,
-                    [pergunta.id]: { ...prev[pergunta.id], ...patch },
+                    [chave]: { ...prev[chave], ...patch },
                   }))
                 }
                 if (pergunta.tipo === 'sim_nao') {
                   return (
                     <SimNaoField
-                      key={pergunta.id}
+                      key={chave}
                       label={pergunta.label}
                       value={typeof resposta.valor === 'boolean' ? resposta.valor : null}
                       obsValue={resposta.obs ?? ''}
                       showObs={pergunta.comObservacao !== false}
+                      name={chave}
+                      disabled={isView}
                       onChange={(v) => setResposta({ valor: v })}
                       onObsChange={(obs) => setResposta({ obs })}
                     />
                   )
                 }
                 return (
-                  <div key={pergunta.id} className="space-y-1">
+                  <div key={chave} className="space-y-1">
                     <label className="block text-sm font-medium text-gray-700">{pergunta.label}</label>
                     <input
                       type={pergunta.tipo === 'numero' ? 'number' : 'text'}
@@ -412,32 +681,33 @@ export default function AnamneseFormPage() {
                   Selecione um template acima para usar perguntas customizadas, ou preencha as perguntas padrão abaixo.
                 </p>
               )}
-              <SimNaoField label="Usa rímel?" value={form.usaRimel} obsValue={form.usaRimelObs}
+              <SimNaoField label="Usa rímel?" value={form.usaRimel} obsValue={form.usaRimelObs} disabled={isView}
                 onChange={(v) => setForm({ ...form, usaRimel: v })}
                 onObsChange={(obs) => setForm({ ...form, usaRimelObs: obs })} />
-              <SimNaoField label="Realizou algum procedimento recente nos olhos?" value={form.procedimentosRecentesOlhos} obsValue={form.procedimentosRecentesOlhosObs}
+              <SimNaoField label="Realizou algum procedimento recente nos olhos?" value={form.procedimentosRecentesOlhos} obsValue={form.procedimentosRecentesOlhosObs} disabled={isView}
                 onChange={(v) => setForm({ ...form, procedimentosRecentesOlhos: v })}
                 onObsChange={(obs) => setForm({ ...form, procedimentosRecentesOlhosObs: obs })} />
-              <SimNaoField label="Possui alergias?" value={form.alergias} obsValue={form.alergiasObs}
+              <SimNaoField label="Possui alergias?" value={form.alergias} obsValue={form.alergiasObs} disabled={isView}
                 onChange={(v) => setForm({ ...form, alergias: v })}
                 onObsChange={(obs) => setForm({ ...form, alergiasObs: obs })} />
-              <SimNaoField label="Problemas oculares?" value={form.problemasOculares} obsValue={form.problemasOcularesObs}
+              <SimNaoField label="Problemas oculares?" value={form.problemasOculares} obsValue={form.problemasOcularesObs} disabled={isView}
                 onChange={(v) => setForm({ ...form, problemasOculares: v })}
                 onObsChange={(obs) => setForm({ ...form, problemasOcularesObs: obs })} />
-              <SimNaoField label="Está em tratamento oncológico?" value={form.tratamentoOncologico} obsValue={form.tratamentoOncologicoObs}
+              <SimNaoField label="Está em tratamento oncológico?" value={form.tratamentoOncologico} obsValue={form.tratamentoOncologicoObs} disabled={isView}
                 onChange={(v) => setForm({ ...form, tratamentoOncologico: v })}
                 onObsChange={(obs) => setForm({ ...form, tratamentoOncologicoObs: obs })} />
-              <SimNaoField label="Tem problema de tireoide?" value={form.tireoide} obsValue={form.tireoidedObs}
+              <SimNaoField label="Tem problema de tireoide?" value={form.tireoide} obsValue={form.tireoidedObs} disabled={isView}
                 onChange={(v) => setForm({ ...form, tireoide: v })}
                 onObsChange={(obs) => setForm({ ...form, tireoidedObs: obs })} />
-              <SimNaoField label="Dorme de lado?" value={form.dormeDeLado} obsValue={form.dormeDeLadoObs}
+              <SimNaoField label="Dorme de lado?" value={form.dormeDeLado} obsValue={form.dormeDeLadoObs} disabled={isView}
                 onChange={(v) => setForm({ ...form, dormeDeLado: v })}
                 onObsChange={(obs) => setForm({ ...form, dormeDeLadoObs: obs })} />
-              <SimNaoField label="Está grávida?" value={form.gravidez} obsValue={form.gravidezObs}
+              <SimNaoField label="Está grávida?" value={form.gravidez} obsValue={form.gravidezObs} disabled={isView}
                 onChange={(v) => setForm({ ...form, gravidez: v })}
                 onObsChange={(obs) => setForm({ ...form, gravidezObs: obs })} />
               <div className="space-y-2">
                 <SimNaoField label="Outros problemas?" value={form.outrosProblemas}
+                  disabled={isView}
                   onChange={(v) => setForm({ ...form, outrosProblemas: v })} showObs={false} />
                 {form.outrosProblemas === true && (
                   <textarea value={form.outrosProblemasDescricao || ''}

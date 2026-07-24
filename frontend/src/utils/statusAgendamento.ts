@@ -5,7 +5,7 @@
  *
  * Semântica:
  * - AGENDADO            → slate-700 (neutro, ainda sem ação)
- * - CONFIRMADO          → emerald-500 (cliente confirmou — verde positivo)
+ * - CONFIRMADO          → blue-500 (cliente confirmou — azul de destaque)
  * - EM_ANDAMENTO        → violet-500 (em curso — cor de marca)
  * - PROCEDIMENTO_FIM    → violet-600 (curso quase finalizando — mesma família)
  * - CONCLUIDO/FINALIZADO → emerald-600 (verde forte — fechado com sucesso)
@@ -27,7 +27,7 @@ export type StatusKey =
 /** Cor de fundo sólida (dots, badges sólidos). */
 export const STATUS_DOT: Record<string, string> = {
   AGENDADO: 'bg-slate-400',
-  CONFIRMADO: 'bg-emerald-500',
+  CONFIRMADO: 'bg-blue-500',
   EM_ANDAMENTO: 'bg-violet-500',
   PROCEDIMENTO_FIM: 'bg-violet-600',
   CONCLUIDO: 'bg-emerald-600',
@@ -39,7 +39,7 @@ export const STATUS_DOT: Record<string, string> = {
 /** Hex pra <Cell> / SVG charts. Mesma paleta do Tailwind 500-600. */
 export const STATUS_HEX: Record<string, string> = {
   AGENDADO: '#334155',          // slate-700
-  CONFIRMADO: '#10b981',        // emerald-500
+  CONFIRMADO: '#3b82f6',        // blue-500
   EM_ANDAMENTO: '#8b5cf6',      // violet-500
   PROCEDIMENTO_FIM: '#7c3aed',  // violet-600
   CONCLUIDO: '#059669',         // emerald-600
@@ -51,7 +51,7 @@ export const STATUS_HEX: Record<string, string> = {
 /** Classe Tailwind completa para badge (bg-XXX-50 + text-XXX-700). */
 export const STATUS_BADGE: Record<string, string> = {
   AGENDADO: 'bg-slate-100 text-slate-700',
-  CONFIRMADO: 'bg-emerald-50 text-emerald-700',
+  CONFIRMADO: 'bg-blue-50 text-blue-700',
   EM_ANDAMENTO: 'bg-violet-50 text-violet-700',
   PROCEDIMENTO_FIM: 'bg-violet-50 text-violet-800',
   CONCLUIDO: 'bg-emerald-50 text-emerald-800',
@@ -63,7 +63,7 @@ export const STATUS_BADGE: Record<string, string> = {
 /** Barra vertical colorida do card de timeline (Day/Week). */
 export const STATUS_BAR: Record<string, string> = {
   AGENDADO: 'bg-slate-400',
-  CONFIRMADO: 'bg-emerald-500',
+  CONFIRMADO: 'bg-blue-500',
   EM_ANDAMENTO: 'bg-violet-500',
   PROCEDIMENTO_FIM: 'bg-violet-600',
   CONCLUIDO: 'bg-emerald-600',
@@ -75,7 +75,7 @@ export const STATUS_BAR: Record<string, string> = {
 /** Fundo + borda do card de timeline (bg-XX-50 border-XX-200). */
 export const STATUS_CARD: Record<string, string> = {
   AGENDADO: 'bg-slate-50 border-slate-200',
-  CONFIRMADO: 'bg-emerald-50 border-emerald-200',
+  CONFIRMADO: 'bg-blue-50 border-blue-200',
   EM_ANDAMENTO: 'bg-violet-50 border-violet-200',
   PROCEDIMENTO_FIM: 'bg-violet-50 border-violet-200',
   CONCLUIDO: 'bg-emerald-50 border-emerald-200',

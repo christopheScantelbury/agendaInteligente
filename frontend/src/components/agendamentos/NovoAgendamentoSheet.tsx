@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { format } from 'date-fns'
+import { differenceInCalendarDays, format, parseISO } from 'date-fns'
 import {
   Check, ChevronRight, ChevronLeft, Search, User, Briefcase, CreditCard,
   X, UserPlus
@@ -10,7 +10,7 @@ import { clienteService } from '../../services/clienteService'
 import { unidadeService } from '../../services/unidadeService'
 import { servicoService } from '../../services/servicoService'
 import { atendenteService } from '../../services/atendenteService'
-import { agendamentoService } from '../../services/agendamentoService'
+import { agendamentoService, type Agendamento } from '../../services/agendamentoService'
 import { useNotification } from '../../contexts/NotificationContext'
 import { getApiErrorMessage } from '../../utils/apiError'
 import { matchSearch } from '../../utils/normalize'
@@ -23,6 +23,10 @@ interface Props {
   /** Pré-seleciona profissional no primeiro bloco (vindo do tap em slot da timeline) */
   initialAtendenteId?: number
   onCreated?: () => void
+  /** Quando presente, abre o sheet em modo de edição. */
+  editingAgendamento?: Agendamento | null
+  /** Callback genérico após salvar no modo edição. */
+  onSaved?: () => void
 }
 
 type Step = 1 | 2 | 3
@@ -60,6 +64,62 @@ const splitDataHora = (v: string): { data: string; hora: string } => {
 const mergeDataHora = (data: string, hora: string): string =>
   data && hora ? `${data}T${hora}` : ''
 
+const STATUS_LABELS: Record<string, string> = {
+  AGENDADO: 'Agendado',
+  CONFIRMADO: 'Confirmado',
+  EM_ANDAMENTO: 'Em andamento',
+  PROCEDIMENTO_FIM: 'Procedimento OK',
+  CONCLUIDO: 'Finalizado',
+  FINALIZADO: 'Finalizado',
+  CANCELADO: 'Cancelado',
+  NO_SHOW: 'Não compareceu',
+}
+
+function toDateTimeLocal(value?: string): string {
+  if (!value) return ''
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return ''
+  return format(parsed, "yyyy-MM-dd'T'HH:mm")
+}
+
+function buildBlocosFromAgendamento(agendamento: Agendamento): Bloco[] {
+  const items = (agendamento.servicos ?? []) as any[]
+  const blocos = new Map<string, Bloco>()
+
+  items.forEach((item, idx) => {
+    const servicoId = Number(item?.servicoId ?? item?.servico?.id)
+    if (!Number.isFinite(servicoId) || servicoId <= 0) return
+
+    const atendenteId = (item?.atendenteId ?? agendamento.atendenteId ?? null) as number | null
+    const dataHora = item?.dataHoraInicio ?? agendamento.dataHoraInicio ?? ''
+    const key = `${atendenteId ?? 'x'}|${dataHora || 'x'}`
+    const existente = blocos.get(key)
+
+    if (existente) {
+      existente.servicoIds.push(servicoId)
+      return
+    }
+
+    blocos.set(key, {
+      uid: `edit-${agendamento.id ?? 'ag'}-${idx}`,
+      atendenteId,
+      servicoIds: [servicoId],
+      dataHora,
+    })
+  })
+
+  if (blocos.size > 0) return Array.from(blocos.values())
+
+  return [
+    {
+      uid: `edit-${agendamento.id ?? 'ag'}-0`,
+      atendenteId: agendamento.atendenteId ?? null,
+      servicoIds: agendamento.servico?.id != null ? [Number(agendamento.servico.id)] : [],
+      dataHora: toDateTimeLocal(agendamento.dataHoraInicio),
+    },
+  ]
+}
+
 /**
  * Wizard 3 passos pra criar agendamento.
  *
@@ -69,10 +129,17 @@ const mergeDataHora = (data: string, hora: string): string =>
  * e dataHoraInicio por item — cada item respeita seu bloco.
  */
 export default function NovoAgendamentoSheet({
-  isOpen, onClose, initialDateTime, initialAtendenteId, onCreated,
+  isOpen,
+  onClose,
+  initialDateTime,
+  initialAtendenteId,
+  onCreated,
+  editingAgendamento,
+  onSaved,
 }: Props) {
   const queryClient = useQueryClient()
   const { showNotification } = useNotification()
+  const isEditMode = Boolean(editingAgendamento?.id)
 
   const initialDateTimeStr = initialDateTime
     ? format(initialDateTime, "yyyy-MM-dd'T'HH:mm")
@@ -85,22 +152,32 @@ export default function NovoAgendamentoSheet({
   const [blocos, setBlocos] = useState<Bloco[]>([
     novoBloco(initialAtendenteId ?? null, initialDateTimeStr),
   ])
-  const [formaPagamento, setFormaPagamento] = useState<string>('')
+  const [formaPagamento, setFormaPagamento] = useState<string>('PIX')
   const [observacoes, setObservacoes] = useState<string>('')
 
   // Reset ao abrir
   useEffect(() => {
     if (isOpen) {
-      setStep(1)
-      setClienteSearch('')
-      setClienteId(null)
-      setUnidadeId(null)
-      setObservacoes('')
-      setFormaPagamento('')
-      setBlocos([novoBloco(initialAtendenteId ?? null, initialDateTimeStr)])
+      if (editingAgendamento) {
+        setStep(2)
+        setClienteSearch('')
+        setClienteId(editingAgendamento.clienteId ?? null)
+        setUnidadeId(editingAgendamento.unidadeId ?? null)
+        setObservacoes(editingAgendamento.observacoes ?? '')
+        setFormaPagamento(editingAgendamento.formaPagamentoPreferida ?? 'PIX')
+        setBlocos(buildBlocosFromAgendamento(editingAgendamento))
+      } else {
+        setStep(1)
+        setClienteSearch('')
+        setClienteId(null)
+        setUnidadeId(null)
+        setObservacoes('')
+        setFormaPagamento('PIX')
+        setBlocos([novoBloco(initialAtendenteId ?? null, initialDateTimeStr)])
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, initialDateTime, initialAtendenteId])
+  }, [isOpen, initialDateTime, initialAtendenteId, editingAgendamento])
 
   const { data: clientes = [] } = useQuery({
     queryKey: ['clientes'],
@@ -173,6 +250,23 @@ export default function NovoAgendamentoSheet({
     [clientes, clienteId]
   )
 
+  const { data: resumoCliente } = useQuery({
+    queryKey: ['cliente-resumo', clienteId],
+    queryFn: () => clienteService.buscarResumo(clienteId!),
+    enabled: isOpen && clienteId != null,
+    staleTime: 5 * 60_000,
+  })
+
+  const ultimoProcedimento = resumoCliente?.ultimosProcedimentos?.[0] ?? null
+  const ultimoProcedimentoLabel = useMemo(() => {
+    if (!ultimoProcedimento) return null
+    const data = parseISO(ultimoProcedimento.data)
+    if (Number.isNaN(data.getTime())) return ultimoProcedimento.nome || null
+    const dias = differenceInCalendarDays(new Date(), data)
+    const diasLabel = dias <= 0 ? 'hoje' : `há ${dias} dia${dias === 1 ? '' : 's'}`
+    return `${ultimoProcedimento.nome || 'Procedimento'} • ${diasLabel}`
+  }, [ultimoProcedimento])
+
   const valorTotal = useMemo(() => {
     return blocos.reduce((acc, b) => {
       const v = servicos
@@ -183,15 +277,21 @@ export default function NovoAgendamentoSheet({
   }, [blocos, servicos])
 
   const createMutation = useMutation({
-    mutationFn: agendamentoService.criar,
+    mutationFn: async (payload: Parameters<typeof agendamentoService.criar>[0]) => {
+      if (isEditMode && editingAgendamento?.id) {
+        return agendamentoService.atualizar(editingAgendamento.id, payload)
+      }
+      return agendamentoService.criar(payload)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agendamentos'] })
-      showNotification('success', 'Agendamento criado com sucesso!')
+      showNotification('success', isEditMode ? 'Agendamento atualizado com sucesso!' : 'Agendamento criado com sucesso!')
       onCreated?.()
+      onSaved?.()
       onClose()
     },
     onError: (error: any) => {
-      showNotification('error', getApiErrorMessage(error, 'Erro ao criar agendamento'))
+      showNotification('error', getApiErrorMessage(error, isEditMode ? 'Erro ao atualizar agendamento' : 'Erro ao criar agendamento'))
     },
   })
 
@@ -310,7 +410,7 @@ export default function NovoAgendamentoSheet({
     <BottomSheet
       isOpen={isOpen}
       onClose={onClose}
-      title="Novo agendamento"
+      title={isEditMode ? 'Editar agendamento' : 'Novo agendamento'}
       size="full"
       footer={
         <div className="flex items-center justify-between gap-3">
@@ -350,7 +450,7 @@ export default function NovoAgendamentoSheet({
               ) : (
                 <>
                   <Check className="h-4 w-4" />
-                  {createMutation.isPending ? 'Salvando...' : 'Criar'}
+                  {createMutation.isPending ? 'Salvando...' : isEditMode ? 'Salvar alterações' : 'Criar'}
                 </>
               )}
             </button>
@@ -361,6 +461,29 @@ export default function NovoAgendamentoSheet({
       {/* STEP 1 — Cliente */}
       {step === 1 && (
         <div className="space-y-4">
+          {isEditMode && (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 space-y-1">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Editando agendamento
+                  </p>
+                  <p className="text-sm font-bold text-slate-900 truncate">
+                    {clienteSelecionado?.nome ?? editingAgendamento?.cliente?.nome ?? 'Cliente'}
+                  </p>
+                  <p className="text-xs text-slate-500 truncate">
+                    {editingAgendamento?.dataHoraInicio
+                      ? format(new Date(editingAgendamento.dataHoraInicio), "dd/MM/yyyy 'às' HH:mm")
+                      : '—'}
+                  </p>
+                </div>
+                <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider bg-violet-100 text-violet-700 flex-shrink-0">
+                  {STATUS_LABELS[(editingAgendamento?.status ?? '').toUpperCase()] ?? 'Agendado'}
+                </span>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center gap-2">
             <div className="h-9 w-9 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center">
               <User className="h-5 w-5" />
@@ -400,6 +523,22 @@ export default function NovoAgendamentoSheet({
               >
                 Trocar
               </button>
+            </div>
+          )}
+
+          {clienteSelecionado && (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-600">
+              {resumoCliente?.ultimosProcedimentos?.length ? (
+                <p className="truncate">
+                  <span className="font-semibold text-slate-700">Último procedimento:</span>{' '}
+                  <span className="text-slate-900">{ultimoProcedimentoLabel ?? '—'}</span>
+                </p>
+              ) : (
+                <p className="truncate">
+                  <span className="font-semibold text-slate-700">Último procedimento:</span>{' '}
+                  <span className="text-slate-900">Cliente nova</span>
+                </p>
+              )}
             </div>
           )}
 
@@ -645,6 +784,24 @@ export default function NovoAgendamentoSheet({
       {/* STEP 3 — Pagamento + observações */}
       {step === 3 && (
         <div className="space-y-4">
+          {isEditMode && (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Resumo da edição
+                  </p>
+                  <p className="text-sm font-bold text-slate-900 truncate">
+                    {clienteSelecionado?.nome ?? editingAgendamento?.cliente?.nome ?? 'Cliente'}
+                  </p>
+                </div>
+                <span className="text-xs font-semibold text-violet-700 bg-violet-100 px-2.5 py-1 rounded-full">
+                  {STATUS_LABELS[(editingAgendamento?.status ?? '').toUpperCase()] ?? 'Agendado'}
+                </span>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center gap-2">
             <div className="h-9 w-9 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center">
               <CreditCard className="h-5 w-5" />

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { X, Phone, MessageCircle, Edit, Trash2 } from 'lucide-react'
+import { Phone, MessageCircle, Edit, Trash2, User, Cake, Mail, Info, ChevronRight, CreditCard, FileText, Clock, Briefcase } from 'lucide-react'
 import { clienteService } from '../../services/clienteService'
 import { useNotification } from '../../contexts/NotificationContext'
 import ConfirmDialog from '../ConfirmDialog'
@@ -51,16 +51,13 @@ export default function ClienteQuickModal({ clienteId, onClose }: ClienteQuickMo
 
   if (!clienteId) return null
 
+  const infoItemClass = 'flex items-center gap-3 text-sm'
+  const infoIconClass = 'h-4 w-4 text-violet-600 shrink-0'
+
   const handleWhatsApp = () => {
     if (resumo?.telefone) {
       const numero = resumo.telefone.replace(/\D/g, '')
       window.open(`https://wa.me/55${numero}`, '_blank')
-    }
-  }
-
-  const handleLigar = () => {
-    if (resumo?.telefone) {
-      window.open(`tel:${resumo.telefone}`)
     }
   }
 
@@ -69,37 +66,35 @@ export default function ClienteQuickModal({ clienteId, onClose }: ClienteQuickMo
     onClose()
   }
 
+  const handleInformacoes = () => {
+    navigate(`/clientes/${clienteId}/informacoes`)
+    onClose()
+  }
+
+  const handleCredito = () => {
+    showNotification('info', 'Funcionalidade em breve')
+  }
+
+  const handleAnotacoes = () => {
+    showNotification('info', 'Funcionalidade em breve')
+  }
+
   return (
     <>
       <div
         className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50"
         onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
       >
-        <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto border border-slate-200">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-slate-200">
-            <h2 className="text-lg font-semibold text-slate-900">Acesso Rápido</h2>
-            <button onClick={onClose} className="text-slate-400 hover:text-slate-700 transition-colors">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+        <div className="relative bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto border border-slate-200">
 
           {isLoading ? (
-            <div className="p-6 text-center text-slate-400">Carregando...</div>
+            <div className="p-6 pt-6 text-center text-slate-400">Carregando...</div>
           ) : !resumo ? (
-            <div className="p-6 text-center text-slate-400">Cliente não encontrado.</div>
+            <div className="p-6 pt-6 text-center text-slate-400">Cliente não encontrado.</div>
           ) : (
-            <div className="p-4 space-y-4">
+            <div className="p-4 pt-4 space-y-4">
               {/* Action buttons */}
               <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={handleLigar}
-                  disabled={!resumo.telefone}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors"
-                >
-                  <Phone className="h-4 w-4" />
-                  Ligar
-                </button>
                 <button
                   onClick={handleWhatsApp}
                   disabled={!resumo.telefone}
@@ -126,74 +121,90 @@ export default function ClienteQuickModal({ clienteId, onClose }: ClienteQuickMo
 
               {/* Basic info */}
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1.5">
-                <div>
-                  <span className="text-slate-500 text-sm">Nome: </span>
+                <div className={infoItemClass}>
+                  <User className={infoIconClass} />
                   <span className="text-slate-900 font-medium">{resumo.nome}</span>
                 </div>
                 {resumo.telefone && (
-                  <div>
-                    <span className="text-slate-500 text-sm">Telefone: </span>
+                  <div className={infoItemClass}>
+                    <Phone className={infoIconClass} />
                     <span className="text-slate-900">{resumo.telefone}</span>
                   </div>
                 )}
                 {resumo.dataNascimento && (
-                  <div>
-                    <span className="text-slate-500 text-sm">Data de nascimento: </span>
+                  <div className={infoItemClass}>
+                    <Cake className={infoIconClass} />
                     <span className="text-slate-900">{formatBirthDate(resumo.dataNascimento)}</span>
                   </div>
                 )}
+                <button
+                  type="button"
+                  onClick={handleInformacoes}
+                  className="w-full flex items-center gap-3 rounded-md py-1 text-left hover:bg-slate-100 transition-colors"
+                >
+                  <span className="flex items-center gap-3 min-w-0 flex-1">
+                    <Info className={infoIconClass} />
+                    <span className="text-sm font-medium text-slate-900 truncate">Informações do cliente</span>
+                  </span>
+                  <ChevronRight className={infoIconClass + ' ml-auto'} />
+                </button>
                 {resumo.email && (
-                  <div>
-                    <span className="text-slate-500 text-sm">E-mail: </span>
+                  <div className={infoItemClass}>
+                    <Mail className={infoIconClass} />
                     <span className="text-slate-900">{resumo.email}</span>
                   </div>
                 )}
               </div>
 
-              {/* Quick links */}
-              <div className="flex gap-2">
-                {(['Informações', 'Crédito', 'Anotações'] as const).map((label) => (
-                  <button
-                    key={label}
-                    className="px-3 py-1.5 border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 text-sm rounded-lg transition-colors"
-                    onClick={() => showNotification('info', 'Funcionalidade em breve')}
-                  >
-                    {label}
-                  </button>
-                ))}
+              {/* Atalhos do cliente */}
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1.5">
+                <button
+                  type="button"
+                  onClick={handleCredito}
+                  className="w-full flex items-center gap-3 rounded-md py-1 text-left hover:bg-slate-100 transition-colors"
+                >
+                  <span className="flex items-center gap-3 min-w-0 flex-1">
+                    <CreditCard className={infoIconClass} />
+                    <span className="text-sm font-medium text-slate-900 truncate">Crédito do cliente</span>
+                  </span>
+                  <ChevronRight className={infoIconClass + ' ml-auto'} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAnotacoes}
+                  className="w-full flex items-center gap-3 rounded-md py-1 text-left hover:bg-slate-100 transition-colors"
+                >
+                  <span className="flex items-center gap-3 min-w-0 flex-1">
+                    <FileText className={infoIconClass} />
+                    <span className="text-sm font-medium text-slate-900 truncate">Anotações</span>
+                  </span>
+                  <ChevronRight className={infoIconClass + ' ml-auto'} />
+                </button>
               </div>
 
               {/* History */}
-              <div className="border-t border-slate-200 pt-3 space-y-1.5">
-                <h3 className="text-slate-600 font-semibold text-xs uppercase tracking-wide">Histórico</h3>
-                <div>
-                  <span className="text-slate-500 text-sm">Último atendimento: </span>
-                  <span className="text-slate-900 text-sm">
-                    {resumo.ultimoAtendimento
-                      ? `${formatDate(resumo.ultimoAtendimento)} (há ${resumo.diasDesdeUltimoAtendimento} dia${resumo.diasDesdeUltimoAtendimento !== 1 ? 's' : ''})`
-                      : 'Nenhum atendimento'}
-                  </span>
-                </div>
-                {resumo.ultimosProcedimentos?.length > 0 && (
-                  <div>
-                    <span className="text-slate-500 text-sm">Últimos procedimentos: </span>
-                    <span className="text-slate-900 text-sm">
-                      {resumo.ultimosProcedimentos
-                        .slice(0, 3)
-                        .map((p) => `${p.nome} (${formatDate(p.data)})`)
-                        .join(', ')}
-                    </span>
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1.5">
+                <div className={infoItemClass}>
+                  <Clock className={infoIconClass} />
+                  <div className="min-w-0">
+                    <span className="text-slate-500 text-sm">Último atendimento</span>
+                    <div className="text-slate-900 text-sm">
+                      {resumo.ultimoAtendimento
+                        ? `${formatDate(resumo.ultimoAtendimento)} (há ${resumo.diasDesdeUltimoAtendimento} dia${resumo.diasDesdeUltimoAtendimento !== 1 ? 's' : ''})`
+                        : 'Nenhum atendimento'}
+                    </div>
                   </div>
-                )}
-                <div>
-                  <span className="text-slate-500 text-sm">Cancelamentos: </span>
-                  <span className="text-slate-900 text-sm">{resumo.totalCancelamentos}</span>
-                  <span className="text-slate-500 text-sm ml-3">Não compareceu: </span>
-                  <span className="text-slate-900 text-sm">{resumo.totalNaoCompareceu}</span>
                 </div>
-                <div>
-                  <span className="text-slate-500 text-sm">Cliente desde: </span>
-                  <span className="text-slate-900 text-sm">{formatDate(resumo.clienteDesde)}</span>
+                <div className={infoItemClass}>
+                  <Briefcase className={infoIconClass} />
+                  <div className="min-w-0">
+                    <span className="text-slate-500 text-sm">Procedimento realizado</span>
+                    <div className="text-slate-900 text-sm">
+                      {resumo.ultimosProcedimentos?.length > 0
+                        ? `${resumo.ultimosProcedimentos[0].nome} (${formatDate(resumo.ultimosProcedimentos[0].data)})`
+                        : 'Nenhum procedimento'}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

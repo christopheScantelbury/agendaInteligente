@@ -12,13 +12,56 @@ import Button from '../components/Button'
 import { useNotification } from '../contexts/NotificationContext'
 import { maskCPF, maskCNPJ, maskPhone, maskEmail, maskCEP } from '../utils/masks'
 import { buscarEnderecoPorCep } from '../utils/viaCep'
-import DateInput from '../components/forms/DateInput'
 import DateTimeInput from '../components/forms/DateTimeInput'
 
 function pad2(n: number) { return String(n).padStart(2, '0') }
 function nowMinIso() {
   const d = new Date(); d.setSeconds(0, 0); d.setMinutes(d.getMinutes() + 1)
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+}
+
+function todayIso(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+}
+
+function formatDataNascimentoBR(value?: string | null): string {
+  if (!value) return ''
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(value)
+  if (!iso) return value
+  return `${iso[3]}/${iso[2]}/${iso[1]}`
+}
+
+function maskDataNascimentoBR(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 8)
+  if (digits.length <= 2) return digits
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
+}
+
+function parseDataNascimentoBR(value: string): string | '' {
+  const digits = value.replace(/\D/g, '')
+  if (!digits) return ''
+  if (digits.length !== 8) return '__invalid__'
+
+  const day = Number(digits.slice(0, 2))
+  const month = Number(digits.slice(2, 4))
+  const year = Number(digits.slice(4, 8))
+  if (!Number.isInteger(day) || !Number.isInteger(month) || !Number.isInteger(year)) return '__invalid__'
+  if (month < 1 || month > 12) return '__invalid__'
+
+  const parsed = new Date(year, month - 1, day)
+  if (
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    return '__invalid__'
+  }
+
+  const iso = `${year}-${pad2(month)}-${pad2(day)}`
+  if (iso > todayIso()) return '__invalid__'
+  return iso
 }
 
 // Classes do input padrão (limpa) e do input com erro (borda vermelha + ring rosa).
@@ -149,7 +192,7 @@ export default function ClienteFormPage() {
         cpfCnpj: clienteExistente.cpfCnpj || '',
         email: clienteExistente.email || '',
         telefone: clienteExistente.telefone || '',
-        dataNascimento: clienteExistente.dataNascimento || '',
+        dataNascimento: formatDataNascimentoBR(clienteExistente.dataNascimento),
         rg: clienteExistente.rg || '',
         cep: clienteExistente.cep || '',
         endereco: clienteExistente.endereco || '',
@@ -273,6 +316,10 @@ export default function ClienteFormPage() {
     if (telDigits && (telDigits.length < 10 || telDigits.length > 11)) {
       errs.telefone = 'Telefone deve ter 10 ou 11 dígitos com DDD'
     }
+    const dataNascimentoIso = parseDataNascimentoBR(formData.dataNascimento || '')
+    if (dataNascimentoIso === '__invalid__') {
+      errs.dataNascimento = 'Data de nascimento inválida'
+    }
     const cepDigits = (formData.cep ?? '').replace(/\D/g, '')
     if (cepDigits && cepDigits.length !== 8) {
       errs.cep = 'CEP deve ter 8 dígitos'
@@ -306,6 +353,7 @@ export default function ClienteFormPage() {
       cpfCnpj: (formData.cpfCnpj ?? '').replace(/\D/g, ''),
       telefone: (formData.telefone ?? '').replace(/\D/g, ''),
       cep: (formData.cep ?? '').replace(/\D/g, ''),
+      dataNascimento: parseDataNascimentoBR(formData.dataNascimento || '') || undefined,
       // validarFormulario garantiu que unidadesIds tem ≥ 1 — TS não consegue inferir, então !.
       unidadeId: formData.unidadesIds![0],
       unidadesIds: formData.unidadesIds!,
@@ -497,13 +545,20 @@ export default function ClienteFormPage() {
 
           <div>
             <label className="block text-xs font-semibold text-slate-600 mb-1">Data de nascimento</label>
-            {/* #146: DateInput moderno — input nativo no mobile, 3 selects (dia/mês/ano) no desktop */}
-            <DateInput
+            <input
+              type="text"
               value={formData.dataNascimento || ''}
-              onChange={(v) => setFormData({ ...formData, dataNascimento: v })}
-              futuroDesabilitado
-              className="mt-1"
+              onChange={(e) => {
+                setFormData({ ...formData, dataNascimento: maskDataNascimentoBR(e.target.value) })
+                clearFieldError('dataNascimento')
+              }}
+              placeholder="dd/mm/aaaa"
+              inputMode="numeric"
+              maxLength={10}
+              className={cls('dataNascimento', fieldErrors)}
             />
+            <p className="mt-1 text-xs text-slate-500">Digite a data no formato dd/mm/aaaa.</p>
+            <FieldError field="dataNascimento" errors={fieldErrors} />
           </div>
         </section>
 

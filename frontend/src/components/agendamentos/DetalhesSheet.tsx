@@ -3,11 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
-  User,
+  UserRound,
   Clock,
   MapPin,
   Briefcase,
-  CreditCard,
   StickyNote,
   Check,
   X,
@@ -16,17 +15,22 @@ import {
   RotateCcw,
   Wallet,
   Receipt,
+  PencilLine,
 } from 'lucide-react'
 import BottomSheet from '../BottomSheet'
 import ConfirmDialog from '../ConfirmDialog'
 import MoneyInput from '../forms/MoneyInput'
+import NovoAgendamentoSheet from './NovoAgendamentoSheet'
 import ReabrirAgendamentoModal from './ReabrirAgendamentoModal'
 import ReceberSinalModal from './ReceberSinalModal'
 import ReciboModal from '../profissional/ReciboModal'
 
 import { agendamentoService, FinalizarAgendamento } from '../../services/agendamentoService'
+import { authService } from '../../services/authService'
+import { empresaService } from '../../services/empresaService'
 import { useNotification } from '../../contexts/NotificationContext'
 import { getApiErrorMessage } from '../../utils/apiError'
+import { maskPhone, maskMoney } from '../../utils/masks'
 
 interface Props {
   agendamentoId: number | null
@@ -80,12 +84,20 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
   const [reabrirOpen, setReabrirOpen] = useState(false)
   const [sinalOpen, setSinalOpen] = useState(false)
   const [reciboOpen, setReciboOpen] = useState(false)
+  const [editarOpen, setEditarOpen] = useState(false)
 
   const { data: agendamento, isLoading } = useQuery({
     queryKey: ['agendamento', agendamentoId],
     queryFn: () => agendamentoService.buscarPorId(agendamentoId!),
     enabled: agendamentoId != null,
   })
+  const isAdmin = authService.isPerfilAdmin()
+  const { data: empresas = [] } = useQuery({
+    queryKey: ['empresas'],
+    queryFn: empresaService.listarTodos,
+    enabled: isAdmin,
+  })
+  const mostrarUnidade = isAdmin && empresas.length > 1
 
   const status = agendamento?.status ?? 'AGENDADO'
   const badge = STATUS_BADGE[status] ?? STATUS_BADGE.AGENDADO
@@ -93,20 +105,47 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
   const podeConfirmar = status === 'AGENDADO'
   const podeFinalizar = ['AGENDADO', 'CONFIRMADO', 'EM_ANDAMENTO', 'PROCEDIMENTO_FIM'].includes(status)
   const podeCancelar = !['CANCELADO', 'CONCLUIDO', 'FINALIZADO'].includes(status)
-  // Sinal: pode receber se status não-finalizado E sinal ainda não foi pago.
-  // A configuração `cobraSinal` da unidade só controla a sugestão/ênfase;
-  // mesmo unidade sem cobraSinal pode receber sinal voluntário pra qualquer agendamento.
+  const podeEditar = !['CANCELADO', 'CONCLUIDO', 'FINALIZADO'].includes(status)
+  // Sinal: só exibimos o botão quando a unidade está configurada para cobrar sinal
+  // e o agendamento ainda não tem sinal pago.
   const sinalPago = Boolean(agendamento?.sinalPago)
   // #163: esconder "Receber Sinal" depois de uma confirmação deliberada sem sinal.
   const confirmadoSemSinal = Boolean((agendamento as any)?.confirmadoSemSinal)
   const podeReceberSinal =
     !!agendamento?.id &&
+    Boolean(agendamento?.unidade?.cobraSinal) &&
     !sinalPago &&
     !confirmadoSemSinal &&
     !['CANCELADO', 'CONCLUIDO', 'FINALIZADO'].includes(status)
   const percentualSinalUnidade = Number(agendamento?.unidade?.percentualSinal ?? 30)
 
   const inicio = agendamento?.dataHoraInicio ? new Date(agendamento.dataHoraInicio) : null
+  const fim = (() => {
+    if (agendamento?.dataHoraFim) return new Date(agendamento.dataHoraFim)
+    if (!inicio) return null
+
+    const itens = (agendamento?.servicos ?? []) as any[]
+    const fimDosItens = itens
+      .map((item) => item?.dataHoraFim)
+      .filter(Boolean)
+      .map((dataHoraFim) => new Date(dataHoraFim))
+      .filter((data) => !Number.isNaN(data.getTime()))
+
+    if (fimDosItens.length > 0) {
+      return new Date(Math.max(...fimDosItens.map((data) => data.getTime())))
+    }
+
+    const duracaoTotal = itens.reduce((acc, item) => {
+      const duracao = Number(item?.duracaoMinutos ?? item?.servico?.duracaoMinutos ?? 30)
+      return acc + (Number.isFinite(duracao) && duracao > 0 ? duracao : 30)
+    }, 0)
+
+    if (duracaoTotal > 0) {
+      return new Date(inicio.getTime() + duracaoTotal * 60_000)
+    }
+
+    return null
+  })()
   const valorPadrao = agendamento?.valorTotal ?? agendamento?.valorFinal ?? 0
 
   // #163: confirmar via endpoint dedicado; semSinal=true grava flag pra esconder Receber Sinal.
@@ -192,94 +231,64 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
               >
                 {badge.label}
               </span>
-              <h2 className="text-xl font-bold text-slate-900 mt-2">
-                {agendamento.cliente?.nome ?? `Cliente #${agendamento.clienteId}`}
-              </h2>
             </div>
 
             {/* Info rows */}
             <div className="space-y-2">
-              <InfoRow icon={Clock} label="Quando">
+              <InfoRow icon={Clock} hideLabel>
                 {inicio ? (
                   <span>
-                    {format(inicio, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                    <br />
                     <span className="font-bold text-slate-900">
                       {format(inicio, 'HH:mm')}
+                      {fim ? ` - ${format(fim, 'HH:mm')}` : ''}
                     </span>
+                    <br />
+                    {format(inicio, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                   </span>
                 ) : (
                   '—'
                 )}
               </InfoRow>
 
-              <InfoRow icon={User} label="Profissional">
-                {agendamento.atendente?.nomeUsuario
-                  ?? agendamento.atendente?.usuario?.nome
-                  ?? agendamento.atendente?.nome
-                  ?? '—'}
-                {(() => {
-                  // #155: marca quando há outros profissionais nos itens
-                  const itens = (agendamento.servicos ?? []) as any[]
-                  const principal = agendamento.atendente?.id ?? agendamento.atendenteId
-                  const outros = new Set(
-                    itens
-                      .map((it) => it.atendenteId)
-                      .filter((id) => id != null && id !== principal)
-                  )
-                  if (outros.size === 0) return null
-                  return (
-                    <span className="ml-2 text-[10px] font-semibold text-violet-700 bg-violet-50 border border-violet-200 rounded-full px-1.5 py-0.5">
-                      + {outros.size} prof.
-                    </span>
-                  )
-                })()}
-              </InfoRow>
-
-              {agendamento.unidade?.nome && (
+              {mostrarUnidade && agendamento.unidade?.nome && (
                 <InfoRow icon={MapPin} label="Unidade">
                   {agendamento.unidade.nome}
                 </InfoRow>
               )}
 
-              <InfoRow icon={Briefcase} label="Serviços">
+              <InfoRow icon={UserRound} hideLabel>
+                <div className="space-y-0.5">
+                  <p className="font-semibold text-slate-900">
+                    {agendamento.cliente?.nome ?? `Cliente #${agendamento.clienteId}`}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {agendamento.cliente?.telefone ? maskPhone(String(agendamento.cliente.telefone)) : '—'}
+                  </p>
+                </div>
+              </InfoRow>
+
+              <InfoRow icon={Briefcase} hideLabel>
                 {agendamento.servicos && agendamento.servicos.length > 0 ? (
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     {agendamento.servicos.map((s: any, i: number) => {
                       const nomeServico = s.nomeServico ?? s.servico?.nome ?? s.descricao ?? 'Serviço'
-                      // #164: sempre mostrar QUAL profissional realiza o serviço.
-                      // Se o item tem atendente próprio (#155), usa nomeAtendente.
-                      // Senão, herda do atendente principal do agendamento.
-                      const nomeAt =
-                        s.nomeAtendente
-                        ?? agendamento.atendente?.nomeUsuario
-                        ?? agendamento.atendente?.usuario?.nome
-                        ?? null
+                      const valorRaw = s.valorTotal ?? s.valor ?? s.servico?.valor ?? null
+                      const valorNumero = typeof valorRaw === 'number' ? valorRaw : Number(valorRaw)
+                      const valorProcedimento = Number.isFinite(valorNumero) && valorNumero >= 0
+                        ? valorNumero
+                        : null
                       return (
-                        <div key={i} className="text-sm flex items-center flex-wrap gap-1.5">
-                          <span className="text-slate-800">{nomeServico}</span>
-                          {nomeAt && (
-                            <span className="text-[11px] text-violet-700 bg-violet-50 border border-violet-100 rounded px-1.5 py-0.5">
-                              {nomeAt.split(' ')[0]}
-                            </span>
-                          )}
+                        <div key={i} className="text-sm">
+                          <p className="font-semibold text-slate-900">{nomeServico}</p>
+                          <p className="text-sm text-slate-600 mt-0.5">
+                            {valorProcedimento != null ? maskMoney(valorProcedimento) : '—'}
+                          </p>
                         </div>
                       )
                     })}
                   </div>
                 ) : (
                   '—'
-                )}
-              </InfoRow>
-
-              <InfoRow icon={CreditCard} label="Valor">
-                <span className="font-bold text-slate-900">
-                  R$ {Number(agendamento.valorTotal ?? agendamento.valorFinal ?? 0).toFixed(2).replace('.', ',')}
-                </span>
-                {agendamento.formaPagamentoPreferida && (
-                  <span className="text-xs text-slate-500 ml-2">
-                    · {agendamento.formaPagamentoPreferida.replace(/_/g, ' ')}
-                  </span>
                 )}
               </InfoRow>
 
@@ -310,17 +319,25 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
             {/* Ações */}
             {(podeConfirmar || podeFinalizar || podeCancelar || podeReceberSinal) && (
               <div className="pt-2 space-y-2">
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Ações</p>
+            {podeEditar && (
+              <button
+                onClick={() => setEditarOpen(true)}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white border border-slate-900 text-black text-sm font-semibold hover:bg-slate-50 transition"
+              >
+                <PencilLine className="h-4 w-4" />
+                Editar agendamento
+              </button>
+            )}
 
-                {podeReceberSinal && (
-                  <button
-                    onClick={() => setSinalOpen(true)}
-                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-violet-50 border border-violet-200 text-violet-700 text-sm font-semibold hover:bg-violet-100 transition"
-                  >
-                    <Wallet className="h-4 w-4" />
-                    Receber sinal {agendamento?.unidade?.cobraSinal ? `(${percentualSinalUnidade}% sugerido)` : ''}
-                  </button>
-                )}
+            {podeReceberSinal && (
+                <button
+                  onClick={() => setSinalOpen(true)}
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-violet-50 border border-violet-200 text-violet-700 text-sm font-semibold hover:bg-violet-100 transition"
+                >
+                  <Wallet className="h-4 w-4" />
+                Receber sinal
+                </button>
+              )}
 
                 {podeConfirmar && (
                   <button
@@ -448,6 +465,13 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
         onClose={() => setReciboOpen(false)}
       />
 
+      <NovoAgendamentoSheet
+        isOpen={editarOpen}
+        onClose={() => setEditarOpen(false)}
+        editingAgendamento={agendamento ?? null}
+        onSaved={() => setEditarOpen(false)}
+      />
+
       {/* Sub-sheet de finalizar (valor final + forma) */}
       <BottomSheet
         isOpen={finalizandoOpen}
@@ -515,19 +539,25 @@ export default function DetalhesSheet({ agendamentoId, onClose }: Props) {
 function InfoRow({
   icon: Icon,
   label,
+  hideLabel,
   children,
 }: {
-  icon: React.ComponentType<{ className?: string }>
-  label: string
+  icon?: React.ComponentType<{ className?: string }>
+  label?: string
+  hideLabel?: boolean
   children: React.ReactNode
 }) {
   return (
     <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-      <div className="h-8 w-8 rounded-full bg-white text-violet-600 flex items-center justify-center flex-shrink-0">
-        <Icon className="h-4 w-4" />
-      </div>
+      {Icon && (
+        <div className="h-8 w-8 rounded-full bg-white text-violet-600 flex items-center justify-center flex-shrink-0">
+          <Icon className="h-4 w-4" />
+        </div>
+      )}
       <div className="flex-1 min-w-0">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</p>
+        {!hideLabel && label && (
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</p>
+        )}
         <div className="text-sm text-slate-700 mt-0.5">{children}</div>
       </div>
     </div>

@@ -101,6 +101,7 @@ export const comissaoService = {
     formaPagamento?: string,
     observacao?: string,
     valesIds: number[] = [],
+    dataPagamento?: string,
   ): Promise<ComissaoPagamento> => {
     const response = await api.post<ComissaoPagamento>('/comissoes/pagar', {
       atendenteId,
@@ -108,6 +109,7 @@ export const comissaoService = {
       valesIds,
       formaPagamento,
       observacao,
+      dataPagamento,
     })
     return response.data
   },

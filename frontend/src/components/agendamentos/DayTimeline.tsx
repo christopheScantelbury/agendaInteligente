@@ -2,6 +2,7 @@ import { useMemo, useEffect, useState, useRef } from 'react'
 import { format, isSameDay } from 'date-fns'
 import { Agendamento } from '../../services/agendamentoService'
 import { barClass, cardClass } from '../../utils/statusAgendamento'
+import AgendamentoCardContent from './AgendamentoCardContent'
 
 export interface ColunaProfissional {
   id: number
@@ -12,6 +13,8 @@ export interface ColunaProfissional {
 interface Props {
   selectedDate: Date
   colunas: ColunaProfissional[]
+  /** Quando true, o componente fica embutido em um card pai e não renderiza sua borda externa. */
+  embedded?: boolean
   /** Hora inicial do range (default 7) */
   startHour?: number
   /** Hora final do range — exclusiva (default 22) */
@@ -40,7 +43,8 @@ interface Props {
 export default function DayTimeline({
   selectedDate,
   colunas,
-  startHour = 7,
+  embedded = false,
+  startHour = 8,
   endHour = 22,
   pxPerMin: pxPerMinProp = 1.2,
   slotMinutes = 30,
@@ -48,7 +52,23 @@ export default function DayTimeline({
   onSlotClick,
   onAgendamentoClick,
 }: Props) {
-  const totalMinutes = (endHour - startHour) * 60
+  const effectiveEndHour = useMemo(() => {
+    let latestEndMin = startHour * 60
+
+    colunas.forEach((col) => {
+      col.agendamentos.forEach((a) => {
+        if (!a.dataHoraInicio) return
+        const inicio = new Date(a.dataHoraInicio)
+        const fim = a.dataHoraFim ? new Date(a.dataHoraFim) : new Date(inicio.getTime() + 60 * 60_000)
+        const endMin = fim.getHours() * 60 + fim.getMinutes()
+        latestEndMin = Math.max(latestEndMin, endMin)
+      })
+    })
+
+    return Math.max(endHour, Math.ceil(latestEndMin / 60))
+  }, [colunas, endHour, startHour])
+
+  const totalMinutes = (effectiveEndHour - startHour) * 60
 
   // fillHeight: mede o corpo e calcula pxPerMin pra caber na altura disponível.
   const bodyRef = useRef<HTMLDivElement>(null)
@@ -78,9 +98,9 @@ export default function DayTimeline({
 
   const hours = useMemo(() => {
     const arr: number[] = []
-    for (let h = startHour; h < endHour; h++) arr.push(h)
+    for (let h = startHour; h < effectiveEndHour; h++) arr.push(h)
     return arr
-  }, [startHour, endHour])
+  }, [startHour, effectiveEndHour])
 
   const slotsPerColumn = totalMinutes / slotMinutes
   const startTotalMinEarly = startHour * 60
@@ -118,15 +138,25 @@ export default function DayTimeline({
   const isHoje = isSameDay(selectedDate, now)
   const nowMinutes = now.getHours() * 60 + now.getMinutes()
   const startTotalMin = startHour * 60
-  const endTotalMin = endHour * 60
+  const endTotalMin = effectiveEndHour * 60
   const nowInRange = isHoje && nowMinutes >= startTotalMin && nowMinutes < endTotalMin
   const nowOffset = (nowMinutes - startTotalMin) * pxPerMin
 
   return (
-    <div className={`bg-white rounded-2xl border border-slate-200 ${fillHeight ? 'h-full flex flex-col overflow-hidden' : ''}`}>
+    <div
+      className={
+        embedded
+          ? `h-full flex flex-col overflow-hidden`
+          : `bg-white rounded-2xl border border-slate-200 ${fillHeight ? 'h-full flex flex-col overflow-hidden' : ''}`
+      }
+    >
       {/* Header com nomes dos profissionais */}
-      <div className={`flex border-b border-slate-200 bg-slate-50 z-10 rounded-t-2xl ${fillHeight ? 'flex-shrink-0' : 'sticky top-0'}`}>
-        <div className="w-10 flex-shrink-0" />
+      <div
+        className={`flex border-b border-slate-200 bg-slate-50 z-10 ${embedded ? '' : 'rounded-t-2xl'} ${
+          fillHeight ? 'flex-shrink-0' : 'sticky top-0'
+        }`}
+      >
+        <div className="w-[60px] flex-shrink-0" />
         {colunas.map((col) => (
           <div
             key={col.id}
@@ -143,12 +173,16 @@ export default function DayTimeline({
       {/* Corpo — rola por dentro quando a timeline não cabe (mantém header fixo) */}
       <div ref={bodyRef} className={`flex relative overflow-x-auto ${fillHeight ? 'flex-1 min-h-0 overflow-y-auto' : ''}`}>
         {/* Eixo de horas */}
-        <div className="w-10 flex-shrink-0 relative" style={{ height: `${totalHeight}px` }}>
+        <div className="w-[60px] flex-shrink-0 relative" style={{ height: `${totalHeight}px` }}>
           {hours.map((h) => (
+            // O primeiro rótulo fica sem o deslocamento negativo pra não cortar no topo.
+            // Os demais mantêm o alinhamento visual tradicional do eixo.
             <div
               key={h}
-              className="absolute right-1 text-[10px] font-medium text-slate-400 -translate-y-1.5"
-              style={{ top: `${(h - startHour) * 60 * pxPerMin}px` }}
+              className={`absolute right-1 text-[10px] font-medium text-slate-400 ${
+                h === startHour ? 'translate-y-0' : '-translate-y-1.5'
+              }`}
+              style={{ top: `${(h - startHour) * 60 * pxPerMin + (h === startHour ? 2 : 0)}px` }}
             >
               {String(h).padStart(2, '0')}h
             </div>
@@ -212,12 +246,6 @@ export default function DayTimeline({
               const height = Math.max((clampedEnd - clampedStart) * pxPerMin, 26)
               const barra = barClass(a.status)
               const bg = cardClass(a.status)
-              const clienteNome = a.cliente?.nome ?? `Cliente #${a.clienteId}`
-              const servicos: any[] = a.servicos ?? []
-              const servicosLabel = servicos
-                .map((s: any) => s.nomeServico ?? s.servico?.nome ?? s.descricao ?? '')
-                .filter(Boolean)
-                .join(' · ')
 
               return (
                 <button
@@ -228,17 +256,7 @@ export default function DayTimeline({
                   style={{ top: `${top}px`, height: `${height}px` }}
                 >
                   <div className={`w-1.5 ${barra} flex-shrink-0`} aria-hidden />
-                  <div className="flex-1 min-w-0 px-1.5 py-0.5">
-                    {/* Cliente em destaque — é o "o que é" do agendamento */}
-                    <p className="text-[11px] font-bold text-slate-900 truncate leading-tight">
-                      {clienteNome}
-                    </p>
-                    <p className="text-[10px] text-slate-500 truncate leading-tight">
-                      {format(inicio, 'HH:mm')}
-                      {fim && `–${format(fim, 'HH:mm')}`}
-                      {servicosLabel && ` · ${servicosLabel}`}
-                    </p>
-                  </div>
+                  <AgendamentoCardContent agendamento={a} inicio={inicio} fim={fim} compact />
                 </button>
               )
             })}

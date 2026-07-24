@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { perfilService, Perfil, PerfilSistemaBase } from '../services/perfilService'
 import { authService } from '../services/authService'
-import { Plus, Trash2, Edit, Shield, Lock, Eye, Pencil, X } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { Plus, Trash2, Edit, Shield, Lock, Eye, Pencil, Search, X } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
 import FormField from '../components/FormField'
@@ -10,6 +10,8 @@ import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { podeEditar } from '../utils/permissions'
 import { MENUS_CONFIG } from '../constants/menusPermissoes'
+import { useIsWebLayout } from '../hooks/useIsWebLayout'
+import { getApiErrorMessage } from '../utils/apiError'
 
 /**
  * #171: o nome do cargo é da empresa ("Cabeleireiro(a)"), mas o poder vem da
@@ -43,7 +45,6 @@ const CORES_BASE: Record<string, string> = {
   CLIENTE: 'bg-sky-50 text-sky-700',
   ADMINISTRADOR: 'bg-amber-50 text-amber-700',
 }
-import { getApiErrorMessage } from '../utils/apiError'
 
 type TipoPermissao = 'EDITAR' | 'VISUALIZAR' | 'SEM_ACESSO'
 
@@ -74,9 +75,11 @@ function contarMenusPermitidos(perfil: Perfil): number {
 
 export default function Perfis() {
   const { showNotification } = useNotification()
+  const isWeb = useIsWebLayout()
   const [showModal, setShowModal] = useState(false)
   const [editingPerfil, setEditingPerfil] = useState<Perfil | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null })
+  const [searchTerm, setSearchTerm] = useState('')
   const queryClient = useQueryClient()
   const usuario = authService.getUsuario()
 
@@ -91,6 +94,16 @@ export default function Perfis() {
     queryKey: ['perfis'],
     queryFn: perfilService.listarTodos,
   })
+
+  const perfisFiltrados = useMemo(() => {
+    if (!searchTerm) return perfis
+    const term = searchTerm.toLowerCase()
+    return perfis.filter((perfil) =>
+      perfil.nome?.toLowerCase().includes(term) ||
+      perfil.descricao?.toLowerCase().includes(term) ||
+      (perfil.perfilSistemaBase ?? '').toLowerCase().includes(term)
+    )
+  }, [perfis, searchTerm])
 
   const deleteMutation = useMutation({
     mutationFn: perfilService.excluir,
@@ -118,112 +131,297 @@ export default function Perfis() {
     return <div className="text-center py-8">Carregando...</div>
   }
 
-  return (
-    <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
-      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Shield className="h-6 w-6 text-violet-600" />
-            Perfis e Permissões
-          </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Controle de acesso por tela para cada tipo de usuário.
-          </p>
-        </div>
-        {podeEditarPerfis && (
-          <Button
-            onClick={() => {
-              setEditingPerfil(null)
-              setShowModal(true)
-            }}
-          >
-            <Plus className="h-4 w-4" />
-            Novo Perfil
-          </Button>
-        )}
-      </header>
+  const pageClassName = `${isWeb ? 'max-w-[1920px] w-full p-6 xl:p-8' : 'max-w-3xl p-4 sm:p-6'} mx-auto space-y-6`
+  const hasActiveFilters = searchTerm !== ''
 
-      {perfis.length === 0 ? (
-        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
-          <div className="mx-auto h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mb-3">
-            <Shield className="h-5 w-5" />
-          </div>
-          <p className="text-sm text-slate-600">Nenhum perfil cadastrado ainda.</p>
-        </div>
-      ) : (
-        <ul className="space-y-2">
-          {perfis.map((perfil) => {
-            const totalMenus = contarMenusPermitidos(perfil)
-            return (
-              <li
-                key={perfil.id}
-                className="bg-white border border-slate-200 rounded-2xl p-4 hover:shadow-sm transition"
+  return (
+    <div className={pageClassName}>
+      {isWeb ? (
+        <>
+          <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                <Shield className="h-6 w-6 text-violet-600" />
+                Perfis e Permissões
+              </h1>
+              <p className="text-sm text-slate-500 mt-0.5">
+                Controle de acesso por tela para cada tipo de usuário.
+              </p>
+            </div>
+            {podeEditarPerfis && (
+              <Button
+                onClick={() => {
+                  setEditingPerfil(null)
+                  setShowModal(true)
+                }}
               >
-                <div className="flex items-start gap-3">
-                  <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    perfil.sistema
-                      ? 'bg-slate-100 text-slate-500'
-                      : 'bg-violet-100 text-violet-700'
-                  }`}>
-                    {perfil.sistema ? <Lock className="h-5 w-5" /> : <Shield className="h-5 w-5" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-semibold text-slate-900 truncate">{perfil.nome}</p>
-                      {perfil.sistema && (
-                        <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
-                          Sistema
-                        </span>
-                      )}
-                      {perfil.perfilSistemaBase && (
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                            CORES_BASE[perfil.perfilSistemaBase] ?? 'bg-slate-100 text-slate-600'
-                          }`}
-                        >
-                          {rotuloBase(perfil.perfilSistemaBase) ?? perfil.perfilSistemaBase}
-                        </span>
-                      )}
-                    </div>
-                    {perfil.descricao && (
-                      <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{perfil.descricao}</p>
-                    )}
-                    {totalMenus > 0 && (
-                      <p className="text-xs text-slate-400 mt-1">
-                        {totalMenus} menu{totalMenus > 1 ? 's' : ''} permitido{totalMenus > 1 ? 's' : ''}
-                      </p>
-                    )}
-                  </div>
-                  {podeEditarPerfis && (
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <button
-                        onClick={() => {
-                          setEditingPerfil(perfil)
-                          setShowModal(true)
-                        }}
-                        className="p-2 rounded-lg text-slate-500 hover:bg-violet-50 hover:text-violet-700 transition"
-                        aria-label="Editar perfil"
-                        title="Editar"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      {!perfil.sistema && (
-                        <button
-                          onClick={() => handleDelete(perfil.id!)}
-                          className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition"
-                          aria-label="Excluir perfil"
-                          title="Excluir"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
-                  )}
+                <Plus className="h-4 w-4" />
+                Novo Perfil
+              </Button>
+            )}
+          </header>
+
+          <div className="flex justify-start">
+            <div className="relative w-full sm:w-96">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar por nome, descrição ou base..."
+                className="block w-full bg-white text-slate-900 border border-slate-200 rounded-xl pl-9 pr-9 py-2 text-sm placeholder-slate-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  aria-label="Limpar busca"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {perfisFiltrados.length === 0 ? (
+              <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
+                <div className="mx-auto h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mb-3">
+                  <Shield className="h-5 w-5" />
                 </div>
-              </li>
-            )
-          })}
-        </ul>
+                <p className="text-sm text-slate-600">
+                  {hasActiveFilters ? 'Nenhum perfil encontrado com os filtros aplicados.' : 'Nenhum perfil cadastrado ainda.'}
+                </p>
+              </div>
+            ) : (
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                <table className="w-full table-fixed border-collapse">
+                  <colgroup>
+                    <col className="w-[30%]" />
+                    <col className="w-[18%]" />
+                    <col className="w-[22%]" />
+                    <col className="w-[18%]" />
+                    <col className="w-[12%]" />
+                  </colgroup>
+                  <thead className="bg-slate-50">
+                    <tr className="border-b border-slate-200 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      <th scope="col" className="px-4 py-3 text-left">Nome</th>
+                      <th scope="col" className="px-4 py-3 text-left">Base</th>
+                      <th scope="col" className="px-4 py-3 text-left">Menus</th>
+                      <th scope="col" className="px-4 py-3 text-left">Status</th>
+                      <th scope="col" className="px-4 py-3 text-right">Ações</th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-slate-100">
+                    {perfisFiltrados.map((perfil) => {
+                      const totalMenus = contarMenusPermitidos(perfil)
+                      const baseLabel = perfil.perfilSistemaBase
+                        ? rotuloBase(perfil.perfilSistemaBase) ?? perfil.perfilSistemaBase
+                        : '—'
+                      return (
+                        <tr key={perfil.id} className="hover:bg-slate-50 transition align-middle">
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className={`h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 ${
+                                perfil.sistema
+                                  ? 'bg-slate-100 text-slate-500'
+                                  : 'bg-violet-100 text-violet-700'
+                              }`}>
+                                {perfil.sistema ? <Lock className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-slate-900 truncate">{perfil.nome}</p>
+                                {perfil.descricao && (
+                                  <p className="text-xs text-slate-500 truncate">{perfil.descricao}</p>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="px-4 py-4">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                                perfil.perfilSistemaBase
+                                  ? CORES_BASE[perfil.perfilSistemaBase] ?? 'bg-slate-100 text-slate-600'
+                                  : 'bg-slate-100 text-slate-600'
+                              }`}
+                            >
+                              {baseLabel}
+                            </span>
+                          </td>
+
+                          <td className="px-4 py-4 text-sm text-slate-700 whitespace-nowrap">
+                            {totalMenus > 0
+                              ? `${totalMenus} menu${totalMenus > 1 ? 's' : ''}`
+                              : '—'}
+                          </td>
+
+                          <td className="px-4 py-4">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                                perfil.ativo === false
+                                  ? 'bg-slate-100 text-slate-500'
+                                  : 'bg-emerald-50 text-emerald-700'
+                              }`}
+                            >
+                              {perfil.ativo === false ? 'Inativo' : 'Ativo'}
+                            </span>
+                          </td>
+
+                          <td className="px-4 py-4 text-right whitespace-nowrap">
+                            {podeEditarPerfis ? (
+                              <div className="inline-flex items-center gap-1">
+                                <button
+                                  onClick={() => {
+                                    setEditingPerfil(perfil)
+                                    setShowModal(true)
+                                  }}
+                                  className="p-2 rounded-lg text-slate-500 hover:bg-violet-50 hover:text-violet-700 transition"
+                                  aria-label="Editar perfil"
+                                  title="Editar"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </button>
+                                {!perfil.sistema && (
+                                  <button
+                                    onClick={() => handleDelete(perfil.id!)}
+                                    className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition"
+                                    aria-label="Excluir perfil"
+                                    title="Excluir"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              <span />
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {perfisFiltrados.length > 0 && (
+              <p className="text-xs text-slate-500 text-center">
+                Mostrando {perfisFiltrados.length} de {perfis.length} perfil{perfis.length !== 1 ? 's' : ''}
+              </p>
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                <Shield className="h-6 w-6 text-violet-600" />
+                Perfis e Permissões
+              </h1>
+              <p className="text-sm text-slate-500 mt-0.5">
+                Controle de acesso por tela para cada tipo de usuário.
+              </p>
+            </div>
+            {podeEditarPerfis && (
+              <Button
+                onClick={() => {
+                  setEditingPerfil(null)
+                  setShowModal(true)
+                }}
+              >
+                <Plus className="h-4 w-4" />
+                Novo Perfil
+              </Button>
+            )}
+          </header>
+
+          {perfis.length === 0 ? (
+            <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
+              <div className="mx-auto h-12 w-12 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center mb-3">
+                <Shield className="h-5 w-5" />
+              </div>
+              <p className="text-sm text-slate-600">Nenhum perfil cadastrado ainda.</p>
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {perfis.map((perfil) => {
+                const totalMenus = contarMenusPermitidos(perfil)
+                return (
+                  <li
+                    key={perfil.id}
+                    className="bg-white border border-slate-200 rounded-2xl p-4 hover:shadow-sm transition"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        perfil.sistema
+                          ? 'bg-slate-100 text-slate-500'
+                          : 'bg-violet-100 text-violet-700'
+                      }`}>
+                        {perfil.sistema ? <Lock className="h-5 w-5" /> : <Shield className="h-5 w-5" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold text-slate-900 truncate">{perfil.nome}</p>
+                          {perfil.sistema && (
+                            <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+                              Sistema
+                            </span>
+                          )}
+                          {perfil.perfilSistemaBase && (
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                                CORES_BASE[perfil.perfilSistemaBase] ?? 'bg-slate-100 text-slate-600'
+                              }`}
+                            >
+                              {rotuloBase(perfil.perfilSistemaBase) ?? perfil.perfilSistemaBase}
+                            </span>
+                          )}
+                        </div>
+                        {perfil.descricao && (
+                          <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{perfil.descricao}</p>
+                        )}
+                        {totalMenus > 0 && (
+                          <p className="text-xs text-slate-400 mt-1">
+                            {totalMenus} menu{totalMenus > 1 ? 's' : ''} permitido{totalMenus > 1 ? 's' : ''}
+                          </p>
+                        )}
+                      </div>
+                      {podeEditarPerfis && (
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <button
+                            onClick={() => {
+                              setEditingPerfil(perfil)
+                              setShowModal(true)
+                            }}
+                            className="p-2 rounded-lg text-slate-500 hover:bg-violet-50 hover:text-violet-700 transition"
+                            aria-label="Editar perfil"
+                            title="Editar"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          {!perfil.sistema && (
+                            <button
+                              onClick={() => handleDelete(perfil.id!)}
+                              className="p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition"
+                              aria-label="Excluir perfil"
+                              title="Excluir"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </>
       )}
 
       <Modal

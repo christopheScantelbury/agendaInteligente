@@ -1,4 +1,4 @@
-import { Users, Plus, X } from 'lucide-react'
+import { Users, Plus } from 'lucide-react'
 
 export interface ProfissionalChipItem {
   id: number | null  // null = "Todos"
@@ -24,6 +24,8 @@ interface MultiProps extends BaseProps {
   maxSelected?: number
   /** Callback do botão "Selecionar profissionais" — abre picker com busca. */
   onOpenPicker?: () => void
+  /** Mostra a contagem no texto do botão de seleção. */
+  showPickerCount?: boolean
 }
 
 type Props = SingleProps | MultiProps
@@ -40,9 +42,10 @@ type Props = SingleProps | MultiProps
  */
 export default function ProfissionalFilterChips(props: Props) {
   if (props.mode === 'multi') {
-    const { items, selectedIds, onChange, onOpenPicker } = props
-    // maxSelected é usado pelo picker; aqui só servimos selecionados como chips removíveis.
+    const { items, selectedIds, onChange, onOpenPicker, maxSelected, showPickerCount = true } = props
+    // maxSelected define o limite de seleção e também a contagem exibida no CTA.
     const totalProfs = items.length
+    const limiteExibido = maxSelected ?? totalProfs
     // Em multi mode, o componente sempre rendera o controle se houver >= 2 profs
     // (com 1 prof, o DayMode já auto-seleciona e esconde o filtro pelo idsExibidos).
     if (totalProfs <= 1) return null
@@ -61,13 +64,15 @@ export default function ProfissionalFilterChips(props: Props) {
                 key={item.id}
                 onClick={() => onChange(selectedIds.filter((x) => x !== item.id))}
                 title="Remover da seleção"
-                className="inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1.5 rounded-full text-xs font-semibold bg-violet-600 text-white shadow-sm shadow-violet-200 flex-shrink-0 hover:bg-violet-700 transition"
+                className="inline-flex items-center gap-1.5 pl-2 pr-2 py-1 rounded-full text-xs font-semibold bg-violet-600 text-white shadow-sm shadow-violet-200 flex-shrink-0 hover:bg-violet-700 transition"
               >
                 <span className="h-5 w-5 rounded-full bg-white/20 text-white flex items-center justify-center text-[10px] font-bold">
                   {inicial}
                 </span>
                 <span>{item.nome}</span>
-                <X className="h-3.5 w-3.5 opacity-80" />
+                <span className="ml-0.5 opacity-70 text-xs leading-none" aria-hidden>
+                  ×
+                </span>
               </button>
             )
           })}
@@ -76,11 +81,11 @@ export default function ProfissionalFilterChips(props: Props) {
           {onOpenPicker && (
             <button
               onClick={onOpenPicker}
-              className="inline-flex items-center gap-1.5 pl-2.5 pr-3 py-1.5 rounded-full text-xs font-semibold flex-shrink-0 bg-white border border-dashed border-violet-300 text-violet-700 hover:bg-violet-50 transition"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0 bg-white border border-dashed border-violet-300 text-violet-700 hover:bg-violet-50 transition"
             >
               <Plus className="h-3.5 w-3.5" />
               <span>
-                Selecionar profissionais ({selectedIds.length}/{totalProfs})
+                Selecionar profissionais{showPickerCount ? ` (${selectedIds.length}/${limiteExibido})` : ''}
               </span>
             </button>
           )}
