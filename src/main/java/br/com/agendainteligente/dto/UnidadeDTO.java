@@ -57,13 +57,17 @@ public class UnidadeDTO {
     private String notafacilApiKey;
     private Boolean notafacilAtivo;
 
-    // ── Sinal/Adiantamento (V76) ─────────────────────────────────────────────
+    // ── Sinal/Adiantamento (V76 + #175) ──────────────────────────────────────
     private Boolean cobraSinal;
     private java.math.BigDecimal percentualSinal;
+    /** #175: PERCENTUAL | VALOR_FIXO */
+    private String tipoSinal;
+    private java.math.BigDecimal valorSinalFixo;
 
-    // ── Flags de fluxo de atendimento (V78 / issue #157) ─────────────────────
+    // ── Flags de fluxo de atendimento (V78 / issue #157 + #176) ───────────────
     private Boolean requerSinalPraIniciar;
     private Boolean permiteFinalizarSemPagamento;
     private Boolean clientePodeCancelarAposConfirmar;
+    private Boolean exigirConfirmacaoIniciar;
     private Short lembreteConfirmacaoHoras;
 }

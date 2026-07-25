@@ -237,6 +237,17 @@ export default function AcoesAgendamentoSheet({ agendamento, onClose }: AcoesAge
                 disabled={carregando}
                 onClick={() => alterarStatus('CONFIRMADO')}
               />
+              {/* #176: iniciar direto, sem confirmar — só quando a unidade não exige confirmação */}
+              {!agendamento.unidade?.exigirConfirmacaoIniciar && (
+                <ActionButton
+                  icon={PlayCircle}
+                  color="violet"
+                  label="Iniciar atendimento"
+                  desc="Status: Em andamento"
+                  disabled={carregando}
+                  onClick={() => alterarStatus('EM_ANDAMENTO')}
+                />
+              )}
               <ActionButton
                 icon={XCircle}
                 color="red"

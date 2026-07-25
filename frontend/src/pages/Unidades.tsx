@@ -13,6 +13,7 @@ import Button from '../components/Button'
 import FormField from '../components/FormField'
 import FilterBar from '../components/FilterBar'
 import IntegerInput from '../components/forms/IntegerInput'
+import MoneyInput from '../components/forms/MoneyInput'
 import NotaFacilCard from '../components/unidades/NotaFacilCard'
 import { useNotification } from '../contexts/NotificationContext'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -610,19 +611,65 @@ function UnidadeForm({
             <span className="text-sm text-slate-700">Esta unidade cobra sinal para confirmar agendamento</span>
           </label>
           {formData.cobraSinal && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <FormField label="Percentual sugerido (% do valor total)">
-                <IntegerInput
-                  min={0}
-                  max={100}
-                  value={formData.percentualSinal}
-                  onChange={(v) => setFormData({ ...formData, percentualSinal: v })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
-                />
-              </FormField>
-              <div className="text-xs text-slate-500 self-end pb-1">
-                Exemplo: agendamento de R$ 100 com 30% → sinal de R$ 30
+            <div className="space-y-3">
+              {/* #175: escolha da modalidade do sinal */}
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                  Como o sinal é definido
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { valor: 'PERCENTUAL', rotulo: 'Percentual do valor' },
+                    { valor: 'VALOR_FIXO', rotulo: 'Valor fixo' },
+                  ] as const).map((op) => {
+                    const ativo = (formData.tipoSinal ?? 'PERCENTUAL') === op.valor
+                    return (
+                      <button
+                        key={op.valor}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, tipoSinal: op.valor })}
+                        className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                          ativo
+                            ? 'border-violet-400 bg-violet-50 text-violet-700'
+                            : 'border-slate-200 bg-white text-slate-600 hover:border-violet-200'
+                        }`}
+                      >
+                        {op.rotulo}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
+
+              {(formData.tipoSinal ?? 'PERCENTUAL') === 'PERCENTUAL' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <FormField label="Percentual sugerido (% do valor total)">
+                    <IntegerInput
+                      min={0}
+                      max={100}
+                      value={formData.percentualSinal}
+                      onChange={(v) => setFormData({ ...formData, percentualSinal: v })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+                    />
+                  </FormField>
+                  <div className="text-xs text-slate-500 self-end pb-1">
+                    Exemplo: agendamento de R$ 100 com 30% → sinal de R$ 30
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <FormField label="Valor fixo do sinal">
+                    <MoneyInput
+                      value={formData.valorSinalFixo}
+                      onChange={(v) => setFormData({ ...formData, valorSinalFixo: v })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500"
+                    />
+                  </FormField>
+                  <div className="text-xs text-slate-500 self-end pb-1">
+                    Exemplo: todo agendamento pede R$ 50 de sinal, independente do valor total.
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -649,6 +696,21 @@ function UnidadeForm({
                 {!formData.cobraSinal && (
                   <span className="text-amber-700"> Disponível só com "Cobra sinal" ativo.</span>
                 )}
+              </span>
+            </span>
+          </label>
+
+          <label className="flex items-start gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={formData.exigirConfirmacaoIniciar ?? false}
+              onChange={(e) => setFormData({ ...formData, exigirConfirmacaoIniciar: e.target.checked })}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-violet-600"
+            />
+            <span className="text-sm text-slate-700">
+              Exigir confirmação para iniciar o atendimento
+              <span className="block text-[11px] text-slate-500">
+                Profissional não consegue iniciar enquanto o agendamento não estiver confirmado.
               </span>
             </span>
           </label>

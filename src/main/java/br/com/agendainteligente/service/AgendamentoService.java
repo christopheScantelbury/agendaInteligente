@@ -940,8 +940,17 @@ public class AgendamentoService {
         
         if (novoStatus == StatusAgendamento.EM_ANDAMENTO) {
             validarClienteSemOutroAtendimentoEmAndamento(agendamento);
-            // #157: gate "requer sinal pra iniciar"
             Unidade unidadeAg = agendamento.getUnidade();
+            // #176: gate "exigir confirmação para iniciar" — bloqueia INICIAR a
+            // partir de AGENDADO (não afeta reabertura de CONCLUÍDO/PROCEDIMENTO_FIM,
+            // que também transiciona pra EM_ANDAMENTO).
+            if (unidadeAg != null
+                    && Boolean.TRUE.equals(unidadeAg.getExigirConfirmacaoIniciar())
+                    && statusAtual == StatusAgendamento.AGENDADO) {
+                throw new BusinessException(
+                        "Esta unidade exige o agendamento confirmado antes de iniciar o atendimento");
+            }
+            // #157: gate "requer sinal pra iniciar"
             if (unidadeAg != null
                     && Boolean.TRUE.equals(unidadeAg.getRequerSinalPraIniciar())
                     && Boolean.TRUE.equals(unidadeAg.getCobraSinal())
@@ -996,8 +1005,11 @@ public class AgendamentoService {
         switch (statusAtual) {
             case AGENDADO:
                 // AGENDADO → CONFIRMADO (fluxo normal) ou direto NO_SHOW (cliente não
-                // apareceu sem ter passado pelo confirma — caso comum)
+                // apareceu sem ter passado pelo confirma — caso comum).
+                // #176: AGENDADO → EM_ANDAMENTO permitido (iniciar direto, sem
+                // confirmar); o gate acima bloqueia quando a unidade exige confirmação.
                 if (novoStatus == StatusAgendamento.CONFIRMADO
+                        || novoStatus == StatusAgendamento.EM_ANDAMENTO
                         || novoStatus == StatusAgendamento.NO_SHOW) return;
                 break;
             case CONFIRMADO:

@@ -117,6 +117,19 @@ public class Unidade {
     @Builder.Default
     private BigDecimal percentualSinal = new BigDecimal("30.00");
 
+    /**
+     * #175: como o sinal é definido — PERCENTUAL (usa percentualSinal) ou
+     * VALOR_FIXO (usa valorSinalFixo). String em vez de enum pra manter o
+     * padrão dos outros campos de config e evitar tipo enum no Postgres.
+     */
+    @Column(name = "tipo_sinal", nullable = false, length = 20)
+    @Builder.Default
+    private String tipoSinal = "PERCENTUAL";
+
+    /** #175: valor absoluto do sinal quando tipoSinal = VALOR_FIXO. */
+    @Column(name = "valor_sinal_fixo", precision = 12, scale = 2)
+    private BigDecimal valorSinalFixo;
+
     // ── Flags de fluxo de atendimento (V78 / issue #157) ─────────────────────
     /** Bloqueia CONFIRMADO→EM_ANDAMENTO se cobra_sinal=true e sinal_pago=false. */
     @Column(name = "requer_sinal_pra_iniciar", nullable = false)
@@ -132,6 +145,11 @@ public class Unidade {
     @Column(name = "cliente_pode_cancelar_apos_confirmar", nullable = false)
     @Builder.Default
     private Boolean clientePodeCancelarAposConfirmar = true;
+
+    /** #176: se TRUE, iniciar (EM_ANDAMENTO) exige o agendamento CONFIRMADO. */
+    @Column(name = "exigir_confirmacao_iniciar", nullable = false)
+    @Builder.Default
+    private Boolean exigirConfirmacaoIniciar = false;
 
     /** Antecedência (horas) do lembrete automático de confirmação (1-168). */
     @Column(name = "lembrete_confirmacao_horas", nullable = false)
@@ -171,10 +189,19 @@ public class Unidade {
         // deixariam os horários null → violação de NOT NULL (V70) no INSERT.
         if (horarioAbertura == null) horarioAbertura = java.time.LocalTime.of(8, 0);
         if (horarioFechamento == null) horarioFechamento = java.time.LocalTime.of(18, 0);
+        normalizarFlags();
     }
 
     @PreUpdate
     protected void onUpdate() {
         dataAtualizacao = LocalDateTime.now();
+        // #175/#176: update via MapStruct pode deixar o campo null se o DTO não
+        // o trouxer, violando o NOT NULL — mesma armadilha do @Builder.Default.
+        normalizarFlags();
+    }
+
+    private void normalizarFlags() {
+        if (tipoSinal == null || tipoSinal.isBlank()) tipoSinal = "PERCENTUAL";
+        if (exigirConfirmacaoIniciar == null) exigirConfirmacaoIniciar = false;
     }
 }

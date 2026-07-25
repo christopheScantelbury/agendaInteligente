@@ -25,10 +25,13 @@ export interface Unidade {
   // ── Sinal/Adiantamento (V76) ──
   cobraSinal?: boolean
   percentualSinal?: number
+  tipoSinal?: 'PERCENTUAL' | 'VALOR_FIXO'
+  valorSinalFixo?: number
   // ── Flags de fluxo (#157 / V78) ──
   requerSinalPraIniciar?: boolean
   permiteFinalizarSemPagamento?: boolean
   clientePodeCancelarAposConfirmar?: boolean
+  exigirConfirmacaoIniciar?: boolean
   lembreteConfirmacaoHoras?: number
 }
 
