@@ -7,6 +7,7 @@ import { clienteService, type Cliente } from '../../services/clienteService'
 import { servicoService, type Servico } from '../../services/servicoService'
 import Button from '../../components/Button'
 import SimNaoField from '../../components/anamneses/SimNaoField'
+import HistoricoAtendimentos from '../../components/anamneses/HistoricoAtendimentos'
 import { useNotification } from '../../contexts/NotificationContext'
 import { matchSearch } from '../../utils/normalize'
 import DateInput from '../../components/forms/DateInput'
@@ -609,6 +610,16 @@ export default function AnamneseFormPage() {
           </div>
         )}
       </form>
+
+      {/* #174: linha do tempo de atendimentos da cliente — só na visualização da ficha */}
+      {isView && anamneseExistente?.clienteId && (
+        <div className="mt-6">
+          <HistoricoAtendimentos
+            clienteId={anamneseExistente.clienteId}
+            clienteNome={anamneseExistente.clienteNome}
+          />
+        </div>
+      )}
     </div>
   )
 }
