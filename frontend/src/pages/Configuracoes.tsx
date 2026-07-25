@@ -18,6 +18,7 @@ import {
   Briefcase,
   ChevronRight,
   Palette,
+  Sparkles,
 } from 'lucide-react'
 import { authService } from '../services/authService'
 import { usuarioService, Usuario } from '../services/usuarioService'
@@ -360,6 +361,12 @@ export default function Configuracoes() {
       descricao: 'Defina os horários em que cada unidade atende.',
       path: '/configuracoes/horarios',
       icon: Clock,
+    },
+    {
+      titulo: 'Fluxo de atendimento',
+      descricao: 'Sinal, confirmação para iniciar e regras de pagamento por unidade.',
+      path: '/configuracoes/atendimento',
+      icon: Sparkles,
     },
     {
       titulo: 'Link público da empresa',

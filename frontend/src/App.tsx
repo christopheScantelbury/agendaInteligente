@@ -71,6 +71,7 @@ const LinkPublicoConfig = lazy(() => import('./pages/configuracoes/LinkPublicoCo
 const NfseConfig = lazy(() => import('./pages/configuracoes/NfseConfig'))
 const NfseEditarUnidade = lazy(() => import('./pages/configuracoes/NfseEditarUnidade'))
 const HorariosConfig = lazy(() => import('./pages/configuracoes/HorariosConfig'))
+const AtendimentoConfig = lazy(() => import('./pages/configuracoes/AtendimentoConfig'))
 const ServicosConfig = lazy(() => import('./pages/configuracoes/ServicosConfig'))
 const ProfissionaisConfig = lazy(() => import('./pages/configuracoes/ProfissionaisConfig'))
 const EquipeConfig = lazy(() => import('./pages/configuracoes/EquipeConfig'))
@@ -400,6 +401,16 @@ function App() {
                 element={
                   authService.isAuthenticated() && ['GERENTE','ADMIN','ADMINISTRADOR'].includes((authService.getUsuario()?.perfil ?? '').toUpperCase())
                     ? <Layout><HorariosConfig /></Layout>
+                    : <Navigate to="/login" replace />
+                }
+              />
+
+              {/* #177: Sinal + Fluxo de atendimento acessível ao dono (admin único) */}
+              <Route
+                path="/configuracoes/atendimento"
+                element={
+                  authService.isAuthenticated() && ['GERENTE','ADMIN','ADMINISTRADOR'].includes((authService.getUsuario()?.perfil ?? '').toUpperCase())
+                    ? <Layout><AtendimentoConfig /></Layout>
                     : <Navigate to="/login" replace />
                 }
               />
